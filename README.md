@@ -1,7 +1,7 @@
 <h1 align="center">
   <br>
   <a href="https://www.sphereon.com"><img src="https://sphereon.com/content/themes/sphereon/assets/img/logo.svg" alt="Sphereon" width="400"></a>
-    <br>OpenID Federation Monorepo
+  <br>OpenID Federation Monorepo
   <br>
 </h1>
 
@@ -10,6 +10,32 @@
 OpenID Federation is a framework designed to facilitate the secure and interoperable interaction of entities within a federation. This involves the use of JSON Web Tokens (JWTs) to represent and convey necessary information for entities to participate in federations, ensuring trust and security across different organizations and systems.
 
 In the context of OpenID Federation, Entity Statements play a crucial role. These are signed JWTs that contain details about the entity, such as its public keys and metadata. This framework allows entities to assert their identity and capabilities in a standardized manner, enabling seamless integration and interoperability within federations.
+
+## Key Concepts
+
+- **Federation**: A group of organizations that agree to interoperate under a set of common rules defined in a federation policy.
+- **Entity Statements**: JSON objects that contain metadata about entities (IdPs, RPs) and their federation relationships.
+- **Trust Chains**: Mechanisms by which parties in a federation verify each other’s trustworthiness through a chain of entity statements, leading back to a trusted authority.
+- **Federation API**: Interfaces defined for entities to exchange information and perform operations necessary for federation management.
+
+## Core Components
+
+- **Federation Operator**: The central authority in a federation that manages policy and trust chain verification.
+- **Identity Providers (IdPs)**: Entities that authenticate users and provide identity assertions to relying parties.
+- **Relying Parties (RPs)**: Entities that rely on identity assertions provided by IdPs to offer services to users.
+
+## Technical Features
+
+- **JSON Web Tokens (JWT)**: Used for creating verifiable entity statements and security assertions.
+- **JSON Object Signing and Encryption (JOSE)**: Standards for signing and encrypting JSON-based objects to ensure their integrity and confidentiality.
+
+## Operational Model
+
+- **Dynamic Federation**: Allows entities to join or adjust their federation relationships dynamically, based on real-time verification of entity statements.
+- **Trust Model**: Establishes a model where trust is derived from known and verifiable sources and can be dynamically adjusted according to real-time interactions and policy evaluations.
+- **Conflict Resolution**: Defines how disputes or mismatches in federation policies among entities are resolved.
+
+# Data Structure
 
 ## Entity Statement Overview
 
