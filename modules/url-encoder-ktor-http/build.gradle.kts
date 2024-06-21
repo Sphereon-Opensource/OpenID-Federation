@@ -16,7 +16,7 @@ kotlin {
         browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8080
+                    port = 8083
                 }
             }
         }
