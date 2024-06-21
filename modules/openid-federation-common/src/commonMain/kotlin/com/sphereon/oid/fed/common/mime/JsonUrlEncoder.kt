@@ -1,4 +1,4 @@
-package com.sphereon.utils.mime
+package com.sphereon.oid.fed.common.mime
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.encodeToString

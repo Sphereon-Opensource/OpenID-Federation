@@ -1,5 +1,10 @@
-package com.sphereon.utils.mime
+package com.sphereon.oid.fed.common.mime
 
+import com.sphereon.oid.fed.common.mime.appendUrlEncodedValue
+import com.sphereon.oid.fed.common.mime.fromUrlEncodedJsonValuesToJsonElements
+import com.sphereon.oid.fed.common.mime.fromUrlEncodedValues
+import com.sphereon.oid.fed.common.mime.getUrlEncodedJsonValueToJsonElement
+import com.sphereon.oid.fed.common.mime.getUrlEncodedValue
 import io.ktor.http.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement

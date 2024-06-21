@@ -47,10 +47,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(project(":modules:url-encoder"))
                 implementation("io.ktor:ktor-client-core:2.3.11")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0-RC")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
             }
         }
         val commonTest by getting {
@@ -127,7 +126,7 @@ tasks.register("printSdkLocation") {
 }
 
 android {
-    namespace = "com.sphereon.kmp.genesis.shared"
+    namespace = "com.sphereon.oid.fed.common"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

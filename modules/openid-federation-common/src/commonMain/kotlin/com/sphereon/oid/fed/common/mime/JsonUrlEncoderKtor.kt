@@ -1,4 +1,4 @@
-package com.sphereon.utils.mime
+package com.sphereon.oid.fed.common.mime
 
 import io.ktor.http.*
 import kotlinx.serialization.json.JsonElement

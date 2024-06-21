@@ -28,5 +28,4 @@ dependencyResolutionManagement {
     }
 }
 
-include(":modules:url-encoder")
-include(":modules:url-encoder-ktor-http")
+include(":modules:openid-federation-common")
