@@ -22,16 +22,16 @@ data class TestData(
 
 class JsonUrlEncoderTest {
     private val originalJson =
-        """{"grants":{"urn:ietf:params:oauth:grant-type:pre-authorized_code":{"pre-authorized_code":"a"}},"credential_configuration_ids":["Woonplaatsverklaring"],"credential_issuer":"https://agent.issuer.bd.demo.sphereon.com"}"""
+        """{"grants":{"urn:ietf:params:oauth:grant-type:pre-authorized_code":{"pre-authorized_code":"a"}},"credential_configuration_ids":["DummyCredential"],"credential_issuer":"https://agent.issuer.dummy.com"}"""
     private val encodedJson =
-        "%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22a%22%7D%7D%2C%22credential_configuration_ids%22%3A%5B%22Woonplaatsverklaring%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fagent.issuer.bd.demo.sphereon.com%22%7D"
+        "%7B%22grants%22%3A%7B%22urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Apre-authorized_code%22%3A%7B%22pre-authorized_code%22%3A%22a%22%7D%7D%2C%22credential_configuration_ids%22%3A%5B%22DummyCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fagent.issuer.dummy.com%22%7D"
     private val encodedJsonFromObject =  // In objects, we can have colons in the field name
-        "%7B%22grants%22%3A%7B%22urn_ietf_params_oauth_grant_type_pre_authorized_code%22%3A%7B%22pre_authorized_code%22%3A%22a%22%7D%7D%2C%22credential_configuration_ids%22%3A%5B%22Woonplaatsverklaring%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fagent.issuer.bd.demo.sphereon.com%22%7D"
+        "%7B%22grants%22%3A%7B%22urn_ietf_params_oauth_grant_type_pre_authorized_code%22%3A%7B%22pre_authorized_code%22%3A%22a%22%7D%7D%2C%22credential_configuration_ids%22%3A%5B%22DummyCredential%22%5D%2C%22credential_issuer%22%3A%22https%3A%2F%2Fagent.issuer.dummy.com%22%7D"
 
     private val testData = TestData(
         grants = Grants(PreAuthorizedCode("a")),
-        credential_configuration_ids = listOf("Woonplaatsverklaring"),
-        credential_issuer = "https://agent.issuer.bd.demo.sphereon.com"
+        credential_configuration_ids = listOf("DummyCredential"),
+        credential_issuer = "https://agent.issuer.dummy.com"
     )
 
     @Test

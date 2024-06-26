@@ -4,15 +4,17 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlin.js.JsExport
 
 private val qpAllowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~".toSet()
 
 /**
  * URL encode a String.
  * Converts characters not allowed in URL query parameters to their percent-encoded equivalents.
- *
+ * input   an input string
  * @return URL encoded String
  */
+@JsExport
 fun urlEncodeValue(input: String): String {
     return buildString {
         input.forEach { char ->
@@ -71,10 +73,11 @@ fun <T> T.toUrlEncodedJsonValue(serializer: KSerializer<T>): String {
  * Extension function to decode a URL encoded String.
  * Converts percent-encoded characters back to their original form.
  *
+ * input   An URL encoded input string
  * @return Decoded String
  */
-fun String.fromUrlEncodedValue(): String {
-    val input = this
+@JsExport
+fun urlDecodeValue(input: String): String {
     return buildString {
         var i = 0
         while (i < input.length) {
@@ -94,6 +97,16 @@ fun String.fromUrlEncodedValue(): String {
             }
         }
     }
+}
+
+/**
+ * Extension function to decode a URL encoded String.
+ * Converts percent-encoded characters back to their original form.
+ *
+ * @return Decoded String
+ */
+fun String.fromUrlEncodedValue(): String {
+    return urlDecodeValue(this)
 }
 
 /**
