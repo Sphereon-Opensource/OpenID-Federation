@@ -46,7 +46,7 @@ In the context of OpenID Federation, Entity Statements play a crucial role. Thes
 
 ### 2. Requirements and Structure
 - **Type**: JWT must be explicitly typed as `entity-statement+jwt`.
-- **Signature**: Signed using the issuer’s private key, preferably using RSA SHA-256 (RS256).
+- **Signature**: Signed using the issuer’s private key, preferably using ECDSA using P-256 and SHA-256 (ES256).
 - **Key ID (kid)**: The header must include the Key ID of the signing key.
 
 ### 3. Claims in an Entity Statement
