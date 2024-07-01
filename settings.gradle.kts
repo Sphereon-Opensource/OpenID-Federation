@@ -29,4 +29,4 @@ dependencyResolutionManagement {
 }
 
 include(":modules:openid-federation-common")
-include(":server")
+include(":admin-server")
