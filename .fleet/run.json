@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "OpenID-Federation [:server:build]",
+            "type": "gradle",
+            "workingDir": "$PROJECT_DIR$",
+            "tasks": [
+                ":server:build"
+            ],
+            "args": [
+                ""
+            ],
+            "initScripts": {
+                "flmapper": "ext.mapPath = { path -> null }"
+            }
+        },
+        {
+            "name": "OpenID-Federation [build]",
+            "type": "gradle",
+            "workingDir": "$PROJECT_DIR$",
+            "tasks": [
+                "build"
+            ],
+            "args": [
+                ""
+            ],
+            "initScripts": {
+                "flmapper": "ext.mapPath = { path -> null }"
+            }
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "plugins": [
+        {
+            "type": "add",
+            "pluginName": "fleet.spring.boot"
+        },
+        {
+            "type": "add",
+            "pluginName": "fleet.mercury"
+        }
+    ]
+}
