@@ -34,6 +34,7 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
+springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

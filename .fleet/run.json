@@ -5,7 +5,7 @@
             "type": "gradle",
             "workingDir": "$PROJECT_DIR$",
             "tasks": [
-                ":server:build"
+                ":admin-server:build"
             ],
             "args": [
                 ""
