@@ -30,6 +30,7 @@ kotlin {
 }
 
 tasks.withType<Test> {
+    useJUnitPlatform()
     testLogging {
         setExceptionFormat("full")
         events("started", "skipped", "passed", "failed")
