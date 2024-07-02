@@ -19,7 +19,7 @@ dependencies {
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.kotlin.reflect)
-
+    testImplementation(libs.springboot.test)
     runtimeOnly(libs.springboot.devtools)
 }
 
@@ -31,4 +31,9 @@ kotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    testLogging {
+        setExceptionFormat("full")
+        events("started", "skipped", "passed", "failed")
+        showStandardStreams = true
+    }
 }
