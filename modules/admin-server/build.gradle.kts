@@ -6,7 +6,7 @@ plugins {
     application
 }
 
-group = "com.sphereon.oid.fed"
+group = "com.sphereon.oid.fed.server.admin"
 version = "1.0.0"
 
 java {

@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed
+package com.sphereon.oid.fed.server.admin
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication

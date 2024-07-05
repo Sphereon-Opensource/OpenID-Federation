@@ -15,12 +15,12 @@ DATASOURCE_URL=<URL>
 
 To build
 <br>
-```./gradlew admin-server:build```
+```./gradlew :modules:admin-server:build```
 
 To run
 <br>
-```./gradlew admin-server:bootRun```
+```./gradlew :modules:admin-server:bootRun```
 
 To run tests
 <br>
-```./gradlew admin-server:test```
+```./gradlew :modules:admin-server:test```
