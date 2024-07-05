@@ -6,6 +6,13 @@ API
 
 <br>
 
+Add environment file (.env) with following properties
+```
+DATABASE_USER=<USER>
+DATABASE_PASSWORD=<PAsSWORD>
+DATABASE_NAME=<NAME>
+```
+
 To build
 <br>
 ```./gradlew admin-server:build```

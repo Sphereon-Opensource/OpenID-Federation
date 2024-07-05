@@ -5,9 +5,9 @@ services:
     image: postgres:latest
     container_name: postgres_db
     environment:
-      POSTGRES_USER: openid-federation-user
-      POSTGRES_PASSWORD: changeit
-      POSTGRES_DB: openid-federation-db
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     ports:
       - "5432:5432"
     volumes:
