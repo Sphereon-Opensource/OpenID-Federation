@@ -8,9 +8,9 @@ API
 
 Add environment file (.env) with following properties
 ```
-DATABASE_USER=<USER>
-DATABASE_PASSWORD=<PAsSWORD>
-DATABASE_NAME=<NAME>
+DATASOURCE_USER=<USER>
+DATASOURCE_PASSWORD=<PASSWORD>
+DATASOURCE_URL=<URL>
 ```
 
 To build
