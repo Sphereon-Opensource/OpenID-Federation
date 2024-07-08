@@ -25,3 +25,7 @@ jobs:
 
       - name: Execute Gradle build
         run: ./gradlew build
+        env:
+          DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
+          DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
+          DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
