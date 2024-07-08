@@ -27,16 +27,6 @@
             "initScripts": {
                 "flmapper": "ext.mapPath = { path -> null }"
             }
-        },
-        {
-            "name": "OpenID-Federation [admin-server:bootRun]",
-            "type": "gradle",
-            "workingDir": "C:\\Users\\Robo\\Sphereon\\OpenID-Federation",
-            "tasks": ["admin-server:bootRun"],
-            "args": [""],
-            "initScripts": {
-                "flmapper": "ext.mapPath = { path -> null }"
-            }
         }
     ]
 }
