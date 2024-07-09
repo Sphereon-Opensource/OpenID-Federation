@@ -1,4 +1,4 @@
-rootProject.name = "kotlin-mp-genesis"
+rootProject.name = "openid-federation"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

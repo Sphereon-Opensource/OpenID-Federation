@@ -3,7 +3,7 @@ version: '3.9'
 services:
   db:
     image: postgres:latest
-    container_name: postgres_db
+    container_name: openid-federation-datastore
     environment:
       POSTGRES_USER: ${DATASOURCE_USER}
       POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
