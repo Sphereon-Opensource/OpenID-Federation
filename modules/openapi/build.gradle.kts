@@ -45,6 +45,12 @@ openApiGenerate {
     }
 }
 
+tasks.jar {
+    dependsOn(tasks.openApiGenerate)
+    archiveBaseName.set(project.name)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+}
+
 sourceSets {
     main {
         java.srcDirs("build/generated/sources/openapi/src/main/kotlin")

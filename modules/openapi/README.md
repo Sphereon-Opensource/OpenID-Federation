@@ -26,3 +26,8 @@ Generate only models:
 ```shell
 gradle clean openApiGenerate -Pprofile=model-only
 ```
+
+Generate the jar file:
+```shell
+gradle clean build
+```
