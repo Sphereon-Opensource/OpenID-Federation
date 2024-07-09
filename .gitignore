@@ -20,3 +20,5 @@ captures
 /platforms/
 /platform-tools/
 /.temp/
+/docker/.env
+/.run/*

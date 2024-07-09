@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: openid-federation-datastore
+    environment:
+      POSTGRES_USER: ${DATASOURCE_USER}
+      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+      POSTGRES_DB: openid-federation-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - openid_network
+
+networks:
+  openid_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
