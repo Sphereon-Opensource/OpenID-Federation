@@ -33,8 +33,10 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
+springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc" }
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
+postgres = { module = "org.postgresql:postgresql" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

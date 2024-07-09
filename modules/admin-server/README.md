@@ -6,6 +6,13 @@ API
 
 <br>
 
+Add environment file (.env) with following properties
+```
+DATASOURCE_USER=<USER>
+DATASOURCE_PASSWORD=<PASSWORD>
+DATASOURCE_URL=<URL>
+```
+
 To build
 <br>
 ```./gradlew :modules:admin-server:build```
