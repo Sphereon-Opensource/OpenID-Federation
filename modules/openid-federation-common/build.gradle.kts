@@ -9,6 +9,8 @@ plugins {
     kotlin("plugin.serialization") version "2.0.0"
 }
 
+val ktorVersion = "2.3.11"
+
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
 
@@ -47,7 +49,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-core:2.3.11")
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
             }
@@ -60,7 +62,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-cio:2.3.11")
+                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
             }
         }
         val jvmTest by getting {
@@ -71,7 +73,7 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-okhttp:2.3.11")
+                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
             }
         }
         val androidUnitTest by getting {
@@ -83,7 +85,7 @@ kotlin {
         val iosMain by creating {
             dependsOn(commonMain)
             dependencies {
-                implementation("io.ktor:ktor-client-ios:2.3.11")
+                implementation("io.ktor:ktor-client-ios:$ktorVersion")
             }
         }
         val iosX64Main by getting {
@@ -105,7 +107,7 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:2.3.11")
+                implementation("io.ktor:ktor-client-js:$ktorVersion")
             }
         }
 
