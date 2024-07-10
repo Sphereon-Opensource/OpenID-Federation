@@ -25,7 +25,7 @@ openApiGenerate {
     packageName.set("com.sphereon.oid.fed.openapi")
     apiPackage.set("$openApiPackage.api")
     modelPackage.set("$openApiPackage.models")
-    inputSpec.set("$rootDir/src/main/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
+    inputSpec.set("$projectDir/src/main/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
     library.set("jvm-okhttp4")
     configOptions.set(
         mapOf(
