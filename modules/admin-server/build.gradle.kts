@@ -21,6 +21,9 @@ dependencies {
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
+    testImplementation(libs.testcontainer.junit)
+    testImplementation(libs.springboot.testcontainer)
+    testImplementation(libs.testcontainer.postgres)
     runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
 }
