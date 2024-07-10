@@ -36,6 +36,7 @@ springboot-web = { group = "org.springframework.boot", name = "spring-boot-start
 springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc" }
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
+flyway = { module = "org.flywaydb:flyway-core" }
 postgres = { module = "org.postgresql:postgresql" }
 
 [plugins]
