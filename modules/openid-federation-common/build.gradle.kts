@@ -52,6 +52,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
+                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
         val commonTest by getting {
