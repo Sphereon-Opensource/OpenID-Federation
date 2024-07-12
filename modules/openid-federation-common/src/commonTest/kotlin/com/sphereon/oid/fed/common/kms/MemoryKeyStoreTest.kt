@@ -3,10 +3,10 @@ package com.sphereon.oid.fed.jwks
 import com.nimbusds.jose.jwk.KeyUse
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.sphereon.oid.fed.kms.MemoryKeyStore
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
+import kotlin.test.BeforeTest
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import java.util.*
 
 class MemoryKeyStoreTest {
@@ -14,7 +14,7 @@ class MemoryKeyStoreTest {
     lateinit var kms: MemoryKeyStore
     lateinit var keyId: String
 
-    @BeforeEach
+    @BeforeTest
     fun setUp() {
         kms = MemoryKeyStore()
         keyId =  UUID.randomUUID().toString()
