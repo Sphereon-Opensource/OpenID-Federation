@@ -12,7 +12,7 @@ Immediate Subordinate Entities called Subordinate Statements.
 
 ### Profiles
 
-The Open API generator will generate only models, infrastructures and apis by default. To make it generate apis. To make
+The Open API generator will generate models, infrastructures and apis by default. To make
 it generate models only uncomment `profiles=models-only` from gradle.properties or pass the profile in the comment line.
 
 ### Run Open API generator
