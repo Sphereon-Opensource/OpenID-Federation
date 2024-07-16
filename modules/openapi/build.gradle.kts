@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("org.openapi.generator") version "6.2.1"
+    id("org.openapi.generator") version "6.6.0"
+    id("maven-publish")
 }
 
 group = "com.sphereon.oid.fed"
@@ -10,13 +11,18 @@ project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")
 
 val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyList()
 val isModelsOnlyProfile = profiles.contains("models-only")
+val ktorVersion = "2.3.11"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testImplementation(kotlin("test"))
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
 }
 
 openApiGenerate {
@@ -26,8 +32,9 @@ openApiGenerate {
     apiPackage.set("$openApiPackage.api")
     modelPackage.set("$openApiPackage.models")
     inputSpec.set("$projectDir/src/main/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
-    library.set("jvm-okhttp4")
-    configOptions.set(
+    library.set("multiplatform")
+    outputDir.set("$projectDir/build/generated")
+configOptions.set(
         mapOf(
             "dateLibrary" to "java8",
             "serializationLibrary" to "jackson"
@@ -45,21 +52,32 @@ openApiGenerate {
     }
 }
 
-tasks.jar {
-    dependsOn(tasks.openApiGenerate)
-    archiveBaseName.set(project.name)
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-}
 
-sourceSets {
-    main {
-        java.srcDirs("build/generated/sources/openapi/src/main/kotlin")
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            from(components["kotlin"])
+        }
     }
 }
 
-tasks.test {
-    useJUnitPlatform()
+tasks.compileKotlin {
+    dependsOn(tasks.openApiGenerate)
 }
+
+tasks.jar {
+    dependsOn(tasks.compileKotlin)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveBaseName.set(project.name)
+    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+    from("$projectDir/build/classes/kotlin/main")
+}
+
 kotlin {
+    sourceSets.main {
+        kotlin.srcDirs(
+            "$projectDir/build/generated/src/commonMain/kotlin"
+        )
+    }
     jvmToolchain(21)
 }
