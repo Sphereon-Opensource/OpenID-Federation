@@ -53,6 +53,7 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
                 implementation(libs.kermit.logging)
+                implementation(libs.dotenv.kotlin)
             }
         }
         val commonTest by getting {
