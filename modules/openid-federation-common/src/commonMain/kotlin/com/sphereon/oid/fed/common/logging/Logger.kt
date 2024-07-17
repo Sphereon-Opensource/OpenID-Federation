@@ -1,14 +1,8 @@
 package com.sphereon.oid.fed.common.logging
 
 import co.touchlab.kermit.Logger
-//import io.github.cdimascio.dotenv.dotenv
 
 object Logger {
-
-//    val dotenv = dotenv()
-//    val isLogging = dotenv["LOGGING"]
-
-
 
     fun verbose(tag: String, message: String) {
         Logger.v(tag = tag, messageString = message)
