@@ -36,7 +36,7 @@ openApiGenerate {
     outputDir.set("$projectDir/build/generated")
 configOptions.set(
         mapOf(
-            "dateLibrary" to "java8",
+            "dateLibrary" to "string",
             "serializationLibrary" to "jackson"
         )
     )
