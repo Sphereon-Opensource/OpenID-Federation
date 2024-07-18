@@ -33,16 +33,17 @@ kotlin {
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
 
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+// TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
+//    androidTarget {
+//        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+//        compilerOptions {
+//            jvmTarget.set(JvmTarget.JVM_11)
+//        }
+//    }
+//
+//    iosX64()
+//    iosArm64()
+//    iosSimulatorArm64()
 
     jvm()
 
@@ -72,39 +73,40 @@ kotlin {
             }
         }
 
-        val androidMain by getting {
-            dependencies {
-                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-            }
-        }
-        val androidUnitTest by getting {
-            dependencies {
-                implementation(kotlin("test-junit"))
-            }
-        }
-
-        val iosMain by creating {
-            dependsOn(commonMain)
-            dependencies {
-                implementation("io.ktor:ktor-client-ios:$ktorVersion")
-            }
-        }
-        val iosX64Main by getting {
-            dependsOn(iosMain)
-        }
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
-        }
-
-        val iosTest by creating {
-            dependsOn(commonTest)
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
+//  TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
+//        val androidMain by getting {
+//            dependencies {
+//                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+//            }
+//        }
+//        val androidUnitTest by getting {
+//            dependencies {
+//                implementation(kotlin("test-junit"))
+//            }
+//        }
+//
+//        val iosMain by creating {
+//            dependsOn(commonMain)
+//            dependencies {
+//                implementation("io.ktor:ktor-client-ios:$ktorVersion")
+//            }
+//        }
+//        val iosX64Main by getting {
+//            dependsOn(iosMain)
+//        }
+//        val iosArm64Main by getting {
+//            dependsOn(iosMain)
+//        }
+//        val iosSimulatorArm64Main by getting {
+//            dependsOn(iosMain)
+//        }
+//
+//        val iosTest by creating {
+//            dependsOn(commonTest)
+//            dependencies {
+//                implementation(kotlin("test"))
+//            }
+//        }
 
         val jsMain by getting {
             dependencies {
