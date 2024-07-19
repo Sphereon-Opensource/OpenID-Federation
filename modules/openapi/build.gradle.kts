@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "2.0.0"
-    id("org.openapi.generator") version "6.6.0"
+    id("org.openapi.generator") version "7.7.0"
     id("maven-publish")
 }
 
@@ -36,8 +36,7 @@ openApiGenerate {
     outputDir.set("$projectDir/build/generated")
 configOptions.set(
         mapOf(
-            "dateLibrary" to "string",
-            "serializationLibrary" to "jackson"
+            "dateLibrary" to "string"
         )
     )
 
