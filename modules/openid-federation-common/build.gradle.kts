@@ -50,8 +50,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+                api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
                 implementation(libs.kermit.logging)
             }
         }
