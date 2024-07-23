@@ -21,6 +21,6 @@ class JoseJwtTest {
             "key" to key,
             "jwtHeader" to "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${key.keyID}\"}"
         ))
-        assertTrue { verify(signature, key) }
+        assertTrue { verify(signature, key, emptyMap()) }
     }
 }
