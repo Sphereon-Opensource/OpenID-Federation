@@ -40,9 +40,9 @@ kotlin {
         }
     }
 
-//    iosX64()
-//    iosArm64()
-//    iosSimulatorArm64()
+    iosX64()
+    iosArm64()
+    iosSimulatorArm64()
 
     jvm()
 
@@ -50,9 +50,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-core:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-logging:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-cio:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
                 implementation(libs.kermit.logging)
@@ -88,44 +87,45 @@ kotlin {
             }
         }
 
-//        val iosMain by creating {
-//            dependsOn(commonMain)
-//            dependencies {
-//
-//            }
-//        }
-//        val iosX64Main by getting {
-//            //dependsOn(iosMain)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iosx64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iosx64:$ktorVersion")
-//            }
-//        }
-//        val iosArm64Main by getting {
-//            dependsOn(iosX64Main)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iosarm64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iosarm64:$ktorVersion")
-//            }
-//        }
-//        val iosSimulatorArm64Main by getting {
-//            dependsOn(iosX64Main)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iossimulatorarm64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iossimulatorarm64:$ktorVersion")
-//            }
-//        }
-//
-//        val iosTest by creating {
-//            dependsOn(commonTest)
-//            dependencies {
-//                implementation(kotlin("test"))
-//            }
-//        }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependencies {
+
+            }
+        }
+        val iosX64Main by getting {
+            //dependsOn(iosMain)
+            dependencies {
+                implementation("io.ktor:ktor-client-core-iosx64:$ktorVersion")
+                implementation("io.ktor:ktor-client-cio-iosx64:$ktorVersion")
+            }
+        }
+        val iosArm64Main by getting {
+            dependsOn(iosX64Main)
+            dependencies {
+                implementation("io.ktor:ktor-client-core-iosarm64:$ktorVersion")
+                implementation("io.ktor:ktor-client-cio-iosarm64:$ktorVersion")
+            }
+        }
+        val iosSimulatorArm64Main by getting {
+            dependsOn(iosX64Main)
+            dependencies {
+                implementation("io.ktor:ktor-client-core-iossimulatorarm64:$ktorVersion")
+                implementation("io.ktor:ktor-client-cio-iossimulatorarm64:$ktorVersion")
+            }
+        }
+
+        val iosTest by creating {
+            dependsOn(commonTest)
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
 
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
             }
         }
 
