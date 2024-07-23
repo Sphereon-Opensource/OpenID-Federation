@@ -14,21 +14,19 @@ import java.util.*
 
 actual fun sign(
     payload: String,
-    opts: MutableMap<String, Any>?
+    opts: Map<String, Any>
 ): String {
-    var rsaJWK = opts?.get("key") as RSAKey?
-    val kid = rsaJWK?.keyID ?: UUID.randomUUID().toString()
+    val rsaJWK = opts["key"] as RSAKey? ?: RSAKeyGenerator(2048)
+        .keyID(UUID.randomUUID().toString())
+        .generate()
+
+    val kid = rsaJWK?.keyID
+
     val header: JWSHeader?
-    if (opts?.get("jwtHeader") != null) {
+    if (opts["jwtHeader"] != null) {
         header = JWSHeader.parse(opts["jwtHeader"] as String?)
     } else {
         header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build()
-    }
-
-    if (rsaJWK == null) {
-        rsaJWK = RSAKeyGenerator(2048)
-            .keyID(kid)
-            .generate()
     }
 
     val signer: JWSSigner = RSASSASigner(rsaJWK)
@@ -47,7 +45,7 @@ actual fun sign(
 actual fun verify(
     jwt: String,
     key: Any,
-    opts: MutableMap<String, Any>?
+    opts: Map<String, Any>
 ): Boolean {
     try {
         val rsaKey = key as RSAKey

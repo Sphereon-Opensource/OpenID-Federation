@@ -28,9 +28,9 @@ external object Uuid {
 @JsExport
 actual fun sign(
     payload: String,
-    opts: MutableMap<String, Any>?
+    opts: Map<String, Any>
 ): String {
-    val privateKey = opts?.get("privateKey") ?: throw IllegalArgumentException("JWK private key is required")
+    val privateKey = opts["privateKey"] ?: throw IllegalArgumentException("JWK private key is required")
     val header = opts["jwtHeader"] as String? ?: "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${Uuid.v4()}\"}"
     return Jose.SignJWT(JSON.parse<Any>(payload).asDynamic())
         .setProtectedHeader(JSON.parse<Any>(header).asDynamic())
@@ -42,7 +42,7 @@ actual fun sign(
 actual fun verify(
     jwt: String,
     key: Any,
-    opts: MutableMap<String, Any>?
+    opts: Map<String, Any>
 ): Boolean {
     return Jose.jwtVerify(jwt, key, opts)
 }

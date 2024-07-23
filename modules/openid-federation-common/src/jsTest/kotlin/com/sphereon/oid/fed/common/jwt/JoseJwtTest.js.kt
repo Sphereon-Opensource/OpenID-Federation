@@ -22,7 +22,7 @@ class JoseJwtTest {
     fun verifyTest() = runTest {
         val keyPair = (generateKeyPair("RS256") as Promise<dynamic>).await()
         val signed = (sign("{ \"iss\": \"test\" }", mutableMapOf("privateKey" to keyPair.privateKey)) as Promise<dynamic>).await()
-        val result = async { verify(signed, keyPair.publicKey) }
+        val result = async { verify(signed, keyPair.publicKey, emptyMap()) }
         assertTrue((result.await() as Promise<Boolean>).await())
     }
 }
