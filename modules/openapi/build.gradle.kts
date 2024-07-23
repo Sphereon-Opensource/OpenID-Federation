@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
@@ -59,6 +60,9 @@ kotlin {
 
             named<KotlinJvmCompile>("compileKotlinJvm") {
                 dependsOn("openApiGenerate")
+                compilerOptions {
+                    jvmTarget.set(JvmTarget.JVM_11)
+                }
             }
 
             named("jvmSourcesJar") {
