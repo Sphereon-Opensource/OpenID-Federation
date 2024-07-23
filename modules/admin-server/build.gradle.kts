@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.sphereon.oid.fed.server.admin"
-version = "1.0.0"
+version = "0.0.1"
 
 java {
     toolchain {
@@ -16,6 +16,7 @@ java {
 }
 
 dependencies {
+    api(projects.modules.openidFederationCommon)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
