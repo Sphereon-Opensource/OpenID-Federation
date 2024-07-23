@@ -1,7 +1,7 @@
-CREATE TYPE "public"."KMS_TYPE" AS ENUM ('LOCAL');
+CREATE TYPE "KMS_TYPE" AS ENUM ('LOCAL');
 
-CREATE TABLE "public"."account" (
+CREATE TABLE "account" (
     id  SERIAL PRIMARY KEY,
     username VARCHAR(255) UNIQUE NOT NULL,
-    kms "public"."KMS_TYPE" NOT NULL DEFAULT 'LOCAL'
+    kms "KMS_TYPE" NOT NULL DEFAULT 'LOCAL'
 );
