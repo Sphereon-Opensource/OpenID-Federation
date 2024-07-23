@@ -49,7 +49,9 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                //implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
+
+                api("io.ktor:ktor-client-core:$ktorVersion")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
                 implementation(libs.kermit.logging)
@@ -120,10 +122,6 @@ kotlin {
             }
         }
     }
-}
-
-dependencies {
-    implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
 }
 
 tasks.register("printSdkLocation") {
