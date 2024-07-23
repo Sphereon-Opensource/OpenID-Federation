@@ -9,7 +9,7 @@ class JoseJwtTest {
 
     @Test
     fun signTest() {
-        val signature = sign("{ \"iss\": \"test\" }", mutableMapOf())
+        val signature = sign("{ \"iss\": \"test\" }", emptyMap())
         assertTrue { signature.startsWith("ey") }
     }
 

@@ -20,15 +20,10 @@ actual fun sign(
         .keyID(UUID.randomUUID().toString())
         .generate()
 
-    val kid = rsaJWK?.keyID
-
-    val header: JWSHeader?
-    if (opts["jwtHeader"] != null) {
-        header = JWSHeader.parse(opts["jwtHeader"] as String?)
-    } else {
-        header = JWSHeader.Builder(JWSAlgorithm.RS256).keyID(kid).build()
-    }
-
+    val header = opts["jwtHeader"]?.let {
+        JWSHeader.parse(it as String?)
+    } ?: JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
+    
     val signer: JWSSigner = RSASSASigner(rsaJWK)
 
     val claimsSet = JWTClaimsSet.parse(payload)
@@ -54,6 +49,6 @@ actual fun verify(
         val verified = signedJWT.verify(verifier)
         return verified
     } catch (e: Exception) {
-        throw Exception("Couldn't verify the JWT Signature: ${e.message}")
+        throw Exception("Couldn't verify the JWT Signature: ${e.message}", e)
     }
 }
