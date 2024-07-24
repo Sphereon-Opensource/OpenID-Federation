@@ -49,11 +49,11 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                //implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
-
-                api("io.ktor:ktor-client-core:$ktorVersion")
-                api("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                api("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+                implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
                 implementation(libs.kermit.logging)
             }
         }
