@@ -7,7 +7,7 @@ import kotlinx.serialization.json.decodeFromJsonElement
 class JsonMapper {
 
     /*
-    * Used for mapping JWT token to EntityStatement object
+     * Used for mapping JWT token to EntityStatement object
      */
     fun mapEntityStatement(jwtToken: String): EntityStatement? {
         val data = decodeJWTComponents(jwtToken)
@@ -16,5 +16,16 @@ class JsonMapper {
         } else {
             null
         }
+    }
+
+    /*
+     * Used for mapping trust chain
+     */
+    fun mapTrustChain(jwtTokenList: List<String>): List<EntityStatement?> {
+        val list: MutableList<EntityStatement?> = mutableListOf()
+        jwtTokenList.forEach { jwtToken ->
+            list.add(mapEntityStatement(jwtToken))
+        }
+        return list
     }
 }

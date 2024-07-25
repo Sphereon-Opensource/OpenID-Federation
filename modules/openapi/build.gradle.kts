@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     kotlin("multiplatform") version "2.0.0"
+    kotlin("plugin.serialization") version "2.0.0"
     id("org.openapi.generator") version "7.7.0"
     id("maven-publish")
 }
@@ -23,11 +24,26 @@ repositories {
 
 kotlin {
     tasks {
+        // Temporary fix for this issue: https://github.com/OpenAPITools/openapi-generator/issues/17658
+        register<Copy>("fixOpenApiGeneratorIssue") {
+            from(
+                "$projectDir/build/generated/src/commonMain/kotlin/com/sphereon/oid/fed/openapi"
+            )
+            into(
+                "$projectDir/build/copy/src/commonMain/kotlin/com/sphereon/oid/fed/openapi"
+            )
+            filter { line: String ->
+                line.replace(
+                    "kotlin.collections.Map<kotlin.String, kotlin.Any>",
+                    "kotlinx.serialization.json.JsonObject")
+            }
+        }
+
         withType<KotlinCompileCommon> {
-           dependsOn("openApiGenerate")
+            dependsOn("fixOpenApiGeneratorIssue")
         }
         named("sourcesJar") {
-            dependsOn("openApiGenerate")
+            dependsOn("fixOpenApiGeneratorIssue")
         }
     }
     jvm {
@@ -58,19 +74,23 @@ kotlin {
                 }
             }
 
-            named<KotlinJvmCompile>("compileKotlinJvm") {
+            named<Copy>("fixOpenApiGeneratorIssue") {
                 dependsOn("openApiGenerate")
+            }
+
+            named<KotlinJvmCompile>("compileKotlinJvm") {
+                dependsOn("fixOpenApiGeneratorIssue")
                 compilerOptions {
                     jvmTarget.set(JvmTarget.JVM_11)
                 }
             }
 
             named("jvmSourcesJar") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
 
             named<Jar>("jvmJar") {
-                dependsOn("compileKotlinJvm")
+                dependsOn("fixOpenApiGeneratorIssue")
                 archiveBaseName.set("openapi")
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 from(configurations.kotlinCompilerClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
@@ -82,10 +102,10 @@ kotlin {
     js {
         tasks {
             named("compileKotlinJs") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
             named("jsSourcesJar") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
         }
         nodejs()
@@ -94,37 +114,37 @@ kotlin {
     iosX64 {
         tasks {
             named("compileKotlinIosX64") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
             named("iosX64SourcesJar") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
         }
     }
     iosArm64 {
         tasks {
             named("compileKotlinIosArm64") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
             named("iosArm64SourcesJar") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
         }
     }
     iosSimulatorArm64 {
         tasks {
             named("compileKotlinIosSimulatorArm64") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
             named("iosSimulatorArm64SourcesJar") {
-                dependsOn("openApiGenerate")
+                dependsOn("fixOpenApiGeneratorIssue")
             }
         }
     }
 
     sourceSets {
         val commonMain by getting {
-            kotlin.srcDir("build/generated/src/commonMain/kotlin")
+            kotlin.srcDir("build/copy/src/commonMain/kotlin")
             dependencies {
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
