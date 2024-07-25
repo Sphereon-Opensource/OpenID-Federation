@@ -1,11 +1,8 @@
 package com.sphereon.oid.fed.common.httpclient
 
-import com.sphereon.oid.fed.openapi.models.EntityStatement
-import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
-import com.sphereon.oid.fed.openapi.models.Metadata
+import com.sphereon.oid.fed.openapi.models.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -14,23 +11,32 @@ import kotlin.test.Test
 class OidFederationClientTest {
 
     private val entityStatement = EntityStatement(
-        iss = "test_iss",
-        sub = "test_sub",
-        metadata = Metadata(
-            federationEntity = FederationEntityMetadata(
-                federationListEndpoint = "http://www.example.com/list",
-                federationResolveEndpoint = "http://www.example.com/resolve",
-                organizationName = "test organization",
-                homepageUri = "http://www.example.com",
-                federationFetchEndpoint = "http://www.example.com/fetch",
+            iss = "https://edugain.org/federation",
+            sub = "https://openid.sunet.se",
+            exp = 1568397247,
+            iat = 1568310847,
+            sourceEndpoint = "https://edugain.org/federation/federation_fetch_endpoint",
+            jwks = JWKS(
+                propertyKeys = listOf(
+                    JWK(
+                        // missing e and n ?
+                        kid = "dEEtRjlzY3djcENuT01wOGxrZlkxb3RIQVJlMTY0...",
+                        kty = "RSA"
+                    )
+                )
+            ),
+            metadata = Metadata(
+                federationEntity = FederationEntityMetadata(
+                    organizationName = "SUNET"
+                )
             )
-        )
     )
 
     private val mockEngine = MockEngine {
         respond(
-            content = ByteReadChannel(Json.encodeToString(entityStatement)),
+            content = Json.encodeToString(entityStatement),
             status = HttpStatusCode.OK,
+            // Must be application/entity-statement+jwt, at the moment it's not supported
             headers = headersOf(HttpHeaders.ContentType, "application/json")
         )
     }
@@ -39,7 +45,20 @@ class OidFederationClientTest {
     fun testGetEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement("test_iss", HttpMethod.Get)
+            val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Get)
+            assert(response == entityStatement)
+        }
+    }
+
+    @Test
+    fun testPostEntityStatement() {
+        runBlocking {
+            val client = OidFederationClient(mockEngine)
+            val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Post,
+                Parameters.build {
+                    append("iss","https://edugain.org/federation")
+                    append("sub","https://openid.sunet.se")
+                })
             assert(response == entityStatement)
         }
     }

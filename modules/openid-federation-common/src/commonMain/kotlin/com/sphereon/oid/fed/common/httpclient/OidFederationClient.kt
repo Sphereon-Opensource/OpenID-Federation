@@ -19,8 +19,8 @@ import io.ktor.utils.io.core.*
 
 class OidFederationClient(
     engine: HttpClientEngine,
-    isRequestAuthenticated: Boolean = false,
-    isRequestCached: Boolean = false
+    private val isRequestAuthenticated: Boolean = false,
+    private val isRequestCached: Boolean = false
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache)
