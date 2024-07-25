@@ -24,6 +24,10 @@ repositories {
 
 kotlin {
     tasks {
+        named("build") {
+            finalizedBy("publish")
+        }
+
         // Temporary fix for this issue: https://github.com/OpenAPITools/openapi-generator/issues/17658
         register<Copy>("fixOpenApiGeneratorIssue") {
             from(
@@ -159,6 +163,18 @@ publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
             from(components["kotlin"])
+        }
+    }
+    repositories {
+        maven {
+            name = "sphereon-opensource-snapshots"
+            val snapshotsUrl = "https://nexus.sphereon.com/content/groups/sphereon-opensource-snapshots"
+            val releasesUrl = "https://nexus.sphereon.com/content/groups/sphereon-opensource-releases"
+            url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl)
+            credentials {
+                username = System.getenv("NEXUS_USERNAME")
+                password = System.getenv("NEXUS_PASSWORD")
+            }
         }
     }
 }
