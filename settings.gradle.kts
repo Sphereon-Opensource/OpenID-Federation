@@ -10,7 +10,7 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
-        //mavenLocal()
+        mavenLocal()
         mavenCentral()
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
@@ -31,7 +31,7 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
-        //mavenLocal()
+        mavenLocal()
         mavenCentral()
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
