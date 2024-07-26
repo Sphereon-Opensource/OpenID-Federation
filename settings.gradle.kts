@@ -12,6 +12,12 @@ pluginManagement {
         }
         mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://nexus.sphereon.com/content/groups/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/content/groups/sphereon-opensource-releases")
+        }
         gradlePluginPortal()
     }
 }
@@ -27,6 +33,12 @@ dependencyResolutionManagement {
         }
         mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://nexus.sphereon.com/content/groups/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/content/groups/sphereon-opensource-releases")
+        }
     }
 }
 
