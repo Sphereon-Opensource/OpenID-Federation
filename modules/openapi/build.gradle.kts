@@ -158,7 +158,15 @@ kotlin {
 publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
-            from(components["kotlin"])
+            artifacts {
+                from(components["kotlin"])
+                artifact(tasks["jsJar"]) {
+                    classifier = "js"
+                }
+                artifact(tasks["allMetadataJar"]) {
+                    classifier = "metadata"
+                }
+            }
         }
     }
     repositories {
