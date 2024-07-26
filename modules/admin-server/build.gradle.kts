@@ -19,10 +19,8 @@ dependencies {
     api(projects.modules.openidFederationCommon)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
-    implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
-    runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
 }
 

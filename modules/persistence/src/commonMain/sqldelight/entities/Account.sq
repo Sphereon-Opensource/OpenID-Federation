@@ -1,0 +1,27 @@
+CREATE TABLE account (
+    id  SERIAL PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+
+CREATE INDEX account_username_index ON account (username);
+
+findAll:
+SELECT * FROM account;
+
+create:
+INSERT INTO account (username) VALUES (?);
+
+delete:
+UPDATE account SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?;
+
+findByUsername:
+SELECT * FROM account WHERE username = ?;
+
+findById:
+SELECT * FROM account WHERE id = ?;
+
+update:
+UPDATE account SET username = ? WHERE id = ?;
