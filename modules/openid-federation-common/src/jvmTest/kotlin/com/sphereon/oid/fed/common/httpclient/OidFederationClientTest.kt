@@ -36,8 +36,7 @@ class OidFederationClientTest {
         respond(
             content = Json.encodeToString(entityStatement),
             status = HttpStatusCode.OK,
-            // Must be application/entity-statement+jwt, at the moment it's not supported
-            headers = headersOf(HttpHeaders.ContentType, "application/json")
+            headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
         )
     }
 
@@ -45,7 +44,7 @@ class OidFederationClientTest {
     fun testGetEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Get)
+            val response = client.fetchEntityStatement("https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se", HttpMethod.Get)
             assert(response == entityStatement)
         }
     }
