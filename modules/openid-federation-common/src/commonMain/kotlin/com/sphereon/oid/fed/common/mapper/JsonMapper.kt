@@ -1,8 +1,13 @@
 package com.sphereon.oid.fed.common.mapper
 
+import com.sphereon.oid.fed.common.model.JWTHeader
+import com.sphereon.oid.fed.common.model.JWTSignature
 import com.sphereon.oid.fed.openapi.models.EntityStatement
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class JsonMapper {
 
@@ -27,5 +32,28 @@ class JsonMapper {
             list.add(mapEntityStatement(jwtToken))
         }
         return list
+    }
+
+    /*
+     * Used for decoding JWT to a triple with Header, Payload and Signature
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    fun decodeJWTComponents(jwtToken: String): Triple<JWTHeader?, JsonElement?, JWTSignature?> {
+        val parts = jwtToken.split(".")
+        if (parts.size != 3) {
+            return Triple(null, null, null)
+        }
+
+        val headerJson = Base64.decode(parts[0]).decodeToString()
+        val payloadJson = Base64.decode(parts[1]).decodeToString()
+
+        return try {
+            Triple(
+                Json.decodeFromString(headerJson), Json.parseToJsonElement(payloadJson), JWTSignature(parts[2])
+            )
+        } catch (e: Exception) {
+            println(e.printStackTrace())
+            Triple(null, null, null)
+        }
     }
 }
