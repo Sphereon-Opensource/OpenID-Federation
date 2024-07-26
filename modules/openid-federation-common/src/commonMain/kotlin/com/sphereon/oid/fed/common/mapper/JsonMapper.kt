@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.common.mapper
 
-import com.sphereon.oid.fed.common.model.JWTHeader
-import com.sphereon.oid.fed.common.model.JWTSignature
 import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.JWTSignature
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement

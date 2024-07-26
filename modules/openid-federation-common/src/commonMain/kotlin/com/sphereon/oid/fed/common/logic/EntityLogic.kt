@@ -26,8 +26,5 @@ class EntityLogic {
 }
 
 enum class EntityType {
-    LEAF,
-    INTERMEDIATE,
-    TRUST_ANCHOR,
-    UNDEFINED
+    LEAF, INTERMEDIATE, TRUST_ANCHOR, UNDEFINED
 }
