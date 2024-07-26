@@ -8,6 +8,8 @@ CREATE TABLE account (
 
 CREATE INDEX account_username_index ON account (username);
 
+INSERT INTO account (username) VALUES ('root');
+
 findAll:
 SELECT * FROM account;
 

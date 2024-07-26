@@ -16,8 +16,3 @@ actual class PlatformSqlDriver {
         return driver
     }
 }
-
-actual fun createDatabase(driverFactory: DriverFactory): Database {
-    val driver = driverFactory.createDriver(DatabaseConfig.Postgres("jdbc:postgresql://localhost:5432/oid_fed", "oid_fed", "oid_fed"))
-    return Database(driver)
-}
