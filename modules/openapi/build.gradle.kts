@@ -24,9 +24,6 @@ repositories {
 
 kotlin {
     tasks {
-        build {
-            finalizedBy("publish")
-        }
         // Temporary fix for this issue: https://github.com/OpenAPITools/openapi-generator/issues/17658
         register<Copy>("fixOpenApiGeneratorIssue") {
             from(
