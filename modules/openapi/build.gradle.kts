@@ -34,7 +34,7 @@ openApiGenerate {
     inputSpec.set("$projectDir/src/main/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
     library.set("multiplatform")
     outputDir.set("$projectDir/build/generated")
-configOptions.set(
+    configOptions.set(
         mapOf(
             "dateLibrary" to "string"
         )

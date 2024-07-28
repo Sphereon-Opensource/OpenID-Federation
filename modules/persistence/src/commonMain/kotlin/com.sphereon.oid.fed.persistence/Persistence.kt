@@ -1,13 +1,7 @@
-import com.sphereon.oid.fed.persistence.Database
+package com.sphereon.oid.fed.persistence
+
 import com.sphereon.oid.fed.persistence.repositories.AccountRepository
 
-class Persistence(databaseFactory: DatabaseFactory, config: DatabaseConfig) {
-    val database: Database
+expect object Persistence {
     val accountRepository: AccountRepository
-
-    init {
-        val driver = databaseFactory.createDriver(config)
-        database = Database(driver)
-        accountRepository = AccountRepository(database)
-    }
 }

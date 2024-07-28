@@ -25,7 +25,7 @@ tags:
 
 servers:
   - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d36
+    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d35
 
 paths:
   /status:
@@ -1075,7 +1075,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountResponse'
+                $ref: '#/components/schemas/AccountDTO'
         '401':
           description: Unauthorized
           content:
@@ -1098,14 +1098,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAccountRequest'
+              $ref: '#/components/schemas/CreateAccountDTO'
       responses:
         '201':
           description: Account created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateAccountResponse'
+                $ref: '#/components/schemas/AccountDTO'
         '400':
           description: Invalid request
           content:
@@ -1905,6 +1905,7 @@ components:
       properties:
         revoked_at:
           type: string
+          format: date-time
         reason:
           type: string
 
@@ -1934,6 +1935,7 @@ components:
           description: Expiration time after which the statement MUST NOT be accepted for processing.
         iat:
           type: integer
+          format: date-time
           description: The time the statement was issued.
         jwks:
           $ref: '#/components/schemas/JWKS'
@@ -3397,9 +3399,11 @@ components:
       properties:
         iss:
           type: string
+          format: date-time
           description: The Entity's Entity Identifier.
         iat:
-          type: integer
+          type: string
+          format: date-time
           description: Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.
         keys:
           type: array
@@ -3419,15 +3423,19 @@ components:
       properties:
         iss:
           type: string
+          format: date-time
           description: Entity Identifier of the issuer of the resolve response.
         sub:
           type: string
+          format: date-time
           description: Entity Identifier of the subject of the resolve response.
         iat:
-          type: integer
+          type: string
+          format: date-time
           description: Time when this resolution was issued. This is expressed as Seconds Since the Epoch.
         exp:
-          type: integer
+          type: string
+          format: date-time
           description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
         metadata:
           $ref: '#/components/schemas/Metadata'
@@ -3497,40 +3505,15 @@ components:
             type: string
           description: The updated list of scopes for the user.
 
-    CreateAccountRequest:
+    CreateAccountDTO:
       type: object
       properties:
-        name:
-          type: string
-          description: The name of the account.
-          example: Acme Corporation
-        slug:
-          type: string
-          description: A unique, URL-friendly identifier for the account. Must be unique.
-          example: acme-corp
-      required:
-        - name
-        - slug
-
-    CreateAccountResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: The unique identifier for the newly created account.
-          example: 12345
         username:
           type: string
           description: The username of the account.
-          example: acmecorp
-        createdAt:
-          type: string
-          format: date-time
-          description: The date and time when the account was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: The date and time when the account was last updated.
+          example: acmeco
+      required:
+        - username
 
     AddUserToAccountRequest:
       type: object
@@ -3563,7 +3546,7 @@ components:
           description: The role of the user within the account.
           example: admin
 
-    Account:
+    AccountDTO:
       type: object
       properties:
         id:
@@ -3574,19 +3557,6 @@ components:
           type: string
           description: The username of the account.
           example: acmecorp
-        createdAt:
-          type: string
-          format: date-time
-          description: The date and time when the account was created.
-        updatedAt:
-          type: string
-          format: date-time
-          description: The date and time when the account was last updated.
-
-    AccountResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/Account'
 
     CreateEntityStatementRequest:
       properties:
@@ -3660,7 +3630,7 @@ components:
 
     UserAccount:
       allOf:
-        - $ref: '#/components/schemas/Account'
+        - $ref: '#/components/schemas/AccountDTO'
       type: object
       properties:
         roles:
