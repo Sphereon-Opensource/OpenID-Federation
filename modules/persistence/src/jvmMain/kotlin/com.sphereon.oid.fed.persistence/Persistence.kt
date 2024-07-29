@@ -8,9 +8,9 @@ actual object Persistence {
 
     init {
         val driver = PlatformSqlDriver().createPostgresDriver(
-            System.getenv(Constants.DB_URL),
-            System.getenv(Constants.DB_USER),
-            System.getenv(Constants.DB_PASSWORD)
+            System.getenv(Constants.DATASOURCE_URL),
+            System.getenv(Constants.DATASOURCE_USER),
+            System.getenv(Constants.DATASOURCE_PASSWORD)
         )
         val database = Database(driver)
         accountRepository = AccountRepository(database)

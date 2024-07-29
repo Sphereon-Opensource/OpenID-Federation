@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-
 plugins {
     kotlin("multiplatform") version "2.0.0"
     id("app.cash.sqldelight") version "2.0.2"
@@ -26,12 +24,6 @@ sqldelight {
 
 kotlin {
     jvm()
-
-    @OptIn(ExperimentalKotlinGradlePluginApi::class)
-    compilerOptions {
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
-
-    }
 
     sourceSets {
         commonMain {
