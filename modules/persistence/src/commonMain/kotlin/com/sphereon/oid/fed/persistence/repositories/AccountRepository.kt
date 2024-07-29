@@ -16,7 +16,7 @@ class AccountRepository(database: Database) {
     }
 
     fun create(account: CreateAccountDTO) {
-        accountQueries.create(username = account.username)
+        return accountQueries.create(username = account.username)
     }
 
     fun findAll(): List<Account> {
@@ -24,10 +24,10 @@ class AccountRepository(database: Database) {
     }
 
     fun delete(id: Int) {
-        accountQueries.delete(id)
+        return accountQueries.delete(id)
     }
 
     fun update(id: Int, account: Account) {
-        accountQueries.update(account.username, id)
+        return accountQueries.update(account.username, id)
     }
 }
