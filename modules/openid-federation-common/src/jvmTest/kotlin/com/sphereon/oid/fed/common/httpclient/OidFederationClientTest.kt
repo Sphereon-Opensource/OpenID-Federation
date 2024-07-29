@@ -44,10 +44,7 @@ class OidFederationClientTest {
     fun testGetEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement(HttpMethod.Get, Parameters.build {
-                append("iss", "https://edugain.org/federation")
-                append("sub", "https://openid.sunet.se")
-            })
+            val response = client.fetchEntityStatement("https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se", HttpMethod.Get)
             assert(response == entityStatement)
         }
     }
@@ -56,10 +53,11 @@ class OidFederationClientTest {
     fun testPostEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement(HttpMethod.Post, Parameters.build {
-                append("iss", "https://edugain.org/federation")
-                append("sub", "https://openid.sunet.se")
-            })
+            val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Post,
+                Parameters.build {
+                    append("iss","https://edugain.org/federation")
+                    append("sub","https://openid.sunet.se")
+                })
             assert(response == entityStatement)
         }
     }
