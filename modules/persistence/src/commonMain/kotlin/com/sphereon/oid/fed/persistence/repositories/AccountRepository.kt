@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.persistence.repositories
 
-import com.sphereon.oid.fed.openapi.models.CreateAccountRequest
+import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import entities.*
 import com.sphereon.oid.fed.persistence.Database
 
@@ -15,12 +15,12 @@ class AccountRepository(database: Database) {
         return accountQueries.findByUsername(username).executeAsOneOrNull()
     }
 
-    fun create(account: CreateAccountRequest) {
+    fun create(account: CreateAccountDTO) {
         accountQueries.create(username = account.username)
     }
 
     fun findAll(): List<Account> {
-        return accountQueries.findAll().executeAsList().
+        return accountQueries.findAll().executeAsList()
     }
 
     fun delete(id: Int) {
