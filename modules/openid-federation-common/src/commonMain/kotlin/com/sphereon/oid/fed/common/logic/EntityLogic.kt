@@ -4,25 +4,18 @@ import com.sphereon.oid.fed.openapi.models.EntityStatement
 
 class EntityLogic {
 
-    fun getEntityType(entityStatement: EntityStatement): EntityType {
-        if (isFederationListEndpointPresent(entityStatement) == true && isAuthorityHintPresent(entityStatement) == false) {
-            return EntityType.TRUST_ANCHOR
-        } else if (isFederationListEndpointPresent(entityStatement) == true && isAuthorityHintPresent(entityStatement) == true) {
-            return EntityType.INTERMEDIATE
-        } else if (isFederationListEndpointPresent(entityStatement) == false && isAuthorityHintPresent(entityStatement) == true) {
-            return EntityType.LEAF
-        } else {
-            return EntityType.UNDEFINED
-        }
+    fun getEntityType(entityStatement: EntityStatement): EntityType = when {
+        isFederationListEndpointPresent(entityStatement) && !isAuthorityHintPresent(entityStatement) -> EntityType.TRUST_ANCHOR
+        isFederationListEndpointPresent(entityStatement) && isAuthorityHintPresent(entityStatement) -> EntityType.INTERMEDIATE
+        !isFederationListEndpointPresent(entityStatement) && isAuthorityHintPresent(entityStatement) -> EntityType.LEAF
+        else -> EntityType.UNDEFINED
     }
 
-    private fun isAuthorityHintPresent(entityStatement: EntityStatement): Boolean {
-        return entityStatement.authorityHints?.isEmpty() == false
-    }
+    private fun isAuthorityHintPresent(entityStatement: EntityStatement): Boolean =
+        entityStatement.authorityHints?.isNotEmpty() ?: false
 
-    private fun isFederationListEndpointPresent(entityStatement: EntityStatement): Boolean {
-        return entityStatement.metadata?.federationEntity?.federationListEndpoint?.isNotEmpty() == true
-    }
+    private fun isFederationListEndpointPresent(entityStatement: EntityStatement): Boolean =
+        entityStatement.metadata?.federationEntity?.federationListEndpoint?.isNotEmpty() ?: false
 }
 
 enum class EntityType {
