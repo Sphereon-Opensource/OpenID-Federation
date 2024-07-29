@@ -22,6 +22,8 @@ class OidFederationClient(
     private val isRequestAuthenticated: Boolean = false,
     private val isRequestCached: Boolean = false
 ) {
+    private val BASE_URL = "https://www.example.com"
+
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache)
         install(ContentNegotiation) {
@@ -29,8 +31,12 @@ class OidFederationClient(
             json()
         }
         install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.INFO
+            logger = object : Logger {
+                override fun log(message: String) {
+                    com.sphereon.oid.fed.common.logging.Logger.info("API", message)
+                }
+            }
+            level = LogLevel.ALL
         }
         if (isRequestAuthenticated) {
             install(Auth) {
@@ -47,21 +53,24 @@ class OidFederationClient(
         }
     }
 
-    suspend fun fetchEntityStatement(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): EntityStatement {
+    suspend fun fetchEntityStatement(httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): EntityStatement {
         return when (httpMethod) {
-            Get -> getEntityStatement(url)
-            Post -> postEntityStatement(url, parameters)
+            Get -> getEntityStatement(parameters)
+            Post -> postEntityStatement(parameters)
             else -> throw IllegalArgumentException("Unsupported HTTP method: $httpMethod")
         }
     }
 
-    private suspend fun getEntityStatement(url: String): EntityStatement {
-        return client.use { it.get(url).body<EntityStatement>() }
+    private suspend fun getEntityStatement(parameters: Parameters): EntityStatement {
+        // Appends parameters to the URL
+        val urlWithParams = if (parameters.isEmpty()) BASE_URL else "$BASE_URL?${parameters.formUrlEncode()}"
+
+        return client.use { it.get(urlWithParams).body<EntityStatement>() }
     }
 
-    private suspend fun postEntityStatement(url: String, parameters: Parameters): EntityStatement {
+    private suspend fun postEntityStatement(parameters: Parameters): EntityStatement {
         return client.use {
-            it.post(url) {
+            it.post(BASE_URL) {
                 setBody(FormDataContent(parameters))
             }.body<EntityStatement>()
         }
