@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     kotlin("multiplatform") version "2.0.0"
     id("app.cash.sqldelight") version "2.0.2"
@@ -23,14 +25,19 @@ sqldelight {
 }
 
 kotlin {
-    jvm{
-        withJava()
+    jvm()
+
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    compilerOptions {
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
+
     }
 
     sourceSets {
         commonMain {
             dependencies {
                 implementation(projects.modules.openapi)
+                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
             }
         }
 
@@ -38,14 +45,7 @@ kotlin {
             dependencies {
                 implementation("com.zaxxer:HikariCP:5.1.0")
                 implementation("org.postgresql:postgresql:42.7.3")
-                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
             }
         }
-    }
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
     }
 }
