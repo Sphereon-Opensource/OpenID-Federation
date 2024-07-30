@@ -48,7 +48,12 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                implementation("io.ktor:ktor-client-auth:$ktorVersion")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
                 implementation(libs.kermit.logging)
@@ -58,11 +63,13 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
+                implementation("io.ktor:ktor-client-mock:$ktorVersion")
             }
         }
         val jvmMain by getting {
             dependencies {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
@@ -71,11 +78,11 @@ kotlin {
                 implementation(kotlin("test-junit"))
             }
         }
-
 //  TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
 //        val androidMain by getting {
 //            dependencies {
 //                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+//                implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
 //            }
 //        }
 //        val androidUnitTest by getting {
@@ -83,23 +90,35 @@ kotlin {
 //                implementation(kotlin("test-junit"))
 //            }
 //        }
-//
+
 //        val iosMain by creating {
 //            dependsOn(commonMain)
 //            dependencies {
-//                implementation("io.ktor:ktor-client-ios:$ktorVersion")
+//                implementation("io.ktor:ktor-client-core-ios:$ktorVersion")
 //            }
 //        }
 //        val iosX64Main by getting {
 //            dependsOn(iosMain)
+//            dependencies {
+//                implementation("io.ktor:ktor-client-core-iosx64:$ktorVersion")
+//                implementation("io.ktor:ktor-client-cio-iosx64:$ktorVersion")
+//            }
 //        }
 //        val iosArm64Main by getting {
 //            dependsOn(iosMain)
+//            dependencies {
+//                implementation("io.ktor:ktor-client-core-iosarm64:$ktorVersion")
+//                implementation("io.ktor:ktor-client-cio-iosarm64:$ktorVersion")
+//            }
 //        }
 //        val iosSimulatorArm64Main by getting {
 //            dependsOn(iosMain)
+//            dependencies {
+//                implementation("io.ktor:ktor-client-core-iossimulatorarm64:$ktorVersion")
+//                implementation("io.ktor:ktor-client-cio-iossimulatorarm64:$ktorVersion")
+//            }
 //        }
-//
+
 //        val iosTest by creating {
 //            dependsOn(commonTest)
 //            dependencies {
@@ -109,7 +128,8 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
                 implementation(npm("typescript", "5.5.3"))
                 implementation(npm("jose", "5.6.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")

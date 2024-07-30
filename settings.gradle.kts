@@ -10,7 +10,14 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+        }
         gradlePluginPortal()
     }
 }
@@ -24,7 +31,14 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+        }
     }
 }
 

@@ -161,6 +161,37 @@ components:
           items:
             $ref: '#/components/schemas/JWK'
 
+    JWTHeader:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        alg:
+          type: string
+          description: The algorithm used to sign the JWT (e.g., RS256)
+        kid:
+          type: string
+          description: The unique identifier for the key used to sign the JWT
+        typ:
+          type: string
+          description: The type of token (optional, e.g., "entity-statement+jwt")
+          nullable: true
+        trust_chain:
+          type: array
+          description: An optional list of trust chain certificates or keys
+          items:
+            type: string
+          nullable: true
+
+    JWTSignature:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        value:
+          type: string
+          description: The encoded JWT signature value.
+
     EntityStatement:
       type: object
       x-tags:
