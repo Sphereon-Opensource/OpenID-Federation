@@ -33,8 +33,6 @@ class EntityStatementJwtConverter: ContentConverter {
 
 class OutgoingEntityStatementContent(private val entityStatement: EntityStatement): OutgoingContent.ByteArrayContent() {
 
-    override fun bytes(): ByteArray {
-        val serializedData = Json.encodeToString(entityStatement)
-        return serializedData.toByteArray(Charsets.UTF_8)
-    }
+    override fun bytes(): ByteArray =
+        Json.encodeToString(entityStatement).toByteArray(Charsets.UTF_8)
 }
