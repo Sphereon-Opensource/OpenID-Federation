@@ -1,9 +1,10 @@
 package com.sphereon.oid.fed.persistence.repositories
 
+import app.cash.sqldelight.ExecutableQuery
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Database
-import models.Account
-import models.AccountQueries
+import com.sphereon.oif.fed.persistence.models.Account
+import com.sphereon.oif.fed.persistence.models.AccountQueries
 
 class AccountRepository(database: Database) {
     private val accountQueries: AccountQueries = database.accountQueries
@@ -16,7 +17,7 @@ class AccountRepository(database: Database) {
         return accountQueries.findByUsername(username).executeAsOneOrNull()
     }
 
-    fun create(account: CreateAccountDTO) {
+    fun create(account: CreateAccountDTO): ExecutableQuery<Account> {
         return accountQueries.create(username = account.username)
     }
 

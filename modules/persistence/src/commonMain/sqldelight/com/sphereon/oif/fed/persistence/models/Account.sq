@@ -2,7 +2,7 @@ findAll:
 SELECT * FROM account;
 
 create:
-INSERT INTO account (username) VALUES (?);
+INSERT INTO account (username) VALUES (?) RETURNING *;
 
 delete:
 UPDATE account SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?;
