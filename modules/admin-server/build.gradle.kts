@@ -22,6 +22,8 @@ dependencies {
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.postgres)
     runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
 }
