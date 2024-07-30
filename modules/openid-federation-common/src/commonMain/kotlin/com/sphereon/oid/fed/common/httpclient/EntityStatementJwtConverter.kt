@@ -19,15 +19,10 @@ class EntityStatementJwtConverter: ContentConverter {
         charset: Charset,
         typeInfo: TypeInfo,
         value: Any?
-    ): OutgoingContent? {
-        if (value is EntityStatement) {
-            return OutgoingEntityStatementContent(value)
-        } else if (value is String) {
-            JsonMapper().mapEntityStatement(value)?.let {
-                return OutgoingEntityStatementContent(it)
-            }
-        }
-        return null
+    ): OutgoingContent? = when (value) {
+        is EntityStatement -> OutgoingEntityStatementContent(value)
+        is String -> JsonMapper().mapEntityStatement(value)?.let { OutgoingEntityStatementContent(it) }
+        else -> null
     }
 
     override suspend fun deserialize(charset: Charset, typeInfo: TypeInfo, content: ByteReadChannel): Any? {
