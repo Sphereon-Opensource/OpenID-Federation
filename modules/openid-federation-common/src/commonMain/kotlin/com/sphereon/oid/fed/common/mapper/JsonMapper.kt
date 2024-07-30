@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.common.mapper
 
-import com.sphereon.oid.fed.common.logging.Logger
 import com.sphereon.oid.fed.openapi.models.EntityStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWTSignature
@@ -16,7 +15,7 @@ class JsonMapper {
      * Used for mapping JWT token to EntityStatement object
      */
     fun mapEntityStatement(jwtToken: String): EntityStatement? =
-        decodeJWTComponents(jwtToken)?.second?.let { Json.decodeFromJsonElement(it) }
+        decodeJWTComponents(jwtToken)?.payload?.let { Json.decodeFromJsonElement(it) }
 
     /*
      * Used for mapping trust chain
@@ -24,26 +23,31 @@ class JsonMapper {
     fun mapTrustChain(jwtTokenList: List<String>): List<EntityStatement?> = jwtTokenList.map { mapEntityStatement(it) }
 
     /*
-     * Used for decoding JWT to a triple with Header, Payload and Signature
+     * Used for decoding JWT to an object of JWT with Header, Payload and Signature
      */
     @OptIn(ExperimentalEncodingApi::class)
-    fun decodeJWTComponents(jwtToken: String): Triple<JWTHeader, JsonElement, JWTSignature>? {
+    fun decodeJWTComponents(jwtToken: String): JWT {
         val parts = jwtToken.split(".")
         if (parts.size != 3) {
-            Logger.error(tag = "OIDF", message = "Invalid JWT format: Expected 3 parts, found ${parts.size}")
-            return null
+            throw InvalidJwtException("Invalid JWT format: Expected 3 parts, found ${parts.size}")
         }
 
         val headerJson = Base64.decode(parts[0]).decodeToString()
         val payloadJson = Base64.decode(parts[1]).decodeToString()
 
         return try {
-            Triple(
+            JWT(
                 Json.decodeFromString(headerJson), Json.parseToJsonElement(payloadJson), JWTSignature(parts[2])
             )
         } catch (e: Exception) {
-            Logger.error(tag = "OIDF", message = "Error decoding from string", e)
-            return null
+            throw JwtDecodingException("Error decoding JWT components", e)
         }
     }
+
+    data class JWT(val header: JWTHeader, val payload: JsonElement, val signature: JWTSignature)
+
+
+    // Custom Exceptions
+    class InvalidJwtException(message: String) : Exception(message)
+    class JwtDecodingException(message: String, cause: Throwable) : Exception(message, cause)
 }
