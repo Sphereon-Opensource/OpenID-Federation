@@ -2075,7 +2075,7 @@ components:
         items:
           type: string
       example:
-        "https://openid.net/certification/op": []
+        "https://openid.net/certification/op": [ ]
         "https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf":
           - "https://swamid.se"
 
@@ -2107,7 +2107,8 @@ components:
           description: Identifier of the Trust Mark owner
         jwks:
           $ref: '#/components/schemas/JWKS'
-      additionalProperties: true
+        additionalProperties:
+          type: string
 
     NamingConstraints:
       type: object
@@ -2295,37 +2296,37 @@ components:
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "scope" values that this authorization server supports.
-          example: ["openid", "profile", "email"]
+          example: [ "openid", "profile", "email" ]
         response_types_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "response_type" values that this authorization server supports.
-          example: ["code", "token", "id_token"]
+          example: [ "code", "token", "id_token" ]
         response_modes_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "response_mode" values that this authorization server supports.
-          example: ["query", "fragment", "form_post"]
+          example: [ "query", "fragment", "form_post" ]
         grant_types_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 grant type values that this authorization server supports.
-          example: ["authorization_code", "implicit", "client_credentials", "refresh_token"]
+          example: [ "authorization_code", "implicit", "client_credentials", "refresh_token" ]
         token_endpoint_auth_methods_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this token endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         token_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the token endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         service_documentation:
           type: string
           description: URL of a page containing human-readable information that developers might want or need to know when using the authorization server.
@@ -2335,7 +2336,7 @@ components:
           items:
             type: string
           description: Languages and scripts supported for the user interface, represented as a JSON array of language tag values from BCP 47.
-          example: ["en-US", "fr-FR"]
+          example: [ "en-US", "fr-FR" ]
         op_policy_uri:
           type: string
           description: URL that the authorization server provides to the person registering the client to read about the authorization server's requirements on how the client can use the data provided by the authorization server.
@@ -2353,13 +2354,13 @@ components:
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this revocation endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         revocation_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the revocation endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         introspection_endpoint:
           type: string
           description: URL of the authorization server's OAuth 2.0 introspection endpoint.
@@ -2369,19 +2370,19 @@ components:
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this introspection endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         introspection_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the introspection endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         code_challenge_methods_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of Proof Key for Code Exchange (PKCE) code challenge methods supported by this authorization server.
-          example: ["plain", "S256"]
+          example: [ "plain", "S256" ]
 
     OAuthClientMetadata:
       allOf:
@@ -2631,7 +2632,7 @@ components:
         - authorization_code
         - implicit
         - refresh_token
-      example: ["authorization_code", "implicit"]
+      example: [ "authorization_code", "implicit" ]
 
     OpenIDConnectDynamicClientRegistrationApplicationType:
       type: string
