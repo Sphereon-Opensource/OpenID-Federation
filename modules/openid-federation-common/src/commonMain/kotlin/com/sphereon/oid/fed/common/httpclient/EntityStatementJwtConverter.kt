@@ -25,9 +25,9 @@ class EntityStatementJwtConverter: ContentConverter {
         else -> null
     }
 
-    override suspend fun deserialize(charset: Charset, typeInfo: TypeInfo, content: ByteReadChannel): Any? {
-        val text = content.readRemaining().readText(charset)
-        return Json.decodeFromString(EntityStatement.serializer(), text)
+    override suspend fun deserialize(charset: Charset, typeInfo: TypeInfo, content: ByteReadChannel): Any =
+        content.readRemaining().readText(charset).let {
+            Json.decodeFromString(EntityStatement.serializer(), it)
     }
 }
 
