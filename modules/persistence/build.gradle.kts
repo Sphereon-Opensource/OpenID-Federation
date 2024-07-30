@@ -17,10 +17,10 @@ sqldelight {
         create("Database") {
             packageName = "com.sphereon.oid.fed.persistence"
             dialect("app.cash.sqldelight:postgresql-dialect:2.0.2")
-            schemaOutputDirectory = file("com.jetbrains.handson.kmm.shared.cache")
-            migrationOutputDirectory = file("com.jetbrains.handson.kmm.shared.cache")
+            schemaOutputDirectory = file("src/commonMain/resources/db/migration")
+            migrationOutputDirectory = file("src/commonMain/resources/db/migration")
             deriveSchemaFromMigrations = true
-            migrationOutputFileFormat = ".sqm"
+            migrationOutputFileFormat = ".sql"
             srcDirs.from(
                 "src/commonMain/sqldelight"
             )
