@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class OidFederationClientTest {
 
@@ -45,7 +46,7 @@ class OidFederationClientTest {
         runBlocking {
             val client = OidFederationClient(mockEngine)
             val response = client.fetchEntityStatement("https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se", HttpMethod.Get)
-            assert(response == entityStatement)
+            assertEquals(entityStatement, response)
         }
     }
 
@@ -58,7 +59,7 @@ class OidFederationClientTest {
                     append("iss","https://edugain.org/federation")
                     append("sub","https://openid.sunet.se")
                 })
-            assert(response == entityStatement)
+            assertEquals(entityStatement, response)
         }
     }
 }
