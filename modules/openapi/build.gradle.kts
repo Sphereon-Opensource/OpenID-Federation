@@ -1,5 +1,10 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+
 plugins {
-    kotlin("jvm") version "2.0.0"
+    kotlin("multiplatform") version "2.0.0"
+    kotlin("plugin.serialization") version "2.0.0"
     id("org.openapi.generator") version "7.7.0"
     id("maven-publish")
 }
@@ -17,66 +22,163 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
-}
-
-openApiGenerate {
-    val openApiPackage: String by project
-    generatorName.set("kotlin")
-    packageName.set("com.sphereon.oid.fed.openapi")
-    apiPackage.set("$openApiPackage.api")
-    modelPackage.set("$openApiPackage.models")
-    inputSpec.set("$projectDir/src/main/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
-    library.set("multiplatform")
-    outputDir.set("$projectDir/build/generated")
-configOptions.set(
-        mapOf(
-            "dateLibrary" to "string"
-        )
-    )
-
-    if (isModelsOnlyProfile) {
-        globalProperties.set(
-            configOptions.get().plus(
-                mapOf(
-                    "models" to ""
-                )
+kotlin {
+    tasks {
+        // Temporary fix for this issue: https://github.com/OpenAPITools/openapi-generator/issues/17658
+        register<Copy>("fixOpenApiGeneratorIssue") {
+            from(
+                "$projectDir/build/generated/src/commonMain/kotlin/com/sphereon/oid/fed/openapi"
             )
-        )
+            into(
+                "$projectDir/build/copy/src/commonMain/kotlin/com/sphereon/oid/fed/openapi"
+            )
+            filter { line: String ->
+                line.replace(
+                    "kotlin.collections.Map<kotlin.String, kotlin.Any>",
+                    "kotlinx.serialization.json.JsonObject")
+            }
+        }
+
+        withType<KotlinCompileCommon> {
+            dependsOn("fixOpenApiGeneratorIssue")
+        }
+        named("sourcesJar") {
+            dependsOn("fixOpenApiGeneratorIssue")
+        }
     }
-}
+    jvm {
+        tasks {
+            openApiGenerate {
+                val openApiPackage: String by project
+                generatorName.set("kotlin")
+                packageName.set("com.sphereon.oid.fed.openapi")
+                apiPackage.set("$openApiPackage.api")
+                modelPackage.set("$openApiPackage.models")
+                inputSpec.set("$projectDir/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
+                library.set("multiplatform")
+                outputDir.set("$projectDir/build/generated")
+                configOptions.set(
+                    mapOf(
+                        "dateLibrary" to "string"
+                    )
+                )
 
+                if (isModelsOnlyProfile) {
+                    globalProperties.set(
+                        configOptions.get().plus(
+                            mapOf(
+                                "models" to ""
+                            )
+                        )
+                    )
+                }
+            }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenKotlin") {
-            from(components["kotlin"])
+            named<Copy>("fixOpenApiGeneratorIssue") {
+                dependsOn("openApiGenerate")
+            }
+
+            named<KotlinJvmCompile>("compileKotlinJvm") {
+                dependsOn("fixOpenApiGeneratorIssue")
+                compilerOptions {
+                    jvmTarget.set(JvmTarget.JVM_11)
+                }
+            }
+
+            named("jvmSourcesJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+
+            named<Jar>("jvmJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+                archiveBaseName.set("openapi")
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                from(configurations.kotlinCompilerClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
+                from("$projectDir/build/classes/kotlin/jvm/main")
+            }
+        }
+    }
+
+    js {
+        tasks {
+            named("compileKotlinJs") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+            named("jsSourcesJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+        }
+        nodejs()
+    }
+
+    iosX64 {
+        tasks {
+            named("compileKotlinIosX64") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+            named("iosX64SourcesJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+        }
+    }
+    iosArm64 {
+        tasks {
+            named("compileKotlinIosArm64") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+            named("iosArm64SourcesJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+        }
+    }
+    iosSimulatorArm64 {
+        tasks {
+            named("compileKotlinIosSimulatorArm64") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+            named("iosSimulatorArm64SourcesJar") {
+                dependsOn("fixOpenApiGeneratorIssue")
+            }
+        }
+    }
+
+    sourceSets {
+        val commonMain by getting {
+            kotlin.srcDir("build/copy/src/commonMain/kotlin")
+            dependencies {
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+            }
         }
     }
 }
 
-tasks.compileKotlin {
-    dependsOn(tasks.openApiGenerate)
-}
-
-tasks.jar {
-    dependsOn(tasks.compileKotlin)
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    archiveBaseName.set(project.name)
-    from(configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) })
-    from("$projectDir/build/classes/kotlin/main")
-}
-
-kotlin {
-    sourceSets.main {
-        kotlin.srcDirs(
-            "$projectDir/build/generated/src/commonMain/kotlin"
-        )
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            artifacts {
+                from(components["kotlin"])
+                artifact(tasks["jsJar"]) {
+                    classifier = "js"
+                }
+                artifact(tasks["allMetadataJar"]) {
+                    classifier = "metadata"
+                }
+            }
+        }
     }
-    jvmToolchain(21)
+    repositories {
+        maven {
+            name = "sphereon-opensource-snapshots"
+            val snapshotsUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-snapshots/"
+            val releasesUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-releases/"
+            url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl)
+            credentials {
+                username = System.getenv("NEXUS_USERNAME")
+                password = System.getenv("NEXUS_PASSWORD")
+            }
+        }
+    }
 }
