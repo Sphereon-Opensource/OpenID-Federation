@@ -9,7 +9,12 @@ class JoseJwtTest {
 
     @Test
     fun signTest() {
-        val signature = sign("{ \"iss\": \"test\" }", emptyMap())
+        val key = RSAKeyGenerator(2048).keyID("key1").generate()
+        val signature = sign(
+            "{ \"iss\": \"test\" }",
+            "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${key.keyID}\"}",
+            mutableMapOf("key" to key)
+        )
         assertTrue { signature.startsWith("ey") }
     }
 
@@ -17,7 +22,7 @@ class JoseJwtTest {
     fun verifyTest() {
         val kid = "key1"
         val key: RSAKey = RSAKeyGenerator(2048).keyID(kid).generate()
-        val signature = sign("{ \"iss\": \"test\" }", mutableMapOf(
+        val signature = sign("{ \"iss\": \"test\" }","{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"test\"}", mutableMapOf(
             "key" to key,
             "jwtHeader" to "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${key.keyID}\"}"
         ))

@@ -1,35 +1,29 @@
 package com.sphereon.oid.fed.common.jwt
 
-import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jose.jwk.RSAKey
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import java.util.*
 
 actual fun sign(
     payload: String,
+    header: String,
     opts: Map<String, Any>
 ): String {
-    val rsaJWK = opts["key"] as RSAKey? ?: RSAKeyGenerator(2048)
-        .keyID(UUID.randomUUID().toString())
-        .generate()
+    val rsaJWK = opts["key"] as RSAKey? ?: throw IllegalArgumentException("The RSA key pair is required")
 
-    val header = opts["jwtHeader"]?.let {
-        JWSHeader.parse(it as String?)
-    } ?: JWSHeader.Builder(JWSAlgorithm.RS256).keyID(rsaJWK.keyID).build()
+    val protectedHeader = JWSHeader.parse(header)
     
     val signer: JWSSigner = RSASSASigner(rsaJWK)
 
     val claimsSet = JWTClaimsSet.parse(payload)
 
     val signedJWT = SignedJWT(
-        header,
+        protectedHeader,
         claimsSet
     )
 

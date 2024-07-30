@@ -13,7 +13,7 @@ class JoseJwtTest {
     @Test
     fun signTest() = runTest {
         val keyPair = (generateKeyPair("RS256") as Promise<dynamic>).await()
-        val result = async { sign("{ \"iss\": \"test\" }", mutableMapOf("privateKey" to keyPair.privateKey)) }
+        val result = async { sign("{\"iss\":\"test\"}", "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"test\"}", mutableMapOf("privateKey" to keyPair.privateKey)) }
         assertTrue((result.await() as Promise<String>).await().startsWith("ey"))
     }
 
@@ -21,7 +21,7 @@ class JoseJwtTest {
     @Test
     fun verifyTest() = runTest {
         val keyPair = (generateKeyPair("RS256") as Promise<dynamic>).await()
-        val signed = (sign("{ \"iss\": \"test\" }", mutableMapOf("privateKey" to keyPair.privateKey)) as Promise<dynamic>).await()
+        val signed = (sign("{\"iss\":\"test\"}", "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"test\" }", mutableMapOf("privateKey" to keyPair.privateKey)) as Promise<dynamic>).await()
         val result = async { verify(signed, keyPair.publicKey, emptyMap()) }
         assertTrue((result.await() as Promise<Boolean>).await())
     }
