@@ -1,0 +1,18 @@
+findAll:
+SELECT * FROM account;
+
+create:
+INSERT INTO account (username) VALUES (?);
+
+delete:
+UPDATE account SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?;
+
+findByUsername:
+SELECT * FROM account WHERE username = ?;
+
+findById:
+SELECT * FROM account WHERE id = ?;
+
+update:
+UPDATE account SET username = ? WHERE id = ?;
+

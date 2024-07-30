@@ -16,7 +16,9 @@ java {
 }
 
 dependencies {
+    api(projects.modules.openapi)
     api(projects.modules.openidFederationCommon)
+    api(projects.modules.persistence)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
