@@ -1,11 +1,9 @@
-package com.sphereon.oid.fed.server.admin.services
+package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.extensions.toDTO
-import com.sphereon.oid.fed.server.admin.Constants
-
+import com.sphereon.oid.fed.services.extensions.toDTO
 
 class AccountService {
     private val accountRepository = Persistence.accountRepository

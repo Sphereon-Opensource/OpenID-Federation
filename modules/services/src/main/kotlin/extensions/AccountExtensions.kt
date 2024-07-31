@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.persistence.extensions
+package com.sphereon.oid.fed.services.extensions
 
 import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oif.fed.persistence.models.Account

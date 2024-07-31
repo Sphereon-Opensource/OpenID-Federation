@@ -2,7 +2,7 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
-import com.sphereon.oid.fed.server.admin.services.AccountService
+import com.sphereon.oid.fed.services.AccountService
 import org.springframework.web.bind.annotation.*
 
 @RestController
