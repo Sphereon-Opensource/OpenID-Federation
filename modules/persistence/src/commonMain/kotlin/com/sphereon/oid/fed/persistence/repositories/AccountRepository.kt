@@ -2,12 +2,11 @@ package com.sphereon.oid.fed.persistence.repositories
 
 import app.cash.sqldelight.ExecutableQuery
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
-import com.sphereon.oid.fed.persistence.Database
 import com.sphereon.oif.fed.persistence.models.Account
 import com.sphereon.oif.fed.persistence.models.AccountQueries
 
-class AccountRepository(database: Database) {
-    private val accountQueries: AccountQueries = database.accountQueries
+class AccountRepository(accountQueries: AccountQueries) {
+    private val accountQueries = accountQueries
 
     fun findById(id: Int): Account? {
         return accountQueries.findById(id).executeAsOneOrNull()

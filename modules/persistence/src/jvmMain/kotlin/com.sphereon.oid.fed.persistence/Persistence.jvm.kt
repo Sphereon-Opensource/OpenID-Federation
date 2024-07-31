@@ -11,11 +11,10 @@ actual object Persistence {
 
     init {
         val driver = getDriver()
-        val database = Database(driver)
-
         runMigrations(driver)
 
-        accountRepository = AccountRepository(database)
+        val database = Database(driver)
+        accountRepository = AccountRepository(database.accountQueries)
     }
 
     private fun getDriver(): SqlDriver {
