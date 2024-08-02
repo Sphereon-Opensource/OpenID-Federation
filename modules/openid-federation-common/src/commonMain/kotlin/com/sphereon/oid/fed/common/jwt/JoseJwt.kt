@@ -1,4 +1,7 @@
 package com.sphereon.oid.fed.common.jwt
 
-expect fun sign(payload: String, header: String, opts: Map<String, Any>): String
+expect class JwtHeader
+expect class JwtPayload
+
+expect fun sign(payload: JwtPayload, header: JwtHeader, opts: Map<String, Any>): String
 expect fun verify(jwt: String, key: Any, opts: Map<String, Any>): Boolean

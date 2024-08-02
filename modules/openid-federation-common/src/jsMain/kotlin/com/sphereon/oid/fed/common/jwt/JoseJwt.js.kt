@@ -1,5 +1,10 @@
 package com.sphereon.oid.fed.common.jwt
 
+import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.JWTHeader
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
 @JsModule("jose")
 @JsNonModule
 external object Jose {
@@ -18,22 +23,20 @@ external object Jose {
     fun jwtVerify(jwt: String, key: Any, options: dynamic = definedExternally): dynamic
 }
 
-@JsModule("uuid")
-@JsNonModule
-external object Uuid {
-    fun v4(): String
-}
+actual typealias JwtPayload = EntityStatement
+actual typealias JwtHeader = JWTHeader
 
 @ExperimentalJsExport
 @JsExport
 actual fun sign(
-    payload: String,
-    header: String,
+    payload: JwtPayload,
+    header: JwtHeader,
     opts: Map<String, Any>
 ): String {
     val privateKey = opts["privateKey"] ?: throw IllegalArgumentException("JWK private key is required")
-    return Jose.SignJWT(JSON.parse<Any>(payload).asDynamic())
-        .setProtectedHeader(JSON.parse<Any>(header).asDynamic())
+
+    return Jose.SignJWT(JSON.parse<Any>(Json.encodeToString(payload)))
+        .setProtectedHeader(JSON.parse<Any>(Json.encodeToString(header)))
         .sign(key = privateKey, signOptions = opts)
 }
 

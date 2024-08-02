@@ -11,8 +11,15 @@ class JoseJwtTest {
     fun signTest() {
         val key = RSAKeyGenerator(2048).keyID("key1").generate()
         val signature = sign(
-            "{ \"iss\": \"test\" }",
-            "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${key.keyID}\"}",
+            JwtPayload.parse(
+                mutableMapOf<String, Any>(
+                    "iss" to "test"
+                )
+            ),
+            JwtHeader.parse(mutableMapOf<String, Any>(
+                "typ" to "JWT",
+                "alg" to "RS256",
+                "kid" to key.keyID)),
             mutableMapOf("key" to key)
         )
         assertTrue { signature.startsWith("ey") }
@@ -22,10 +29,16 @@ class JoseJwtTest {
     fun verifyTest() {
         val kid = "key1"
         val key: RSAKey = RSAKeyGenerator(2048).keyID(kid).generate()
-        val signature = sign("{ \"iss\": \"test\" }","{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"test\"}", mutableMapOf(
-            "key" to key,
-            "jwtHeader" to "{\"typ\":\"JWT\",\"alg\":\"RS256\",\"kid\":\"${key.keyID}\"}"
-        ))
+        val signature = sign(
+            JwtPayload.parse(
+                mutableMapOf<String, Any>("iss" to "test")
+            ),
+            JwtHeader.parse(mutableMapOf<String, Any>(
+                    "typ" to "JWT",
+                    "alg" to "RS256",
+                    "kid" to key.keyID)),
+            mutableMapOf("key" to key)
+        )
         assertTrue { verify(signature, key, emptyMap()) }
     }
 }

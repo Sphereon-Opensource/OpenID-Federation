@@ -9,22 +9,21 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 
+actual typealias JwtPayload = JWTClaimsSet
+actual typealias JwtHeader = JWSHeader
+
 actual fun sign(
-    payload: String,
-    header: String,
+    payload: JwtPayload,
+    header: JwtHeader,
     opts: Map<String, Any>
 ): String {
     val rsaJWK = opts["key"] as RSAKey? ?: throw IllegalArgumentException("The RSA key pair is required")
-
-    val protectedHeader = JWSHeader.parse(header)
     
     val signer: JWSSigner = RSASSASigner(rsaJWK)
 
-    val claimsSet = JWTClaimsSet.parse(payload)
-
     val signedJWT = SignedJWT(
-        protectedHeader,
-        claimsSet
+        header,
+        payload
     )
 
     signedJWT.sign(signer)
