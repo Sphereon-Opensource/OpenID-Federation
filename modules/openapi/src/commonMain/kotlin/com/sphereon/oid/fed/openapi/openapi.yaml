@@ -1896,6 +1896,40 @@ components:
         revoked:
           $ref: '#/components/schemas/JWTRevoked'
 
+    JwkDto:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the JWK record.
+          example: 1
+        uuid:
+          type: string
+          format: uuid
+          description: The universally unique identifier for the JWK record.
+          example: 123e4567-e89b-12d3-a456-426614174000
+        account_id:
+          type: integer
+          description: The ID of the account associated with this JWK.
+          example: 100
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the JWK was created.
+          example: 2024-08-06T12:34:56Z
+        revoked_at:
+          type: string
+          format: date-time
+          description: The timestamp when the JWK was revoked, if applicable.
+          example: 2024-09-01T12:34:56Z
+        revoked_reason:
+          type: string
+          description: The reason for revoking the JWK, if applicable.
+          example: Key compromise
+
+
     JWTRevoked:
       type: object
       x-tags:
