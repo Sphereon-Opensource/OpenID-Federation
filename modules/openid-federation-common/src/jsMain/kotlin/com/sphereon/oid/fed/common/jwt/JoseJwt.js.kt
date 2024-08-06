@@ -49,3 +49,7 @@ actual fun verify(
 ): Boolean {
     return Jose.jwtVerify(jwt, key, opts)
 }
+
+actual fun generateKeyPair(): String {
+    return Jose.generateKeyPair("EC").toString()
+}

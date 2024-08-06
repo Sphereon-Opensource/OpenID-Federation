@@ -1,0 +1,11 @@
+create:
+INSERT INTO jwk (account_id, key) VALUES (?, ?) RETURNING *;
+
+revoke:
+UPDATE jwk SET (revoked_at, revoked_reason) = (CURRENT_TIMESTAMP, ?) WHERE id = ?;
+
+findByAccountId:
+SELECT * FROM jwk WHERE account_id = ?;
+
+findById:
+SELECT * FROM jwk WHERE id = ?;

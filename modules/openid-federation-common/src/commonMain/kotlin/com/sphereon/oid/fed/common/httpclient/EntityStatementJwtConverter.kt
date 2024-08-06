@@ -19,27 +19,20 @@ class EntityStatementJwtConverter: ContentConverter {
         charset: Charset,
         typeInfo: TypeInfo,
         value: Any?
-    ): OutgoingContent? {
-        if (value is EntityStatement) {
-            return OutgoingEntityStatementContent(value)
-        } else if (value is String) {
-            JsonMapper().mapEntityStatement(value)?.let {
-                return OutgoingEntityStatementContent(it)
-            }
-        }
-        return null
+    ): OutgoingContent? = when (value) {
+        is EntityStatement -> OutgoingEntityStatementContent(value)
+        is String -> JsonMapper().mapEntityStatement(value)?.let { OutgoingEntityStatementContent(it) }
+        else -> null
     }
 
-    override suspend fun deserialize(charset: Charset, typeInfo: TypeInfo, content: ByteReadChannel): Any? {
-        val text = content.readRemaining().readText(charset)
-        return Json.decodeFromString(EntityStatement.serializer(), text)
+    override suspend fun deserialize(charset: Charset, typeInfo: TypeInfo, content: ByteReadChannel): Any =
+        content.readRemaining().readText(charset).let {
+            Json.decodeFromString(EntityStatement.serializer(), it)
     }
 }
 
 class OutgoingEntityStatementContent(private val entityStatement: EntityStatement): OutgoingContent.ByteArrayContent() {
 
-    override fun bytes(): ByteArray {
-        val serializedData = Json.encodeToString(entityStatement)
-        return serializedData.toByteArray(Charsets.UTF_8)
-    }
+    override fun bytes(): ByteArray =
+        Json.encodeToString(entityStatement).toByteArray(Charsets.UTF_8)
 }

@@ -5,7 +5,10 @@ import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.JWSVerifier
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jose.crypto.RSASSAVerifier
+import com.nimbusds.jose.jwk.Curve
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 
@@ -43,5 +46,19 @@ actual fun verify(
         return verified
     } catch (e: Exception) {
         throw Exception("Couldn't verify the JWT Signature: ${e.message}", e)
+    }
+}
+
+actual fun generateKeyPair(): String {
+    try {
+
+        val key: ECKey = ECKeyGenerator(Curve.P_256)
+        .keyID("123")
+        .generate()
+
+        return key.toJSONString()
+
+    } catch (e: Exception) {
+        throw Exception("Couldn't generate the EC Key Pair: ${e.message}", e)
     }
 }

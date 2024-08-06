@@ -23,7 +23,6 @@ class OidFederationClient(
     private val isRequestCached: Boolean = false
 ) {
     private val client: HttpClient = HttpClient(engine) {
-        install(HttpCache)
         install(ContentNegotiation) {
             register(EntityStatementJwt, EntityStatementJwtConverter())
             json()
