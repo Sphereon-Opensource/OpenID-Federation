@@ -63,7 +63,7 @@ actual fun generateKeyPair(): JwtWithPrivateKey {
         x = key.x,
         y = key.y,
         kid = key.kid,
-        kty = key.kty as? String,
+        kty = key.kty,
         use = key.use,
     )
 }
