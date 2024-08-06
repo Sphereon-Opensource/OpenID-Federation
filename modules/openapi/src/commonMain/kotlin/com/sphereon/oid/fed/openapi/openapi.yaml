@@ -25,9 +25,35 @@ tags:
 
 servers:
   - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d36
+    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d35
 
 paths:
+  /status:
+    get:
+      tags:
+        - api
+      summary: Check node status
+      description: Check the status of the Federated Node.
+      responses:
+        '200':
+          description: Successful status check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
   /entity-statement:
     get:
       tags:
@@ -90,6 +116,1737 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /subordinates:
+    get:
+      tags:
+        - federation
+      summary: List Immediate Subordinates
+      description: List the Immediate Subordinates for the specified criteria.
+      parameters:
+        - name: entity_type
+          in: query
+          description: The value of this parameter is an Entity Type Identifier. If the responder knows the Entity Types of its Immediate Subordinates, the result MUST be filtered to include only those that include the specified Entity Type.
+          required: false
+          schema:
+            type: string
+        - name: trust_marked
+          in: query
+          description: If the parameter trust_marked is present and set to true, the result contains only the Immediate Subordinates for which at least one Trust Mark have been issued and is still valid.
+          required: false
+          schema:
+            type: boolean
+        - name: trust_mark_id
+          in: query
+          description: The value of this parameter is a Trust Mark identifier. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark identifier has been issued and is still valid.
+          required: false
+          schema:
+            type: string
+        - name: intermediate
+          in: query
+          description: If the parameter intermediate is present and set to true, then if the responder knows whether its Immediate Subordinates are Intermediates or not, the result MUST be filtered accordingly.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful fetch of Immediate Subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /resolve-statement:
+    get:
+      tags:
+        - federation
+      summary: Resolve Entity Statement
+      description: Resolve metadata and Trust Marks for an Entity.
+      parameters:
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity whose resolved data is requested.
+          required: true
+          schema:
+            type: string
+        - name: anchor
+          in: query
+          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity identifier.
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful resolve of Entity metadata
+          content:
+            application/resolve-response+jwt:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Entity not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Entity could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /trust-mark:
+    get:
+      tags:
+        - federation
+      summary: Get Trust Mark
+      description: Retrieve a specific Trust Mark.
+      parameters:
+        - name: trust_mark_id
+          in: query
+          description: Trust Mark identifier.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark is issued.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval of Trust Mark
+          content:
+            application/trust-mark+jwt:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Trust Mark not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Trust Mark could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /trust-mark/status:
+    post:
+      tags:
+        - federation
+      summary: Check Trust Mark Status
+      description: Check if a Trust Mark is still active.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                sub:
+                  type: string
+                  description: The Entity Identifier of the Entity to which the Trust Mark was issued.
+                trust_mark_id:
+                  type: string
+                  description: Identifier of the Trust Mark.
+                iat:
+                  type: integer
+                  description: Time when the Trust Mark was issued. If iat is not specified and the Trust Mark issuer has issued several Trust Marks with the identifier specified in the request to the Entity identified by sub, the most recent one is assumed.
+                trust_mark:
+                  type: string
+                  description: The whole Trust Mark.
+      responses:
+        '200':
+          description: Trust Mark status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                    description: Whether the Trust Mark is active or not.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Trust Mark not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Trust Mark could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /trust-marked-entities:
+    get:
+      tags:
+        - federation
+      summary: List Trust Marked Entities
+      description: List all Entities for which Trust Marks have been issued and are still valid.
+      parameters:
+        - name: trust_mark_id
+          in: query
+          description: Trust Mark identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Entities for which that Trust Mark identifier has been issued and is still valid.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark was issued. The list obtained in the response MUST be filtered to only the Entity matching this value.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful fetch of Trust Marked Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /historical-keys:
+    get:
+      tags:
+        - federation
+      summary: Get Historical Keys
+      description: Retrieve previously used keys for non-repudiation of statements.
+      responses:
+        '200':
+          description: Successful retrieval of historical keys
+          content:
+            application/jwk-set+jwt:
+              schema:
+                $ref: '#/components/schemas/FederationHistoricalKeysResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/entity-statement:
+    get:
+      tags:
+        - federation
+      summary: Fetch an Tenant Entity Statement
+      description: Fetch an Entity Statement for a specified issuer and optional subject.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: iss
+          in: query
+          description: The Entity Identifier of the issuer from which the Entity Statement is issued. Because of the normalization of the URL, multiple issuers MAY resolve to a shared fetch endpoint. This parameter makes it explicit exactly which issuer the Entity Statement must come from.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the subject for which the Entity Statement is being requested. If this parameter is omitted, it is considered to be the same as the issuer and indicates a request for a self-signed Entity Configuration.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful fetch of Entity Statement
+          content:
+            application/entity-statement+jwt:
+              schema:
+                $ref: '#/components/schemas/EntityStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Entity Statement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Entity Statement not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Entity Statement could not be found for the provided issuer and subject.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/subordinates:
+    get:
+      tags:
+        - federation
+      summary: List Tenant Immediate Subordinates
+      description: List the Immediate Subordinates for the specified criteria.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+
+        - name: entity_type
+          in: query
+          description: The value of this parameter is an Entity Type Identifier. If the responder knows the Entity Types of its Immediate Subordinates, the result MUST be filtered to include only those that include the specified Entity Type.
+          required: false
+          schema:
+            type: string
+        - name: trust_marked
+          in: query
+          description: If the parameter trust_marked is present and set to true, the result contains only the Immediate Subordinates for which at least one Trust Mark have been issued and is still valid.
+          required: false
+          schema:
+            type: boolean
+        - name: trust_mark_id
+          in: query
+          description: The value of this parameter is a Trust Mark identifier. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark identifier has been issued and is still valid.
+          required: false
+          schema:
+            type: string
+        - name: intermediate
+          in: query
+          description: If the parameter intermediate is present and set to true, then if the responder knows whether its Immediate Subordinates are Intermediates or not, the result MUST be filtered accordingly.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful fetch of Immediate Subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/resolve-statement:
+    get:
+      tags:
+        - federation
+      summary: Resolve Tenant Entity Statement
+      description: Resolve metadata and Trust Marks for an Entity.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity whose resolved data is requested.
+          required: true
+          schema:
+            type: string
+        - name: anchor
+          in: query
+          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity identifier.
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful resolve of Entity metadata
+          content:
+            application/resolve-statement-response+jwt:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Entity not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Entity could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/trust-mark:
+    get:
+      tags:
+        - federation
+      summary: Get Tenant Trust Mark
+      description: Retrieve a specific Trust Mark.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+
+        - name: trust_mark_id
+          in: query
+          description: Trust Mark identifier.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark is issued.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval of Trust Mark
+          content:
+            application/trust-mark+jwt:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Trust Mark not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Trust Mark could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/trust-mark/status:
+    post:
+      tags:
+        - federation
+      summary: Check Tenant Trust Mark Status
+      description: Check if a Trust Mark is still active.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                sub:
+                  type: string
+                  description: The Entity Identifier of the Entity to which the Trust Mark was issued.
+                trust_mark_id:
+                  type: string
+                  description: Identifier of the Trust Mark.
+                iat:
+                  type: integer
+                  description: Time when the Trust Mark was issued. If iat is not specified and the Trust Mark issuer has issued several Trust Marks with the identifier specified in the request to the Entity identified by sub, the most recent one is assumed.
+                trust_mark:
+                  type: string
+                  description: The whole Trust Mark.
+      responses:
+        '200':
+          description: Trust Mark status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                    description: Whether the Trust Mark is active or not.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Trust Mark not found example
+                  value:
+                    error: not_found
+                    error_description: The requested Trust Mark could not be found for the provided parameters.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/trust-marked-entities:
+    get:
+      tags:
+        - federation
+      summary: List Tenant Trust Marked Entities
+      description: List all Entities for which Trust Marks have been issued and are still valid.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+
+        - name: trust_mark_id
+          in: query
+          description: Trust Mark identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Entities for which that Trust Mark identifier has been issued and is still valid.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark was issued. The list obtained in the response MUST be filtered to only the Entity matching this value.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful fetch of Trust Marked Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /{accountUsername}/historical-keys:
+    get:
+      tags:
+        - federation
+      summary: Get Tenant Historical Keys
+      description: Retrieve previously used keys for non-repudiation of statements.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: Successful retrieval of historical keys
+          content:
+            application/jwk-set+jwt:
+              schema:
+                $ref: '#/components/schemas/FederationHistoricalKeysResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /stats:
+    get:
+      tags:
+        - Superadmin
+      summary: Get system statistics
+      description: Retrieve system statistics including uptime, CPU usage, memory usage, and disk usage.
+      responses:
+        '200':
+          description: Successful retrieval of system statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatsResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+  /audit:
+    get:
+      tags:
+        - Superadmin
+      summary: Get audit logs
+      description: Retrieve audit logs with optional filtering by start and end dates.
+      parameters:
+        - name: startDate
+          in: query
+          description: The start date for filtering audit logs.
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: The end date for filtering audit logs.
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful retrieval of audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditLog'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /role:
+    get:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Retrieve all available roles
+      description: Retrieve a list of all available roles and their descriptions.
+      responses:
+        '200':
+          description: Successful retrieval of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+
+  /scope:
+    get:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Retrieve all available scopes
+      description: Retrieve a list of all available scopes and their descriptions.
+      responses:
+        '200':
+          description: Successful retrieval of scopes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scope'
+
+  /me:
+    get:
+      tags:
+        - auth
+      summary: Get logged-in user details
+      description: Retrieve information about the logged-in user, including linked accounts, roles, and scopes per account.
+      responses:
+        '200':
+          description: Successful retrieval of logged-in user details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account:
+    get:
+      tags:
+        - Superadmin
+      summary: List all accounts
+      description: Retrieve a list of all accounts.
+      responses:
+        '200':
+          description: Accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDTO'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Superadmin
+      summary: Register a new tenant account
+      description: Endpoint for a superadmin to create a new account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountDTO'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDTO'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict (e.g., slug already exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}:
+    delete:
+      tags:
+        - Superadmin
+      summary: Delete an account
+      description: Endpoint for a superadmin to delete an account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account to be deleted.
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Account deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user:
+    post:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Add an user to an account
+      description: Endpoint to add an user to a specific account with a defined role.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserToAccountRequest'
+      responses:
+        '201':
+          description: User added to account successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddUserToAccountResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict (e.g., user already in account)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Superadmin
+        - Account Admin
+        - Account User
+      summary: List users in an account
+      description: Endpoint to list all users in a specific account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user/{userId}:
+    delete:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Remove an user from an account
+      description: Endpoint to remove an user from a specific account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user to be removed.
+      responses:
+        '200':
+          description: User removed from account successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User removed from account successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user/{userId}/role:
+    post:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Add a role to an user
+      description: Endpoint to add a role to an user.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRoleRequest'
+      responses:
+        '200':
+          description: Role added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserRoleResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user/{userId}/role/{roleId}:
+    delete:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Remove a role from an user
+      description: Endpoint to remove a role from an user.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user.
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the role to be removed from the user.
+      responses:
+        '200':
+          description: Role removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserRoleResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user/{userId}/scope:
+    post:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Add a scope to an user
+      description: Endpoint to add a scope to an user.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserScopeRequest'
+      responses:
+        '200':
+          description: Scope added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserScopeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/user/{userId}/scope/{scopeId}:
+    delete:
+      tags:
+        - Superadmin
+        - Account Admin
+      summary: Remove a scope from an user
+      description: Endpoint to remove a scope from an user.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user.
+        - name: scopeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the scope to be removed from the user.
+      responses:
+        '200':
+          description: Scope removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserScopeResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/statement:
+    post:
+      tags:
+        - Account Admin
+        - Account User
+      summary: Create an Entity Configuration Statement for the specified account
+      description: Create an Entity Configuration Statement for the specified account. If `dry-run` is true, it will return the generated entity statement without persisting it.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account.
+      requestBody:
+        description: Entity Statement data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEntityStatementRequest'
+      responses:
+        '200':
+          description: Entity Statement generated successfully (dry-run)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityStatement'
+        '201':
+          description: Entity Statement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/subordinate-statement:
+    post:
+      tags:
+        - Account Admin
+        - Account User
+      summary: Create a new Subordinate Statement
+      description: Create a new Subordinate Statement. If `dry-run` is true, it will return the generated entity statement without persisting it.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: dry-run
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: If true, the statement will be generated but not persisted.
+      requestBody:
+        description: Entity Statement data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEntityStatementRequest'
+      responses:
+        '200':
+          description: Subordinate Statement dry-run successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityStatement'
+        '201':
+          description: Subordinate Statement created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Account Admin
+        - Account User
+      summary: List Subordinate Statements
+      description: List all active Subordinate Statements for the specified account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: Successful fetch of Subordinate Statements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntityStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/subordinate-statement/{statementId}:
+    delete:
+      tags:
+        - Account Admin
+      summary: Delete a Subordinate Statement
+      description: Delete an existing Subordinate Statement and move it to historical data.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: statementId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the Subordinate Statement to be deleted.
+      responses:
+        '200':
+          description: Subordinate Statement deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Subordinate Statement deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subordinate Statement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/trust-mark:
+    post:
+      tags:
+        - Account Admin
+      summary: Create or Update a Trust Mark
+      description: Create or update a Trust Mark for the specified account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dry_run: # TO-DO Add correct required attributes
+                  type: boolean
+                  description: If true, the entity statement will be generated but not persisted.
+                  default: false
+      responses:
+        '200':
+          description: Trust Mark dry-run successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The identifier of the created or updated Trust Mark.
+        '201':
+          description: Trust Mark created or updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The identifier of the created or updated Trust Mark.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Account Admin
+        - Account User
+      summary: List Trust Marks
+      description: List all Trust Marks for the specified account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: Successful fetch of Trust Marks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trustMarkId:
+                      type: string
+                      description: The identifier of the Trust Mark.
+                    trustMark:
+                      type: string
+                      description: The JWT of the Trust Mark.
+                    entityId:
+                      type: string
+                      description: The Entity Identifier of the entity to which the Trust Mark is issued.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /account/{accountUsername}/trust-mark/{trustMarkId}:
+    delete:
+      tags:
+        - Account Admin
+      summary: Delete a Trust Mark
+      description: Delete an existing Trust Mark for the specified account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: trustMarkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The identifier of the Trust Mark to be deleted.
+      responses:
+        '200':
+          description: Trust Mark deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Trust Mark deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     JWK:
@@ -148,6 +1905,7 @@ components:
       properties:
         revoked_at:
           type: string
+          format: date-time
         reason:
           type: string
 
@@ -208,6 +1966,7 @@ components:
           description: Expiration time after which the statement MUST NOT be accepted for processing.
         iat:
           type: integer
+          format: date-time
           description: The time the statement was issued.
         jwks:
           $ref: '#/components/schemas/JWKS'
@@ -215,17 +1974,29 @@ components:
           type: array
           items:
             type: string
-            description: An array of strings representing the Entity Identifiers of Intermediate Entities or Trust Anchors
         metadata:
           $ref: '#/components/schemas/Metadata'
+        metadata_policy:
+          $ref: '#/components/schemas/MetadataPolicy'
         constraints:
           $ref: '#/components/schemas/Constraint'
         crit:
           type: array
-          description: Extension of the JOSE header parameters that MUST be understood and processed.
           items:
             type: string
-            description: Claim names present in the JWT that use those extensions
+        metadata_policy_crit:
+          type: array
+          items:
+            type: string
+        trust_marks:
+          type: array
+          description: An array of JSON objects, each representing a Trust Mark.
+          items:
+            $ref: '#/components/schemas/TrustMark'
+        trust_mark_issuers:
+          $ref: '#/components/schemas/TrustMarkIssuers'
+        trust_mark_owners:
+          $ref: '#/components/schemas/TrustMarkOwners'
         source_endpoint:
           type: string
           format: uri
@@ -253,6 +2024,91 @@ components:
           $ref: '#/components/schemas/OAuthClientMetadata'
         oauth_resource:
           $ref: '#/components/schemas/OAuthProtectedResourceMetadata'
+
+    MetadataPolicy:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        federation_entity:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+        openid_relying_party:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+        openid_provider:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+        oauth_authorization_server:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+        oauth_client:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+        oauth_resource:
+          $ref: '#/components/schemas/MetadataParameterPolicy'
+
+    MetadataParameterPolicy:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        additionalProperties:
+          type: object
+          additionalProperties: true
+
+    TrustMark:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: string
+          description: The Trust Mark identifier. It MUST be the same value as the id claim contained in the Trust Mark JWT.
+          example: "example-trust-mark-id"
+        trust_mark:
+          type: string
+          description: A signed JSON Web Token that represents a Trust Mark.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+
+    TrustMarkIssuers:
+      type: object
+      x-tags:
+        - federation
+      additionalProperties:
+        type: array
+        items:
+          type: string
+      example:
+        "https://openid.net/certification/op": [ ]
+        "https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf":
+          - "https://swamid.se"
+
+    TrustMarkOwners:
+      type: object
+      x-tags:
+        - federation
+      additionalProperties:
+        $ref: '#/components/schemas/TrustMarkOwner'
+      example:
+        "https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf":
+          sub: "https://refeds.org/sirtfi"
+          jwks:
+            keys:
+              - alg: "RS256"
+                e: "AQAB"
+                kid: "key1"
+                kty: "RSA"
+                n: "pnXBOusEANuug6ewezb9J_..."
+                use: "sig"
+
+    TrustMarkOwner:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        sub:
+          type: string
+          description: Identifier of the Trust Mark owner
+        jwks:
+          $ref: '#/components/schemas/JWKS'
+        additionalProperties:
+          type: string
 
     NamingConstraints:
       type: object
@@ -440,37 +2296,37 @@ components:
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "scope" values that this authorization server supports.
-          example: ["openid", "profile", "email"]
+          example: [ "openid", "profile", "email" ]
         response_types_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "response_type" values that this authorization server supports.
-          example: ["code", "token", "id_token"]
+          example: [ "code", "token", "id_token" ]
         response_modes_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 "response_mode" values that this authorization server supports.
-          example: ["query", "fragment", "form_post"]
+          example: [ "query", "fragment", "form_post" ]
         grant_types_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the OAuth 2.0 grant type values that this authorization server supports.
-          example: ["authorization_code", "implicit", "client_credentials", "refresh_token"]
+          example: [ "authorization_code", "implicit", "client_credentials", "refresh_token" ]
         token_endpoint_auth_methods_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this token endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         token_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the token endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         service_documentation:
           type: string
           description: URL of a page containing human-readable information that developers might want or need to know when using the authorization server.
@@ -480,7 +2336,7 @@ components:
           items:
             type: string
           description: Languages and scripts supported for the user interface, represented as a JSON array of language tag values from BCP 47.
-          example: ["en-US", "fr-FR"]
+          example: [ "en-US", "fr-FR" ]
         op_policy_uri:
           type: string
           description: URL that the authorization server provides to the person registering the client to read about the authorization server's requirements on how the client can use the data provided by the authorization server.
@@ -498,13 +2354,13 @@ components:
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this revocation endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         revocation_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the revocation endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         introspection_endpoint:
           type: string
           description: URL of the authorization server's OAuth 2.0 introspection endpoint.
@@ -514,19 +2370,19 @@ components:
           items:
             type: string
           description: JSON array containing a list of client authentication methods supported by this introspection endpoint.
-          example: ["client_secret_basic", "private_key_jwt"]
+          example: [ "client_secret_basic", "private_key_jwt" ]
         introspection_endpoint_auth_signing_alg_values_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of the JWS signing algorithms supported by the introspection endpoint for the signature on the JWT used to authenticate the client.
-          example: ["RS256", "ES256"]
+          example: [ "RS256", "ES256" ]
         code_challenge_methods_supported:
           type: array
           items:
             type: string
           description: JSON array containing a list of Proof Key for Code Exchange (PKCE) code challenge methods supported by this authorization server.
-          example: ["plain", "S256"]
+          example: [ "plain", "S256" ]
 
     OAuthClientMetadata:
       allOf:
@@ -536,101 +2392,6 @@ components:
       type: object
       x-tags:
         - federation
-
-    OAuthDynamicClientMetadata:
-      type:
-        object
-      x-tags:
-        - federation
-      properties:
-        redirect_uris:
-          type: array
-          items:
-            type: string
-            format: uri
-          description: Array of redirection URI strings for redirect-based flows.
-        token_endpoint_auth_method:
-          $ref: '#/components/schemas/OAuthDynamicClientTokenEndpointAuthMethod'
-        grant_types:
-          type: array
-          items:
-            $ref: '#/components/schemas/OAuthDynamicClientGrantTypes'
-        response_types:
-          type: array
-          items:
-            $ref: '#/components/schemas/OAuthDynamicClientResponseTypes'
-        client_name:
-          type: string
-          description: Human-readable string name of the client to be presented to the end-user during authorization.
-        client_uri:
-          type: string
-          format: uri
-          description: URL string of a web page providing information about the client.
-        logo_uri:
-          type: string
-          format: uri
-          description: URL string that references a logo for the client.
-        scope:
-          type: string
-          description: Space-separated list of scope values the client can use when requesting access tokens.
-        contacts:
-          type: array
-          items:
-            type: string
-          description: Array of strings representing ways to contact people responsible for this client, typically email addresses.
-        tos_uri:
-          type: string
-          format: uri
-          description: URL string that points to a human-readable terms of service document for the client.
-        policy_uri:
-          type: string
-          format: uri
-          description: URL string that points to a human-readable privacy policy document.
-        jwks_uri:
-          type: string
-          format: uri
-          description: URL string referencing the client’s JSON Web Key (JWK) Set document, which contains the client’s public keys.
-        jwks:
-          $ref: '#/components/schemas/JWKS'
-        software_id:
-          type: string
-          description: Unique identifier string for the client software to be dynamically registered.
-        software_version:
-          type: string
-          description: Version identifier string for the client software identified by software_id.
-
-    OAuthDynamicClientTokenEndpointAuthMethod:
-      type: string
-      x-tags:
-        - federation
-      description: Requested authentication method for the token endpoint.
-      enum:
-        - none
-        - client_secret_post
-        - client_secret_basic
-
-    OAuthDynamicClientGrantTypes:
-      type: string
-      x-tags:
-        - federation
-      description: Array of OAuth 2.0 grant type strings the client can use at the token endpoint.
-      enum:
-        - authorization_code
-        - implicit
-        - password
-        - client_credentials
-        - refresh_token
-        - urn:ietf:params:oauth:grant-type:jwt-bearer
-        - urn:ietf:params:oauth:grant-type:saml2-bearer
-
-    OAuthDynamicClientResponseTypes:
-      type: string
-      x-tags:
-        - federation
-      description: Array of OAuth 2.0 response type strings the client can use at the authorization endpoint.
-      enum:
-        - code
-        - token
 
     OAuthProtectedResourceMetadata:
       allOf:
@@ -711,6 +2472,178 @@ components:
           type: string
           format: uri
           description: URL of a Web page for the organization owning this Entity.
+
+    ErrorType:
+      type: string
+      x-tags:
+        - federation
+      description: One of the predefined error codes.
+      example: invalid_request
+      enum:
+        - invalid_request
+        - invalid_client
+        - invalid_issuer
+        - not_found
+        - server_error
+        - temporary_unavailable
+        - unsupported_parameter
+        - invalid_token
+        - insufficient_scope
+        - unsupported_token_type
+        - interaction_required
+        - login_required
+        - account_selection_required
+        - consent_required
+        - invalid_request_uri
+        - invalid_request_object
+        - request_not_supported
+        - request_uri_not_supported
+        - registration_not_supported
+        - need_info
+        - request_denied
+        - request_submitted
+        - authorization_pending
+        - access_denied
+        - slow_down
+        - expired_token
+        - invalid_target
+        - unsupported_pop_key
+        - incompatible_ace_profiles
+        - invalid_authorization_details
+        - invalid_dpop_proof
+        - use_dpop_nonce
+        - insufficient_user_authentication
+
+    ErrorResponse:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - error
+        - error_description
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorType'
+        error_description:
+          type: string
+          description: A human-readable short text describing the error.
+
+    OAuthDynamicClientTokenEndpointAuthMethod:
+      type: string
+      x-tags:
+        - federation
+      description: Requested authentication method for the token endpoint.
+      enum:
+        - none
+        - client_secret_post
+        - client_secret_basic
+
+    OAuthDynamicClientGrantTypes:
+      type: string
+      x-tags:
+        - federation
+      description: Array of OAuth 2.0 grant type strings the client can use at the token endpoint.
+      enum:
+        - authorization_code
+        - implicit
+        - password
+        - client_credentials
+        - refresh_token
+        - urn:ietf:params:oauth:grant-type:jwt-bearer
+        - urn:ietf:params:oauth:grant-type:saml2-bearer
+
+    OAuthDynamicClientResponseTypes:
+      type: string
+      x-tags:
+        - federation
+      description: Array of OAuth 2.0 response type strings the client can use at the authorization endpoint.
+      enum:
+        - code
+        - token
+
+    OAuthDynamicClientMetadata:
+      type:
+        object
+      x-tags:
+        - federation
+      properties:
+        redirect_uris:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: Array of redirection URI strings for redirect-based flows.
+        token_endpoint_auth_method:
+          $ref: '#/components/schemas/OAuthDynamicClientTokenEndpointAuthMethod'
+        grant_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/OAuthDynamicClientGrantTypes'
+        response_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/OAuthDynamicClientResponseTypes'
+        client_name:
+          type: string
+          description: Human-readable string name of the client to be presented to the end-user during authorization.
+        client_uri:
+          type: string
+          format: uri
+          description: URL string of a web page providing information about the client.
+        logo_uri:
+          type: string
+          format: uri
+          description: URL string that references a logo for the client.
+        scope:
+          type: string
+          description: Space-separated list of scope values the client can use when requesting access tokens.
+        contacts:
+          type: array
+          items:
+            type: string
+          description: Array of strings representing ways to contact people responsible for this client, typically email addresses.
+        tos_uri:
+          type: string
+          format: uri
+          description: URL string that points to a human-readable terms of service document for the client.
+        policy_uri:
+          type: string
+          format: uri
+          description: URL string that points to a human-readable privacy policy document.
+        jwks_uri:
+          type: string
+          format: uri
+          description: URL string referencing the client’s JSON Web Key (JWK) Set document, which contains the client’s public keys.
+        jwks:
+          $ref: '#/components/schemas/JWKS'
+        software_id:
+          type: string
+          description: Unique identifier string for the client software to be dynamically registered.
+        software_version:
+          type: string
+          description: Version identifier string for the client software identified by software_id.
+
+    OpenIDConnectDynamicClientRegistrationGrantTypes:
+      type: string
+      x-tags:
+        - federation
+      description: JSON array containing a list of the OAuth 2.0 Grant Types that the Client is declaring that it will restrict itself to using.
+      enum:
+        - authorization_code
+        - implicit
+        - refresh_token
+      example: [ "authorization_code", "implicit" ]
+
+    OpenIDConnectDynamicClientRegistrationApplicationType:
+      type: string
+      x-tags:
+        - federation
+      description: Kind of the application. The default, if omitted, is web.
+      enum:
+        - native
+        - web
+      example: native
+      default: web
 
     OpenIDConnectDynamicClientRegistrationMetadata:
       type: object
@@ -827,28 +2760,6 @@ components:
           description: Array of pre-registered request_uri values for use at the OP.
       required:
         - redirect_uris
-
-    OpenIDConnectDynamicClientRegistrationGrantTypes:
-      type: string
-      x-tags:
-        - federation
-      description: JSON array containing a list of the OAuth 2.0 Grant Types that the Client is declaring that it will restrict itself to using.
-      enum:
-        - authorization_code
-        - implicit
-        - refresh_token
-      example: [ "authorization_code", "implicit" ]
-
-    OpenIDConnectDynamicClientRegistrationApplicationType:
-      type: string
-      x-tags:
-        - federation
-      description: Kind of the application. The default, if omitted, is web.
-      enum:
-        - native
-        - web
-      example: native
-      default: web
 
     OpenIDConnectDiscoveryProviderMetadata:
       type: object
@@ -1509,57 +3420,328 @@ components:
           type: boolean
           description: Specifies whether the client always uses DPoP for token requests.
 
-    ErrorResponse:
+    FederationHistoricalKeysResponse:
       type: object
       x-tags:
         - federation
       required:
-        - error
-        - error_description
+        - iss
+        - iat
+        - keys
       properties:
-        error:
-          $ref: '#/components/schemas/ErrorType'
-        error_description:
+        iss:
           type: string
-          description: A human-readable short text describing the error.
+          format: date-time
+          description: The Entity's Entity Identifier.
+        iat:
+          type: string
+          format: date-time
+          description: Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/JWK'
 
-    ErrorType:
-      type: string
+    ResolveResponse:
+      type: object
       x-tags:
         - federation
-      description: One of the predefined error codes.
-      example: invalid_request
+      required:
+        - iss
+        - sub
+        - iat
+        - exp
+        - metadata
+      properties:
+        iss:
+          type: string
+          format: date-time
+          description: Entity Identifier of the issuer of the resolve response.
+        sub:
+          type: string
+          format: date-time
+          description: Entity Identifier of the subject of the resolve response.
+        iat:
+          type: string
+          format: date-time
+          description: Time when this resolution was issued. This is expressed as Seconds Since the Epoch.
+        exp:
+          type: string
+          format: date-time
+          description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        trust_marks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustMark'
+        trust_chain:
+          type: array
+          items:
+            type: string
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: The current status of the node.
+          example: "OK"
+        timestamp:
+          type: string
+          format: date-time
+          description: The time at which the status was checked.
+          example: "2024-06-05T12:34:56Z"
+
+    SystemStatsResponse:
+      type: object
+      properties:
+        uptime:
+          type: string
+          description: The system uptime.
+          example: "5 days, 4:03:27"
+
+    UpdateUserRoleRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          description: The role to be added or removed from the user.
+      required:
+        - role
+
+    UpdateUserRoleResponse:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+          description: The updated list of roles for the user.
+
+    UpdateUserScopeRequest:
+      type: object
+      properties:
+        scope:
+          type: string
+          description: The scope to be added or removed from the user.
+      required:
+        - scope
+
+    UpdateUserScopeResponse:
+      type: object
+      properties:
+        scopes:
+          type: array
+          items:
+            type: string
+          description: The updated list of scopes for the user.
+
+    CreateAccountDTO:
+      type: object
+      properties:
+        username:
+          type: string
+          description: The username of the account.
+          example: acmeco
+      required:
+        - username
+
+    AddUserToAccountRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email of the user to be added to the account.
+          example: user@acme-corp.com
+        role:
+          type: string
+          description: The role of the user within the account (e.g., admin, user). The default, if omitted, is user.
+          example: admin
+      required:
+        - email
+
+    AddUserToAccountResponse:
+      type: object
+      properties:
+        accountId:
+          type: string
+          description: The unique identifier for the account.
+          example: account123
+        userId:
+          type: string
+          description: The ID of the user added to the account.
+          example: user123
+        role:
+          type: string
+          description: The role of the user within the account.
+          example: admin
+
+    AccountDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the account.
+          example: 12345
+        username:
+          type: string
+          description: The username of the account.
+          example: acmecorp
+
+    CreateEntityStatementRequest:
+      properties:
+        dry_run: # TO-DO Add correct required attributes
+          type: boolean
+          description: If true, the entity statement will be generated but not persisted.
+          default: false
+
+    Scope:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the scope.
+          example: "1"
+        name:
+          type: string
+          description: The name of the scope.
+          example: "create:statement"
+        description:
+          type: string
+          description: A detailed description of what the scope allows.
+          example: "Permission to create Entity Statements"
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the role.
+          example: "1"
+        name:
+          type: string
+          description: The name of the role.
+          example: "admin"
+        description:
+          type: string
+          description: A detailed description of what the role allows.
+          example: "Administrator role with full access to account management"
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scope"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the user.
+          example: "user123"
+        role:
+          type: string
+          description: The role assigned to the user within the account.
+          example: "admin"
+        scopes:
+          type: array
+          items:
+            type: string
+          description: The list of scopes assigned to the user.
+          example:
+            - "read:config"
+            - "write:config"
+        email:
+          type: string
+          format: email
+          description: The email address of the user.
+          example: "johndoe@gmail.com"
+      required:
+        - email
+
+    UserAccount:
+      allOf:
+        - $ref: '#/components/schemas/AccountDTO'
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+            description: The roles assigned to the user within this account.
+        scopes:
+          type: array
+          items:
+            type: string
+            description: The scopes assigned to the user within this account.
+
+    UserDetailsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the user.
+        email:
+          type: string
+          format: email
+          description: The email address of the user.
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAccount'
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the audit log entry.
+        accountId:
+          type: string
+          description: The account ID from where the log was generated
+        timestamp:
+          type: string
+          format: date-time
+          description: The timestamp of the audit log entry.
+        errorLevel:
+          $ref: '#/components/schemas/LogLevel'
+        errorCode:
+          type: string
+          description: The error code or type.
+        errorMessage:
+          type: string
+          description: A meaningful explanation of what happened.
+        componentName:
+          type: string
+          description: The name of the component logging the error.
+        operation:
+          type: string
+          description: The operation performed when the error occurred.
+        sourceLineNumber:
+          type: integer
+          description: The source code line number.
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional details about the audit log entry.
+
+    LogLevel:
+      type: string
       enum:
-        - invalid_request
-        - invalid_client
-        - invalid_issuer
-        - not_found
-        - server_error
-        - temporary_unavailable
-        - unsupported_parameter
-        - invalid_token
-        - insufficient_scope
-        - unsupported_token_type
-        - interaction_required
-        - login_required
-        - account_selection_required
-        - consent_required
-        - invalid_request_uri
-        - invalid_request_object
-        - request_not_supported
-        - request_uri_not_supported
-        - registration_not_supported
-        - need_info
-        - request_denied
-        - request_submitted
-        - authorization_pending
-        - access_denied
-        - slow_down
-        - expired_token
-        - invalid_target
-        - unsupported_pop_key
-        - incompatible_ace_profiles
-        - invalid_authorization_details
-        - invalid_dpop_proof
-        - use_dpop_nonce
-        - insufficient_user_authentication
+        - TRACE
+        - DEBUG
+        - INFO
+        - NOTICE
+        - WARN
+        - ERROR
+        - FATAL
+      description: Enum for log levels.
+      example: ERROR
+
+    KMS:
+      type: string
+      enum:
+        - LOCAL
+      description: Enum for KMS integrations.
+      example: LOCAL
