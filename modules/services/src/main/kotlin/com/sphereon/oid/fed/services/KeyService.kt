@@ -13,7 +13,6 @@ class KeyService {
         val account = Persistence.accountRepository.findByUsername(accountUsername) ?: throw IllegalArgumentException("Account not found")
         val accountId = account.id
         val key = generateKeyPair()
-        println("generateKeyPair")
         return keyRepository.create(accountId, key)
     }
 
