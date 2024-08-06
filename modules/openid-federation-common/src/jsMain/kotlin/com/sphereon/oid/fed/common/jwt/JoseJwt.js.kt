@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.common.jwt
 
 import com.sphereon.oid.fed.openapi.models.EntityStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.JwtWithPrivateKey
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -12,13 +13,16 @@ external object Jose {
         constructor(payload: dynamic) {
             definedExternally
         }
+
         fun setProtectedHeader(protectedHeader: dynamic): SignJWT {
             definedExternally
         }
+
         fun sign(key: Any?, signOptions: Any?): String {
             definedExternally
         }
     }
+
     fun generateKeyPair(alg: String, options: dynamic = definedExternally): dynamic
     fun jwtVerify(jwt: String, key: Any, options: dynamic = definedExternally): dynamic
 }
@@ -50,6 +54,16 @@ actual fun verify(
     return Jose.jwtVerify(jwt, key, opts)
 }
 
-actual fun generateKeyPair(): String {
-    return Jose.generateKeyPair("EC").toString()
+actual fun generateKeyPair(): JwtWithPrivateKey {
+    val key = Jose.generateKeyPair("EC")
+    return JwtWithPrivateKey(
+        d = key.d,
+        alg = key.alg,
+        crv = key.crv,
+        x = key.x,
+        y = key.y,
+        kid = key.kid,
+        kty = key.kty as? String,
+        use = key.use,
+    )
 }
