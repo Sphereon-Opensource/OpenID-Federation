@@ -19,6 +19,10 @@ repositories {
 
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
+    jvm()
+
+    // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
+    // @OptIn(ExperimentalWasmDsl::class)
     js {
         browser {
             commonWebpackConfig {
@@ -36,32 +40,29 @@ kotlin {
         }
     }
 
-    // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
-
-//    androidTarget {
-//        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-//        compilerOptions {
-//            jvmTarget.set(JvmTarget.JVM_11)
-//        }
-//    }
-
-//    iosX64()
-//    iosArm64()
-//    iosSimulatorArm64()
-
-    jvm()
+    // TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
+    //    androidTarget {
+    //        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    //        compilerOptions {
+    //            jvmTarget.set(JvmTarget.JVM_11)
+    //        }
+    //    }
+    //    iosX64()
+    //    iosArm64()
+    //    iosSimulatorArm64()
+    //    androidTarget()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation("com.sphereon.oid.fed:openapi:0.1.0-SNAPSHOT")
+                api(projects.modules.openapi)
                 implementation("io.ktor:ktor-client-core:$ktorVersion")
                 implementation("io.ktor:ktor-client-logging:$ktorVersion")
                 implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
                 implementation("io.ktor:ktor-client-auth:$ktorVersion")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
                 implementation(libs.kermit.logging)
             }
         }
@@ -70,6 +71,7 @@ kotlin {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("io.ktor:ktor-client-mock:$ktorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
         }
         val jvmMain by getting {
@@ -142,11 +144,9 @@ kotlin {
         }
 
         val jsTest by getting {
-            dependsOn(commonTest)
             dependencies {
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
         }
     }
