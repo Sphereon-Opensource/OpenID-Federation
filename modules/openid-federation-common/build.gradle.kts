@@ -11,6 +11,12 @@ plugins {
 
 val ktorVersion = "2.3.11"
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+    google()
+}
+
 kotlin {
     @OptIn(ExperimentalWasmDsl::class)
 
