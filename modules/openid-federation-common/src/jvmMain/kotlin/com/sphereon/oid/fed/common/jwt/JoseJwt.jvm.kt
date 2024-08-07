@@ -59,10 +59,6 @@ actual fun generateKeyPair(): JwtWithPrivateKey {
             .keyIDFromThumbprint(true)
             .algorithm(Algorithm("EC"))
             .issueTime(Date())
-            .expirationTime(Calendar.getInstance().apply {
-                time = Date()
-                add(Calendar.YEAR, 1)
-            }.time)
             .generate()
 
         return JwtWithPrivateKey(
