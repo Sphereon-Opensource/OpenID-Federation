@@ -16,12 +16,18 @@ java {
 }
 
 dependencies {
+    api(projects.modules.openapi)
     api(projects.modules.openidFederationCommon)
+    api(projects.modules.persistence)
+    api(projects.modules.services)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
+    testImplementation(libs.testcontainer.junit)
+    testImplementation(libs.springboot.testcontainer)
+    testImplementation(libs.testcontainer.postgres)
     runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
 }

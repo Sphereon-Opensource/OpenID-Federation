@@ -45,3 +45,5 @@ dependencyResolutionManagement {
 include(":modules:openid-federation-common")
 include(":modules:admin-server")
 include(":modules:openapi")
+include(":modules:persistence")
+include(":modules:services")

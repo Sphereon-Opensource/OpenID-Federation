@@ -39,6 +39,9 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 postgres = { module = "org.postgresql:postgresql" }
+springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers"}
+testcontainer-postgres = { group = "org.testcontainers", name = "postgresql"}
+testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter"}
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
