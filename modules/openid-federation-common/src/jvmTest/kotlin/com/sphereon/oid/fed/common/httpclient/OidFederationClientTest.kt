@@ -12,25 +12,25 @@ import kotlin.test.assertEquals
 class OidFederationClientTest {
 
     private val entityStatement = EntityStatement(
-            iss = "https://edugain.org/federation",
-            sub = "https://openid.sunet.se",
-            exp = 1568397247,
-            iat = 1568310847,
-            sourceEndpoint = "https://edugain.org/federation/federation_fetch_endpoint",
-            jwks = JWKS(
-                propertyKeys = listOf(
-                    JWK(
-                        // missing e and n ?
-                        kid = "dEEtRjlzY3djcENuT01wOGxrZlkxb3RIQVJlMTY0...",
-                        kty = "RSA"
-                    )
-                )
-            ),
-            metadata = Metadata(
-                federationEntity = FederationEntityMetadata(
-                    organizationName = "SUNET"
+        iss = "https://edugain.org/federation",
+        sub = "https://openid.sunet.se",
+        exp = 1568397247,
+        iat = 1568310847,
+        sourceEndpoint = "https://edugain.org/federation/federation_fetch_endpoint",
+        jwks = JWKS(
+            propertyKeys = listOf(
+                JwkDTO(
+                    // missing e and n ?
+                    kid = "dEEtRjlzY3djcENuT01wOGxrZlkxb3RIQVJlMTY0...",
+                    kty = "RSA"
                 )
             )
+        ),
+        metadata = Metadata(
+            federationEntity = FederationEntityMetadata(
+                organizationName = "SUNET"
+            )
+        )
     )
 
     private val mockEngine = MockEngine {
@@ -45,7 +45,10 @@ class OidFederationClientTest {
     fun testGetEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement("https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se", HttpMethod.Get)
+            val response = client.fetchEntityStatement(
+                "https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se",
+                HttpMethod.Get
+            )
             assertEquals(entityStatement, response)
         }
     }
@@ -56,8 +59,8 @@ class OidFederationClientTest {
             val client = OidFederationClient(mockEngine)
             val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Post,
                 Parameters.build {
-                    append("iss","https://edugain.org/federation")
-                    append("sub","https://openid.sunet.se")
+                    append("iss", "https://edugain.org/federation")
+                    append("sub", "https://openid.sunet.se")
                 })
             assertEquals(entityStatement, response)
         }

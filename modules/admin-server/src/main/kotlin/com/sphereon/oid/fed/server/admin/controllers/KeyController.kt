@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.JwkDto
+import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.services.KeyService
-import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -11,13 +11,13 @@ class KeyController {
     private val keyService = KeyService()
 
     @PostMapping
-    fun create(@PathVariable accountUsername: String): JwkDto {
+    fun create(@PathVariable accountUsername: String): JwkAdminDTO {
         val key = keyService.create(accountUsername)
-        return key.toJwkDTO()
+        return key.toJwkAdminDTO()
     }
 
     @GetMapping
-    fun getKeys(@PathVariable accountUsername: String): List<JwkDto> {
+    fun getKeys(@PathVariable accountUsername: String): List<JwkAdminDTO> {
         val keys = keyService.getKeys(accountUsername)
         return keys
     }
@@ -27,7 +27,7 @@ class KeyController {
         @PathVariable accountUsername: String,
         @PathVariable keyId: Int,
         @RequestParam reason: String?
-    ): JwkDto {
+    ): JwkAdminDTO {
         return keyService.revokeKey(accountUsername, keyId, reason)
     }
 }

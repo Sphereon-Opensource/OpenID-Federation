@@ -1,10 +1,10 @@
 package com.sphereon.oid.fed.services.extensions
 
-import com.sphereon.oid.fed.openapi.models.JwkDto
+import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.models.Jwk
 
-fun Jwk.toJwkDTO(): JwkDto {
-    return JwkDto(
+fun Jwk.toJwkAdminDTO(): JwkAdminDTO {
+    return JwkAdminDTO(
         id = this.id,
         accountId = this.account_id,
         uuid = this.uuid.toString(),

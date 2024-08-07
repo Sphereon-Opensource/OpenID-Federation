@@ -2,7 +2,6 @@ package com.sphereon.oid.fed.common.jwt
 
 import com.sphereon.oid.fed.openapi.models.EntityStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.JwtWithPrivateKey
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -52,18 +51,4 @@ actual fun verify(
     opts: Map<String, Any>
 ): Boolean {
     return Jose.jwtVerify(jwt, key, opts)
-}
-
-actual fun generateKeyPair(): JwtWithPrivateKey {
-    val key = Jose.generateKeyPair("EC")
-    return JwtWithPrivateKey(
-        d = key.d,
-        alg = key.alg,
-        crv = key.crv,
-        x = key.x,
-        y = key.y,
-        kid = key.kid,
-        kty = key.kty,
-        use = key.use,
-    )
 }

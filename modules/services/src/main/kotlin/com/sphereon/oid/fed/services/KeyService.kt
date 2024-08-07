@@ -1,10 +1,10 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.jwt.generateKeyPair
-import com.sphereon.oid.fed.openapi.models.JwkDto
+import com.sphereon.oid.fed.common.jwk.generateKeyPair
+import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Jwk
-import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
 
 class KeyService {
     private val accountRepository = Persistence.accountRepository
@@ -42,14 +42,14 @@ class KeyService {
         return createdKey
     }
 
-    fun getKeys(accountUsername: String): List<JwkDto> {
+    fun getKeys(accountUsername: String): List<JwkAdminDTO> {
         val account =
             accountRepository.findByUsername(accountUsername) ?: throw IllegalArgumentException("Account not found")
         val accountId = account.id
-        return keyRepository.findByAccountId(accountId).map { it.toJwkDTO() }
+        return keyRepository.findByAccountId(accountId).map { it.toJwkAdminDTO() }
     }
 
-    fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkDto {
+    fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {
         val account =
             accountRepository.findByUsername(accountUsername) ?: throw IllegalArgumentException("Account not found")
         val accountId = account.id
@@ -68,6 +68,6 @@ class KeyService {
 
         key = keyRepository.findById(keyId) ?: throw IllegalArgumentException("Key not found")
 
-        return key.toJwkDTO()
+        return key.toJwkAdminDTO()
     }
 }
