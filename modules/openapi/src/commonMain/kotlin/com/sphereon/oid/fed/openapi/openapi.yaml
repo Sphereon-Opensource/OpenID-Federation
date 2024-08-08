@@ -96,46 +96,106 @@ components:
       type: object
       x-tags:
         - federation
+      required:
+        - kty
       properties:
         kty:
           type: string
-          description: The "kty" (key type) parameter identifies the cryptographic algorithm family used with the key, such as "RSA" or "EC".
+          description: The key type (e.g., EC, RSA).
           example: RSA
-        use:
+        crv:
           type: string
-          description: The "use" (public key use) parameter identifies the intended use of the public key.
-          example: sig
-        key_ops:
-          type: string
-          description: The "key_ops" (key operations) parameter identifies the operation(s) for which the key is intended to be used.
-          example: encrypt
-        alg:
-          type: string
-          description: The "alg" (algorithm) parameter identifies the algorithm intended for use with the key.
-          example: RS256
+          description: The elliptic curve used (only for EC keys).
+          example: P-256
+          nullable: true
         kid:
           type: string
-          description: The "kid" (key ID) parameter is used to match a specific key.
-          example: 1
+          description: The key ID (optional).
+          example: 12345
+          nullable: true
+        x:
+          type: string
+          description: The X coordinate for EC keys (optional).
+          example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
+          nullable: true
+        y:
+          type: string
+          description: The Y coordinate for EC keys (optional).
+          example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
+          nullable: true
+        n:
+          type: string
+          description: The modulus for RSA keys.
+          example: modulus_value
+          nullable: true
+        e:
+          type: string
+          description: The exponent for RSA keys.
+          example: AQAB
+          nullable: true
+        alg:
+          type: string
+          description: The algorithm associated with the key.
+          example: ES256
+        use:
+          type: string
+          description: The intended use of the key (e.g., sig, enc).
+          example: sig
+          nullable: true
         x5u:
           type: string
-          description: The "x5u" (X.509 URL) parameter is a URI that refers to a resource for an X.509 public key certificate or certificate chain.
+          format: uri
+          description: A URL that points to an X.509 public key certificate or certificate chain.
           example: https://example.com/cert.pem
+          nullable: true
         x5c:
           type: array
-          description: The "x5c" (X.509 certificate chain) parameter contains a chain of one or more PKIX certificates.
           items:
             type: string
-          example:
-            - MIIDQzCCA...+3whvMF1XEt0K2bA8wpPmSTPgQ==
+            description: A base64-encoded string representing an X.509 certificate.
+            example: MIICoTCCAYkCAQ...
+          description: The X.509 certificate chain.
+          nullable: true
         x5t:
           type: string
-          description: The "x5t" (X.509 certificate SHA-1 thumbprint) parameter is a base64url-encoded SHA-1 thumbprint of the DER encoding of an X.509 certificate.
-          example: 0fVuYF8jJ3onI+9Zk2/Iy+Oh5ZpE
-        x5t#S256:
+          description: The SHA-1 thumbprint of the X.509 certificate.
+          example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
+          nullable: true
+        x5tS256:
           type: string
-          description: The "x5t#S256" (X.509 certificate SHA-256 thumbprint) parameter is a base64url-encoded SHA-256 thumbprint of the DER encoding of an X.509 certificate.
-          example: 1MvI4/VhnEzTz7Jo/0Q/d/jI3rE7IMoMT34wvAjyLvs
+          description: The SHA-256 thumbprint of the X.509 certificate.
+          example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
+          nullable: true
+        d:
+          type: string
+          description: The private key value (for RSA and EC keys).
+          example: base64url_encoded_private_key
+          nullable: true
+        p:
+          type: string
+          description: The first prime factor (for RSA private key).
+          example: base64url_encoded_p
+          nullable: true
+        q:
+          type: string
+          description: The second prime factor (for RSA private key).
+          example: base64url_encoded_q
+          nullable: true
+        dp:
+          type: string
+          description: The first factor CRT exponent (for RSA private key).
+          example: base64url_encoded_dp
+          nullable: true
+        dq:
+          type: string
+          description: The second factor CRT exponent (for RSA private key).
+          example: base64url_encoded_dq
+          nullable: true
+        qi:
+          type: string
+          description: The first CRT coefficient (for RSA private key).
+          example: base64url_encoded_qi
+          nullable: true
         revoked:
           $ref: '#/components/schemas/JWTRevoked'
 
