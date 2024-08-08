@@ -1,9 +1,14 @@
 package com.sphereon.oid.fed.common.jwt
 
 import com.sphereon.oid.fed.common.jwt.Jose.generateKeyPair
+import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.JWTHeader
 import kotlinx.coroutines.async
 import kotlinx.coroutines.await
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.js.Promise
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -13,11 +18,15 @@ class JoseJwtTest {
     @Test
     fun signTest() = runTest {
         val keyPair = (generateKeyPair("RS256") as Promise<dynamic>).await()
+        val entityStatement = EntityStatement(iss = "test")
+        val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val result = async {
             sign(
-            JwtPayload(iss="test"),
-            JwtHeader(typ="JWT",alg="RS256",kid="test"),
-            mutableMapOf("privateKey" to keyPair.privateKey)) }
+                payload,
+                JWTHeader(typ = "JWT", alg = "RS256", kid = "test"),
+                mutableMapOf("privateKey" to keyPair.privateKey)
+            )
+        }
         assertTrue((result.await() as Promise<String>).await().startsWith("ey"))
     }
 
@@ -25,10 +34,13 @@ class JoseJwtTest {
     @Test
     fun verifyTest() = runTest {
         val keyPair = (generateKeyPair("RS256") as Promise<dynamic>).await()
+        val entityStatement = EntityStatement(iss = "test")
+        val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val signed = (sign(
-            JwtPayload(iss="test"),
-            JwtHeader(typ="JWT",alg="RS256",kid="test"),
-            mutableMapOf("privateKey" to keyPair.privateKey)) as Promise<dynamic>).await()
+            payload,
+            JWTHeader(typ = "JWT", alg = "RS256", kid = "test"),
+            mutableMapOf("privateKey" to keyPair.privateKey)
+        ) as Promise<dynamic>).await()
         val result = async { verify(signed, keyPair.publicKey, emptyMap()) }
         assertTrue((result.await()))
     }

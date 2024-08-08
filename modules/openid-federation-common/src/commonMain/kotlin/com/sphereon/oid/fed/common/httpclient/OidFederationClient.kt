@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.common.httpclient
 
+import com.sphereon.oid.fed.common.jwt.sign
 import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.JWTHeader
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.*
@@ -10,12 +12,12 @@ import io.ktor.client.plugins.cache.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
-import io.ktor.client.request.forms.*
 import io.ktor.http.*
 import io.ktor.http.HttpMethod.Companion.Get
 import io.ktor.http.HttpMethod.Companion.Post
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.core.*
+import kotlinx.serialization.json.JsonObject
 
 class OidFederationClient(
     engine: HttpClientEngine,
@@ -29,8 +31,12 @@ class OidFederationClient(
             json()
         }
         install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.INFO
+            logger = object : Logger {
+                override fun log(message: String) {
+                    com.sphereon.oid.fed.common.logging.Logger.info("API", message)
+                }
+            }
+            level = LogLevel.ALL
         }
         if (isRequestAuthenticated) {
             install(Auth) {
@@ -47,23 +53,45 @@ class OidFederationClient(
         }
     }
 
-    suspend fun fetchEntityStatement(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): EntityStatement {
+    suspend fun fetchEntityStatement(
+        url: String, httpMethod: HttpMethod = Get, postParameters: PostEntityParameters? = null
+    ): EntityStatement {
         return when (httpMethod) {
             Get -> getEntityStatement(url)
-            Post -> postEntityStatement(url, parameters)
+            Post -> postEntityStatement(url, postParameters)
             else -> throw IllegalArgumentException("Unsupported HTTP method: $httpMethod")
         }
     }
 
+    /*
+     * GET call for Entity Statement
+     */
     private suspend fun getEntityStatement(url: String): EntityStatement {
         return client.use { it.get(url).body<EntityStatement>() }
     }
 
-    private suspend fun postEntityStatement(url: String, parameters: Parameters): EntityStatement {
+    /*
+     *  POST call for Entity Statement
+     */
+    private suspend fun postEntityStatement(url: String, postParameters: PostEntityParameters?): EntityStatement {
+        val body = postParameters?.let { params ->
+            sign(
+                header = params.header,
+                payload = params.payload,
+                opts = mapOf("key" to params.key, "privateKey" to params.privateKey)
+            )
+        }
+
         return client.use {
             it.post(url) {
-                setBody(FormDataContent(parameters))
+                setBody(body)
             }.body<EntityStatement>()
         }
     }
+
+
+    // Data class for POST parameters
+    data class PostEntityParameters(
+        val payload: JsonObject, val header: JWTHeader, val key: String, val privateKey: String
+    )
 }

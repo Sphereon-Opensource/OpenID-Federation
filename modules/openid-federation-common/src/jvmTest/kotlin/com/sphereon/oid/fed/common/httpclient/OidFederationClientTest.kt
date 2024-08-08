@@ -1,11 +1,14 @@
 package com.sphereon.oid.fed.common.httpclient
 
+import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
 import com.sphereon.oid.fed.openapi.models.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.test.Test
 
 class OidFederationClientTest {
@@ -53,11 +56,16 @@ class OidFederationClientTest {
     fun testPostEntityStatement() {
         runBlocking {
             val client = OidFederationClient(mockEngine)
+            val key = RSAKeyGenerator(2048).keyID("key1").generate()
+            val entityStatement = EntityStatement(iss = "https://edugain.org/federation", sub = "https://openid.sunet.se")
+            val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
             val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Post,
-                Parameters.build {
-                    append("iss","https://edugain.org/federation")
-                    append("sub","https://openid.sunet.se")
-                })
+                OidFederationClient.PostEntityParameters(
+                    payload = payload,
+                    header = JWTHeader(typ = "JWT", alg = "RS256", kid = key.keyID),
+                    key = key.toString(), privateKey = key.toRSAPrivateKey().toString()
+                )
+            )
             assert(response == entityStatement)
         }
     }
