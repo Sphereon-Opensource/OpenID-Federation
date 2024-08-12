@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import kotlin.reflect.KClass
 
-class EntityConfigurationStatementJwtConverter : ContentConverter {
+class EntityStatementJwtConverter : ContentConverter {
 
     override suspend fun serializeNullable(
         contentType: ContentType,

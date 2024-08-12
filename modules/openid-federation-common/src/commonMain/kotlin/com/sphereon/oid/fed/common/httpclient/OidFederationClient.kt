@@ -25,7 +25,7 @@ class OidFederationClient(
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(ContentNegotiation) {
-            register(EntityStatementJwt, EntityConfigurationStatementJwtConverter())
+            register(EntityStatementJwt, EntityStatementJwtConverter())
             json()
         }
         install(Logging) {
