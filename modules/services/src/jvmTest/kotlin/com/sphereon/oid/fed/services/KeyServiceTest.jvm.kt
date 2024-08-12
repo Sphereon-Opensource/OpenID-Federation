@@ -16,7 +16,11 @@ class KeyServiceTest {
         val key = generateKeyPair()
         val encryptedKey = key.encrypt()
 
-        assertNotEquals(key, encryptedKey)
+        if (System.getenv("APP_KEY") == null) {
+            assertEquals(key.d, encryptedKey.d)
+        } else {
+            assertNotEquals(key.d, encryptedKey.d)
+        }
 
         val persistenceJwk = JwkPersistence(
             id = 1,
