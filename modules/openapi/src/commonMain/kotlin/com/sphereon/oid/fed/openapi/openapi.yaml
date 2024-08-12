@@ -79,7 +79,7 @@ paths:
           content:
             application/entity-statement+jwt:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/EntityConfigurationStatement'
         '400':
           description: Invalid request
           content:
@@ -498,7 +498,7 @@ paths:
           content:
             application/entity-statement+jwt:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/EntityConfigurationStatement'
         '400':
           description: Invalid request
           content:
@@ -1540,13 +1540,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/EntityConfigurationStatement'
         '201':
           description: Entity Statement created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/EntityConfigurationStatement'
         '400':
           description: Invalid request
           content:
@@ -1593,13 +1593,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/SubordinateStatement'
         '201':
           description: Subordinate Statement created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntityStatement'
+                $ref: '#/components/schemas/SubordinateStatement'
         '400':
           description: Invalid request
           content:
@@ -1633,7 +1633,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/EntityStatement'
+                  $ref: '#/components/schemas/SubordinateStatement'
         '400':
           description: Invalid request
           content:
@@ -2029,9 +2029,6 @@ components:
           description: The first CRT coefficient (for RSA private key).
           example: base64url_encoded_qi
           nullable: true
-        revoked:
-          $ref: '#/components/schemas/JWTRevoked'
-
 
     JwkAdminDTO:
       type: object
@@ -2192,10 +2189,16 @@ components:
           type: string
           description: The encoded JWT signature value.
 
-    EntityStatement:
+    BaseEntityStatement:
       type: object
       x-tags:
         - federation
+      required:
+        - iss
+        - sub
+        - iat
+        - exp
+        - jwks
       properties:
         iss:
           type: string
@@ -2212,42 +2215,65 @@ components:
           description: The time the statement was issued.
         jwks:
           $ref: '#/components/schemas/JWKS'
-        authority_hints:
-          type: array
-          items:
-            type: string
         metadata:
           $ref: '#/components/schemas/Metadata'
-        metadata_policy:
-          $ref: '#/components/schemas/MetadataPolicy'
-        constraints:
-          $ref: '#/components/schemas/Constraint'
         crit:
           type: array
           items:
             type: string
-        metadata_policy_crit:
-          type: array
-          items:
-            type: string
-        trust_marks:
-          type: array
-          description: An array of JSON objects, each representing a Trust Mark.
-          items:
-            $ref: '#/components/schemas/TrustMark'
-        trust_mark_issuers:
-          $ref: '#/components/schemas/TrustMarkIssuers'
-        trust_mark_owners:
-          $ref: '#/components/schemas/TrustMarkOwners'
-        source_endpoint:
-          type: string
-          format: uri
-          description: String containing the fetch endpoint URL from which the Entity Statement was issued.
-        additionalProperties:
-          type: object
-          additionalProperties: true
-          example:
-            "jti": "7l2lncFdY6SlhNia"
+
+    EntityConfigurationStatement:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntityStatement'
+        - type: object
+          properties:
+            authority_hints:
+              type: array
+              items:
+                type: string
+            metadata:
+              $ref: '#/components/schemas/Metadata'
+            crit:
+              type: array
+              items:
+                type: string
+            trust_marks:
+              type: array
+              description: An array of JSON objects, each representing a Trust Mark.
+              items:
+                $ref: '#/components/schemas/TrustMark'
+            trust_mark_issuers:
+              $ref: '#/components/schemas/TrustMarkIssuers'
+            trust_mark_owners:
+              $ref: '#/components/schemas/TrustMarkOwners'
+
+    SubordinateStatement:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntityStatement'
+        - type: object
+          required:
+            - iss
+            - sub
+            - iat
+            - exp
+            - jwks
+          properties:
+            metadata_policy:
+              $ref: '#/components/schemas/MetadataPolicy'
+            constraints:
+              $ref: '#/components/schemas/Constraint'
+            crit:
+              type: array
+              items:
+                type: string
+            metadata_policy_crit:
+              type: array
+              items:
+                type: string
+            source_endpoint:
+              type: string
+              format: uri
+              description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
 
     Metadata:
       type: object

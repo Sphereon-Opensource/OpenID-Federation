@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.common.jwt
 
-import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,7 +26,7 @@ external object Jose {
     fun jwtVerify(jwt: String, key: Any, options: dynamic = definedExternally): dynamic
 }
 
-actual typealias JwtPayload = EntityStatement
+actual typealias JwtPayload = EntityConfigurationStatement
 actual typealias JwtHeader = JWTHeader
 
 @ExperimentalJsExport

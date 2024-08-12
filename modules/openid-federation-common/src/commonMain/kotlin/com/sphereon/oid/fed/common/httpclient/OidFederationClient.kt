@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.common.httpclient
 
-import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.*
@@ -24,7 +25,7 @@ class OidFederationClient(
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(ContentNegotiation) {
-            register(EntityStatementJwt, EntityStatementJwtConverter())
+            register(EntityStatementJwt, EntityConfigurationStatementJwtConverter())
             json()
         }
         install(Logging) {
@@ -46,23 +47,43 @@ class OidFederationClient(
         }
     }
 
-    suspend fun fetchEntityStatement(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): EntityStatement {
+    suspend fun fetchEntityConfigurationStatement(
+        identifier: String,
+        httpMethod: HttpMethod = Get,
+        parameters: Parameters = Parameters.Empty
+    ): EntityConfigurationStatement {
+        val wellKnownUrl = "$identifier/.well-known/openid-federation"
         return when (httpMethod) {
-            Get -> getEntityStatement(url)
-            Post -> postEntityStatement(url, parameters)
+            Get -> fetchGetStatement(wellKnownUrl)
+            Post -> fetchPostStatement(wellKnownUrl, parameters)
             else -> throw IllegalArgumentException("Unsupported HTTP method: $httpMethod")
         }
     }
 
-    private suspend fun getEntityStatement(url: String): EntityStatement {
-        return client.use { it.get(url).body<EntityStatement>() }
-    }
+    suspend fun fetchSubordinateStatement(
+        iss: String,
+        sub: String,
+        fetchUrl: String,
+        httpMethod: HttpMethod = Get,
+    ): SubordinateStatement {
+        return when (httpMethod) {
+            Get -> fetchGetStatement("$fetchUrl?iss=$iss&sub=$sub")
+            Post -> fetchPostStatement(fetchUrl, Parameters.build {
+                append("iss", iss)
+                append("sub", sub)
+            })
 
-    private suspend fun postEntityStatement(url: String, parameters: Parameters): EntityStatement {
-        return client.use {
-            it.post(url) {
-                setBody(FormDataContent(parameters))
-            }.body<EntityStatement>()
+            else -> throw IllegalArgumentException("Unsupported HTTP method: $httpMethod")
         }
     }
+
+    private suspend inline fun <reified T> fetchGetStatement(url: String): T =
+        client.use { it.get(url).body() }
+
+    private suspend inline fun <reified T> fetchPostStatement(url: String, parameters: Parameters): T =
+        client.use {
+            it.post(url) {
+                setBody(FormDataContent(parameters))
+            }.body()
+        }
 }
