@@ -1,11 +1,8 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-//    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
 }
 
@@ -13,12 +10,10 @@ val ktorVersion = "2.3.11"
 
 repositories {
     mavenCentral()
-    mavenLocal()
     google()
 }
 
 kotlin {
-    @OptIn(ExperimentalWasmDsl::class)
     jvm()
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
@@ -79,7 +74,6 @@ kotlin {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
-                implementation("org.bouncycastle:bcprov-jdk15on:1.70")
             }
         }
         val jvmTest by getting {
@@ -87,7 +81,7 @@ kotlin {
                 implementation(kotlin("test-junit"))
             }
         }
-
+//  TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
 //        val androidMain by getting {
 //            dependencies {
 //                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
@@ -102,6 +96,9 @@ kotlin {
 
 //        val iosMain by creating {
 //            dependsOn(commonMain)
+//            dependencies {
+//                implementation("io.ktor:ktor-client-core-ios:$ktorVersion")
+//            }
 //        }
 //        val iosX64Main by getting {
 //            dependsOn(iosMain)
@@ -124,7 +121,7 @@ kotlin {
 //                implementation("io.ktor:ktor-client-cio-iossimulatorarm64:$ktorVersion")
 //            }
 //        }
-//
+
 //        val iosTest by creating {
 //            dependsOn(commonTest)
 //            dependencies {
@@ -169,4 +166,4 @@ kotlin {
 //        minSdk = libs.versions.android.minSdk.get().toInt()
 //    }
 //}
-//
+
