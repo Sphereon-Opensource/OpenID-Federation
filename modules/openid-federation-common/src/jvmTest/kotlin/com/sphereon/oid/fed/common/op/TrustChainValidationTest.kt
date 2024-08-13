@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.common.op
 
 import com.sphereon.oid.fed.common.mapper.JsonMapper
-import com.sphereon.oid.fed.openapi.models.EntityStatement
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.test.runTest

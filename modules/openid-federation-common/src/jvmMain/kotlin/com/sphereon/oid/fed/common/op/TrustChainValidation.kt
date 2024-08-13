@@ -3,14 +3,14 @@ package com.sphereon.oid.fed.common.op
 import com.sphereon.oid.fed.common.httpclient.OidFederationClient
 import com.sphereon.oid.fed.common.jwt.verify
 import com.sphereon.oid.fed.common.mapper.JsonMapper
-import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import io.ktor.client.engine.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.time.OffsetDateTime
 
 suspend fun readAuthorityHints(jwt: String, engine: HttpClientEngine) = coroutineScope {
-    val entityStatementList = mutableListOf<EntityStatement?>()
+    val entityStatementList = mutableListOf<EntityConfigurationStatement?>()
     val entityStatement = JsonMapper().mapEntityStatement(jwt)
     launch {
         entityStatement?.authorityHints?.forEach {
@@ -65,4 +65,3 @@ suspend fun readAuthorityHints(jwt: String, engine: HttpClientEngine) = coroutin
         }
         return@coroutineScope result as String
     }
-

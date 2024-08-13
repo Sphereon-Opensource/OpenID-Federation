@@ -15,7 +15,7 @@ class JsonMapper {
      * Used for mapping JWT token to EntityStatement object
      */
     fun mapEntityStatement(jwtToken: String): EntityConfigurationStatement? =
-        decodeJWTComponents(jwtToken)?.payload?.let { Json.decodeFromJsonElement(it) }
+        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it) }
 
     /*
      * Used for mapping trust chain
