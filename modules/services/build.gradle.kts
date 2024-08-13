@@ -13,10 +13,6 @@ repositories {
 }
 
 kotlin {
-//    js {
-//        browser()
-//        nodejs()
-//    }
     jvm()
 
     sourceSets {
@@ -33,11 +29,5 @@ kotlin {
                 implementation(kotlin("test-junit"))
             }
         }
-
-//        val jsMain by getting {
-//            dependencies {
-////                implementation(npm("jose", "5.6.3"))
-//            }
-//        }
     }
 }
