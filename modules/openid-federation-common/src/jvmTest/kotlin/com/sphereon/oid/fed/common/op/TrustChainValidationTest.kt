@@ -3,40 +3,55 @@ package com.sphereon.oid.fed.common.op
 import com.sphereon.oid.fed.common.mapper.JsonMapper
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
-import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TrustChainValidationTest {
 
-    private val entityStatementJwt = """
-    eyJhbGciOiJSUzI1NiIsInR5cCI6ImVudGl0eS1zdGF0ZW1lbnQrand0Iiwia2lkIjoiTnpiTHNYaDh1RENjZC02TU53WEY0V183bm9XWEZaQWZIa3ha
-    c1JHQzlYcyJ9.eyJpc3MiOiJodHRwczovL2ZlaWRlLm5vIiwic3ViIjoiaHR0cHM6Ly9udG51Lm5vIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY
-    yOTgwMjIsImp3a3MiOnsia2V5cyI6W3sia3R5IjoiUlNBIiwiYWxnIjoiUlMyNTYiLCJ1c2UiOiJzaWciLCJraWQiOiJOemJMc1hoOHVEQ2NkLTZNTnd
-    YRjRXXzdub1dYRlpBZkhreFpzUkdDOVhzIiwibiI6InBuWEJPdXNFQU51dWc2ZXdlemI5Sl8uLi4iLCJlIjoiQVFBQiJ9XX0sIm1ldGFkYXRhIjp7Im9
-    wZW5pZF9wcm92aWRlciI6eyJpc3N1ZXIiOiJodHRwczovL250bnUubm8iLCJvcmdhbml6YXRpb25fbmFtZSI6Ik5UTlUifSwib2F1dGhfY2xpZW50Ijp
-    7Im9yZ2FuaXphdGlvbl9uYW1lIjoiTlROVSJ9fSwibWV0YWRhdGFfcG9saWN5Ijp7Im9wZW5pZF9wcm92aWRlciI6eyJpZF90b2tlbl9zaWduaW5nX2F
-    sZ192YWx1ZXNfc3VwcG9ydGVkIjp7InN1YnNldF9vZiI6WyJSUzI1NiIsIlJTMzg0IiwiUlM1MTIiXX0sIm9wX3BvbGljeV91cmkiOnsicmVnZXhwIjo
-    iXmh0dHBzOi8vW1xcdy1dK1xcLmV4YW1wbGVcXC5jb20vW1xcdy1dK1xcLmh0bWwifX0sIm9hdXRoX2NsaWVudCI6eyJncmFudF90eXBlcyI6eyJvbmV
-    fb2YiOlsiYXV0aG9yaXphdGlvbl9jb2RlIiwiY2xpZW50X2NyZWRlbnRpYWxzIl19fX0sImNvbnN0cmFpbnRzIjp7Im1heF9wYXRoX2xlbmd0aCI6Mn0
-    sImNyaXQiOlsianRpIl0sIm1ldGFkYXRhX3BvbGljeV9jcml0IjpbInJlZ2V4cCJdLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2ZlaWRlLm5vL2Z
-    lZGVyYXRpb25fYXBpL2ZldGNoIiwianRpIjoiN2wybG5jRmRZNlNsaE5pYSJ9.cb0Xxqskr77xvJcF_rOfe1LiDjI-F9W-M7TMqEAJSYVrxEZAcaQfrL
-    wIyeyh_gE3_KVt1bBpdod1XPG9Eied5oqwuf6_TPjrtKI6W9pdNwzXExwDSjUCk726UIxhOkakViBFrtptxB0fz_JCwtqOHP7fhdcJY2KhpUNJQjlJkl
-    00Bh83MwYuTcYwcbPkr9zl3hf38dDtziZgqOs7Ig9UZUw4FCajC4fcho88NIoBDM3XajfiIblDKd8B-sSJUz8WAJxSzWnD9sLPpbwe5qjOwSms3gSiTg
-    Jxl_8N7QV9-bSzEshSU0XvpMPBfP8Hl3RJkgJ7a9Ng6PKDa0eqFLLLQA
-    """.replace("[\\n\\s]+".toRegex(), "")
+    private val intermediateEntityStatement = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldC5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyOTgwMjIsIm1ldGFkYXRhIjp7ImZlZGVyYXRpb25fZW50aXR5Ijp7ImZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQiOiJodHRwczovL3N1bmV0LnNlL29wZW5pZC9mZWRhcGkiLCJob21lcGFnZV91cmkiOiJodHRwczovL3d3dy5zdW5ldC5zZSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoiU1VORVQifSwib3BlbmlkX3Byb3ZpZGVyIjp7Imlzc3VlciI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiYXV0aG9yaXphdGlvbl9lbmRwb2ludCI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2F1dGhvcml6YXRpb24iLCJncmFudF90eXBlc19zdXBwb3J0ZWQiOlsiYXV0aG9yaXphdGlvbl9jb2RlIl0sImlkX3Rva2VuX3NpZ25pbmdfYWxnX3ZhbHVlc19zdXBwb3J0ZWQiOlsiRVMyNTYiLCJSUzI1NiJdLCJsb2dvX3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9pbWcvdW11LWxvZ28tbGVmdC1uZWctU0Uuc3ZnIiwib3BfcG9saWN5X3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9lbi93ZWJzaXRlL2xlZ2FsLWluZm9ybWF0aW9uLyIsInJlc3BvbnNlX3R5cGVzX3N1cHBvcnRlZCI6WyJjb2RlIl0sInN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjpbInBhaXJ3aXNlIiwicHVibGljIl0sInRva2VuX2VuZHBvaW50IjoiaHR0cHM6Ly9vcGVuaWQuc3VuZXQuc2UvdG9rZW4iLCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjpbInByaXZhdGVfa2V5X2p3dCJdLCJqd2tzX3VyaSI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2p3a3MifX0sImp3a3MiOnsia2V5cyI6W3siYWxnIjoiUlMyNTYiLCJlIjoiQVFBQiIsImtpZCI6ImtleTEiLCJrdHkiOiJSU0EiLCJuIjoicG5YQk91c0VBTnV1ZzZld2V6YjlKXy4uLiIsInVzZSI6InNpZyJ9XX0sImF1dGhvcml0eV9oaW50cyI6WyJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fb25lIiwiaHR0cHM6Ly9lZHVnYWluLm9yZy9mZWRlcmF0aW9uX3R3byJdfQ.dRJSJIhDkB6LmqJ7iKsacmWTKYnSJDy9X8KRpz3XZq0"
+    private val intermediateEntityStatement1 = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldC5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyOTgwMjIsIm1ldGFkYXRhIjp7ImZlZGVyYXRpb25fZW50aXR5Ijp7ImZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQiOiJodHRwczovL3N1bmV0LnNlL29wZW5pZC9mZWRhcGkiLCJob21lcGFnZV91cmkiOiJodHRwczovL3d3dy5zdW5ldC5zZSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoiU1VORVQifSwib3BlbmlkX3Byb3ZpZGVyIjp7Imlzc3VlciI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiYXV0aG9yaXphdGlvbl9lbmRwb2ludCI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2F1dGhvcml6YXRpb24iLCJncmFudF90eXBlc19zdXBwb3J0ZWQiOlsiYXV0aG9yaXphdGlvbl9jb2RlIl0sImlkX3Rva2VuX3NpZ25pbmdfYWxnX3ZhbHVlc19zdXBwb3J0ZWQiOlsiRVMyNTYiLCJSUzI1NiJdLCJsb2dvX3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9pbWcvdW11LWxvZ28tbGVmdC1uZWctU0Uuc3ZnIiwib3BfcG9saWN5X3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9lbi93ZWJzaXRlL2xlZ2FsLWluZm9ybWF0aW9uLyIsInJlc3BvbnNlX3R5cGVzX3N1cHBvcnRlZCI6WyJjb2RlIl0sInN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjpbInBhaXJ3aXNlIiwicHVibGljIl0sInRva2VuX2VuZHBvaW50IjoiaHR0cHM6Ly9vcGVuaWQuc3VuZXQuc2UvdG9rZW4iLCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjpbInByaXZhdGVfa2V5X2p3dCJdLCJqd2tzX3VyaSI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2p3a3MifX0sImp3a3MiOnsia2V5cyI6W3siYWxnIjoiUlMyNTYiLCJlIjoiQVFBQiIsImtpZCI6ImtleTEiLCJrdHkiOiJSU0EiLCJuIjoicG5YQk91c0VBTnV1ZzZld2V6YjlKXy4uLiIsInVzZSI6InNpZyJ9XX0sImF1dGhvcml0eV9oaW50cyI6WyJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fdGhyZWUiXX0.HUuT8CtSWpax6Dbu8THPei16UDVEylUyESuXE3-PdPo"
+    private val trustAnchor = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldC5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyOTgwMjIsIm1ldGFkYXRhIjp7ImZlZGVyYXRpb25fZW50aXR5Ijp7ImZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQiOiJodHRwczovL3N1bmV0LnNlL29wZW5pZC9mZWRhcGkiLCJob21lcGFnZV91cmkiOiJodHRwczovL3d3dy5zdW5ldC5zZSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoiU1VORVQifSwib3BlbmlkX3Byb3ZpZGVyIjp7Imlzc3VlciI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiYXV0aG9yaXphdGlvbl9lbmRwb2ludCI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2F1dGhvcml6YXRpb24iLCJncmFudF90eXBlc19zdXBwb3J0ZWQiOlsiYXV0aG9yaXphdGlvbl9jb2RlIl0sImlkX3Rva2VuX3NpZ25pbmdfYWxnX3ZhbHVlc19zdXBwb3J0ZWQiOlsiRVMyNTYiLCJSUzI1NiJdLCJsb2dvX3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9pbWcvdW11LWxvZ28tbGVmdC1uZWctU0Uuc3ZnIiwib3BfcG9saWN5X3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9lbi93ZWJzaXRlL2xlZ2FsLWluZm9ybWF0aW9uLyIsInJlc3BvbnNlX3R5cGVzX3N1cHBvcnRlZCI6WyJjb2RlIl0sInN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjpbInBhaXJ3aXNlIiwicHVibGljIl0sInRva2VuX2VuZHBvaW50IjoiaHR0cHM6Ly9vcGVuaWQuc3VuZXQuc2UvdG9rZW4iLCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjpbInByaXZhdGVfa2V5X2p3dCJdLCJqd2tzX3VyaSI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2p3a3MifX0sImp3a3MiOnsia2V5cyI6W3siYWxnIjoiUlMyNTYiLCJlIjoiQVFBQiIsImtpZCI6ImtleTEiLCJrdHkiOiJSU0EiLCJuIjoicG5YQk91c0VBTnV1ZzZld2V6YjlKXy4uLiIsInVzZSI6InNpZyJ9XX19.CxbYkZxQ8Y8U0uLBn5uAl1xJh96C8qv_4RB6cOIDvss"
 
     private val mockEngine = MockEngine { request ->
         when(request.url) {
-            Url("https://www.example.com/.well-known/openid-federation") -> respond(entityStatementJwt)
-            Url("https://www.example.com/entity-statement") -> respond(entityStatementJwt)
+            Url("https://edugain.org/federation") -> respond(
+                content = intermediateEntityStatement,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+            )
+            Url("https://edugain.org/federation_one") -> respond(
+                content = intermediateEntityStatement1,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+            )
+            Url("https://edugain.org/federation_two") -> respond(
+                content = trustAnchor,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+            )
+            Url("https://edugain.org/federation_three") -> respond(
+                content = trustAnchor,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+            )
             else -> error("Unhandled ${request.url}")
         }
     }
 
     @Test
-    fun readAuthorityHintsTest() = runTest {
-        val entityStatements = listOf(JsonMapper().mapEntityStatement(entityStatementJwt))
-        assertEquals(entityStatements, readAuthorityHints(entityStatementJwt, mockEngine))
+    fun readAuthorityHintsTest() {
+        val entityConfigurationStatement = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldC5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyOTgwMjIsIm1ldGFkYXRhIjp7ImZlZGVyYXRpb25fZW50aXR5Ijp7ImZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQiOiJodHRwczovL3N1bmV0LnNlL29wZW5pZC9mZWRhcGkiLCJob21lcGFnZV91cmkiOiJodHRwczovL3d3dy5zdW5ldC5zZSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoiU1VORVQifSwib3BlbmlkX3Byb3ZpZGVyIjp7Imlzc3VlciI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiYXV0aG9yaXphdGlvbl9lbmRwb2ludCI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2F1dGhvcml6YXRpb24iLCJncmFudF90eXBlc19zdXBwb3J0ZWQiOlsiYXV0aG9yaXphdGlvbl9jb2RlIl0sImlkX3Rva2VuX3NpZ25pbmdfYWxnX3ZhbHVlc19zdXBwb3J0ZWQiOlsiRVMyNTYiLCJSUzI1NiJdLCJsb2dvX3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9pbWcvdW11LWxvZ28tbGVmdC1uZWctU0Uuc3ZnIiwib3BfcG9saWN5X3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9lbi93ZWJzaXRlL2xlZ2FsLWluZm9ybWF0aW9uLyIsInJlc3BvbnNlX3R5cGVzX3N1cHBvcnRlZCI6WyJjb2RlIl0sInN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjpbInBhaXJ3aXNlIiwicHVibGljIl0sInRva2VuX2VuZHBvaW50IjoiaHR0cHM6Ly9vcGVuaWQuc3VuZXQuc2UvdG9rZW4iLCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjpbInByaXZhdGVfa2V5X2p3dCJdLCJqd2tzX3VyaSI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2p3a3MifX0sImp3a3MiOnsia2V5cyI6W3siYWxnIjoiUlMyNTYiLCJlIjoiQVFBQiIsImtpZCI6ImtleTEiLCJrdHkiOiJSU0EiLCJuIjoicG5YQk91c0VBTnV1ZzZld2V6YjlKXy4uLiIsInVzZSI6InNpZyJ9XX0sImF1dGhvcml0eV9oaW50cyI6WyJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb24iXX0.8O9EVsFWRo65ITGDp2KS5sVs7PNOBEWPm60mcOyC29A"
+        // It should be
+        // [
+        //  [intermediateEntityStatement, intermediateStatement1, trustAnchor],
+        //  [intermediateStatement, trustAnchor]
+        // ]
+        val entityStatements = listOf(
+            JsonMapper().mapEntityStatement(intermediateEntityStatement),
+            JsonMapper().mapEntityStatement(intermediateEntityStatement1),
+            JsonMapper().mapEntityStatement(trustAnchor),
+            JsonMapper().mapEntityStatement(trustAnchor)
+            )
+        assertEquals(entityStatements, readAuthorityHints(entityConfigurationStatement, mockEngine))
     }
 }

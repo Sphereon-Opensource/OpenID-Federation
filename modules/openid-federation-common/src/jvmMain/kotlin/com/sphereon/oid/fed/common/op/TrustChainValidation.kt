@@ -5,26 +5,22 @@ import com.sphereon.oid.fed.common.jwt.verify
 import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import io.ktor.client.engine.*
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.time.OffsetDateTime
 
-suspend fun readAuthorityHints(jwt: String, engine: HttpClientEngine) = coroutineScope {
-    val entityStatementList = mutableListOf<EntityConfigurationStatement?>()
+fun readAuthorityHints(jwt: String, engine: HttpClientEngine): List<EntityConfigurationStatement> {
+    val entityStatementList = mutableListOf<EntityConfigurationStatement>()
     val entityStatement = JsonMapper().mapEntityStatement(jwt)
-    launch {
-        entityStatement?.authorityHints?.forEach {
-            val intermediateJwt = requestEntityConfiguration(it, engine)
-            val intermediateES = JsonMapper().mapEntityStatement(intermediateJwt)
-            entityStatementList.add(intermediateES)
-            //readAuthorityHints(intermediateJwt, engine)
-        }
+    entityStatement?.authorityHints?.forEach {
+       requestEntityConfiguration(it, engine).run {
+           JsonMapper().mapEntityStatement(this)?.run {
+               entityStatementList.add(this)
+           }
+           entityStatementList.addAll(readAuthorityHints(this, engine))
+       }
     }
-    return@coroutineScope entityStatementList
+    return entityStatementList
 }
-
-    //TODO fetch entity configuration
-    //TODO iterate through intermediates listed in authority_hints, ignore unknown trust anchor, repeat if intermediate
 
     fun validateEntityStatement(jwts: List<String>) {
         val entityStatements = jwts.map { JsonMapper().mapEntityStatement(it) }
@@ -42,7 +38,7 @@ suspend fun readAuthorityHints(jwt: String, engine: HttpClientEngine) = coroutin
             if(element?.iat?.compareTo(offsetTime.toEpochSecond().toInt())!! > 0) {
                 throw IllegalArgumentException("Invalid iat")
             }
-            if(element.exp?.compareTo(offsetTime.toEpochSecond().toInt())!! < 0) {
+            if(element.exp < offsetTime.toEpochSecond().toInt()) {
                 throw IllegalArgumentException("Invalid exp")
             }
 
@@ -58,10 +54,6 @@ suspend fun readAuthorityHints(jwt: String, engine: HttpClientEngine) = coroutin
         }
     }
 
-    private suspend fun requestEntityConfiguration(url: String, engine: HttpClientEngine) = coroutineScope {
-        var result: String? = null
-        launch {
-            result = OidFederationClient(engine).fetchEntityStatement(url)
-        }
-        return@coroutineScope result as String
+    private fun requestEntityConfiguration(url: String, engine: HttpClientEngine) = runBlocking {
+        return@runBlocking OidFederationClient(engine).fetchEntityStatement(url)
     }
