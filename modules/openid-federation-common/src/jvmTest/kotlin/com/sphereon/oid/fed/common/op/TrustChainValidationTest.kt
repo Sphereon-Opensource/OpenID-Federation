@@ -41,17 +41,10 @@ class TrustChainValidationTest {
     @Test
     fun readAuthorityHintsTest() {
         val entityConfigurationStatement = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldC5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyOTgwMjIsIm1ldGFkYXRhIjp7ImZlZGVyYXRpb25fZW50aXR5Ijp7ImZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQiOiJodHRwczovL3N1bmV0LnNlL29wZW5pZC9mZWRhcGkiLCJob21lcGFnZV91cmkiOiJodHRwczovL3d3dy5zdW5ldC5zZSIsIm9yZ2FuaXphdGlvbl9uYW1lIjoiU1VORVQifSwib3BlbmlkX3Byb3ZpZGVyIjp7Imlzc3VlciI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiYXV0aG9yaXphdGlvbl9lbmRwb2ludCI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2F1dGhvcml6YXRpb24iLCJncmFudF90eXBlc19zdXBwb3J0ZWQiOlsiYXV0aG9yaXphdGlvbl9jb2RlIl0sImlkX3Rva2VuX3NpZ25pbmdfYWxnX3ZhbHVlc19zdXBwb3J0ZWQiOlsiRVMyNTYiLCJSUzI1NiJdLCJsb2dvX3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9pbWcvdW11LWxvZ28tbGVmdC1uZWctU0Uuc3ZnIiwib3BfcG9saWN5X3VyaSI6Imh0dHBzOi8vd3d3LnVtdS5zZS9lbi93ZWJzaXRlL2xlZ2FsLWluZm9ybWF0aW9uLyIsInJlc3BvbnNlX3R5cGVzX3N1cHBvcnRlZCI6WyJjb2RlIl0sInN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjpbInBhaXJ3aXNlIiwicHVibGljIl0sInRva2VuX2VuZHBvaW50IjoiaHR0cHM6Ly9vcGVuaWQuc3VuZXQuc2UvdG9rZW4iLCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjpbInByaXZhdGVfa2V5X2p3dCJdLCJqd2tzX3VyaSI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlL2p3a3MifX0sImp3a3MiOnsia2V5cyI6W3siYWxnIjoiUlMyNTYiLCJlIjoiQVFBQiIsImtpZCI6ImtleTEiLCJrdHkiOiJSU0EiLCJuIjoicG5YQk91c0VBTnV1ZzZld2V6YjlKXy4uLiIsInVzZSI6InNpZyJ9XX0sImF1dGhvcml0eV9oaW50cyI6WyJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb24iXX0.8O9EVsFWRo65ITGDp2KS5sVs7PNOBEWPm60mcOyC29A"
-        // It should be
-        // [
-        //  [intermediateEntityStatement, intermediateStatement1, trustAnchor],
-        //  [intermediateStatement, trustAnchor]
-        // ]
-        val entityStatements = listOf(
-            JsonMapper().mapEntityStatement(intermediateEntityStatement),
-            JsonMapper().mapEntityStatement(intermediateEntityStatement1),
-            JsonMapper().mapEntityStatement(trustAnchor),
-            JsonMapper().mapEntityStatement(trustAnchor)
-            )
-        assertEquals(entityStatements, readAuthorityHints(entityConfigurationStatement, mockEngine))
+        val listOfEntityConfigurationStatementList = listOf(
+            listOf(JsonMapper().mapEntityStatement(intermediateEntityStatement), JsonMapper().mapEntityStatement(intermediateEntityStatement1), JsonMapper().mapEntityStatement(trustAnchor)),
+            listOf(JsonMapper().mapEntityStatement(intermediateEntityStatement), JsonMapper().mapEntityStatement(trustAnchor))
+        )
+        assertEquals(listOfEntityConfigurationStatementList, readAuthorityHints(entityConfigurationStatement, mockEngine))
     }
 }

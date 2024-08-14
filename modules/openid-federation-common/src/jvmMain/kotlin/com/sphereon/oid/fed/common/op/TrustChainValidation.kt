@@ -8,18 +8,37 @@ import io.ktor.client.engine.*
 import kotlinx.coroutines.runBlocking
 import java.time.OffsetDateTime
 
-fun readAuthorityHints(jwt: String, engine: HttpClientEngine): List<EntityConfigurationStatement> {
-    val entityStatementList = mutableListOf<EntityConfigurationStatement>()
+fun readAuthorityHints(jwt: String, engine: HttpClientEngine): List<List<EntityConfigurationStatement>> {
+    val trustChains = mutableListOf<List<EntityConfigurationStatement>>()
     val entityStatement = JsonMapper().mapEntityStatement(jwt)
-    entityStatement?.authorityHints?.forEach {
-       requestEntityConfiguration(it, engine).run {
-           JsonMapper().mapEntityStatement(this)?.run {
-               entityStatementList.add(this)
-           }
-           entityStatementList.addAll(readAuthorityHints(this, engine))
-       }
+
+    entityStatement?.authorityHints?.forEach { authorityHint ->
+        buildTrustChain(authorityHint, engine, trustChains)
     }
-    return entityStatementList
+    return trustChains
+}
+
+fun buildTrustChain(
+    authorityHint: String,
+    engine: HttpClientEngine,
+    trustChains: MutableList<List<EntityConfigurationStatement>>,
+    trustChain: MutableList<EntityConfigurationStatement> = mutableListOf()
+)
+{
+    requestEntityConfiguration(authorityHint, engine).run {
+        JsonMapper().mapEntityStatement(this)?.let {
+            if (it.authorityHints.isNullOrEmpty()) {
+                trustChain.add(it)
+                trustChains.add(trustChain.map { content -> content.copy() })
+                it.authorityHints ?: trustChain.clear()
+            } else {
+                it.authorityHints?.forEach { hint ->
+                    trustChain.add(it)
+                    buildTrustChain(hint, engine, trustChains, trustChain)
+                }
+            }
+        }
+    }
 }
 
     fun validateEntityStatement(jwts: List<String>) {
