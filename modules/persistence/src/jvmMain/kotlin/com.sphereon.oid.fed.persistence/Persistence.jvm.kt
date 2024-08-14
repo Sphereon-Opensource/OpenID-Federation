@@ -6,10 +6,12 @@ import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.oid.fed.persistence.repositories.AccountRepository
 import com.sphereon.oid.fed.persistence.repositories.KeyRepository
+import com.sphereon.oid.fed.persistence.repositories.SubordinateRepository
 
 actual object Persistence {
     actual val accountRepository: AccountRepository
     actual val keyRepository: KeyRepository
+    actual val subordinateRepository: SubordinateRepository
 
     init {
         val driver = getDriver()
@@ -18,6 +20,7 @@ actual object Persistence {
         val database = Database(driver)
         accountRepository = AccountRepository(database.accountQueries)
         keyRepository = KeyRepository(database.keyQueries)
+        subordinateRepository = SubordinateRepository(database.subordinateQueries)
     }
 
     private fun getDriver(): SqlDriver {

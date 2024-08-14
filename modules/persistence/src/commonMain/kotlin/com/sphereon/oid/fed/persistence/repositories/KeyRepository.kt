@@ -4,9 +4,7 @@ import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.persistence.models.KeyQueries
 import com.sphereon.oid.fed.persistence.models.Jwk as JwkPersistence
 
-class KeyRepository(keyQueries: KeyQueries) {
-    private val keyQueries = keyQueries
-
+class KeyRepository(private val keyQueries: KeyQueries) {
     fun findById(id: Int): JwkPersistence? {
         return keyQueries.findById(id).executeAsOneOrNull()
     }
