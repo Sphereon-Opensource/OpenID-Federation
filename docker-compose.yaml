@@ -45,6 +45,7 @@ services:
       APP_KEY: ${APP_KEY}
     depends_on:
       - db
+      - federation-server
     networks:
       - openid_network
 
