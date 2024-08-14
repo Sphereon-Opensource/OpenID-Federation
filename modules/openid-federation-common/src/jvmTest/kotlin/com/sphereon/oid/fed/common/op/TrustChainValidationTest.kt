@@ -17,22 +17,22 @@ class TrustChainValidationTest {
             Url("https://edugain.org/federation") -> respond(
                 content = intermediateEntityStatement,
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
             Url("https://edugain.org/federation_one") -> respond(
                 content = intermediateEntityStatement1,
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
             Url("https://edugain.org/federation_two") -> respond(
                 content = trustAnchor,
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
             Url("https://edugain.org/federation_three") -> respond(
                 content = trustAnchor,
                 status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "text/plain")
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
             else -> error("Unhandled ${request.url}")
         }
