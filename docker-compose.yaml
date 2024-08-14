@@ -5,7 +5,6 @@ services:
     environment:
       POSTGRES_USER: ${DATASOURCE_USER}
       POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
-      POSTGRES_DB: ${DATASOURCE_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -24,7 +23,6 @@ services:
       DATASOURCE_URL: ${DATASOURCE_URL}
       DATASOURCE_USER: ${DATASOURCE_USER}
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-      DATASOURCE_DB: ${DATASOURCE_DB}
     depends_on:
       - db
     networks:
@@ -41,7 +39,6 @@ services:
       DATASOURCE_URL: ${DATASOURCE_URL}
       DATASOURCE_USER: ${DATASOURCE_USER}
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-      DATASOURCE_DB: ${DATASOURCE_DB}
       APP_KEY: ${APP_KEY}
     depends_on:
       - db
