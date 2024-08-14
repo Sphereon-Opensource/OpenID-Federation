@@ -16,7 +16,7 @@ actual fun sign(
     opts: Map<String, Any>
 ): String {
     val rsaJWK = opts["key"] as RSAKey? ?: throw IllegalArgumentException("The RSA key pair is required")
-    
+
     val signer: JWSSigner = RSASSASigner(rsaJWK)
 
     val signedJWT = SignedJWT(

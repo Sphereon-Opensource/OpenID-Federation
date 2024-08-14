@@ -1,0 +1,33 @@
+create:
+INSERT INTO jwk (
+    account_id,
+    kty,
+    crv,
+    kid,
+    x,
+    y,
+    d,
+    n,
+    e,
+    p,
+    q,
+    dp,
+    dq,
+    qi,
+    x5u,
+    x5c,
+    x5t,
+    x5t_s256,
+    alg,
+    use
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *;
+
+revoke:
+UPDATE jwk SET (revoked_at, revoked_reason) = (CURRENT_TIMESTAMP, ?) WHERE id = ?;
+
+findByAccountId:
+SELECT * FROM jwk WHERE account_id = ?;
+
+findById:
+SELECT * FROM jwk WHERE id = ?;

@@ -35,7 +35,8 @@ kotlin {
             filter { line: String ->
                 line.replace(
                     "kotlin.collections.Map<kotlin.String, kotlin.Any>",
-                    "kotlinx.serialization.json.JsonObject")
+                    "kotlinx.serialization.json.JsonObject"
+                )
             }
         }
 

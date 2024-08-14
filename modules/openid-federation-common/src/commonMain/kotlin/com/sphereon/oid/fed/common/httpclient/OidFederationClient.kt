@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.common.httpclient
 
 import com.sphereon.oid.fed.common.jwt.sign
-import com.sphereon.oid.fed.openapi.models.EntityStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -9,13 +8,11 @@ import io.ktor.client.engine.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.cache.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.HttpMethod.Companion.Get
 import io.ktor.http.HttpMethod.Companion.Post
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.core.*
 import kotlinx.serialization.json.JsonObject
 
@@ -26,10 +23,6 @@ class OidFederationClient(
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache)
-        install(ContentNegotiation) {
-            register(EntityStatementJwt, EntityStatementJwtConverter())
-            json()
-        }
         install(Logging) {
             logger = object : Logger {
                 override fun log(message: String) {
@@ -55,7 +48,8 @@ class OidFederationClient(
 
     suspend fun fetchEntityStatement(
         url: String, httpMethod: HttpMethod = Get, postParameters: PostEntityParameters? = null
-    ): EntityStatement {
+    ): String {
+
         return when (httpMethod) {
             Get -> getEntityStatement(url)
             Post -> postEntityStatement(url, postParameters)
@@ -63,17 +57,11 @@ class OidFederationClient(
         }
     }
 
-    /*
-     * GET call for Entity Statement
-     */
-    private suspend fun getEntityStatement(url: String): EntityStatement {
-        return client.use { it.get(url).body<EntityStatement>() }
+    private suspend fun getEntityStatement(url: String): String {
+        return client.use { it.get(url).body() }
     }
 
-    /*
-     *  POST call for Entity Statement
-     */
-    private suspend fun postEntityStatement(url: String, postParameters: PostEntityParameters?): EntityStatement {
+    private suspend fun postEntityStatement(url: String, postParameters: PostEntityParameters?): String {
         val body = postParameters?.let { params ->
             sign(
                 header = params.header,
@@ -85,7 +73,7 @@ class OidFederationClient(
         return client.use {
             it.post(url) {
                 setBody(body)
-            }.body<EntityStatement>()
+            }.body()
         }
     }
 
