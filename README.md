@@ -46,7 +46,35 @@ capabilities in a standardized manner, enabling seamless integration and interop
   adjusted according to real-time interactions and policy evaluations.
 - **Conflict Resolution**: Defines how disputes or mismatches in federation policies among entities are resolved.
 
-# Local Key Management System - Important Notice
+# Deployment Instructions
+
+## Docker Setup
+
+For seamless deployment of the OpenID Federation components, Docker and Docker Compose offer the most efficient and
+straightforward approach.
+
+## Essential Commands
+
+### Build Docker Images
+
+* `docker compose build` - Compile the Docker images for the services.
+* `docker compose build --no-cache` - Compile the Docker images without utilizing the build cache, ensuring a clean
+  build.
+
+### Manage Services:
+
+* `docker compose up` - Initiate the services.
+* `docker compose up -d` - Launch the services in detached mode, allowing them to run in the background.
+* `docker compose down` - Terminate the services.
+* `docker compose down -v` - Terminate the services and remove associated volumes.
+* `docker compose up db -d` - Start only the database container in detached mode for isolated database operations.
+
+## API Endpoints via Docker
+
+* Federation API: Accessible at http://localhost:8080
+* Admin Server API: Accessible at http://localhost:8081
+
+## Local Key Management System - Important Notice
 
 Local Key Management Service is designed primarily for testing, development, and local experimentation
 purposes. **It is not intended for use in production environments** due to significant security and compliance risks.
