@@ -76,7 +76,9 @@ class OidFederationClient(
         }
     }
 
-    suspend fun fetchAccount(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): String {
+    suspend fun fetchAccount(
+        url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty
+    ): String {
         return when (httpMethod) {
             Get -> getAccount(url)
             Post -> postAccount(url, parameters)
