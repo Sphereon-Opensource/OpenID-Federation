@@ -12,6 +12,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - openid_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${DATASOURCE_DB} -U ${DATASOURCE_USER}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
 
   federation-server:
     build:
@@ -25,7 +30,10 @@ services:
       DATASOURCE_USER: ${DATASOURCE_USER}
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
     depends_on:
-      - db
+      admin-server:
+        condition: service_started
+      db:
+        condition: service_healthy
     networks:
       - openid_network
 
@@ -42,8 +50,8 @@ services:
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
     depends_on:
-      - db
-      - federation-server
+      db:
+        condition: service_healthy
     networks:
       - openid_network
 
