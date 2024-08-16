@@ -20,6 +20,7 @@ class OidFederationClient(
     private val isRequestCached: Boolean = false
 ) {
     private val client: HttpClient = HttpClient(engine) {
+        install(HttpCache)
         install(Logging) {
             logger = Logger.DEFAULT
             level = LogLevel.INFO
@@ -39,7 +40,11 @@ class OidFederationClient(
         }
     }
 
-    suspend fun fetchEntityStatement(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): String {
+    suspend fun fetchEntityStatement(
+        url: String,
+        httpMethod: HttpMethod = Get,
+        parameters: Parameters = Parameters.Empty
+    ): String {
         return when (httpMethod) {
             Get -> getEntityStatement(url)
             Post -> postEntityStatement(url, parameters)

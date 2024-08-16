@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.common.mapper
 
-import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWTSignature
 import kotlinx.serialization.json.Json
@@ -14,13 +14,14 @@ class JsonMapper {
     /*
      * Used for mapping JWT token to EntityStatement object
      */
-    fun mapEntityStatement(jwtToken: String): EntityStatement? =
+    fun mapEntityStatement(jwtToken: String): EntityConfigurationStatement? =
         decodeJWTComponents(jwtToken)?.payload?.let { Json.decodeFromJsonElement(it) }
 
     /*
      * Used for mapping trust chain
      */
-    fun mapTrustChain(jwtTokenList: List<String>): List<EntityStatement?> = jwtTokenList.map { mapEntityStatement(it) }
+    fun mapTrustChain(jwtTokenList: List<String>): List<EntityConfigurationStatement?> =
+        jwtTokenList.map { mapEntityStatement(it) }
 
     /*
      * Used for decoding JWT to an object of JWT with Header, Payload and Signature

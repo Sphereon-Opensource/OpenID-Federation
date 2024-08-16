@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.services.AccountService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/account")
+@RequestMapping("/accounts")
 class AccountController {
     private val accountService = AccountService()
 
