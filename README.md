@@ -46,6 +46,11 @@ capabilities in a standardized manner, enabling seamless integration and interop
   adjusted according to real-time interactions and policy evaluations.
 - **Conflict Resolution**: Defines how disputes or mismatches in federation policies among entities are resolved.
 
+# Local Key Management System - Important Notice
+
+Local Key Management Service is designed primarily for testing, development, and local experimentation
+purposes. **It is not intended for use in production environments** due to significant security and compliance risks.
+
 # Data Structure
 
 ## Entity Statement Overview

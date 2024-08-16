@@ -20,5 +20,6 @@ captures
 /platforms/
 /platform-tools/
 /.temp/
+/docker/.env
 /.run/*
 kotlin-js-store/
