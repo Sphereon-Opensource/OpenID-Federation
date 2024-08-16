@@ -19,7 +19,7 @@ jobs:
           java-version: 17
 
       - name: Build the stack
-        run: docker-compose -f docker-compose.yaml up -d
+        run: docker compose -f docker-compose.yaml up db -d
         env:
           DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
           DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
