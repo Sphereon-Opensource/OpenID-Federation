@@ -56,8 +56,7 @@ class OidFederationClientTest {
             val response = client.fetchEntityStatement("https://www.example.com", HttpMethod.Post,
                 OidFederationClient.PostEntityParameters(
                     payload = payload,
-                    header = JWTHeader(typ = "JWT", alg = "RS256", kid = key.keyID),
-                    key = key.toString(), privateKey = key.toRSAPrivateKey().toString()
+                    header = JWTHeader(typ = "JWT", alg = "RS256", kid = key.keyID)
                 )
             )
             assertEquals(jwt, response)

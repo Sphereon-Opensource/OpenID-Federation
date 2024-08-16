@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.common.httpclient
 
-import com.sphereon.oid.fed.common.jwt.sign
+import com.sphereon.oid.fed.common.jwt.KMSInterface
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -10,7 +10,9 @@ import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.cache.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.http.*
+import io.ktor.http.HttpMethod.Companion.Delete
 import io.ktor.http.HttpMethod.Companion.Get
 import io.ktor.http.HttpMethod.Companion.Post
 import io.ktor.utils.io.core.*
@@ -18,8 +20,9 @@ import kotlinx.serialization.json.JsonObject
 
 class OidFederationClient(
     engine: HttpClientEngine,
+    private val kmsInterface: KMSInterface,
     private val isRequestAuthenticated: Boolean = false,
-    private val isRequestCached: Boolean = false
+    private val isRequestCached: Boolean = false,
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache)
@@ -63,11 +66,7 @@ class OidFederationClient(
 
     private suspend fun postEntityStatement(url: String, postParameters: PostEntityParameters?): String {
         val body = postParameters?.let { params ->
-            sign(
-                header = params.header,
-                payload = params.payload,
-                opts = mapOf("key" to params.key, "privateKey" to params.privateKey)
-            )
+            kmsInterface.createJWT(header = params.header, payload = params.payload)
         }
 
         return client.use {
@@ -77,9 +76,34 @@ class OidFederationClient(
         }
     }
 
+    suspend fun fetchAccount(url: String, httpMethod: HttpMethod = Get, parameters: Parameters = Parameters.Empty): String {
+        return when (httpMethod) {
+            Get -> getAccount(url)
+            Post -> postAccount(url, parameters)
+            Delete -> deleteAccount(url)
+            else -> throw IllegalArgumentException("Unsupported HTTP method: $httpMethod")
+        }
+    }
+
+    private suspend fun getAccount(url: String): String {
+        return client.use { it.get(url).body() }
+    }
+
+    private suspend fun postAccount(url: String, parameters: Parameters): String {
+        return client.use {
+            it.post(url) {
+                setBody(FormDataContent(parameters))
+            }.body()
+        }
+    }
+
+    private suspend fun deleteAccount(url: String): String {
+        return client.use { it.delete(url).body() }
+    }
+
 
     // Data class for POST parameters
     data class PostEntityParameters(
-        val payload: JsonObject, val header: JWTHeader, val key: String, val privateKey: String
+        val payload: JsonObject, val header: JWTHeader
     )
 }
