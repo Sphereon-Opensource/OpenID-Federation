@@ -5,11 +5,53 @@ services:
     environment:
       POSTGRES_USER: ${DATASOURCE_USER}
       POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
-      POSTGRES_DB: openid-federation-db
+      POSTGRES_DB: ${DATASOURCE_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - openid_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DATASOURCE_DB}" ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  federation-server:
+    build:
+      context: .
+      dockerfile: ./.docker/federation-server/Dockerfile
+    ports:
+      - "8080:8080"
+    container_name: openid-federation-server
+    environment:
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USER: ${DATASOURCE_USER}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+    depends_on:
+      admin-server:
+        condition: service_started
+      db:
+        condition: service_healthy
+    networks:
+      - openid_network
+
+  admin-server:
+    build:
+      context: .
+      dockerfile: ./.docker/admin-server/Dockerfile
+    ports:
+      - "8081:8080"
+    container_name: openid-federation-server-admin
+    environment:
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USER: ${DATASOURCE_USER}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      APP_KEY: ${APP_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - openid_network
 

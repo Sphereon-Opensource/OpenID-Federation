@@ -15,7 +15,7 @@ In the context of OpenID Federation, Entity Statements play a crucial role. Thes
 about the entity, such as its public keys and metadata. This framework allows entities to assert their identity and
 capabilities in a standardized manner, enabling seamless integration and interoperability within federations.
 
-## Key Concepts
+# Key Concepts
 
 - **Federation**: A group of organizations that agree to interoperate under a set of common rules defined in a
   federation policy.
@@ -92,3 +92,38 @@ purposes. **It is not intended for use in production environments** due to signi
 
 - Entity Statements can include additional claims as required by applications and protocols.
 - Metadata in Subordinate Statements overrides that in the Entity’s own configuration.
+
+# Servers Deployment Instructions
+
+## Docker Setup
+
+For seamless deployment of the OpenID Federation servers, Docker and Docker Compose offer the most efficient and
+straightforward approach.
+
+## Essential Commands
+
+### Build Docker Images
+
+- `docker compose build` - Compile the Docker images for the services.
+- `docker compose build --no-cache` - Compile the Docker images without utilizing the build cache, ensuring a clean
+  build.
+
+### Manage Services:
+
+- `docker compose up` - Initiate the services.
+- `docker compose up -d` - Launch the services in detached mode, allowing them to run in the background.
+- `docker compose down` - Terminate the services.
+- `docker compose down -v` - Terminate the services and remove associated volumes.
+- `docker compose up db -d` - Start only the database container in detached mode for isolated database operations.
+- `docker compose up federation-server -d` - Start only the Federation Server in detached mode.
+
+## API Endpoints via Docker
+
+* Federation API: Accessible at http://localhost:8080
+* Admin Server API: Accessible at http://localhost:8081
+
+## Local Key Management System - Important Notice
+
+Local Key Management Service is designed primarily for testing, development, and local experimentation
+purposes. **It is not intended for use in production environments** due to significant security and compliance risks.
+
