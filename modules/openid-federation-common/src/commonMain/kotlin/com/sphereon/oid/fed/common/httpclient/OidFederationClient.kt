@@ -20,7 +20,8 @@ import kotlinx.serialization.json.JsonObject
 
 class OidFederationClient(
     engine: HttpClientEngine,
-    private val kmsInterface: KMSInterface,
+    // TODO need KMS implementation
+    //private val kmsInterface: KMSInterface,
     private val isRequestAuthenticated: Boolean = false,
     private val isRequestCached: Boolean = false,
 ) {
@@ -66,7 +67,9 @@ class OidFederationClient(
 
     private suspend fun postEntityStatement(url: String, postParameters: PostEntityParameters?): String {
         val body = postParameters?.let { params ->
-            kmsInterface.createJWT(header = params.header, payload = params.payload)
+            // TODO need KMS implementation
+            //kmsInterface.createJWT(header = params.header, payload = params.payload)
+            params.payload.toString()
         }
 
         return client.use {
