@@ -1,7 +1,8 @@
 package com.sphereon.oid.fed.common.httpclient
 
 import com.nimbusds.jose.jwk.gen.RSAKeyGenerator
-import com.sphereon.oid.fed.openapi.models.EntityStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.JWKS
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -42,8 +43,7 @@ class OidFederationClientTest {
         runBlocking {
             val client = OidFederationClient(mockEngine)
             val response = client.fetchEntityStatement(
-                "https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se",
-                HttpMethod.Get
+                "https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se", HttpMethod.Get
             )
             assertEquals(jwt, response)
         }
@@ -54,14 +54,17 @@ class OidFederationClientTest {
         runBlocking {
             val client = OidFederationClient(mockEngine)
             val key = RSAKeyGenerator(2048).keyID("key1").generate()
-            val entityStatement =
-                EntityStatement(iss = "https://edugain.org/federation", sub = "https://openid.sunet.se")
+            val entityStatement = EntityConfigurationStatement(
+                iss = "https://edugain.org/federation",
+                sub = "https://openid.sunet.se",
+                exp = 111111,
+                iat = 111111,
+                jwks = JWKS()
+            )
             val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
             val response = client.fetchEntityStatement(
-                "https://www.example.com", HttpMethod.Post,
-                OidFederationClient.PostEntityParameters(
-                    payload = payload,
-                    header = JWTHeader(typ = "JWT", alg = "RS256", kid = key.keyID)
+                "https://www.example.com", HttpMethod.Post, OidFederationClient.PostEntityParameters(
+                    payload = payload, header = JWTHeader(typ = "JWT", alg = "RS256", kid = key.keyID)
                 )
             )
             assertEquals(jwt, response)
