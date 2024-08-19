@@ -7,7 +7,7 @@ COPY . /app
 
 RUN chmod +x ./gradlew
 
-RUN ./gradlew :modules:federation-server:jar -x test -x allTests -x jsBrowserTest
+RUN ./gradlew :modules:federation-server:bootJar -x test -x allTests -x jsBrowserTest
 
 FROM openjdk:21-jdk as runner
 
