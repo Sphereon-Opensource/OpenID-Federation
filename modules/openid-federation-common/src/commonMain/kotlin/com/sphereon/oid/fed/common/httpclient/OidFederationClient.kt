@@ -23,7 +23,7 @@ class OidFederationClient(
     // TODO need KMS implementation
     //private val kmsInterface: KMSInterface,
     private val isRequestAuthenticated: Boolean = false,
-    private val isRequestCached: Boolean = false,
+    private val isRequestCached: Boolean = false
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache)

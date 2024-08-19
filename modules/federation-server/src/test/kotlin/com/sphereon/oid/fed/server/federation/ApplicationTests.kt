@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.admin
+package com.sphereon.oid.fed.server.federation
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
@@ -9,5 +9,4 @@ class ApplicationTests {
     @Test
     fun contextLoads() {
     }
-
 }

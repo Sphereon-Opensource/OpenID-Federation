@@ -5,9 +5,7 @@ import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 
-class AccountRepository(accountQueries: AccountQueries) {
-    private val accountQueries = accountQueries
-
+class AccountRepository(private val accountQueries: AccountQueries) {
     fun findById(id: Int): Account? {
         return accountQueries.findById(id).executeAsOneOrNull()
     }
