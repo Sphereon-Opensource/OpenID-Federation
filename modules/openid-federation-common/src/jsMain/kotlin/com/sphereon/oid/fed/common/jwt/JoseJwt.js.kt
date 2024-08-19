@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.common.jwt
 
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

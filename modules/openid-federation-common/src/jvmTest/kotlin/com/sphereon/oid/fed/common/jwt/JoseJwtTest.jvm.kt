@@ -18,9 +18,7 @@ class JoseJwtTest {
         val entityStatement = EntityStatement(iss = "test")
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val signature = sign(
-            payload,
-            JWTHeader(alg = "RS256", typ = "JWT", kid = key.keyID),
-            mutableMapOf("key" to key)
+            payload, JWTHeader(alg = "RS256", typ = "JWT", kid = key.keyID), mutableMapOf("key" to key)
         )
         assertTrue { signature.startsWith("ey") }
     }
@@ -32,9 +30,7 @@ class JoseJwtTest {
         val entityStatement = EntityStatement(iss = "test")
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val signature = sign(
-            payload,
-            JWTHeader(alg = "RS256", typ = "JWT", kid = key.keyID),
-            mutableMapOf("key" to key)
+            payload, JWTHeader(alg = "RS256", typ = "JWT", kid = key.keyID), mutableMapOf("key" to key)
         )
         assertTrue { verify(signature, key, emptyMap()) }
     }

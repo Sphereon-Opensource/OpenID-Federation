@@ -2,8 +2,8 @@ package com.sphereon.oid.fed.common.jwt
 
 import com.sphereon.oid.fed.common.jwt.Jose.generateKeyPair
 import com.sphereon.oid.fed.openapi.models.EntityStatement
-import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWKS
+import com.sphereon.oid.fed.openapi.models.JWTHeader
 import kotlinx.coroutines.async
 import kotlinx.coroutines.await
 import kotlinx.coroutines.test.runTest

@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.common.httpclient
 
-import com.sphereon.oid.fed.common.jwt.KMSInterface
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import io.ktor.client.*
 import io.ktor.client.call.*
