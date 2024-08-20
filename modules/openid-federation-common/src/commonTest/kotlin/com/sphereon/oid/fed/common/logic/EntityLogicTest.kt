@@ -1,9 +1,10 @@
 package com.sphereon.oid.fed.common.logic
 
+import EntityLogic
+import EntityType
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.JWKS
-import com.sphereon.oid.fed.openapi.models.Metadata
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -38,16 +39,17 @@ class EntityLogicTest {
         assertEquals(EntityType.LEAF, entityLogic.getEntityType(leafEntityStatement))
     }
 
+
     @Test
     fun shouldReturnUndefined() {
         val entityStatement = EntityConfigurationStatement(
-            metadata = Metadata(federationEntity = null),
-            authorityHints = emptyList(),
+            metadata = JsonObject(emptyMap()),
+            authorityHints = emptyArray(),
             exp = 0,
             iat = 0,
             iss = "",
             sub = "",
-            jwks = JWKS(),
+            jwks = JsonObject(emptyMap())
         )
 
         assertEquals(EntityType.UNDEFINED, entityLogic.getEntityType(entityStatement))

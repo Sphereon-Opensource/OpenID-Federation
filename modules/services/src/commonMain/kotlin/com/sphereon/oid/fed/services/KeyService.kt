@@ -30,12 +30,12 @@ class KeyService {
         return key.decrypt()
     }
 
-    fun getKeys(accountUsername: String): List<JwkAdminDTO> {
+    fun getKeys(accountUsername: String): Array<Jwk> {
         val account =
             accountRepository.findByUsername(accountUsername)
                 ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
         val accountId = account.id
-        return keyRepository.findByAccountId(accountId).map { it.toJwkAdminDTO() }
+        return keyRepository.findByAccountId(accountId)
     }
 
     fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {

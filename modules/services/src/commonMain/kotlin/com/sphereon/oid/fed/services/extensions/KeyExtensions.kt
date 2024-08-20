@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.services.extensions
 
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.JwkDTO
 import com.sphereon.oid.fed.persistence.models.Jwk as JwkPersistence
 
 fun JwkPersistence.toJwkAdminDTO(): JwkAdminDTO = JwkAdminDTO(
@@ -17,13 +18,28 @@ fun JwkPersistence.toJwkAdminDTO(): JwkAdminDTO = JwkAdminDTO(
     kid = kid,
     kty = kty,
     use = use,
-    x5c = x5c as? List<String> ?: null,
+    x5c = x5c,
     x5t = x5t,
     x5u = x5u,
     x5tHashS256 = x5t_s256,
     createdAt = created_at.toString(),
     revokedAt = revoked_at.toString(),
     revokedReason = revoked_reason
+)
+
+fun JwkPersistence.toJwkDTO(): JwkDTO = JwkDTO(
+    e = e,
+    n = n,
+    x = x,
+    y = y,
+    alg = alg,
+    crv = crv,
+    kid = kid,
+    kty = kty,
+    use = use,
+    x5c = x5c,
+    x5t = x5t,
+    x5u = x5u,
 )
 
 fun Jwk.encrypt(): Jwk {

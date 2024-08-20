@@ -19,7 +19,7 @@ class KeyController {
     @GetMapping
     fun getKeys(@PathVariable accountUsername: String): List<JwkAdminDTO> {
         val keys = keyService.getKeys(accountUsername)
-        return keys
+        return keys.map { it.toJwkAdminDTO() }
     }
 
     @DeleteMapping("/{keyId}")

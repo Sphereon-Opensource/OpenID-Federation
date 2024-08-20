@@ -34,8 +34,8 @@ class KeyRepository(private val keyQueries: KeyQueries) {
         ).executeAsOne()
     }
 
-    fun findByAccountId(accountId: Int): List<JwkPersistence> {
-        return keyQueries.findByAccountId(accountId).executeAsList()
+    fun findByAccountId(accountId: Int): Array<JwkPersistence> {
+        return keyQueries.findByAccountId(accountId).executeAsList().toTypedArray()
     }
 
     fun revokeKey(id: Int, reason: String? = null) {
