@@ -1,15 +1,15 @@
 findByAccountId:
-SELECT * FROM entityStatement WHERE account_id = ?;
+SELECT * FROM entityConfigurationStatement WHERE account_id = ?;
 
 findById:
-SELECT * FROM entityStatement WHERE id = ?;
+SELECT * FROM entityConfigurationStatement WHERE id = ?;
 
 create:
-INSERT INTO entityStatement (
+INSERT INTO entityConfigurationStatement (
     account_id,
     statement,
     expires_at
 ) VALUES (?, ?, ?) RETURNING *;
 
 findLatestByAccountId:
-SELECT * FROM entityStatement WHERE account_id = ? ORDER BY created_at DESC LIMIT 1;
+SELECT * FROM entityConfigurationStatement WHERE account_id = ? ORDER BY created_at DESC LIMIT 1;

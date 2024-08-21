@@ -10,5 +10,8 @@ UPDATE subordinate SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_a
 findByAccountId:
 SELECT * FROM subordinate WHERE account_id = ? AND deleted_at IS NULL;
 
+findByAccountIdAndIdentifier:
+SELECT * FROM subordinate WHERE account_id = ? AND identifier = ? AND deleted_at IS NULL;
+
 findById:
 SELECT * FROM subordinate WHERE id = ? AND deleted_at IS NULL;

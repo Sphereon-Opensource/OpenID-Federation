@@ -22,13 +22,13 @@ class FederationController {
     }
 
     @GetMapping("/list")
-    fun getRootSubordinatesList(): List<String> {
-        return subordinateService.findSubordinatesByAccountAsList("root")
+    fun getRootSubordinatesList(): Array<String> {
+        return subordinateService.findSubordinatesByAccountAsArray("root")
     }
 
     @GetMapping("/{username}/list")
-    fun getSubordinatesList(@PathVariable username: String): List<String> {
-        return subordinateService.findSubordinatesByAccountAsList(username)
+    fun getSubordinatesList(@PathVariable username: String): Array<String> {
+        return subordinateService.findSubordinatesByAccountAsArray(username)
     }
 
     @GetMapping("/fetch")

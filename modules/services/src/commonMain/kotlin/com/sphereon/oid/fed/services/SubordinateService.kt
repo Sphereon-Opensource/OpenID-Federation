@@ -5,32 +5,30 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Subordinate
 
 class SubordinateService {
-    private val accountRepository = Persistence.accountRepository
-    private val subordinateRepository = Persistence.subordinateRepository
+    private val accountQueries = Persistence.accountQueries
+    private val subordinateQueries = Persistence.subordinateQueries
 
-    fun findSubordinatesByAccount(accountUsername: String): List<Subordinate> {
-        val account = accountRepository.findByUsername(accountUsername)
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+    fun findSubordinatesByAccount(accountUsername: String): Array<Subordinate> {
+        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
 
-        return subordinateRepository.findByAccountId(account.id)
+        return subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
     }
 
-    fun findSubordinatesByAccountAsList(accountUsername: String): List<String> {
+    fun findSubordinatesByAccountAsArray(accountUsername: String): Array<String> {
         val subordinates = findSubordinatesByAccount(accountUsername)
-        return subordinates.map { it.identifier }
+        return subordinates.map { it.identifier }.toTypedArray()
     }
 
     fun createSubordinate(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
-        val account = accountRepository.findByUsername(accountUsername)
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
 
-        val subordinateAlreadyExists = subordinateRepository.findByAccountId(account.id)
-            .any { it.identifier == subordinateDTO.identifier }
+        val subordinateAlreadyExists =
+            subordinateQueries.findByAccountIdAndIdentifier(account.id, subordinateDTO.identifier).executeAsList()
 
-        if (subordinateAlreadyExists) {
+        if (subordinateAlreadyExists.isNotEmpty()) {
             throw IllegalArgumentException(Constants.SUBORDINATE_ALREADY_EXISTS)
         }
 
-        return subordinateRepository.create(account.id, subordinateDTO.identifier)
+        return subordinateQueries.create(account.id, subordinateDTO.identifier).executeAsOne()
     }
 }

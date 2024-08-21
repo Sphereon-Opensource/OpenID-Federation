@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.services.EntityStatementService
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/statement")
+@RequestMapping("/accounts/{accountUsername}/entity-statement")
 class EntityStatementController {
     private val entityStatementService = EntityStatementService()
 
