@@ -11,18 +11,18 @@ class EntityConfigurationMetadataService {
         metadata: JsonObject
     ): EntityConfigurationMetadata {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException("Account not found")
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
         val metadataAlreadyExists =
             Persistence.entityConfigurationMetadataQueries.findByAccountIdAndKey(account.id, key).executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
-            throw IllegalStateException("Entity configuration metadata already exists")
+            throw IllegalStateException(Constants.ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS)
         }
 
         return Persistence.entityConfigurationMetadataQueries.create(account.id, key, metadata.toString())
             .executeAsOneOrNull()
-            ?: throw IllegalStateException("Failed to create entity configuration metadata")
+            ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA)
     }
 
     fun findByAccountId(accountId: Int): Array<EntityConfigurationMetadata> {
@@ -31,23 +31,23 @@ class EntityConfigurationMetadataService {
 
     fun findByAccountUsername(accountUsername: String): Array<EntityConfigurationMetadata> {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException("Account not found")
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
         return Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList().toTypedArray()
     }
 
     fun deleteEntityConfigurationMetadata(accountUsername: String, id: Int): EntityConfigurationMetadata {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException("Account not found")
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
         val metadata =
             Persistence.entityConfigurationMetadataQueries.findById(id).executeAsOneOrNull()
-                ?: throw IllegalArgumentException("Entity configuration metadata not found")
+                ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
 
         if (metadata.account_id != account.id) {
-            throw IllegalArgumentException("Entity configuration metadata not found")
+            throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
         }
 
         return Persistence.entityConfigurationMetadataQueries.delete(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException("Entity configuration metadata not found")
+            ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
     }
 }

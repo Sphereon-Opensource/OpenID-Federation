@@ -18,7 +18,7 @@ class EntityStatementService {
 
     fun findByUsername(accountUsername: String): EntityConfigurationStatement {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException("Account not found")
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
         val keys = keyService.getKeys(accountUsername).map { it.toJwkDTO() }.toTypedArray()
 
