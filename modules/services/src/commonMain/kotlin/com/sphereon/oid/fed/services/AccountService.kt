@@ -26,7 +26,7 @@ class AccountService {
     }
 
     fun getAccountIdentifier(accountUsername: String): String {
-        val rootIdentifier = System.getenv("ROOT_IDENTIFIER") ?: "https://www.sphereon.com"
+        val rootIdentifier = System.getenv("ROOT_IDENTIFIER") ?: "http://localhost:8080"
 
         if (accountUsername == "root") {
             return rootIdentifier
@@ -36,6 +36,7 @@ class AccountService {
     }
 
     fun getAccountByUsername(accountUsername: String): Account {
-        return accountQueries.findByUsername(accountUsername).executeAsOne()
+        return accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
     }
 }

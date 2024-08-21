@@ -12,4 +12,4 @@ INSERT INTO entityConfigurationStatement (
 ) VALUES (?, ?, ?) RETURNING *;
 
 findLatestByAccountId:
-SELECT * FROM entityConfigurationStatement WHERE account_id = ? ORDER BY created_at DESC LIMIT 1;
+SELECT * FROM entityConfigurationStatement WHERE account_id = ? ORDER BY id DESC LIMIT 1;

@@ -4,8 +4,7 @@ CREATE TABLE entityConfigurationStatement (
     statement TEXT NOT NULL,
     expires_at BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT FK_ParentEntityStatement FOREIGN KEY (account_id) REFERENCES account (id),
-    UNIQUE (account_id)
+    CONSTRAINT FK_ParentEntityConfigurationStatement FOREIGN KEY (account_id) REFERENCES account (id)
 );
 
 CREATE INDEX entity_statement_account_id_index ON subordinate (account_id);

@@ -12,15 +12,17 @@ import kotlinx.serialization.json.jsonObject
 class EntityStatementService {
     private val accountService = AccountService()
     private val keyService = KeyService()
-    private val subordinateService = SubordinateService()
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
+    private val accountQueries = Persistence.accountQueries
+    private val subordinateQueries = Persistence.subordinateQueries
 
     fun findByUsername(accountUsername: String): EntityConfigurationStatement {
-        val account = accountService.getAccountByUsername(accountUsername)
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw IllegalArgumentException("Account not found")
 
         val keys = keyService.getKeys(accountUsername).map { it.toJwkDTO() }.toTypedArray()
 
-        val hasSubordinates = subordinateService.findSubordinatesByAccount(accountUsername).isNotEmpty()
+        val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
 
         val identifier = accountService.getAccountIdentifier(account.username)
 
@@ -49,17 +51,16 @@ class EntityStatementService {
     fun publishByUsername(accountUsername: String): EntityConfigurationStatement {
         val account = accountService.getAccountByUsername(accountUsername)
 
-        // fetching
         val entityConfigurationStatement = findByUsername(accountUsername)
-        // signing
 
-        // publishing
+        // @TO-DO JWT creation and signing
+
         entityConfigurationStatementQueries.create(
             account_id = account.id,
             expires_at = entityConfigurationStatement.exp.toLong(),
             statement = Json.encodeToString(EntityConfigurationStatement.serializer(), entityConfigurationStatement)
-        )
+        ).executeAsOne()
 
-        throw UnsupportedOperationException("Not implemented")
+        return entityConfigurationStatement
     }
 }

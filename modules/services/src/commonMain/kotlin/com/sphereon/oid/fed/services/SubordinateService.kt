@@ -20,7 +20,8 @@ class SubordinateService {
     }
 
     fun createSubordinate(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
-        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinateAlreadyExists =
             subordinateQueries.findByAccountIdAndIdentifier(account.id, subordinateDTO.identifier).executeAsList()
