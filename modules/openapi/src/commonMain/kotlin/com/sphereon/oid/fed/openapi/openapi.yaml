@@ -54,7 +54,7 @@ paths:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
 
-  /entity-statement:
+  /.well-known/openid-federation:
     get:
       tags:
         - federation
@@ -117,11 +117,11 @@ paths:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
 
-  /subordinates:
+  /list:
     get:
       tags:
         - federation
-      summary: List Immediate Subordinates
+      summary: List Subordinates
       description: List the Immediate Subordinates for the specified criteria.
       parameters:
         - name: entity_type
@@ -183,7 +183,73 @@ paths:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
 
-  /resolve-statement:
+  /fetch:
+    get:
+      tags:
+        - federation
+      summary: Fetch Subordinate Statement
+      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub``.
+      parameters:
+        - name: iss
+          in: query
+          description: The issuer identifier (URI) of the entity that issues the Subordinate Statement.
+          required: true
+          schema:
+            type: string
+            format: uri
+        - name: sub
+          in: query
+          description: The subject identifier (URI) of the entity for whom the Subordinate Statement is created.
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: Successful fetch of the Subordinate Statement
+          content:
+            application/resolve-response+jwt:
+              schema:
+                $ref: '#/components/schemas/SubordinateStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRequest:
+                  summary: Invalid request example
+                  value:
+                    error: invalid_request
+                    error_description: The request is incomplete or does not comply with current specifications.
+        '404':
+          description: Subordinate Statement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Statement not found example
+                  value:
+                    error: statement_not_found
+                    error_description: The specified Subordinate Statement could not be found.
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+
+
+  /resolve:
     get:
       tags:
         - federation
@@ -447,467 +513,6 @@ paths:
         - federation
       summary: Get Historical Keys
       description: Retrieve previously used keys for non-repudiation of statements.
-      responses:
-        '200':
-          description: Successful retrieval of historical keys
-          content:
-            application/jwk-set+jwt:
-              schema:
-                $ref: '#/components/schemas/FederationHistoricalKeysResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/entity-statement:
-    get:
-      tags:
-        - federation
-      summary: Fetch an Tenant Entity Statement
-      description: Fetch an Entity Statement for a specified issuer and optional subject.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: iss
-          in: query
-          description: The Entity Identifier of the issuer from which the Entity Statement is issued. Because of the normalization of the URL, multiple issuers MAY resolve to a shared fetch endpoint. This parameter makes it explicit exactly which issuer the Entity Statement must come from.
-          required: true
-          schema:
-            type: string
-        - name: sub
-          in: query
-          description: The Entity Identifier of the subject for which the Entity Statement is being requested. If this parameter is omitted, it is considered to be the same as the issuer and indicates a request for a self-signed Entity Configuration.
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful fetch of Entity Statement
-          content:
-            application/entity-statement+jwt:
-              schema:
-                $ref: '#/components/schemas/EntityConfigurationStatement'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '404':
-          description: Entity Statement not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Entity Statement not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Entity Statement could not be found for the provided issuer and subject.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/subordinates:
-    get:
-      tags:
-        - federation
-      summary: List Tenant Immediate Subordinates
-      description: List the Immediate Subordinates for the specified criteria.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-
-        - name: entity_type
-          in: query
-          description: The value of this parameter is an Entity Type Identifier. If the responder knows the Entity Types of its Immediate Subordinates, the result MUST be filtered to include only those that include the specified Entity Type.
-          required: false
-          schema:
-            type: string
-        - name: trust_marked
-          in: query
-          description: If the parameter trust_marked is present and set to true, the result contains only the Immediate Subordinates for which at least one Trust Mark have been issued and is still valid.
-          required: false
-          schema:
-            type: boolean
-        - name: trust_mark_id
-          in: query
-          description: The value of this parameter is a Trust Mark identifier. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark identifier has been issued and is still valid.
-          required: false
-          schema:
-            type: string
-        - name: intermediate
-          in: query
-          description: If the parameter intermediate is present and set to true, then if the responder knows whether its Immediate Subordinates are Intermediates or not, the result MUST be filtered accordingly.
-          required: false
-          schema:
-            type: boolean
-      responses:
-        '200':
-          description: Successful fetch of Immediate Subordinates
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-                  format: uri
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/resolve-statement:
-    get:
-      tags:
-        - federation
-      summary: Resolve Tenant Entity Statement
-      description: Resolve metadata and Trust Marks for an Entity.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-
-        - name: sub
-          in: query
-          description: The Entity Identifier of the Entity whose resolved data is requested.
-          required: true
-          schema:
-            type: string
-        - name: anchor
-          in: query
-          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity identifier.
-          required: true
-          schema:
-            type: string
-        - name: type
-          in: query
-          description: A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful resolve of Entity metadata
-          content:
-            application/resolve-statement-response+jwt:
-              schema:
-                $ref: '#/components/schemas/ResolveResponse'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '404':
-          description: Entity not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Entity not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Entity could not be found for the provided parameters.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/trust-mark:
-    get:
-      tags:
-        - federation
-      summary: Get Tenant Trust Mark
-      description: Retrieve a specific Trust Mark.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-
-        - name: trust_mark_id
-          in: query
-          description: Trust Mark identifier.
-          required: true
-          schema:
-            type: string
-        - name: sub
-          in: query
-          description: The Entity Identifier of the Entity to which the Trust Mark is issued.
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful retrieval of Trust Mark
-          content:
-            application/trust-mark+jwt:
-              schema:
-                type: string
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '404':
-          description: Trust Mark not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Trust Mark not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Trust Mark could not be found for the provided parameters.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/trust-mark/status:
-    post:
-      tags:
-        - federation
-      summary: Check Tenant Trust Mark Status
-      description: Check if a Trust Mark is still active.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                sub:
-                  type: string
-                  description: The Entity Identifier of the Entity to which the Trust Mark was issued.
-                trust_mark_id:
-                  type: string
-                  description: Identifier of the Trust Mark.
-                iat:
-                  type: integer
-                  description: Time when the Trust Mark was issued. If iat is not specified and the Trust Mark issuer has issued several Trust Marks with the identifier specified in the request to the Entity identified by sub, the most recent one is assumed.
-                trust_mark:
-                  type: string
-                  description: The whole Trust Mark.
-      responses:
-        '200':
-          description: Trust Mark status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  active:
-                    type: boolean
-                    description: Whether the Trust Mark is active or not.
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '404':
-          description: Trust Mark not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Trust Mark not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Trust Mark could not be found for the provided parameters.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/trust-marked-entities:
-    get:
-      tags:
-        - federation
-      summary: List Tenant Trust Marked Entities
-      description: List all Entities for which Trust Marks have been issued and are still valid.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-
-        - name: trust_mark_id
-          in: query
-          description: Trust Mark identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Entities for which that Trust Mark identifier has been issued and is still valid.
-          required: true
-          schema:
-            type: string
-        - name: sub
-          in: query
-          description: The Entity Identifier of the Entity to which the Trust Mark was issued. The list obtained in the response MUST be filtered to only the Entity matching this value.
-          required: false
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successful fetch of Trust Marked Entities
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-                  format: uri
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-
-  /{accountUsername}/historical-keys:
-    get:
-      tags:
-        - federation
-      summary: Get Tenant Historical Keys
-      description: Retrieve previously used keys for non-repudiation of statements.
-      parameters:
-        - name: accountUsername
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
       responses:
         '200':
           description: Successful retrieval of historical keys
@@ -1547,6 +1152,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EntityConfigurationStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /accounts/{accountUsername}/subordinates:
+    post:
+      tags:
+        - Account Admin
+        - Account User
+      summary: Create a new Subordinate entry
+      description: Create a new Subordinate relationship.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      requestBody:
+        description: Subordinate data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubordinateDTO'
+      responses:
+        '201':
+          description: Subordinate relationship created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateAdminDTO'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Account Admin
+        - Account User
+      summary: List Subordinates
+      description: List all active Subordinates for the specified account.
+      parameters:
+        - name: accountUsername
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: Successful list of Subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubordinateAdminDTO'
         '400':
           description: Invalid request
           content:
@@ -2214,9 +1894,9 @@ components:
           format: date-time
           description: The time the statement was issued.
         jwks:
-          $ref: '#/components/schemas/JWKS'
+          additionalProperties: true
         metadata:
-          $ref: '#/components/schemas/Metadata'
+          type: object
         crit:
           type: array
           items:
@@ -2232,7 +1912,7 @@ components:
               items:
                 type: string
             metadata:
-              $ref: '#/components/schemas/Metadata'
+              additionalProperties: true
             crit:
               type: array
               items:
@@ -2275,7 +1955,7 @@ components:
               format: uri
               description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
 
-    Metadata:
+    MetadataPolicy:
       type: object
       x-tags:
         - federation
@@ -2283,42 +1963,22 @@ components:
         federation_entity:
           $ref: '#/components/schemas/FederationEntityMetadata'
         openid_relying_party:
-          $ref: '#/components/schemas/OpenIDConnectRelyingPartyMetadata'
+          type: object
         openid_provider:
-          $ref: '#/components/schemas/OpenIDProviderMetadata'
+          type: object
         oauth_authorization_server:
-          $ref: '#/components/schemas/OAuthAuthorizationServerMetadata'
+          type: object
         oauth_client:
-          $ref: '#/components/schemas/OAuthClientMetadata'
+          type: object
         oauth_resource:
-          $ref: '#/components/schemas/OAuthProtectedResourceMetadata'
-
-    MetadataPolicy:
-      type: object
-      x-tags:
-        - federation
-      properties:
-        federation_entity:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
-        openid_relying_party:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
-        openid_provider:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
-        oauth_authorization_server:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
-        oauth_client:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
-        oauth_resource:
-          $ref: '#/components/schemas/MetadataParameterPolicy'
+          type: object
 
     MetadataParameterPolicy:
       type: object
       x-tags:
         - federation
-      properties:
-        additionalProperties:
-          type: object
-          additionalProperties: true
+      additionalProperties:
+        type: object
 
     TrustMark:
       type: object
@@ -2338,9 +1998,8 @@ components:
       type: object
       x-tags:
         - federation
-      additionalProperties:
-        type: array
-        items:
+      properties:
+        a:
           type: string
       example:
         "https://openid.net/certification/op": [ ]
@@ -2829,6 +2488,21 @@ components:
         - code
         - token
 
+    CreateMetadataDTO:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The metadata key.
+          example: openid_relying_party
+        value:
+          additionalProperties: true
+          description: The metadata object.
+      required:
+        - key
+        - value
+
+
     OAuthDynamicClientMetadata:
       type:
         object
@@ -3205,9 +2879,9 @@ components:
       type: object
       x-tags:
         - federation
-      additionalProperties:
-        type: string
-        format: uri
+      properties:
+        a:
+          type: string
       example:
         token_endpoint: "https://mtls.example.com/token"
         revocation_endpoint: "https://mtls.example.com/revo"
@@ -3738,7 +3412,7 @@ components:
           format: date-time
           description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
         metadata:
-          $ref: '#/components/schemas/Metadata'
+          type: object
         trust_marks:
           type: array
           items:
@@ -3814,6 +3488,50 @@ components:
           example: acmeco
       required:
         - username
+
+    CreateSubordinateDTO:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: The identifier of the subordinate account.
+          example: https://www.sphereon.com/subordinate
+      required:
+        - identifier
+
+    SubordinateAdminDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The unique identifier of the subordinate.
+          example: 123
+        accountId:
+          type: integer
+          format: int32
+          description: The ID of the account associated with this subordinate.
+          example: 456
+        identifier:
+          type: string
+          description: The unique identifier for the subordinate.
+          example: https://www.sphereon.com/subordinate
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the subordinate was created.
+          example: 2023-08-21T14:52:00Z
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: The timestamp when the subordinate was deleted, if applicable.
+          example: 2024-08-21T14:52:00Z
+      required:
+        - id
+        - accountId
+        - identifier
+        - createdAt
 
     AddUserToAccountRequest:
       type: object
@@ -3991,8 +3709,6 @@ components:
           description: The source code line number.
         details:
           type: object
-          additionalProperties: true
-          description: Additional details about the audit log entry.
 
     LogLevel:
       type: string

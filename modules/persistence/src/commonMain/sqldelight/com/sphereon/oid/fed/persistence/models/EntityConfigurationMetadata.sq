@@ -1,0 +1,18 @@
+create:
+INSERT INTO entityConfigurationMetadata (
+    account_id,
+    key,
+    value
+) VALUES (?, ?, ?) RETURNING *;
+
+delete:
+UPDATE entityConfigurationMetadata SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL RETURNING *;
+
+findByAccountId:
+SELECT * FROM entityConfigurationMetadata WHERE account_id = ? AND deleted_at IS NULL;
+
+findByAccountIdAndKey:
+SELECT * FROM entityConfigurationMetadata WHERE account_id = ? AND key = ? AND deleted_at IS NULL;
+
+findById:
+SELECT * FROM entityConfigurationMetadata WHERE id = ? AND deleted_at IS NULL;

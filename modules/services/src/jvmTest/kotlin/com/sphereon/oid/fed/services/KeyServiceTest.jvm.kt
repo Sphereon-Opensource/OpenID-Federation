@@ -42,7 +42,7 @@ class KeyServiceTest {
             x5u = encryptedKey.x5u,
             kid = encryptedKey.kid,
             kty = encryptedKey.kty,
-            x5c = encryptedKey.x5c?.toTypedArray(),
+            x5c = encryptedKey.x5c,
             created_at = LocalDateTime.now(),
             revoked_reason = null,
             revoked_at = null,

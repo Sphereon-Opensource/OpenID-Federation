@@ -21,6 +21,7 @@ kotlin {
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
             }
         }
 

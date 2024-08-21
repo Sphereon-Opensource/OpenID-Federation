@@ -4,23 +4,25 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
-import com.sphereon.oid.fed.persistence.repositories.AccountRepository
-import com.sphereon.oid.fed.persistence.repositories.KeyRepository
-import com.sphereon.oid.fed.persistence.repositories.SubordinateRepository
+import com.sphereon.oid.fed.persistence.models.*
 
 actual object Persistence {
-    actual val accountRepository: AccountRepository
-    actual val keyRepository: KeyRepository
-    actual val subordinateRepository: SubordinateRepository
+    actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
+    actual val accountQueries: AccountQueries
+    actual val keyQueries: KeyQueries
+    actual val subordinateQueries: SubordinateQueries
+    actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
 
     init {
         val driver = getDriver()
         runMigrations(driver)
 
         val database = Database(driver)
-        accountRepository = AccountRepository(database.accountQueries)
-        keyRepository = KeyRepository(database.keyQueries)
-        subordinateRepository = SubordinateRepository(database.subordinateQueries)
+        accountQueries = database.accountQueries
+        entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
+        keyQueries = database.keyQueries
+        subordinateQueries = database.subordinateQueries
+        entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
     }
 
     private fun getDriver(): SqlDriver {
