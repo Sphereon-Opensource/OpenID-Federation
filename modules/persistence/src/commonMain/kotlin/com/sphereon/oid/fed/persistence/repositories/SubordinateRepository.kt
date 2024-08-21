@@ -8,8 +8,8 @@ class SubordinateRepository(private val subordinateQueries: SubordinateQueries) 
         return subordinateQueries.findByAccountId(accountId).executeAsList()
     }
 
-    fun create(accountId: Int, subordinateIdentifier: String): Subordinate {
-        return subordinateQueries.create(account_id = accountId, subordinate_identifier = subordinateIdentifier)
+    fun create(accountId: Int, identifier: String): Subordinate {
+        return subordinateQueries.create(account_id = accountId, identifier)
             .executeAsOne()
     }
 

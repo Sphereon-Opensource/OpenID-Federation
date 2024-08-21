@@ -6,5 +6,6 @@ class Constants {
         const val ACCOUNT_NOT_FOUND = "Account not found"
         const val KEY_NOT_FOUND = "Key not found"
         const val KEY_ALREADY_REVOKED = "Key already revoked"
+        const val SUBORDINATE_ALREADY_EXISTS = "Subordinate already exists"
     }
 }

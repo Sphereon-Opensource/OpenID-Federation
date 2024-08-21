@@ -1,7 +1,7 @@
 create:
 INSERT INTO subordinate (
     account_id,
-    subordinate_identifier
+    identifier
 ) VALUES (?, ?) RETURNING *;
 
 delete:

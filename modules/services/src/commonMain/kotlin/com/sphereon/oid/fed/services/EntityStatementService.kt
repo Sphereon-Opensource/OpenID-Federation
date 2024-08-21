@@ -1,38 +1,45 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementBuilder
+import com.sphereon.oid.fed.common.builder.FederationEntityMetadataBuilder
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.services.extensions.toJwkDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 class EntityStatementService {
     private val keyService = KeyService()
+    private val subordinateService = SubordinateService()
 
     fun findByUsername(accountUsername: String): EntityConfigurationStatement {
-        val metadata = Pair(
-            "federation_entity", Json.parseToJsonElement(
-                "{\n" +
-                        "      \"federation_fetch_endpoint\": \"https://www.sphereon.com/fetch\",\n" +
-                        "      \"federation_resolve_endpoint\": \"https://www.sphereon.com/resolve\",\n" +
-                        "      \"federation_list_endpoint\": \"https://www.sphereon.com/list\"\n" +
-                        "  }"
-            ).jsonObject
-        )
-
         val keys = keyService.getKeys(accountUsername).map { it.toJwkDTO() }.toTypedArray()
+
+        val hasSubordinates = subordinateService.findSubordinatesByAccount(accountUsername).isNotEmpty()
+        println(hasSubordinates);
 
         val entityConfigurationStatement = EntityConfigurationStatementBuilder()
             .iss("https://www.sphereon.com")
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
-            .metadata(
-                metadata
-            )
             .jwks(keys)
-            .build()
 
-        return entityConfigurationStatement
+        if (hasSubordinates) {
+            val federationEntityMetadata = FederationEntityMetadataBuilder()
+                .identifier(accountUsername)
+                .build()
+
+            println(federationEntityMetadata);
+
+            entityConfigurationStatement.metadata(
+                Pair(
+                    "federation_entity",
+                    Json.encodeToJsonElement(FederationEntityMetadata.serializer(), federationEntityMetadata).jsonObject
+                )
+            )
+        }
+
+        return entityConfigurationStatement.build()
     }
 
     fun publishByUsername(accountUsername: String): EntityConfigurationStatement {
