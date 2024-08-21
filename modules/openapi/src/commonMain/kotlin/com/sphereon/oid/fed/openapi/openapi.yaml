@@ -2488,6 +2488,21 @@ components:
         - code
         - token
 
+    CreateMetadataDTO:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The metadata key.
+          example: openid_relying_party
+        value:
+          additionalProperties: true
+          description: The metadata object.
+      required:
+        - key
+        - value
+
+
     OAuthDynamicClientMetadata:
       type:
         object

@@ -28,7 +28,13 @@ class FederationController {
 
     @GetMapping("/{username}/.well-known/openid-federation")
     fun getAccountEntityConfigurationStatement(@PathVariable username: String): String {
-        throw NotImplementedError()
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
+            ?: throw IllegalArgumentException("Account not found")
+        val entityConfigurationStatement =
+            entityConfigurationStatementQueries.findLatestByAccountId(account.id).executeAsOneOrNull()
+                ?: throw IllegalArgumentException("Entity Configuration Statement not found")
+
+        return entityConfigurationStatement.statement
     }
 
     @GetMapping("/list")

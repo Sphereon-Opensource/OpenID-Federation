@@ -45,6 +45,14 @@ class EntityStatementService {
             )
         }
 
+        val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
+
+        metadata.forEach {
+            entityConfigurationStatement.metadata(
+                Pair(it.key, Json.parseToJsonElement(it.value_).jsonObject)
+            )
+        }
+
         return entityConfigurationStatement.build()
     }
 

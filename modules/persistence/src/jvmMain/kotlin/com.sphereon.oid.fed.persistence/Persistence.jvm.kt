@@ -4,16 +4,14 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
-import com.sphereon.oid.fed.persistence.models.AccountQueries
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
-import com.sphereon.oid.fed.persistence.models.KeyQueries
-import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.*
 
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     actual val accountQueries: AccountQueries
     actual val keyQueries: KeyQueries
     actual val subordinateQueries: SubordinateQueries
+    actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
 
     init {
         val driver = getDriver()
@@ -24,6 +22,7 @@ actual object Persistence {
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
         keyQueries = database.keyQueries
         subordinateQueries = database.subordinateQueries
+        entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
     }
 
     private fun getDriver(): SqlDriver {
