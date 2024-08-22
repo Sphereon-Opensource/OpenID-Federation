@@ -1,4 +1,4 @@
-CREATE TABLE account (
+CREATE TABLE Account (
     id SERIAL PRIMARY KEY,
     username VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -6,6 +6,6 @@ CREATE TABLE account (
     deleted_at TIMESTAMP
 );
 
-CREATE INDEX account_username_index ON account (username);
+CREATE INDEX account_username_index ON Account (username);
 
-INSERT INTO account (username) VALUES ('root');
+INSERT INTO Account (username) VALUES ('root');
