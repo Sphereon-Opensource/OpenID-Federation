@@ -9,8 +9,12 @@ class AuthorityHintService {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
-        Persistence.authorityHintQueries.findByAccountIdAndIdentifier(account.id, identifier).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.AUTHORITY_HINT_ALREADY_EXISTS)
+        val authorityHintAlreadyExists =
+            Persistence.authorityHintQueries.findByAccountIdAndIdentifier(account.id, identifier).executeAsOneOrNull()
+
+        if (authorityHintAlreadyExists != null) {
+            throw IllegalArgumentException(Constants.AUTHORITY_HINT_ALREADY_EXISTS)
+        }
 
         return Persistence.authorityHintQueries.create(account.id, identifier)
             .executeAsOneOrNull()
