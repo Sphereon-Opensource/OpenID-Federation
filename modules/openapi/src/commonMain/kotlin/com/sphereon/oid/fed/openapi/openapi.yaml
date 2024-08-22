@@ -2502,6 +2502,15 @@ components:
         - key
         - value
 
+    CreateAuthorityHintDTO:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: The authority identifier.
+          example: openid_relying_party
+      required:
+        - identifier
 
     OAuthDynamicClientMetadata:
       type:

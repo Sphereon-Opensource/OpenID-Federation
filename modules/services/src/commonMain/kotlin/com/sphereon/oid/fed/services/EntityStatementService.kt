@@ -15,16 +15,17 @@ class EntityStatementService {
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
     private val accountQueries = Persistence.accountQueries
     private val subordinateQueries = Persistence.subordinateQueries
+    private val authorityHintQueries = Persistence.authorityHintQueries
 
     fun findByUsername(accountUsername: String): EntityConfigurationStatement {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
-
-        val keys = keyService.getKeys(accountUsername).map { it.toJwkDTO() }.toTypedArray()
-
-        val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
-
         val identifier = accountService.getAccountIdentifier(account.username)
+        val keys = keyService.getKeys(accountUsername).map { it.toJwkDTO() }.toTypedArray()
+        val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
+        val authorityHints =
+            authorityHintQueries.findByAccountId(account.id).executeAsList().map { it.identifier }.toTypedArray()
+        val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
 
         val entityConfigurationStatement = EntityConfigurationStatementBuilder()
             .iss(identifier)
@@ -45,7 +46,9 @@ class EntityStatementService {
             )
         }
 
-        val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
+        authorityHints.forEach {
+            entityConfigurationStatement.authorityHint(it)
+        }
 
         metadata.forEach {
             entityConfigurationStatement.metadata(
