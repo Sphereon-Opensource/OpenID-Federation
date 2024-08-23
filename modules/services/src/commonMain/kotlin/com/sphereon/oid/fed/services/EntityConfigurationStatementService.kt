@@ -9,7 +9,7 @@ import com.sphereon.oid.fed.services.extensions.toJwkDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class EntityStatementService {
+class EntityConfigurationStatementService {
     private val accountService = AccountService()
     private val keyService = KeyService()
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
