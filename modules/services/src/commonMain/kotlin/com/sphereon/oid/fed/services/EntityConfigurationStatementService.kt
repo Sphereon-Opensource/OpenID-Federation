@@ -52,7 +52,7 @@ class EntityConfigurationStatementService {
 
         metadata.forEach {
             entityConfigurationStatement.metadata(
-                Pair(it.key, Json.parseToJsonElement(it.value_).jsonObject)
+                Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject)
             )
         }
 

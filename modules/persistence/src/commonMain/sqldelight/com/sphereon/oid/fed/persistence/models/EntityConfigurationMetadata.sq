@@ -2,7 +2,7 @@ create:
 INSERT INTO EntityConfigurationMetadata (
     account_id,
     key,
-    value
+    metadata
 ) VALUES (?, ?, ?) RETURNING *;
 
 delete:
