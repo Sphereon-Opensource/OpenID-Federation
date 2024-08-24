@@ -6,6 +6,7 @@ import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.persistence.models.CritQueries
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQueries
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
 import com.sphereon.oid.fed.persistence.models.KeyQueries
@@ -18,6 +19,7 @@ actual object Persistence {
     actual val subordinateQueries: SubordinateQueries
     actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
     actual val authorityHintQueries: AuthorityHintQueries
+    actual val critQueries: CritQueries
 
     init {
         val driver = getDriver()
@@ -30,6 +32,7 @@ actual object Persistence {
         subordinateQueries = database.subordinateQueries
         entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
         authorityHintQueries = database.authorityHintQueries
+        critQueries = database.critQueries
     }
 
     private fun getDriver(): SqlDriver {

@@ -25,6 +25,7 @@ class EntityConfigurationStatementService {
         val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
         val authorityHints =
             authorityHintQueries.findByAccountId(account.id).executeAsList().map { it.identifier }.toTypedArray()
+        val crits = Persistence.critQueries.findByAccountId(account.id).executeAsList().map { it.claim }.toTypedArray()
         val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
 
         val entityConfigurationStatement = EntityConfigurationStatementBuilder()
@@ -54,6 +55,10 @@ class EntityConfigurationStatementService {
             entityConfigurationStatement.metadata(
                 Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject)
             )
+        }
+
+        crits.forEach {
+            entityConfigurationStatement.crit(it)
         }
 
         return entityConfigurationStatement.build()
