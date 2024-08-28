@@ -5,8 +5,7 @@ import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 
 @Repository
-interface KeyRepository : CrudRepository<Key,
-        String> {
+interface KeyRepository : CrudRepository<Key, String> {
 
     @Query("SELECT * FROM keys WHERE id = :keyId")
     fun findByKeyId(keyId: String): Key?
