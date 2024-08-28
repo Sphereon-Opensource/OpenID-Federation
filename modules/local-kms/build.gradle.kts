@@ -1,5 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.0.0"
+    alias(libs.plugins.springboot)
+    alias(libs.plugins.springDependencyManagement)
+    alias(libs.plugins.kotlinJvm)
 }
 
 group = "com.sphereon.oid.fed.kms.local"
@@ -14,6 +16,8 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
     implementation(projects.modules.services)
+    implementation(libs.springboot.data.jdbc)
+    testImplementation(libs.springboot.test)
 }
 
 tasks.test {

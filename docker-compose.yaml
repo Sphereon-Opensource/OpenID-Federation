@@ -55,6 +55,23 @@ services:
     networks:
       - openid_network
 
+  local-kms:
+    build:
+      context: .
+      dockerfile: ./.docker/local-kms/Dockerfile
+    ports:
+      - "8082:8082"
+    container_name: openid-federation-local-kms
+    environment:
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USER: ${DATASOURCE_USER}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - openid_network
+
 networks:
   openid_network:
     driver: bridge
