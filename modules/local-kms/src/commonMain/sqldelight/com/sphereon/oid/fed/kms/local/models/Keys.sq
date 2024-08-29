@@ -6,3 +6,6 @@ INSERT INTO Keys (id, private_key, public_key, algorithm) VALUES (?, ?, ?, ?) RE
 
 findById:
 SELECT * FROM Keys WHERE id = ?;
+
+delete:
+UPDATE Keys SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?;

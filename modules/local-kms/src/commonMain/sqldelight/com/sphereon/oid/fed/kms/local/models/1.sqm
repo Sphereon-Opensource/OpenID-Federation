@@ -2,5 +2,6 @@ CREATE TABLE Keys (
     id TEXT PRIMARY KEY,
     private_key BYTEA NOT NULL,
     public_key BYTEA NOT NULL,
-    algorithm TEXT NOT NULL
+    algorithm TEXT NOT NULL,
+    deleted_at TIMESTAMP
 );
