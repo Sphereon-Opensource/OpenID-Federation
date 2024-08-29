@@ -8,11 +8,12 @@ import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 
 actual class LocalKmsDatabase {
 
+    var database: Database
+
     init {
         val driver = getDriver()
 
-        val database = Database(driver)
-
+        database = Database(driver)
     }
 
     private fun getDriver(): SqlDriver {
@@ -24,13 +25,14 @@ actual class LocalKmsDatabase {
     }
 
     actual fun getKey(keyId: String): Keys {
-        TODO("Not yet implemented")
+        return database.keysQueries.findById(keyId).executeAsOneOrNull()
+            ?: throw KeyNotFoundException("$keyId not found")
     }
 
     actual fun insertKey(
         keyId: String, privateKey: ByteArray, publicKey: ByteArray, algorithm: String
     ) {
-        TODO("Not yet implemented")
+        database.keysQueries.create(keyId, privateKey, publicKey, algorithm).executeAsOneOrNull()
     }
 
     actual fun updateKey(

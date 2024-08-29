@@ -1,6 +1,8 @@
-CREATE TABLE keys (
-    id TEXT PRIMARY KEY,
-    private_key TEXT NOT NULL,
-    public_key TEXT NOT NULL,
-    algorithm TEXT NOT NULL
-);
+findAll:
+SELECT * FROM Keys;
+
+create:
+INSERT INTO Keys (id, private_key, public_key, algorithm) VALUES (?, ?, ?, ?) RETURNING *;
+
+findById:
+SELECT * FROM Keys WHERE id = ?;
