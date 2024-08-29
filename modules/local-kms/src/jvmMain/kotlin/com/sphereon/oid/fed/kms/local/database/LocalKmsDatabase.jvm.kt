@@ -1,9 +1,9 @@
-package com.sphereon.oid.fed.kms.local
+package com.sphereon.oid.fed.kms.local.database
 
 import app.cash.sqldelight.db.SqlDriver
+import com.sphereon.oid.fed.kms.local.Constants
+import com.sphereon.oid.fed.kms.local.Database
 import com.sphereon.oid.fed.kms.local.models.Keys
-import com.sphereon.oid.fed.persistence.Constants
-import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 
 
 actual class LocalKmsDatabase {

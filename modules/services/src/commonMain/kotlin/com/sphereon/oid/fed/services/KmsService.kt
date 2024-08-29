@@ -1,15 +1,13 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.persistence.models.Jwk
+import com.sphereon.oid.fed.openapi.models.Jwk
+
 
 class KmsService(private val provider: String) {
 
-    private val kmsClient: KmsClient by lazy {
-        when (provider) {
-            //"local" -> LocalKmsClient()
-            //"aws" -> AwsKmsClient()
-            else -> throw IllegalArgumentException("Unsupported KMS provider: $provider")
-        }
+    private val kmsClient: KmsClient = when (provider) {
+        "local" -> LocalKmsClient()
+        else -> throw IllegalArgumentException("Unsupported KMS provider: $provider")
     }
 
     fun generateKeyPair(keyId: String): Jwk {

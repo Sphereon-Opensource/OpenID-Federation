@@ -34,13 +34,15 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(projects.modules.services)
+                api(projects.modules.openapi)
             }
         }
 
         jvmMain {
             dependencies {
-                implementation("app.cash.sqldelight:sqlite-driver:2.0.2")
+                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
+                implementation("com.zaxxer:HikariCP:5.1.0")
+                implementation("org.postgresql:postgresql:42.7.3")
             }
         }
     }
