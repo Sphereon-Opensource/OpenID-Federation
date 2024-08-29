@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.jwt
+package com.sphereon.oid.fed.kms.local.jwt
 
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader

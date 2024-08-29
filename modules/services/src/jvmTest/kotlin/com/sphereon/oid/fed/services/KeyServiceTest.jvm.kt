@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.jwk.generateKeyPair
+import com.sphereon.oid.fed.kms.local.jwk.generateKeyPair
 import com.sphereon.oid.fed.services.extensions.decrypt
 import com.sphereon.oid.fed.services.extensions.encrypt
 import org.junit.Test

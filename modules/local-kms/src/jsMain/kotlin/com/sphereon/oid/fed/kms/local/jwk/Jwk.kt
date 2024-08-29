@@ -1,6 +1,6 @@
-package com.sphereon.oid.fed.common.jwk
+package com.sphereon.oid.fed.kms.local.jwk
 
-import com.sphereon.oid.fed.common.jwt.Jose
+import com.sphereon.oid.fed.kms.local.jwt.Jose
 import com.sphereon.oid.fed.openapi.models.Jwk
 
 @ExperimentalJsExport

@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.jwt
+package com.sphereon.oid.fed.kms.local.jwt
 
 expect class JwtHeader
 expect class JwtPayload

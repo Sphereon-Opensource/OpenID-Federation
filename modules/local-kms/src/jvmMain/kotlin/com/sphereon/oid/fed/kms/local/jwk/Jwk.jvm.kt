@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.jwk
+package com.sphereon.oid.fed.kms.local.jwk
 
 import com.nimbusds.jose.Algorithm
 import com.nimbusds.jose.jwk.Curve

@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.jwt
+package com.sphereon.oid.fed.kms.local.jwt
 
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.JWSSigner

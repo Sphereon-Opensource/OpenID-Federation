@@ -43,6 +43,21 @@ kotlin {
                 implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
                 implementation("com.zaxxer:HikariCP:5.1.0")
                 implementation("org.postgresql:postgresql:42.7.3")
+                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+            }
+        }
+
+//        jsMain {
+//            dependencies {
+//                implementation(npm("typescript", "5.5.3"))
+//                implementation(npm("jose", "5.6.3"))
+//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+//            }
+//        }
+
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test-junit"))
             }
         }
     }
