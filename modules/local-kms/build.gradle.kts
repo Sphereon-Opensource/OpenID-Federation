@@ -1,7 +1,6 @@
 plugins {
-    alias(libs.plugins.springboot)
-    alias(libs.plugins.springDependencyManagement)
-    alias(libs.plugins.kotlinJvm)
+    kotlin("multiplatform") version "2.0.0"
+    id("app.cash.sqldelight") version "2.0.2"
 }
 
 group = "com.sphereon.oid.fed.kms.local"
@@ -13,16 +12,36 @@ repositories {
     google()
 }
 
-dependencies {
-    testImplementation(kotlin("test"))
-    implementation(projects.modules.services)
-    implementation(libs.springboot.data.jdbc)
-    testImplementation(libs.springboot.test)
+sqldelight {
+    databases {
+        create("Database") {
+            packageName = "com.sphereon.oid.fed.kms.local"
+            dialect("app.cash.sqldelight:postgresql-dialect:2.0.2")
+            schemaOutputDirectory = file("src/commonMain/resources/db/migration")
+            migrationOutputDirectory = file("src/commonMain/resources/db/migration")
+            deriveSchemaFromMigrations = true
+            migrationOutputFileFormat = ".sql"
+            srcDirs.from(
+                "src/commonMain/sqldelight"
+            )
+        }
+    }
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 kotlin {
-    jvmToolchain(21)
+    jvm()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation(projects.modules.services)
+            }
+        }
+
+        jvmMain {
+            dependencies {
+                implementation("app.cash.sqldelight:sqlite-driver:2.0.2")
+            }
+        }
+    }
 }

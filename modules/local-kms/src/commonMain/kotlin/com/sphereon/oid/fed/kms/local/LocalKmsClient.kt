@@ -3,7 +3,7 @@ package com.sphereon.oid.fed.kms.local
 import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.services.KmsClient
 
-class LocalKmsClient(private val database: LocalKmsDatabaseConnection) : KmsClient {
+class LocalKmsClient(private val database: LocalKmsDatabase) : KmsClient {
 
     override fun generateKeyPair(keyId: String): Jwk {
         TODO("Not yet implemented")

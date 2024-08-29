@@ -1,0 +1,6 @@
+CREATE TABLE keys (
+    id TEXT PRIMARY KEY,
+    private_key TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    algorithm TEXT NOT NULL
+);
