@@ -31,11 +31,10 @@ actual fun sign(
 
 actual fun verify(
     jwt: String,
-    key: Any,
-    opts: Map<String, Any>
+    key: Jwk
 ): Boolean {
     try {
-        val rsaKey = key as RSAKey
+        val rsaKey = key.toRsaKey()
         val verifier: JWSVerifier = RSASSAVerifier(rsaKey)
         val signedJWT = SignedJWT.parse(jwt)
         val verified = signedJWT.verify(verifier)

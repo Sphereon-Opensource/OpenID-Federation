@@ -5,4 +5,4 @@ import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.JsonObject
 
 expect fun sign(payload: JsonObject, header: JWTHeader, key: Jwk): String
-expect fun verify(jwt: String, key: Any, opts: Map<String, Any>): Boolean
+expect fun verify(jwt: String, key: Jwk): Boolean

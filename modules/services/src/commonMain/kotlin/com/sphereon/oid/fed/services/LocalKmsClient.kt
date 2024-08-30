@@ -17,6 +17,6 @@ class LocalKmsClient : KmsClient {
     }
 
     override fun verify(token: String, keyId: String): Boolean {
-        TODO("Not yet implemented")
+        return localKms.verify(token, keyId)
     }
 }

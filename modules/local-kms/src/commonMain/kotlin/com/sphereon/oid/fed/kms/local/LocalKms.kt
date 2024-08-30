@@ -4,6 +4,7 @@ import com.sphereon.oid.fed.kms.local.database.LocalKmsDatabase
 import com.sphereon.oid.fed.kms.local.jwk.generateKeyPair
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.kms.local.jwt.sign
+import com.sphereon.oid.fed.kms.local.jwt.verify
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -23,6 +24,8 @@ class LocalKms {
     }
 
     fun verify(token: String, keyId: String): Boolean {
-        TODO("Pending")
+        val jwk = database.getKey(keyId)
+
+        return verify(jwt = token, key = Json.decodeFromString(jwk.private_key))
     }
 }
