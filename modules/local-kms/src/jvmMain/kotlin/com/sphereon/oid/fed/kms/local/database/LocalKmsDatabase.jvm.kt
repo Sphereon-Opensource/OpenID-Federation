@@ -29,10 +29,8 @@ actual class LocalKmsDatabase {
             ?: throw KeyNotFoundException("$keyId not found")
     }
 
-    actual fun insertKey(
-        keyId: String, privateKey: ByteArray, publicKey: ByteArray, algorithm: String
-    ) {
-        database.keysQueries.create(keyId, privateKey, publicKey, algorithm).executeAsOneOrNull()
+    actual fun insertKey(keyId: String, privateKey: String) {
+        database.keysQueries.create(keyId, privateKey).executeAsOneOrNull()
     }
 
     actual fun deleteKey(keyId: String) {

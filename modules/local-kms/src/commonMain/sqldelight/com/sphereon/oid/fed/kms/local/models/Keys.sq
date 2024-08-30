@@ -2,7 +2,7 @@ findAll:
 SELECT * FROM Keys;
 
 create:
-INSERT INTO Keys (id, private_key, public_key, algorithm) VALUES (?, ?, ?, ?) RETURNING *;
+INSERT INTO Keys (id, private_key) VALUES (?, ?) RETURNING *;
 
 findById:
 SELECT * FROM Keys WHERE id = ?;
