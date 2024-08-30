@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.kms.local.jwt
 
 import com.nimbusds.jose.*
-import com.nimbusds.jose.crypto.RSASSASigner
-import com.nimbusds.jose.crypto.RSASSAVerifier
-import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.crypto.ECDSASigner
+import com.nimbusds.jose.crypto.ECDSAVerifier
+import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.sphereon.oid.fed.openapi.models.JWTHeader
@@ -16,9 +16,9 @@ actual fun sign(
     header: JWTHeader,
     key: Jwk
 ): String {
-    val rsaJWK = key.toRsaKey()
+    val ecJWK = ECKey.parse(key.toString())
 
-    val signer: JWSSigner = RSASSASigner(rsaJWK)
+    val signer: JWSSigner = ECDSASigner(ecJWK)
 
     val signedJWT = SignedJWT(
         header.toJWSHeader(),
@@ -34,8 +34,8 @@ actual fun verify(
     key: Jwk
 ): Boolean {
     try {
-        val rsaKey = key.toRsaKey()
-        val verifier: JWSVerifier = RSASSAVerifier(rsaKey)
+        val ecKey = ECKey.parse(key.toString()) // Parse JWK into ECKey
+        val verifier: JWSVerifier = ECDSAVerifier(ecKey)
         val signedJWT = SignedJWT.parse(jwt)
         val verified = signedJWT.verify(verifier)
         return verified
@@ -50,9 +50,4 @@ fun JWTHeader.toJWSHeader(): JWSHeader {
         type(JOSEObjectType(type))
         keyID(kid)
     }.build()
-}
-
-//TODO: Double check the logic
-fun Jwk.toRsaKey(): RSAKey {
-    return RSAKey.parse(this.toString())
 }
