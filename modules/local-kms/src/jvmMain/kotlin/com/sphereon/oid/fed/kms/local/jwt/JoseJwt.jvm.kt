@@ -8,21 +8,20 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
-
 actual fun sign(
-    payload: JsonObject,
-    header: JWTHeader,
-    key: Jwk
+    payload: JsonObject, header: JWTHeader, key: Jwk
 ): String {
-    val ecJWK = ECKey.parse(key.toString())
-
+    val jwkJsonString = Json.encodeToString(key)
+    val ecJWK = ECKey.parse(jwkJsonString)
     val signer: JWSSigner = ECDSASigner(ecJWK)
+    val jwsHeader = header.toJWSHeader()
 
     val signedJWT = SignedJWT(
-        header.toJWSHeader(),
-        JWTClaimsSet.parse(payload.toString())
+        jwsHeader, JWTClaimsSet.parse(payload.toString())
     )
 
     signedJWT.sign(signer)
@@ -30,11 +29,11 @@ actual fun sign(
 }
 
 actual fun verify(
-    jwt: String,
-    key: Jwk
+    jwt: String, key: Jwk
 ): Boolean {
     try {
-        val ecKey = ECKey.parse(key.toString()) // Parse JWK into ECKey
+        val jwkJsonString = Json.encodeToString(key)
+        val ecKey = ECKey.parse(jwkJsonString)
         val verifier: JWSVerifier = ECDSAVerifier(ecKey)
         val signedJWT = SignedJWT.parse(jwt)
         val verified = signedJWT.verify(verifier)
