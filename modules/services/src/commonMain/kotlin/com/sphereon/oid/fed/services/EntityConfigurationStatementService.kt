@@ -23,7 +23,7 @@ class EntityConfigurationStatementService {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
         val identifier = accountService.getAccountIdentifier(account.username)
-        val keys = keyService.getKeys(accountUsername).map { it }.toTypedArray()
+        val keys = keyService.getKeys(accountUsername)
         val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
         val authorityHints =
             authorityHintQueries.findByAccountId(account.id).executeAsList().map { it.identifier }.toTypedArray()
