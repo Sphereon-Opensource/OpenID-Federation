@@ -2545,6 +2545,16 @@ components:
         - key
         - metadata
 
+    PublishEntityStatementDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        dry-run:
+          type: boolean
+          description: If true, the request will be validated but not persisted.
+          example: false
+
     CreateAuthorityHintDTO:
       type: object
       properties:
