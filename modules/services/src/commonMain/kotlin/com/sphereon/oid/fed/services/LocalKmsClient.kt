@@ -2,11 +2,12 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.kms.local.LocalKms
 import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.JsonObject
 
 class LocalKmsClient : KmsClient {
 
-    val localKms = LocalKms()
+    private val localKms = LocalKms()
 
     override fun generateKeyPair(keyId: String) {
         return localKms.generateKey(keyId)
@@ -16,7 +17,7 @@ class LocalKmsClient : KmsClient {
         return localKms.sign(header, payload, keyId)
     }
 
-    override fun verify(token: String, keyId: String): Boolean {
-        return localKms.verify(token, keyId)
+    override fun verify(token: String, jwk: Jwk): Boolean {
+        return localKms.verify(token, jwk)
     }
 }

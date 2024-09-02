@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.JsonObject
 
 class KmsService(private val provider: String) {
@@ -18,13 +19,13 @@ class KmsService(private val provider: String) {
         return kmsClient.sign(header, payload, keyId)
     }
 
-    fun verify(token: String, keyId: String): Boolean {
-        return kmsClient.verify(token, keyId)
+    fun verify(token: String, jwk: Jwk): Boolean {
+        return kmsClient.verify(token, jwk)
     }
 }
 
 interface KmsClient {
     fun generateKeyPair(keyId: String)
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String
-    fun verify(token: String, keyId: String): Boolean
+    fun verify(token: String, jwk: Jwk): Boolean
 }
