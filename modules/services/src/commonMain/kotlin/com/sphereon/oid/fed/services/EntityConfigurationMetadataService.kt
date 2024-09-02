@@ -21,7 +21,7 @@ class EntityConfigurationMetadataService {
             throw IllegalStateException(Constants.ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS)
         }
 
-        var createdMetadata =
+        val createdMetadata =
             Persistence.entityConfigurationMetadataQueries.create(account.id, key, metadata.toString())
                 .executeAsOneOrNull()
                 ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA)

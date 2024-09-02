@@ -10,9 +10,8 @@ fun EntityConfigurationMetadata.toEntityConfigurationMetadataDTO(): EntityConfig
     return EntityConfigurationMetadataDTO(
         id = this.id,
         key = this.key,
-        accountId = this.account_id,
         metadata = Json.parseToJsonElement(this.metadata).jsonObject,
         createdAt = this.created_at.toString(),
-        deletedAt = this.deleted_at?.toString()
+        accountId = this.account_id
     )
 }

@@ -2510,6 +2510,34 @@ components:
           description: If true, the statement will not be published.
           example: false
 
+    EntityConfigurationMetadataDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The metadata identifier.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this entity.
+          example: 100
+        key:
+          type: string
+          description: The metadata key.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+          description: The metadata object.
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the metadata was created.
+          example: 2024-08-06T12:34:56Z
+      required:
+        - key
+        - metadata
+
+
     CreateAuthorityHintDTO:
       type: object
       properties:
