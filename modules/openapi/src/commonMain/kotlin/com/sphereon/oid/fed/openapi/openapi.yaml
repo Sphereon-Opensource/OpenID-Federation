@@ -2495,12 +2495,20 @@ components:
           type: string
           description: The metadata key.
           example: openid_relying_party
-        value:
+        metadata:
           additionalProperties: true
           description: The metadata object.
       required:
         - key
-        - value
+        - metadata
+
+    PublishEntityStatementDTO:
+      type: object
+      properties:
+        dry-run:
+          type: boolean
+          description: If true, the statement will not be published.
+          example: false
 
     CreateAuthorityHintDTO:
       type: object

@@ -1,48 +1,41 @@
 package com.sphereon.oid.fed.kms.local
 
 import com.sphereon.oid.fed.kms.local.database.LocalKmsDatabase
+import com.sphereon.oid.fed.kms.local.encryption.AesEncryption
+import com.sphereon.oid.fed.kms.local.extensions.toJwkAdminDto
 import com.sphereon.oid.fed.kms.local.jwk.generateKeyPair
 import com.sphereon.oid.fed.kms.local.jwt.sign
 import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
-import kotlinx.serialization.json.*
+import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 class LocalKms {
 
     private val database: LocalKmsDatabase = LocalKmsDatabase()
+    private val aesEncryption: AesEncryption = AesEncryption()
 
-    fun generateKey(keyId: String) {
+    fun generateKey(): JwkAdminDTO {
         val jwk = generateKeyPair()
-        database.insertKey(keyId = keyId, privateKey = jwk.toString())
+
+        database.insertKey(
+            keyId = jwk.kid!!,
+            key = aesEncryption.encrypt(Json.encodeToString(Jwk.serializer(), jwk))
+        )
+
+        return jwk.toJwkAdminDto()
     }
 
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String {
         val jwk = database.getKey(keyId)
-        val jwkString: String = Json.decodeFromString(jwk.private_key)
-        val jwkObject: Jwk = Json.decodeFromString(jwkString)
 
-        // Adding necessary parameter is header
+        val jwkObject: Jwk = Json.decodeFromString(aesEncryption.decrypt(jwk.key))
+
         val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid)
 
-        // Adding JWKs object in payload
-        val mutablePayload = payload.toMutableMap()
-        mutablePayload["kid"] = JsonPrimitive(jwkObject.kid)
-        val keyArrayOfJwks = buildJsonObject {
-            putJsonArray("keys") {
-                addJsonObject {
-                    put("kty", jwkObject.kty)
-                    put("n", jwkObject.n)
-                    put("e", jwkObject.e)
-                    put("kid", jwkObject.kid)
-                    put("use", jwkObject.use)
-                }
-            }
-        }
-        mutablePayload["jwks"] = keyArrayOfJwks
-        val mPayload = JsonObject(mutablePayload)
-
-        return sign(header = mHeader, payload = mPayload, key = jwkObject)
+        return sign(header = mHeader, payload = payload, key = jwkObject)
     }
 
     fun verify(token: String, jwk: Jwk): Boolean {

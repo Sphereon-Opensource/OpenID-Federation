@@ -2,7 +2,7 @@ CREATE TABLE EntityConfigurationMetadata (
     id SERIAL PRIMARY KEY,
     account_id INT NOT NULL,
     key TEXT NOT NULL,
-    value TEXT NOT NULL,
+    metadata TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,
     CONSTRAINT FK_ParentEntityConfigurationMetadata FOREIGN KEY (account_id) REFERENCES Account (id)

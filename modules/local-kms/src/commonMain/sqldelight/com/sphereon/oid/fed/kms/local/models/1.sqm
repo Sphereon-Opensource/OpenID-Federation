@@ -1,5 +1,5 @@
 CREATE TABLE Keys (
     id TEXT PRIMARY KEY,
-    private_key TEXT NOT NULL,
+    key TEXT NOT NULL,
     deleted_at TIMESTAMP
 );

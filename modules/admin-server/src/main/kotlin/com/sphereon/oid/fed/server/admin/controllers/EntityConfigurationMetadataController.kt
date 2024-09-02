@@ -1,9 +1,15 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.CreateMetadataDTO
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadata
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
 import com.sphereon.oid.fed.services.EntityConfigurationMetadataService
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/accounts/{accountUsername}/metadata")
@@ -13,19 +19,19 @@ class EntityConfigurationMetadataController {
     @GetMapping
     fun get(
         @PathVariable accountUsername: String
-    ): Array<EntityConfigurationMetadata> {
+    ): Array<EntityConfigurationMetadataDTO> {
         return entityConfigurationMetadataService.findByAccountUsername(accountUsername)
     }
 
     @PostMapping
     fun create(
         @PathVariable accountUsername: String,
-        @RequestBody metadata: CreateMetadataDTO
-    ): EntityConfigurationMetadata {
+        @RequestBody body: CreateMetadataDTO
+    ): EntityConfigurationMetadataDTO {
         return entityConfigurationMetadataService.createEntityConfigurationMetadata(
             accountUsername,
-            metadata.key,
-            metadata.value
+            body.key,
+            body.metadata
         )
     }
 
@@ -33,7 +39,7 @@ class EntityConfigurationMetadataController {
     fun delete(
         @PathVariable accountUsername: String,
         @PathVariable id: Int
-    ): EntityConfigurationMetadata {
+    ): EntityConfigurationMetadataDTO {
         return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(accountUsername, id)
     }
 }

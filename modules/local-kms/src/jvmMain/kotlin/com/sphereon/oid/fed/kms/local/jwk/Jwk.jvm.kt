@@ -7,11 +7,12 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.sphereon.oid.fed.openapi.models.Jwk
 import java.util.*
 
+
 actual fun generateKeyPair(): Jwk {
     try {
         val ecKey: ECKey = ECKeyGenerator(Curve.P_256)
             .keyIDFromThumbprint(true)
-            .algorithm(Algorithm("EC"))
+            .algorithm(Algorithm("ES256"))
             .issueTime(Date())
             .generate()
 

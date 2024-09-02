@@ -32,7 +32,8 @@ class EntityConfigurationStatementBuilder {
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun createJwks(jwks: Array<JwkDTO>): JsonObject {
-        val jsonArray: JsonArray = Json.encodeToJsonElement(ArraySerializer(JwkDTO.serializer()), jwks) as JsonArray
+        val jsonArray: JsonArray =
+            Json.encodeToJsonElement(ArraySerializer(JwkDTO.serializer()), jwks) as JsonArray
 
         return buildJsonObject {
             put("keys", jsonArray)
