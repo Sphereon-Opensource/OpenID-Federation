@@ -1927,6 +1927,49 @@ components:
             trust_mark_owners:
               $ref: '#/components/schemas/TrustMarkOwners'
 
+    EntityConfigurationMetadataDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Entity Configuration Metadata record.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this Entity Configuration Metadata.
+          example: 1
+        key:
+          type: string
+          description: The key of the metadata.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Entity Configuration Metadata was created.
+          example: 2024-08-06T12:34:56Z
+          nullable: false
+        deleted_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Entity Configuration Metadata was deleted.
+          example: 2024-08-06T12:34:56Z
+          nullable: true
+
+    CreateCritDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        claim:
+          type: string
+          description: A critical claims that must be understood and processed.
+      required:
+        - claim
+
     SubordinateStatement:
       allOf:
         - $ref: '#/components/schemas/BaseEntityStatement'
@@ -2501,42 +2544,6 @@ components:
       required:
         - key
         - metadata
-
-    PublishEntityStatementDTO:
-      type: object
-      properties:
-        dry-run:
-          type: boolean
-          description: If true, the statement will not be published.
-          example: false
-
-    EntityConfigurationMetadataDTO:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: The metadata identifier.
-          example: 1
-        account_id:
-          type: integer
-          description: The ID of the account associated with this entity.
-          example: 100
-        key:
-          type: string
-          description: The metadata key.
-          example: openid_relying_party
-        metadata:
-          additionalProperties: true
-          description: The metadata object.
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the metadata was created.
-          example: 2024-08-06T12:34:56Z
-      required:
-        - key
-        - metadata
-
 
     CreateAuthorityHintDTO:
       type: object

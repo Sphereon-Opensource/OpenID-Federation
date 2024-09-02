@@ -14,6 +14,10 @@ class Constants {
         const val AUTHORITY_HINT_NOT_FOUND = "Authority hint not found"
         const val FAILED_TO_DELETE_AUTHORITY_HINT = "Failed to delete authority hint"
         const val AUTHORITY_HINT_ALREADY_EXISTS = "Authority hint already exists"
+        const val CRIT_ALREADY_EXISTS = "Crit already exists"
+        const val FAILED_TO_CREATE_CRIT = "Failed to create crit"
+        const val CRIT_NOT_FOUND = "Crit not found"
+        const val FAILED_TO_DELETE_CRIT = "Failed to delete crit"
         const val NO_KEYS_FOUND = "No keys found"
     }
 }

@@ -16,6 +16,7 @@ class EntityConfigurationStatementBuilder {
     private lateinit var jwks: Array<JwkDTO>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
+    private val crit: MutableList<String> = mutableListOf()
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun exp(exp: Int) = apply { this.exp = exp }
@@ -28,6 +29,10 @@ class EntityConfigurationStatementBuilder {
 
     fun authorityHint(hint: String) = apply {
         this.authorityHints.add(hint)
+    }
+
+    fun crit(claim: String) = apply {
+        this.crit.add(claim)
     }
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -48,7 +53,8 @@ class EntityConfigurationStatementBuilder {
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
-            authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null
+            authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
+            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null
         )
     }
 }
