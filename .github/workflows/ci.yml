@@ -18,12 +18,19 @@ jobs:
           distribution: adopt-hotspot
           java-version: 17
 
-      - name: Build the stack
+      - name: Run database
         run: docker compose -f docker-compose.yaml up db -d
         env:
           DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
           DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
           DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
+
+      - name: Run local KMS database
+        run: docker compose -f docker-compose.yaml up local-kms-db -d
+        env:
+          DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
+          DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
+          DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
 
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v3
