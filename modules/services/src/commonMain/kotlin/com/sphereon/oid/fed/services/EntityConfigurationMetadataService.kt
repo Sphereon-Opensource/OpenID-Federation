@@ -1,7 +1,8 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadata
+import com.sphereon.oid.fed.services.extensions.toEntityConfigurationMetadataDTO
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationMetadataService {
@@ -9,7 +10,7 @@ class EntityConfigurationMetadataService {
         accountUsername: String,
         key: String,
         metadata: JsonObject
-    ): EntityConfigurationMetadata {
+    ): EntityConfigurationMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -20,22 +21,22 @@ class EntityConfigurationMetadataService {
             throw IllegalStateException(Constants.ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS)
         }
 
-        return Persistence.entityConfigurationMetadataQueries.create(account.id, key, metadata.toString())
-            .executeAsOneOrNull()
-            ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA)
+        val createdMetadata =
+            Persistence.entityConfigurationMetadataQueries.create(account.id, key, metadata.toString())
+                .executeAsOneOrNull()
+                ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA)
+
+        return createdMetadata.toEntityConfigurationMetadataDTO()
     }
 
-    fun findByAccountId(accountId: Int): Array<EntityConfigurationMetadata> {
-        return Persistence.entityConfigurationMetadataQueries.findByAccountId(accountId).executeAsList().toTypedArray()
-    }
-
-    fun findByAccountUsername(accountUsername: String): Array<EntityConfigurationMetadata> {
+    fun findByAccountUsername(accountUsername: String): Array<EntityConfigurationMetadataDTO> {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
-        return Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList().toTypedArray()
+        return Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
+            .map { it.toEntityConfigurationMetadataDTO() }.toTypedArray()
     }
 
-    fun deleteEntityConfigurationMetadata(accountUsername: String, id: Int): EntityConfigurationMetadata {
+    fun deleteEntityConfigurationMetadata(accountUsername: String, id: Int): EntityConfigurationMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -47,7 +48,9 @@ class EntityConfigurationMetadataService {
             throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
         }
 
-        return Persistence.entityConfigurationMetadataQueries.delete(id).executeAsOneOrNull()
+        val deletedMetadata = Persistence.entityConfigurationMetadataQueries.delete(id).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
+
+        return deletedMetadata.toEntityConfigurationMetadataDTO()
     }
 }

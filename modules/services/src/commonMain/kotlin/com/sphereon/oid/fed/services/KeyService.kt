@@ -1,58 +1,34 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.jwk.generateKeyPair
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Jwk
-import com.sphereon.oid.fed.services.extensions.decrypt
-import com.sphereon.oid.fed.services.extensions.encrypt
 import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
+import kotlinx.serialization.json.Json
 
 class KeyService {
+    private val kmsClient = KmsService.getKmsClient()
     private val accountQueries = Persistence.accountQueries
     private val keyQueries = Persistence.keyQueries
 
-    fun create(accountUsername: String): Jwk {
+    fun create(accountUsername: String): JwkAdminDTO {
         val account =
             accountQueries.findByUsername(accountUsername).executeAsOne()
 
-        val encryptedKeyPair = generateKeyPair().encrypt()
+        val jwk = kmsClient.generateKeyPair()
 
-        val key = keyQueries.create(
-            account.id,
-            y = encryptedKeyPair.y,
-            x = encryptedKeyPair.x,
-            d = encryptedKeyPair.d,
-            crv = encryptedKeyPair.crv,
-            kty = encryptedKeyPair.kty,
-            use = encryptedKeyPair.use,
-            alg = encryptedKeyPair.alg,
-            kid = encryptedKeyPair.kid,
-            e = encryptedKeyPair.e,
-            n = encryptedKeyPair.n,
-            p = encryptedKeyPair.p,
-            x5c = encryptedKeyPair.x5c,
-            dp = encryptedKeyPair.dp,
-            x5t_s256 = encryptedKeyPair.x5tS256,
-            q = encryptedKeyPair.q,
-            qi = encryptedKeyPair.qi,
-            dq = encryptedKeyPair.dq,
-            x5u = encryptedKeyPair.x5u,
-            x5t = encryptedKeyPair.x5t,
+        keyQueries.create(
+            account_id = account.id,
+            kid = jwk.kid!!,
+            key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
         ).executeAsOne()
 
-        return key
+        return jwk
     }
 
-    fun getDecryptedKey(keyId: Int): Jwk {
-        var key = keyQueries.findById(keyId).executeAsOne()
-        return key.decrypt()
-    }
-
-    fun getKeys(accountUsername: String): Array<Jwk> {
+    fun getKeys(accountUsername: String): Array<JwkAdminDTO> {
         val account =
             accountQueries.findByUsername(accountUsername).executeAsOne()
-        return keyQueries.findByAccountId(account.id).executeAsList().toTypedArray()
+        return keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
     }
 
     fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {

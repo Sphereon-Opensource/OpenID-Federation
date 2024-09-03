@@ -18,5 +18,6 @@ class Constants {
         const val FAILED_TO_CREATE_CRIT = "Failed to create crit"
         const val CRIT_NOT_FOUND = "Crit not found"
         const val FAILED_TO_DELETE_CRIT = "Failed to delete crit"
+        const val NO_KEYS_FOUND = "No keys found"
     }
 }

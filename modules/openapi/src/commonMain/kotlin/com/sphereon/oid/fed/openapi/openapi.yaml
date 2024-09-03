@@ -9,7 +9,7 @@ info:
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
-  version: 1.0.0-d36
+  version: 1.0.0-d38
 
 tags:
   - name: federation
@@ -60,19 +60,6 @@ paths:
         - federation
       summary: Fetch Entity Statement
       description: Fetch an Entity Statement for a specified issuer and optional subject.
-      parameters:
-        - name: iss
-          in: query
-          description: The Entity Identifier of the issuer from which the Entity Statement is issued. Because of the normalization of the URL, multiple issuers MAY resolve to a shared fetch endpoint. This parameter makes it explicit exactly which issuer the Entity Statement must come from.
-          required: true
-          schema:
-            type: string
-        - name: sub
-          in: query
-          description: The Entity Identifier of the subject for which the Entity Statement is being requested. If this parameter is omitted, it is considered to be the same as the issuer and indicates a request for a self-signed Entity Configuration.
-          required: false
-          schema:
-            type: string
       responses:
         '200':
           description: Successful fetch of Entity Statement
@@ -2544,6 +2531,16 @@ components:
       required:
         - key
         - metadata
+
+    PublishEntityStatementDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        dry-run:
+          type: boolean
+          description: If true, the request will be validated but not persisted.
+          example: false
 
     CreateAuthorityHintDTO:
       type: object

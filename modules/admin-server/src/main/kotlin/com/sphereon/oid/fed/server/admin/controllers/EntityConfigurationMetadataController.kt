@@ -3,7 +3,6 @@ package com.sphereon.oid.fed.server.admin.controllers
 import com.sphereon.oid.fed.openapi.models.CreateMetadataDTO
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
 import com.sphereon.oid.fed.services.EntityConfigurationMetadataService
-import com.sphereon.oid.fed.services.extensions.toAdminDTO
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -21,8 +20,7 @@ class EntityConfigurationMetadataController {
     fun get(
         @PathVariable accountUsername: String
     ): Array<EntityConfigurationMetadataDTO> {
-        return entityConfigurationMetadataService.findByAccountUsername(accountUsername).map { it.toAdminDTO() }
-            .toTypedArray()
+        return entityConfigurationMetadataService.findByAccountUsername(accountUsername)
     }
 
     @PostMapping
@@ -34,7 +32,7 @@ class EntityConfigurationMetadataController {
             accountUsername,
             body.key,
             body.metadata
-        ).toAdminDTO()
+        )
     }
 
     @DeleteMapping("/{id}")
@@ -42,6 +40,6 @@ class EntityConfigurationMetadataController {
         @PathVariable accountUsername: String,
         @PathVariable id: Int
     ): EntityConfigurationMetadataDTO {
-        return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(accountUsername, id).toAdminDTO()
+        return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(accountUsername, id)
     }
 }

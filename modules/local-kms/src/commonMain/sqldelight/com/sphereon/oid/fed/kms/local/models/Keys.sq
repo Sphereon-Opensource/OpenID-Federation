@@ -1,0 +1,11 @@
+findAll:
+SELECT * FROM Keys;
+
+create:
+INSERT INTO Keys (id, key) VALUES (?, ?) RETURNING *;
+
+findById:
+SELECT * FROM Keys WHERE id = ?;
+
+delete:
+UPDATE Keys SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?;

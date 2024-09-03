@@ -18,6 +18,25 @@ services:
       timeout: 5s
       retries: 20
 
+  local-kms-db:
+    image: postgres:latest
+    container_name: openid-federation-local-kms-datastore
+    environment:
+      POSTGRES_USER: ${LOCAL_KMS_DATASOURCE_USER}
+      POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
+      POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - local_kms_data:/var/lib/postgresql/data
+    networks:
+      - openid_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d ${LOCAL_KMS_DATASOURCE_DB} -U ${LOCAL_KMS_DATASOURCE_USER}" ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
   federation-server:
     build:
       context: .
@@ -49,8 +68,16 @@ services:
       DATASOURCE_USER: ${DATASOURCE_USER}
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
+      KMS_PROVIDER: ${KMS_PROVIDER}
+      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
+      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
+      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
+      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
+
     depends_on:
       db:
+        condition: service_healthy
+      local-kms-db:
         condition: service_healthy
     networks:
       - openid_network
@@ -61,3 +88,4 @@ networks:
 
 volumes:
   postgres_data:
+  local_kms_data:
