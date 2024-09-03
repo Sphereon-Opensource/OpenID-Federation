@@ -16,7 +16,7 @@ class FederationController {
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
     private val subordinateService = SubordinateService()
 
-    @GetMapping("/.well-known/openid-federation")
+    @GetMapping("/.well-known/openid-federation", produces = ["application/entity-statement+jwt"])
     fun getRootEntityConfigurationStatement(): String {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()
             ?: throw IllegalArgumentException("Account not found")
@@ -27,7 +27,7 @@ class FederationController {
         return entityConfigurationStatement.statement
     }
 
-    @GetMapping("/{username}/.well-known/openid-federation")
+    @GetMapping("/{username}/.well-known/openid-federation", produces = ["application/entity-statement+jwt"])
     fun getAccountEntityConfigurationStatement(@PathVariable username: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw IllegalArgumentException("Account not found")
@@ -48,12 +48,12 @@ class FederationController {
         return subordinateService.findSubordinatesByAccountAsArray(username)
     }
 
-    @GetMapping("/fetch")
+    @GetMapping("/fetch", produces = ["application/entity-statement+jwt"])
     fun getRootSubordinateStatement(@RequestParam("iss") iss: String, @RequestParam("sub") sub: String): String {
         return subordinateService.fetchSubordinateStatement(iss, sub)
     }
 
-    @GetMapping("/{username}/fetch")
+    @GetMapping("/{username}/fetch", produces = ["application/entity-statement+jwt"])
     fun getSubordinateStatement(@RequestParam("iss") iss: String, @RequestParam("sub") sub: String): String {
         return subordinateService.fetchSubordinateStatement(iss, sub)
     }
