@@ -1,0 +1,14 @@
+findBySubordinateId:
+SELECT * FROM SubordinateJwk WHERE subordinate_id = ?;
+
+findById:
+SELECT * FROM SubordinateJwk WHERE id = ?;
+
+create:
+INSERT INTO SubordinateJwk (
+    subordinate_id,
+    key
+) VALUES (?, ?) RETURNING *;
+
+delete:
+UPDATE SubordinateJwk SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *;

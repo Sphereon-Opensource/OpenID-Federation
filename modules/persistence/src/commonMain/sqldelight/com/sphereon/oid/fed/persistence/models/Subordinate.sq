@@ -13,5 +13,8 @@ SELECT * FROM Subordinate WHERE account_id = ? AND deleted_at IS NULL;
 findByAccountIdAndIdentifier:
 SELECT * FROM Subordinate WHERE account_id = ? AND identifier = ? AND deleted_at IS NULL;
 
+findPublishedByAccountIdAndIdentifier:
+SELECT * FROM Subordinate WHERE account_id = ? AND identifier = ? AND deleted_at IS NULL;
+
 findById:
 SELECT * FROM Subordinate WHERE id = ? AND deleted_at IS NULL;

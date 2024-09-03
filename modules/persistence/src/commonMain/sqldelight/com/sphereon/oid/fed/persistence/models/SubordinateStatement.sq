@@ -1,0 +1,27 @@
+findBySubordinateId:
+SELECT * FROM SubordinateStatement WHERE subordinate_id = ?;
+
+findById:
+SELECT * FROM SubordinateStatement WHERE id = ?;
+
+create:
+INSERT INTO SubordinateStatement (
+    subordinate_id,
+    iss,
+    sub,
+    statement,
+    expires_at
+) VALUES (?, ?, ?, ?, ?) RETURNING *;
+
+findLatestBySubordinateId:
+SELECT * FROM SubordinateStatement WHERE subordinate_id = ? ORDER BY id DESC LIMIT 1;
+
+findPublishedByAccountId:
+SELECT s.*
+FROM Subordinate s
+JOIN SubordinateStatement ss ON ss.subordinate_id = s.id
+WHERE s.account_id = ?
+  AND s.deleted_at IS NULL;
+
+findByIssAndSub:
+SELECT * FROM SubordinateStatement WHERE iss = ? AND sub = ?  ORDER BY id DESC LIMIT 1;
