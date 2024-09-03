@@ -1883,7 +1883,7 @@ components:
         jwks:
           additionalProperties: true
         metadata:
-          type: object
+          additionalProperties: true
         crit:
           type: array
           items:
@@ -1969,17 +1969,15 @@ components:
             - jwks
           properties:
             metadata_policy:
-              $ref: '#/components/schemas/MetadataPolicy'
+              additionalProperties: true
             constraints:
-              $ref: '#/components/schemas/Constraint'
+              additionalProperties: true
             crit:
               type: array
               items:
                 type: string
             metadata_policy_crit:
-              type: array
-              items:
-                type: string
+              additionalProperties: true
             source_endpoint:
               type: string
               format: uri

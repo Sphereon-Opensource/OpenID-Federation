@@ -19,5 +19,8 @@ class Constants {
         const val CRIT_NOT_FOUND = "Crit not found"
         const val FAILED_TO_DELETE_CRIT = "Failed to delete crit"
         const val NO_KEYS_FOUND = "No keys found"
+        const val SUBORDINATE_NOT_FOUND = "Subordinate not found"
+        const val SUBORDINATE_JWK_NOT_FOUND = "Subordinate JWK not found"
+        const val SUBORDINATE_STATEMENT_NOT_FOUND = "Subordinate statement not found"
     }
 }

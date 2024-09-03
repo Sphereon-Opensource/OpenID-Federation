@@ -1,0 +1,10 @@
+CREATE TABLE SubordinateJwk (
+    id SERIAL PRIMARY KEY,
+    subordinate_id INT NOT NULL,
+    key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_ParentSubordinateJwk FOREIGN KEY (subordinate_id) REFERENCES Subordinate (id)
+);
+
+CREATE INDEX subordinate_jwk_account_id_index ON SubordinateJwk (subordinate_id);
