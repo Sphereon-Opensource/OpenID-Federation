@@ -14,6 +14,7 @@ dependencies {
     api(projects.modules.openapi)
     implementation(platform("software.amazon.awssdk:bom:2.21.1"))
     implementation("software.amazon.awssdk:kms")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
 }
 
 tasks.test {

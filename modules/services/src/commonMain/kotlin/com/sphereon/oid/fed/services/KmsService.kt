@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import kotlinx.serialization.json.JsonObject
 
@@ -10,6 +9,7 @@ object KmsService {
 
     private val kmsClient: KmsClient = when (provider) {
         "local" -> LocalKmsClient()
+        "amazon" -> AmazonKmsClient()
         else -> throw IllegalArgumentException("Unsupported KMS provider: $provider")
     }
 
@@ -19,5 +19,5 @@ object KmsService {
 interface KmsClient {
     fun generateKeyPair(): JwkAdminDTO
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String
-    fun verify(token: String, jwk: Jwk): Boolean
+    fun verify(token: String, keyId: String): Boolean
 }

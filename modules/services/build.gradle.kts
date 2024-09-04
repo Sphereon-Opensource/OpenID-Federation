@@ -22,6 +22,7 @@ kotlin {
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
                 api(projects.modules.localKms)
+                api(projects.modules.amazonKms)
                 implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
             }
         }

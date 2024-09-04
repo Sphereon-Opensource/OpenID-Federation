@@ -1,26 +1,23 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.kms.local.LocalKms
+import com.sphereon.oid.fed.kms.local.AmazonKms
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
-
-
 import kotlinx.serialization.json.JsonObject
 
-class LocalKmsClient : KmsClient {
+class AmazonKmsClient : KmsClient {
 
-    private val localKms = LocalKms()
+    private val amazonKms = AmazonKms()
 
     override fun generateKeyPair(): JwkAdminDTO {
-        return localKms.generateKey()
+        return amazonKms.generateKey()
     }
 
     override fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String {
-        return localKms.sign(header, payload, keyId)
+        return amazonKms.sign(header, payload, keyId)
     }
 
     override fun verify(token: String, keyId: String): Boolean {
-        return localKms.verify(token, keyId)
+        return amazonKms.verify(token, keyId)
     }
 }
