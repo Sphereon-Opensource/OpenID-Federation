@@ -38,7 +38,7 @@ class LocalKms {
         return sign(header = mHeader, payload = payload, key = jwkObject)
     }
 
-    fun verify(token: String, keyId: String): Boolean {
-        return verify(jwt = token, key = Jwk(kty = keyId))
+    fun verify(token: String, jwk: Jwk): Boolean {
+        return verify(jwt = token, key =jwk)
     }
 }

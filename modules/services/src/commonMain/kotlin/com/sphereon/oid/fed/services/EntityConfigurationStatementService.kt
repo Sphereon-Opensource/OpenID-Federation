@@ -7,6 +7,7 @@ import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.extensions.toJwkDto
+import com.sphereon.oid.fed.services.kms.KmsService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 

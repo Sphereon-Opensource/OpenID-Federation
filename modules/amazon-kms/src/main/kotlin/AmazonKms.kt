@@ -95,7 +95,7 @@ class AmazonKms {
     }
 
     private fun createKey(): String {
-        val request = CreateKeyRequest.builder().keyUsage(KeyUsageType.SIGN_VERIFY) // Or adjust based on your needs
+        val request = CreateKeyRequest.builder().keyUsage(KeyUsageType.SIGN_VERIFY)
             .build()
 
         val response = kmsClient.createKey(request)

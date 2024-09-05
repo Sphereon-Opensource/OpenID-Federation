@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
+import com.sphereon.oid.fed.services.kms.KmsService
 import kotlinx.serialization.json.Json
 
 class KeyService {

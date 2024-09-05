@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.kms.KmsService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject

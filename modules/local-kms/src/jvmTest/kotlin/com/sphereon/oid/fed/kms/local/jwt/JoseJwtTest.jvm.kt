@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement

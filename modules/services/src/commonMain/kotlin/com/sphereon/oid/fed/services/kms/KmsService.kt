@@ -1,6 +1,7 @@
-package com.sphereon.oid.fed.services
+package com.sphereon.oid.fed.services.kms
 
 import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import kotlinx.serialization.json.JsonObject
 
@@ -19,5 +20,5 @@ object KmsService {
 interface KmsClient {
     fun generateKeyPair(): JwkAdminDTO
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String
-    fun verify(token: String, keyId: String): Boolean
+    fun verify(token: String, keyId: String?, jwk: Jwk?): Boolean
 }
