@@ -10,6 +10,11 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.kms.KmsClient
 import software.amazon.awssdk.services.kms.model.*
 import java.nio.charset.StandardCharsets
+import java.security.KeyFactory
+import java.security.interfaces.ECPrivateKey
+import java.security.interfaces.ECPublicKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.util.*
 
 class AmazonKms {
@@ -24,8 +29,21 @@ class AmazonKms {
             GenerateDataKeyPairRequest.builder().keyId(keyId).keyPairSpec(DataKeyPairSpec.ECC_NIST_P256).build()
         val response = kmsClient.generateDataKeyPair(request)
 
-        //TODO: Check this logic
-        val jwk = Jwk(kty = "EC", kid = response.keyId())
+        val publicKeyBytes = response.publicKey().asByteArray()
+        val privateKeyBytes = response.privateKeyCiphertextBlob().asByteArray()
+
+        val keyFactory = KeyFactory.getInstance("EC")
+        val publicKey = keyFactory.generatePublic(X509EncodedKeySpec(publicKeyBytes)) as ECPublicKey
+        val privateKey = keyFactory.generatePrivate(PKCS8EncodedKeySpec(privateKeyBytes)) as ECPrivateKey
+
+        val x = Base64.getUrlEncoder().withoutPadding().encodeToString(publicKey.w.affineX.toByteArray())
+        val y = Base64.getUrlEncoder().withoutPadding().encodeToString(publicKey.w.affineY.toByteArray())
+        val d = Base64.getUrlEncoder().withoutPadding().encodeToString(privateKey.s.toByteArray())
+
+        val jwk = Jwk(
+            kty = "EC", crv = "P-256", kid = keyId,
+            x = x, y = y, alg = "ES256", use = "sig", d = d
+        )
         return jwk.toJwkAdminDto()
     }
 
