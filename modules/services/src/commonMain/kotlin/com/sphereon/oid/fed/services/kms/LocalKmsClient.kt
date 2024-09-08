@@ -20,7 +20,7 @@ class LocalKmsClient : KmsClient {
         return localKms.sign(header, payload, keyId)
     }
 
-    override fun verify(token: String, keyId: String?, jwk: Jwk?): Boolean {
-        return localKms.verify(token, jwk!!)
+    override fun verify(token: String): Boolean {
+        return com.sphereon.oid.fed.common.crypto.verify(token)
     }
 }

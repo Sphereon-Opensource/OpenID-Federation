@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.kms.local.encryption.AesEncryption
 import com.sphereon.oid.fed.kms.local.extensions.toJwkAdminDto
 import com.sphereon.oid.fed.kms.local.jwk.generateKeyPair
 import com.sphereon.oid.fed.kms.local.jwt.sign
-import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
@@ -36,9 +35,5 @@ class LocalKms {
         val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid)
 
         return sign(header = mHeader, payload = payload, key = jwkObject)
-    }
-
-    fun verify(token: String, jwk: Jwk): Boolean {
-        return verify(jwt = token, key =jwk)
     }
 }

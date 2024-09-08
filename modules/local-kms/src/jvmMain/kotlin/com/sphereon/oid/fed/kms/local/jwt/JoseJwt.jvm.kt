@@ -1,8 +1,10 @@
 package com.sphereon.oid.fed.kms.local.jwt
 
-import com.nimbusds.jose.*
+import com.nimbusds.jose.JOSEObjectType
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.JWSSigner
 import com.nimbusds.jose.crypto.ECDSASigner
-import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
@@ -26,21 +28,6 @@ actual fun sign(
 
     signedJWT.sign(signer)
     return signedJWT.serialize()
-}
-
-actual fun verify(
-    jwt: String, key: Jwk
-): Boolean {
-    try {
-        val jwkJsonString = Json.encodeToString(key)
-        val ecKey = ECKey.parse(jwkJsonString)
-        val verifier: JWSVerifier = ECDSAVerifier(ecKey)
-        val signedJWT = SignedJWT.parse(jwt)
-        val verified = signedJWT.verify(verifier)
-        return verified
-    } catch (e: Exception) {
-        throw Exception("Couldn't verify the JWT Signature: ${e.message}", e)
-    }
 }
 
 fun JWTHeader.toJWSHeader(): JWSHeader {

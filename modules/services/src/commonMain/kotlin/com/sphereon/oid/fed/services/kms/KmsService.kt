@@ -20,5 +20,5 @@ object KmsService {
 interface KmsClient {
     fun generateKeyPair(): JwkAdminDTO
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String
-    fun verify(token: String, keyId: String?, jwk: Jwk?): Boolean
+    fun verify(token: String): Boolean
 }

@@ -2,7 +2,6 @@ package com.sphereon.oid.fed.services.kms
 
 import com.sphereon.oid.fed.kms.local.AmazonKms
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import kotlinx.serialization.json.JsonObject
 
@@ -18,7 +17,7 @@ class AmazonKmsClient : KmsClient {
         return amazonKms.sign(header, payload, keyId)
     }
 
-    override fun verify(token: String, keyId: String?, jwk: Jwk?): Boolean {
-        return amazonKms.verify(token, keyId!!)
+    override fun verify(token: String): Boolean {
+        return com.sphereon.oid.fed.common.crypto.verify(token)
     }
 }

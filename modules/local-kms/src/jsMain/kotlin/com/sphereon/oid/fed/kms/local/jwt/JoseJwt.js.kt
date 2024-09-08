@@ -38,13 +38,3 @@ actual fun sign(
         .setProtectedHeader(JSON.parse<Any>(Json.encodeToString(header)))
         .sign(key = privateKey, signOptions = opts)
 }
-
-@ExperimentalJsExport
-@JsExport
-actual fun verify(
-    jwt: String,
-    key: Any,
-    opts: Map<String, Any>
-): Boolean {
-    return Jose.jwtVerify(jwt, key, opts)
-}

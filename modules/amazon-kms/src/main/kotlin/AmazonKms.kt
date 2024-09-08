@@ -69,31 +69,6 @@ class AmazonKms {
         return encodedHeader + "." + encodedPayload + "." + signature
     }
 
-    fun verify(token: String, keyId: String): Boolean {
-        try {
-            val parts = token.split(".")
-            if (parts.size != 3) {
-                return false // Invalid token format
-            }
-
-            val header = parts[0]
-            val payload = parts[1]
-            val signature = parts[2]
-
-            val verificationRequest = VerifyRequest.builder().keyId(keyId)
-                .message(SdkBytes.fromString(header + "." + payload, StandardCharsets.UTF_8))
-                .signature(SdkBytes.fromByteArray(Base64.getUrlDecoder().decode(signature)))
-                .signingAlgorithm(SigningAlgorithmSpec.ECDSA_SHA_256) // Adjust if needed
-                .build()
-
-            val verificationResponse = kmsClient.verify(verificationRequest)
-
-            return verificationResponse.signatureValid()
-        } catch (e: Exception) {
-            return false
-        }
-    }
-
     private fun createKey(): String {
         val request = CreateKeyRequest.builder().keyUsage(KeyUsageType.SIGN_VERIFY)
             .build()

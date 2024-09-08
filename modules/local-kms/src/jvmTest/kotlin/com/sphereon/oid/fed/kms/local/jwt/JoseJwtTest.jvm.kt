@@ -31,20 +31,4 @@ class JoseJwtTest {
         )
         assertTrue { signature.startsWith("ey") }
     }
-
-    @Test
-    fun verifyTest() {
-        val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
-        val jwk = key.toString()
-        val entityStatement = EntityConfigurationStatement(
-            iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = JsonObject(mapOf())
-        )
-        val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
-        val signature = sign(
-            payload,
-            JWTHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
-            Json.decodeFromString<Jwk>(jwk)
-        )
-        assertTrue { verify(signature, Json.decodeFromString<Jwk>(jwk)) }
-    }
 }
