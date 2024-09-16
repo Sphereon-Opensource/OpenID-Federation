@@ -1,0 +1,10 @@
+CREATE TABLE Crit (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    claim TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_ParentCrit FOREIGN KEY (account_id) REFERENCES Account (id)
+);
+
+CREATE INDEX crit_account_id_index ON Crit (account_id);

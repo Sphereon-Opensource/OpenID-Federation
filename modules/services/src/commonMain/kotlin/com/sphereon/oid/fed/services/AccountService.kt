@@ -3,22 +3,40 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.extensions.toAccountDTO
 
 class AccountService {
-    private val accountRepository = Persistence.accountRepository
+    private val accountQueries = Persistence.accountQueries
 
     fun create(account: CreateAccountDTO): AccountDTO {
-        val accountAlreadyExists = accountRepository.findByUsername(account.username) != null
+        val accountAlreadyExists = accountQueries.findByUsername(account.username).executeAsOneOrNull()
 
-        if (accountAlreadyExists) {
+        if (accountAlreadyExists != null) {
             throw IllegalArgumentException(Constants.ACCOUNT_ALREADY_EXISTS)
         }
 
-        return accountRepository.create(account).executeAsOne().toAccountDTO()
+        return accountQueries.create(
+            username = account.username,
+        ).executeAsOne().toAccountDTO()
     }
 
     fun findAll(): List<AccountDTO> {
-        return accountRepository.findAll().map { it.toAccountDTO() }
+        return accountQueries.findAll().executeAsList().map { it.toAccountDTO() }
+    }
+
+    fun getAccountIdentifier(accountUsername: String): String {
+        val rootIdentifier = System.getenv("ROOT_IDENTIFIER") ?: "http://localhost:8080"
+
+        if (accountUsername == "root") {
+            return rootIdentifier
+        }
+
+        return "$rootIdentifier/$accountUsername"
+    }
+
+    fun getAccountByUsername(accountUsername: String): Account {
+        return accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
     }
 }

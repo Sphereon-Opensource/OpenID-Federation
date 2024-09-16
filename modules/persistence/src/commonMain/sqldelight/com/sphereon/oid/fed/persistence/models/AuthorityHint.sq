@@ -1,0 +1,20 @@
+create:
+INSERT INTO AuthorityHint (
+    account_id,
+    identifier
+) VALUES ( ?, ?) RETURNING *;
+
+delete:
+UPDATE AuthorityHint SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL RETURNING *;
+
+findByAccountId:
+SELECT * FROM AuthorityHint WHERE account_id = ? AND deleted_at IS NULL;
+
+findById:
+SELECT * FROM AuthorityHint WHERE id = ? AND deleted_at IS NULL;
+
+findByAccountIdAndId:
+SELECT * FROM AuthorityHint WHERE account_id = ? AND id = ? AND deleted_at IS NULL;
+
+findByAccountIdAndIdentifier:
+SELECT * FROM AuthorityHint WHERE account_id = ? AND identifier = ? AND deleted_at IS NULL;

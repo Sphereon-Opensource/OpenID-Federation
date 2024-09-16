@@ -1,0 +1,12 @@
+CREATE TABLE SubordinateStatement (
+    id SERIAL PRIMARY KEY,
+    subordinate_id INT NOT NULL,
+    iss TEXT NOT NULL,
+    sub TEXT NOT NULL,
+    statement TEXT NOT NULL,
+    expires_at BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_ParentSubordinateStatement FOREIGN KEY (subordinate_id) REFERENCES Subordinate (id)
+);
+
+CREATE INDEX subordinate_statement_account_id_index ON SubordinateStatement (subordinate_id);

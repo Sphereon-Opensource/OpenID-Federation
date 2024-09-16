@@ -1,52 +1,43 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.jwk.generateKeyPair
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Jwk
-import com.sphereon.oid.fed.services.extensions.decrypt
-import com.sphereon.oid.fed.services.extensions.encrypt
 import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
+import kotlinx.serialization.json.Json
 
 class KeyService {
-    private val accountRepository = Persistence.accountRepository
-    private val keyRepository = Persistence.keyRepository
+    private val kmsClient = KmsService.getKmsClient()
+    private val accountQueries = Persistence.accountQueries
+    private val keyQueries = Persistence.keyQueries
 
-    fun create(accountUsername: String): Jwk {
+    fun create(accountUsername: String): JwkAdminDTO {
         val account =
-            accountRepository.findByUsername(accountUsername)
-                ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            accountQueries.findByUsername(accountUsername).executeAsOne()
 
-        val key = keyRepository.create(
-            account.id,
-            generateKeyPair().encrypt()
-        )
+        val jwk = kmsClient.generateKeyPair()
 
-        return key
+        keyQueries.create(
+            account_id = account.id,
+            kid = jwk.kid!!,
+            key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
+        ).executeAsOne()
+
+        return jwk
     }
 
-    fun getDecryptedKey(keyId: Int): Jwk {
-        var key = keyRepository.findById(keyId) ?: throw IllegalArgumentException(Constants.KEY_NOT_FOUND)
-        return key.decrypt()
-    }
-
-    fun getKeys(accountUsername: String): List<JwkAdminDTO> {
+    fun getKeys(accountUsername: String): Array<JwkAdminDTO> {
         val account =
-            accountRepository.findByUsername(accountUsername)
-                ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
-        val accountId = account.id
-        return keyRepository.findByAccountId(accountId).map { it.toJwkAdminDTO() }
+            accountQueries.findByUsername(accountUsername).executeAsOne()
+        return keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
     }
 
     fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {
         val account =
-            accountRepository.findByUsername(accountUsername)
-                ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
-        val accountId = account.id
+            accountQueries.findByUsername(accountUsername).executeAsOne()
 
-        var key = keyRepository.findById(keyId) ?: throw IllegalArgumentException(Constants.KEY_NOT_FOUND)
+        var key = keyQueries.findById(keyId).executeAsOne()
 
-        if (key.account_id != accountId) {
+        if (key.account_id != account.id) {
             throw IllegalArgumentException(Constants.KEY_NOT_FOUND)
         }
 
@@ -54,9 +45,9 @@ class KeyService {
             throw IllegalArgumentException(Constants.KEY_ALREADY_REVOKED)
         }
 
-        keyRepository.revokeKey(keyId, reason)
+        keyQueries.revoke(reason, keyId)
 
-        key = keyRepository.findById(keyId) ?: throw IllegalArgumentException(Constants.KEY_NOT_FOUND)
+        key = keyQueries.findById(keyId).executeAsOne()
 
         return key.toJwkAdminDTO()
     }

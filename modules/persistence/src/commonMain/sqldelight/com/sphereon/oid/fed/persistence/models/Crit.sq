@@ -1,0 +1,17 @@
+findByAccountId:
+SELECT * FROM Crit WHERE account_id = ? AND deleted_at IS NULL;
+
+findByAccountIdAndClaim:
+SELECT * FROM Crit WHERE account_id = ? AND claim = ? AND deleted_at IS NULL;
+
+deleteByAccountIdAndId:
+UPDATE Crit SET deleted_at = CURRENT_TIMESTAMP WHERE account_id = ? AND id = ? AND deleted_at IS NULL RETURNING *;
+
+deleteById:
+UPDATE Crit SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *;
+
+create:
+INSERT INTO Crit (account_id, claim) VALUES (?, ?) RETURNING *;
+
+findByAccountIdAndId:
+SELECT * FROM Crit WHERE account_id = ? AND id = ? AND deleted_at IS NULL;

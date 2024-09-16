@@ -4,20 +4,41 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
-import com.sphereon.oid.fed.persistence.repositories.AccountRepository
-import com.sphereon.oid.fed.persistence.repositories.KeyRepository
+import com.sphereon.oid.fed.persistence.models.AccountQueries
+import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.persistence.models.CritQueries
+import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQueries
+import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.oid.fed.persistence.models.KeyQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 
 actual object Persistence {
-    actual val accountRepository: AccountRepository
-    actual val keyRepository: KeyRepository
+    actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
+    actual val accountQueries: AccountQueries
+    actual val keyQueries: KeyQueries
+    actual val subordinateQueries: SubordinateQueries
+    actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
+    actual val authorityHintQueries: AuthorityHintQueries
+    actual val critQueries: CritQueries
+    actual val subordinateStatementQueries: SubordinateStatementQueries
+    actual val subordinateJwkQueries: SubordinateJwkQueries
 
     init {
         val driver = getDriver()
         runMigrations(driver)
 
         val database = Database(driver)
-        accountRepository = AccountRepository(database.accountQueries)
-        keyRepository = KeyRepository(database.keyQueries)
+        accountQueries = database.accountQueries
+        entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
+        keyQueries = database.keyQueries
+        subordinateQueries = database.subordinateQueries
+        entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
+        authorityHintQueries = database.authorityHintQueries
+        critQueries = database.critQueries
+        subordinateStatementQueries = database.subordinateStatementQueries
+        subordinateJwkQueries = database.subordinateJwkQueries
     }
 
     private fun getDriver(): SqlDriver {

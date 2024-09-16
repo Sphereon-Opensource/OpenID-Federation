@@ -1,0 +1,10 @@
+CREATE TABLE EntityConfigurationStatement (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    statement TEXT NOT NULL,
+    expires_at BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_ParentEntityConfigurationStatement FOREIGN KEY (account_id) REFERENCES Account (id)
+);
+
+CREATE INDEX entity_configuraion_statement_account_id_index ON EntityConfigurationStatement (account_id);

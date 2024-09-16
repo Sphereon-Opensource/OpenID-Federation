@@ -60,7 +60,8 @@ kotlin {
                 outputDir.set("$projectDir/build/generated")
                 configOptions.set(
                     mapOf(
-                        "dateLibrary" to "string"
+                        "dateLibrary" to "string",
+                        "collectionType" to "array",
                     )
                 )
 

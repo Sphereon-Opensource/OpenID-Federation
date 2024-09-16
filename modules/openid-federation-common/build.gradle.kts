@@ -18,13 +18,13 @@ kotlin {
     jvm()
 
     js {
-//        browser {
-//            commonWebpackConfig {
-//                devServer = KotlinWebpackConfig.DevServer().apply {
-//                    port = 8083
-//                }
-//            }
-//        }
+        browser {
+            commonWebpackConfig {
+                devServer = KotlinWebpackConfig.DevServer().apply {
+                    port = 8083
+                }
+            }
+        }
         nodejs {
             testTask {
                 useMocha {
@@ -138,7 +138,6 @@ kotlin {
         }
 
         val jsTest by getting {
-            dependsOn(commonTest)
             dependencies {
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))

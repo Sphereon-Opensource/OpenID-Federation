@@ -13,10 +13,6 @@ repositories {
 }
 
 kotlin {
-//    js {
-//        browser()
-//        nodejs()
-//    }
     jvm()
 
     sourceSets {
@@ -25,6 +21,8 @@ kotlin {
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
+                api(projects.modules.localKms)
+                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
             }
         }
 
@@ -33,11 +31,5 @@ kotlin {
                 implementation(kotlin("test-junit"))
             }
         }
-
-//        val jsMain by getting {
-//            dependencies {
-////                implementation(npm("jose", "5.6.3"))
-//            }
-//        }
     }
 }
