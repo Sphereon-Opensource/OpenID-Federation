@@ -1,13 +1,15 @@
 package com.sphereon.oid.fed.common.op
 
 import com.sphereon.oid.fed.common.httpclient.OidFederationClient
-import com.sphereon.oid.fed.common.jwt.verify
 import com.sphereon.oid.fed.common.mapper.JsonMapper
+import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.engine.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.OffsetDateTime
 
 fun readAuthorityHints(jwt: String? = null, partyBId: String? = null, engine: HttpClientEngine): List<List<String>> {
@@ -77,7 +79,8 @@ fun validateEntityStatement(jwts: List<String>) {
     if(entityStatements[0]?.iss != entityStatements[0]?.sub) {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
-    if (!verify(jwts[0], entityStatements[0]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any , emptyMap())) {
+
+    if (!verify(jwts[0], retrieveJwk(entityStatements[0]))) {
         throw IllegalArgumentException("Invalid signature")
     }
     entityStatements.forEachIndexed { index, element ->
@@ -92,17 +95,27 @@ fun validateEntityStatement(jwts: List<String>) {
             throw IllegalArgumentException("Invalid exp")
         }
 
-        if(!verify(jwts[index], entityStatements[index +1]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any, emptyMap())) {
+        if(!verify(jwts[index], retrieveJwk(entityStatements[index +1]))) {
             throw IllegalArgumentException("Invalid signature")
         }
     }
     if(entityStatements[entityStatements.size -1]?.iss != "entity_identifier") {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
-    if (!verify(jwts[jwts.size - 1], entityStatements[entityStatements.size - 1]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any , emptyMap())) {
+    if (!verify(jwts[jwts.size - 1], retrieveJwk(entityStatements[entityStatements.size - 1]))) {
         throw IllegalArgumentException("Invalid signature")
     }
 }
+
+fun retrieveJwk(entityStatement: EntityConfigurationStatement?) =
+    entityStatement?.jwks.let { it?.get("keys")?.jsonArray?.first().let { key ->
+        Jwk(
+            kid = key?.jsonObject?.get("kid")?.jsonPrimitive?.content,
+            kty = key?.jsonObject?.get("kty")?.jsonPrimitive?.content ?: "",
+            crv = key?.jsonObject?.get("crv")?.jsonPrimitive?.content,
+            x = key?.jsonObject?.get("x")?.jsonPrimitive?.content
+        )
+    }}
 
 fun requestEntityStatement(url: String, engine: HttpClientEngine) = runBlocking {
     return@runBlocking OidFederationClient(engine).fetchEntityStatement(url)

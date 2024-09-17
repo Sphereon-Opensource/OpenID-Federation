@@ -2,8 +2,6 @@ package com.sphereon.oid.fed.common.logic
 
 import EntityLogic
 import EntityType
-import com.sphereon.oid.fed.openapi.models.JWKS
-import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject

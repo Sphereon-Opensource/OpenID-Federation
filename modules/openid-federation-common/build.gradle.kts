@@ -74,6 +74,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(project(":modules:local-kms"))
             }
         }
         val jvmTest by getting {
