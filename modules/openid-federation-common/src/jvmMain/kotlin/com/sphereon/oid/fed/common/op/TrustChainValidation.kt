@@ -6,6 +6,8 @@ import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import io.ktor.client.engine.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import java.time.OffsetDateTime
 
 fun readAuthorityHints(jwt: String? = null, partyBId: String? = null, engine: HttpClientEngine): List<List<String>> {
@@ -27,8 +29,8 @@ fun readAuthorityHints(jwt: String? = null, partyBId: String? = null, engine: Ht
         JsonMapper().mapEntityStatement(requestEntityStatement(it, engine))
     }
 
-    entityConfigurationStatement?.metadata?.federationEntity?.federationFetchEndpoint?.let { url ->
-        requestEntityStatement(url, engine).let { jwt -> subordinateStatement.add(jwt) }
+    entityConfigurationStatement?.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
+        requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
     }
 
     entityConfigurationStatement?.authorityHints?.forEach { authorityHint ->
@@ -49,8 +51,8 @@ fun buildTrustChain(
     requestEntityStatement(authorityHint, engine).run {
         JsonMapper().mapEntityStatement(this)?.let {
             if (it.authorityHints.isNullOrEmpty()) {
-                it.metadata?.federationEntity?.federationFetchEndpoint?.let { url ->
-                    requestEntityStatement(url, engine).let { jwt -> subordinateStatement.add(jwt) }
+                it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
+                    requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
                 }
                 trustChain.add(it)
                 trustChains.add(trustChain.map { content -> content.copy() })
@@ -59,8 +61,8 @@ fun buildTrustChain(
                 it.authorityHints ?: subordinateStatement.clear()
             } else {
                 it.authorityHints?.forEach { hint ->
-                    it.metadata?.federationEntity?.federationFetchEndpoint?.let { url ->
-                        requestEntityStatement(url, engine).let { jwt -> subordinateStatement.add(jwt) }
+                    it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
+                        requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
                     }
                     trustChain.add(it)
                     buildTrustChain(hint, engine, subordinateStatements, trustChains, trustChain, subordinateStatement)
@@ -75,7 +77,7 @@ fun validateEntityStatement(jwts: List<String>) {
     if(entityStatements[0]?.iss != entityStatements[0]?.sub) {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
-    if (!verify(jwts[0], entityStatements[0]?.jwks?.let { it.propertyKeys?.first()} as Any , emptyMap())) {
+    if (!verify(jwts[0], entityStatements[0]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any , emptyMap())) {
         throw IllegalArgumentException("Invalid signature")
     }
     entityStatements.forEachIndexed { index, element ->
@@ -90,14 +92,14 @@ fun validateEntityStatement(jwts: List<String>) {
             throw IllegalArgumentException("Invalid exp")
         }
 
-        if(!verify(jwts[index], entityStatements[index +1]?.jwks?.let { it.propertyKeys?.first()} as Any, emptyMap())) {
+        if(!verify(jwts[index], entityStatements[index +1]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any, emptyMap())) {
             throw IllegalArgumentException("Invalid signature")
         }
     }
     if(entityStatements[entityStatements.size -1]?.iss != "entity_identifier") {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
-    if (!verify(jwts[jwts.size - 1], entityStatements[entityStatements.size - 1]?.jwks?.let { it.propertyKeys?.first()} as Any , emptyMap())) {
+    if (!verify(jwts[jwts.size - 1], entityStatements[entityStatements.size - 1]?.jwks?.let { it["keys"]?.jsonArray?.first()} as Any , emptyMap())) {
         throw IllegalArgumentException("Invalid signature")
     }
 }
