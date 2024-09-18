@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.op
+package com.sphereon.oid.fed.common.validation
 
 import com.sphereon.oid.fed.common.httpclient.OidFederationClient
 import com.sphereon.oid.fed.common.mapper.JsonMapper
