@@ -70,7 +70,8 @@ fun buildTrustChain(
     }
 }
 
-fun validateEntityStatement(jwts: List<String>) {
+// TODO must validate subordinate statements too
+fun validateTrustChain(jwts: List<String>): Boolean {
     val entityStatements = jwts.map { JsonMapper().mapEntityStatement(it) }
     if(entityStatements[0]?.iss != entityStatements[0]?.sub) {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
@@ -101,6 +102,7 @@ fun validateEntityStatement(jwts: List<String>) {
     if (!verify(jwts[jwts.size - 1], retrieveJwk(entityStatements[entityStatements.size - 1]))) {
         throw IllegalArgumentException("Invalid signature")
     }
+    return true
 }
 
 fun retrieveJwk(entityStatement: EntityConfigurationStatement?) =
