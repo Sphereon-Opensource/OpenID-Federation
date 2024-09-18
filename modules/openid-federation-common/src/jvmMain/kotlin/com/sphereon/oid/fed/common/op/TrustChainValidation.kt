@@ -31,10 +31,6 @@ fun readAuthorityHints(jwt: String? = null, partyBId: String? = null, engine: Ht
         JsonMapper().mapEntityStatement(requestEntityStatement(it, engine))
     }
 
-    entityConfigurationStatement?.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
-        requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
-    }
-
     entityConfigurationStatement?.authorityHints?.forEach { authorityHint ->
         buildTrustChain(authorityHint, engine, subordinateStatements, trustChains, subordinateStatement = subordinateStatement)
     }
@@ -53,7 +49,7 @@ fun buildTrustChain(
     requestEntityStatement(authorityHint, engine).run {
         JsonMapper().mapEntityStatement(this)?.let {
             if (it.authorityHints.isNullOrEmpty()) {
-                it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
+                it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.jsonPrimitive?.content.let { url ->
                     requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
                 }
                 trustChain.add(it)
@@ -63,7 +59,7 @@ fun buildTrustChain(
                 it.authorityHints ?: subordinateStatement.clear()
             } else {
                 it.authorityHints?.forEach { hint ->
-                    it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.let { url ->
+                    it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.jsonPrimitive?.content.let { url ->
                         requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
                     }
                     trustChain.add(it)
