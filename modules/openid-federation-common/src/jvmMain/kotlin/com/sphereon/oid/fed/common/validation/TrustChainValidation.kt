@@ -5,9 +5,9 @@ import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import io.ktor.client.engine.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.time.OffsetDateTime
@@ -26,9 +26,9 @@ fun readAuthorityHints(jwt: String? = null, partyBId: String? = null, engine: Ht
     }
 
     val entityConfigurationStatement = jwt?.let {
-        JsonMapper().mapEntityStatement(it)
+        JsonMapper().mapEntityConfigurationStatement(it)
     } ?: partyBId?.let {
-        JsonMapper().mapEntityStatement(requestEntityStatement(it, engine))
+        JsonMapper().mapEntityConfigurationStatement(requestEntityStatement(it, engine))
     }
 
     entityConfigurationStatement?.authorityHints?.forEach { authorityHint ->
@@ -47,7 +47,7 @@ fun buildTrustChain(
 )
 {
     requestEntityStatement(authorityHint, engine).run {
-        JsonMapper().mapEntityStatement(this)?.let {
+        JsonMapper().mapEntityConfigurationStatement(this)?.let {
             if (it.authorityHints.isNullOrEmpty()) {
                 it.metadata?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.jsonPrimitive?.content.let { url ->
                     requestEntityStatement(url.toString(), engine).let { jwt -> subordinateStatement.add(jwt) }
@@ -73,47 +73,66 @@ fun buildTrustChain(
 // TODO must validate subordinate statements too
 fun validateTrustChain(jwts: List<String>): Boolean {
     val entityStatements = jwts.map { JsonMapper().mapEntityStatement(it) }
-    if(entityStatements[0]?.iss != entityStatements[0]?.sub) {
+
+    val firstEntityConfigurationStatement = entityStatements[0] as EntityConfigurationStatement
+    val subordinateStatements = entityStatements.map { it as SubordinateStatement }.subList(1, entityStatements.size - 1)
+    val lastEntityConfigurationStatement = entityStatements[entityStatements.size - 1] as EntityConfigurationStatement
+
+    if(firstEntityConfigurationStatement.iss != firstEntityConfigurationStatement.sub) {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
 
-    if (!verify(jwts[0], retrieveJwk(entityStatements[0]))) {
+    if (!verify(jwts[0], retrieveJwk(firstEntityConfigurationStatement))) {
         throw IllegalArgumentException("Invalid signature")
     }
-    entityStatements.forEachIndexed { index, element ->
-        if(element?.iss != entityStatements[index + 1]?.sub) {
+
+    subordinateStatements.forEachIndexed { index, current ->
+        val next = entityStatements[index + 1] as SubordinateStatement
+        if(current.iss != next.sub) {
             throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
         }
         val offsetTime = OffsetDateTime.now()
-        if(element?.iat?.compareTo(offsetTime.toEpochSecond().toInt())!! > 0) {
+        if(current.iat > offsetTime.toEpochSecond().toInt()) {
             throw IllegalArgumentException("Invalid iat")
         }
-        if(element.exp < offsetTime.toEpochSecond().toInt()) {
+        if(current.exp < offsetTime.toEpochSecond().toInt()) {
             throw IllegalArgumentException("Invalid exp")
         }
 
-        if(!verify(jwts[index], retrieveJwk(entityStatements[index +1]))) {
+        if(!verify(jwts[index], retrieveJwk(next))) {
             throw IllegalArgumentException("Invalid signature")
         }
     }
-    if(entityStatements[entityStatements.size -1]?.iss != "entity_identifier") {
+    if(lastEntityConfigurationStatement.iss != "entity_identifier") {
         throw IllegalArgumentException("Entity Configuration of the Trust Chain subject requires that iss is equal to sub")
     }
-    if (!verify(jwts[jwts.size - 1], retrieveJwk(entityStatements[entityStatements.size - 1]))) {
+    if (!verify(jwts[jwts.size - 1], retrieveJwk(lastEntityConfigurationStatement))) {
         throw IllegalArgumentException("Invalid signature")
     }
     return true
 }
 
-fun retrieveJwk(entityStatement: EntityConfigurationStatement?) =
-    entityStatement?.jwks.let { it?.get("keys")?.jsonArray?.first().let { key ->
-        Jwk(
-            kid = key?.jsonObject?.get("kid")?.jsonPrimitive?.content,
-            kty = key?.jsonObject?.get("kty")?.jsonPrimitive?.content ?: "",
-            crv = key?.jsonObject?.get("crv")?.jsonPrimitive?.content,
-            x = key?.jsonObject?.get("x")?.jsonPrimitive?.content
-        )
-    }}
+fun retrieveJwk(entityStatement: Any?): Jwk {
+    return when(entityStatement) {
+        is EntityConfigurationStatement -> entityStatement.jwks.let { key ->
+            Jwk(
+                kid = key.jsonObject["kid"]?.jsonPrimitive?.content,
+                kty = key.jsonObject["kty"]?.jsonPrimitive?.content ?: "",
+                crv = key.jsonObject["crv"]?.jsonPrimitive?.content,
+                x = key.jsonObject["x"]?.jsonPrimitive?.content
+            )
+        }
+        is SubordinateStatement -> entityStatement.jwks.let { key ->
+            Jwk(
+                kid = key.jsonObject["kid"]?.jsonPrimitive?.content,
+                kty = key.jsonObject["kty"]?.jsonPrimitive?.content ?: "",
+                crv = key.jsonObject["crv"]?.jsonPrimitive?.content,
+                x = key.jsonObject["x"]?.jsonPrimitive?.content
+            )
+        }
+        else -> throw IllegalArgumentException("Invalid entity statement")
+    }
+}
 
 fun requestEntityStatement(url: String, engine: HttpClientEngine) = runBlocking {
     return@runBlocking OidFederationClient(engine).fetchEntityStatement(url)
