@@ -19,7 +19,7 @@ class JsonMapper {
 
     }
 
-    fun mapEntityConfigurationStatement(jwtToken: String): EntityConfigurationStatement? =
+    fun mapEntityConfigurationStatement(jwtToken: String): EntityConfigurationStatement =
         decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
     }
 
