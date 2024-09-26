@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.common.mapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWTSignature
+import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -20,6 +21,10 @@ class JsonMapper {
     }
 
     fun mapEntityConfigurationStatement(jwtToken: String): EntityConfigurationStatement =
+        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
+    }
+
+    fun mapSubordinateStatement(jwtToken: String): SubordinateStatement =
         decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
     }
 
