@@ -1,6 +1,6 @@
-package com.sphereon.oid.fed.common.validation
+package com.sphereon.oid.fed.client.validation
 
-import com.sphereon.oid.fed.common.httpclient.OidFederationClient
+import com.sphereon.oid.fed.client.httpclient.OidFederationClient
 import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import io.ktor.client.engine.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.time.OffsetDateTime
@@ -18,14 +19,14 @@ class TrustChainValidation {
         partyBId: String,
         engine: HttpClientEngine,
         trustChains: MutableList<List<EntityConfigurationStatement>> = mutableListOf(),
-        trustChain: MutableList<EntityConfigurationStatement> = mutableListOf()
+        trustChain: MutableSet<EntityConfigurationStatement> = mutableSetOf()
     ): List<List<EntityConfigurationStatement>> {
         requestEntityStatement(partyBId, engine).run {
             JsonMapper().mapEntityConfigurationStatement(this).let {
                 if (it.authorityHints.isNullOrEmpty()) {
                     trustChain.add(it)
                     trustChains.add(trustChain.map { content -> content.copy() })
-                    it.authorityHints ?: trustChain.clear()
+                    trustChain.last().also { trustChain.remove(it) }
                 } else {
                     it.authorityHints?.forEach { hint ->
                         trustChain.add(it)
@@ -56,7 +57,8 @@ class TrustChainValidation {
                     }
                 }
             }
-            trustChains.add(trustChain)
+            trustChains.add(trustChain.map { content -> content.substring(0) })
+            trustChain.clear()
         }
         return trustChains
     }
@@ -118,19 +120,21 @@ class TrustChainValidation {
         return when (entityStatement) {
             is EntityConfigurationStatement -> entityStatement.jwks.let { key ->
                 Jwk(
-                    kid = key.jsonObject["kid"]?.jsonPrimitive?.content,
-                    kty = key.jsonObject["kty"]?.jsonPrimitive?.content ?: "",
-                    crv = key.jsonObject["crv"]?.jsonPrimitive?.content,
-                    x = key.jsonObject["x"]?.jsonPrimitive?.content
+                    kid = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["kid"]?.jsonPrimitive?.content,
+                    kty = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["kty"]?.jsonPrimitive?.content ?: "EC",
+                    crv = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["crv"]?.jsonPrimitive?.content,
+                    x = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["x"]?.jsonPrimitive?.content,
+                    y = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["y"]?.jsonPrimitive?.content
                 )
             }
 
             is SubordinateStatement -> entityStatement.jwks.let { key ->
                 Jwk(
-                    kid = key.jsonObject["kid"]?.jsonPrimitive?.content,
-                    kty = key.jsonObject["kty"]?.jsonPrimitive?.content ?: "",
-                    crv = key.jsonObject["crv"]?.jsonPrimitive?.content,
-                    x = key.jsonObject["x"]?.jsonPrimitive?.content
+                    kid = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["kid"]?.jsonPrimitive?.content,
+                    kty = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["kty"]?.jsonPrimitive?.content ?: "EC",
+                    crv = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["crv"]?.jsonPrimitive?.content,
+                    x = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["x"]?.jsonPrimitive?.content,
+                    y = key.jsonObject["keys"]?.jsonArray[0]?.jsonObject["y"]?.jsonPrimitive?.content
                 )
             }
 

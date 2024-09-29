@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.validation
+package com.sphereon.oid.fed.client.validation
 
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
@@ -42,9 +42,6 @@ class TrustChainValidationTest {
         // subordinate statements
         lateinit var intermediateEntitySubordinateStatement: SubordinateStatement
         lateinit var intermediateEntity1SubordinateStatement: SubordinateStatement
-        lateinit var validTrustAnchorSubordinateStatement: SubordinateStatement
-        lateinit var unknownTrustAnchorSubordinateStatement: SubordinateStatement
-        lateinit var invalidTrustAnchorSubordinateStatement: SubordinateStatement
 
         val partyBJwk = Jwk(
             kty = partyBKeyPair.keyType.value,
@@ -125,23 +122,17 @@ class TrustChainValidationTest {
         lateinit var unknownTrustAnchorConfigurationJwt: String
         lateinit var invalidTrustAnchorConfigurationJwt: String
 
-        lateinit var listOfEntityConfigurationStatementList: MutableList<MutableList<EntityConfigurationStatement>>
+        lateinit var intermediateEntitySubordinateStatementJwt: String
+        lateinit var intermediateEntity1SubordinateStatementJwt: String
 
-        val listOfSubordinateStatementList: MutableList<MutableList<String>> = mutableListOf(
-            mutableListOf(
-                "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldG9uZS5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiZXhwIjoyMSwiaWF0IjoyMSwiandrcyI6eyJrZXlzIjpbeyJraWQiOm51bGwsImt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiQWdKQzZLb3R2X1FubEI2UENoZEdpeXRydkg2dnVabkFrdzFCN0ZYVlBvZyIsInkiOiJ1M19qOWVETW90RjVDV0R4M2c2V3EybjVWUE1ZZ2plX01Sb1BWME5QX1YwIn1dfSwibWV0YWRhdGEiOnsiZmVkZXJhdGlvbl9lbnRpdHkiOnsib3JnYW5pemF0aW9uX25hbWUiOiJTVU5FVCJ9LCJvcGVuaWRfcHJvdmlkZXIiOnsic3ViamVjdF90eXBlc19zdXBwb3J0ZWQiOlsicGFpcndpc2UiXSwidG9rZW5fZW5kcG9pbnRfYXV0aF9tZXRob2RzX3N1cHBvcnRlZCI6WyJwcml2YXRlX2tleV9qd3QiXX19LCJjcml0IjpudWxsLCJtZXRhZGF0YV9wb2xpY3kiOnsib3BlbmlkX3Byb3ZpZGVyIjp7InN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjp7InZhbHVlIjpbInBhaXJ3aXNlIl19LCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjp7ImRlZmF1bHQiOlsicHJpdmF0ZV9rZXlfand0Il0sInN1YnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiLCJjbGllbnRfc2VjcmV0X2p3dCJdLCJzdXBlcnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiXX19fSwiY29uc3RyYWludHMiOm51bGwsIm1ldGFkYXRhX3BvbGljeV9jcml0IjpudWxsLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb24vZmVkZXJhdGlvbl9mZXRjaF9lbmRwb2ludCJ9.psisFesGRDx_-iBEfb_sb6ydpKh9ih5vWTTmmYk4i1ZYZOgLxodrSkRWcDq4agRadcTj8XyZiDd3CYQtQIH8N1fPgrvMJTAGOQxpYG31GN0gDaWmFvpTMEynPY4NxFh5oP9oR7VjYRe_hxLcI_fFhO0GHyPDaHmPXi2jvPQ9Wg-bYOMkHmf9YbbQ30GSHZWhd-Kg3xsbmEqGg91Jj70UYwPQT3h9tI7-OELExU6WSQLT6HSVQTuMdhIoLp_f7ELkeUdO3YLxQyZ8h5QU1lTHrycAIQ1g-9NkyCOJQWrzWojxwP30yLWvaPPfwjz01jHfymIjtE0fOlRqZ-xMrJFzpQ",
-                "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldG9uZS5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiZXhwIjoyMSwiaWF0IjoyMSwiandrcyI6eyJrZXlzIjpbeyJraWQiOm51bGwsImt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiQWdKQzZLb3R2X1FubEI2UENoZEdpeXRydkg2dnVabkFrdzFCN0ZYVlBvZyIsInkiOiJ1M19qOWVETW90RjVDV0R4M2c2V3EybjVWUE1ZZ2plX01Sb1BWME5QX1YwIn1dfSwibWV0YWRhdGEiOnsiZmVkZXJhdGlvbl9lbnRpdHkiOnsib3JnYW5pemF0aW9uX25hbWUiOiJTVU5FVCJ9LCJvcGVuaWRfcHJvdmlkZXIiOnsic3ViamVjdF90eXBlc19zdXBwb3J0ZWQiOlsicGFpcndpc2UiXSwidG9rZW5fZW5kcG9pbnRfYXV0aF9tZXRob2RzX3N1cHBvcnRlZCI6WyJwcml2YXRlX2tleV9qd3QiXX19LCJjcml0IjpudWxsLCJtZXRhZGF0YV9wb2xpY3kiOnsib3BlbmlkX3Byb3ZpZGVyIjp7InN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjp7InZhbHVlIjpbInBhaXJ3aXNlIl19LCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjp7ImRlZmF1bHQiOlsicHJpdmF0ZV9rZXlfand0Il0sInN1YnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiLCJjbGllbnRfc2VjcmV0X2p3dCJdLCJzdXBlcnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiXX19fSwiY29uc3RyYWludHMiOm51bGwsIm1ldGFkYXRhX3BvbGljeV9jcml0IjpudWxsLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fb25lL2ZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQifQ.elvdpFKwSmXO878CeE3iK2LAmlPV9_iBcuDM3JL7_zJ9UWay0K-QCrlwbqWNxkH-d0DrnKh1KHZGarQ1u9OB0Q2CFCplkbdNiQc7qUpSk1aHoaz30O9p7o4qKtNjz8AV3gE0xKFLnkj6M7rJZ3POC8AONelC1eaGe4AfgNzd7JgWd_lQGV2esNUoq5x9udjXrX1HW--PAC6vue-F-Tcx_TU2Dff3qOkW-SJvbvGnxVdvirutsJoXdae9yGMQLoi3Araefr1Tfjvd1MSxhlUL80eASrT3XgHZEeajN8ijeYUuaY36K_gCxzxkrgypXZyfZptSIGDctOuj8GucZNz9FA",
-                "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldG9uZS5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiZXhwIjoyMSwiaWF0IjoyMSwiandrcyI6eyJrZXlzIjpbeyJraWQiOm51bGwsImt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiQWdKQzZLb3R2X1FubEI2UENoZEdpeXRydkg2dnVabkFrdzFCN0ZYVlBvZyIsInkiOiJ1M19qOWVETW90RjVDV0R4M2c2V3EybjVWUE1ZZ2plX01Sb1BWME5QX1YwIn1dfSwibWV0YWRhdGEiOnsiZmVkZXJhdGlvbl9lbnRpdHkiOnsib3JnYW5pemF0aW9uX25hbWUiOiJTVU5FVCJ9LCJvcGVuaWRfcHJvdmlkZXIiOnsic3ViamVjdF90eXBlc19zdXBwb3J0ZWQiOlsicGFpcndpc2UiXSwidG9rZW5fZW5kcG9pbnRfYXV0aF9tZXRob2RzX3N1cHBvcnRlZCI6WyJwcml2YXRlX2tleV9qd3QiXX19LCJjcml0IjpudWxsLCJtZXRhZGF0YV9wb2xpY3kiOnsib3BlbmlkX3Byb3ZpZGVyIjp7InN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjp7InZhbHVlIjpbInBhaXJ3aXNlIl19LCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjp7ImRlZmF1bHQiOlsicHJpdmF0ZV9rZXlfand0Il0sInN1YnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiLCJjbGllbnRfc2VjcmV0X2p3dCJdLCJzdXBlcnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiXX19fSwiY29uc3RyYWludHMiOm51bGwsIm1ldGFkYXRhX3BvbGljeV9jcml0IjpudWxsLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fdHdvL2ZlZGVyYXRpb25fZmV0Y2hfZW5kcG9pbnQifQ.eJCajk2u8NMpq2Qi8tUUW4yT3t8zN5efdMz95Qg2Edc9-xXp32V6POp2Zmj3M99TyUrp9YwK9TEesH_7oz5QXYFR4J5cNkvd4mJvpDudvgayvlW_3z4nLUWru8nCfSyH_PiSwbPdhpiUZGvf5-KZHMdQ0SAbp5GSMSf4CD8fIYEV8u_KyS38g9Zgsv6BoQzCZtEPtY_cLCG9YV1S7V3tLsW5-bhf8da8mEny1cdnSLI6YJanQxmpW9Aq0ooxntIo1cokeL2fFoUvzNw-4JhYLOgqVDSNg3lhNhsbiPxHI3yN04Qcn90h0s1--QFHaf8rgMWyLyKZPId4kxPR-4PZoQ",
-                "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldG9uZS5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiZXhwIjoyMSwiaWF0IjoyMSwiandrcyI6eyJrZXlzIjpbeyJraWQiOm51bGwsImt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiQWdKQzZLb3R2X1FubEI2UENoZEdpeXRydkg2dnVabkFrdzFCN0ZYVlBvZyIsInkiOiJ1M19qOWVETW90RjVDV0R4M2c2V3EybjVWUE1ZZ2plX01Sb1BWME5QX1YwIn1dfSwibWV0YWRhdGEiOnsiZmVkZXJhdGlvbl9lbnRpdHkiOnsib3JnYW5pemF0aW9uX25hbWUiOiJTVU5FVCJ9LCJvcGVuaWRfcHJvdmlkZXIiOnsic3ViamVjdF90eXBlc19zdXBwb3J0ZWQiOlsicGFpcndpc2UiXSwidG9rZW5fZW5kcG9pbnRfYXV0aF9tZXRob2RzX3N1cHBvcnRlZCI6WyJwcml2YXRlX2tleV9qd3QiXX19LCJjcml0IjpudWxsLCJtZXRhZGF0YV9wb2xpY3kiOnsib3BlbmlkX3Byb3ZpZGVyIjp7InN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjp7InZhbHVlIjpbInBhaXJ3aXNlIl19LCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjp7ImRlZmF1bHQiOlsicHJpdmF0ZV9rZXlfand0Il0sInN1YnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiLCJjbGllbnRfc2VjcmV0X2p3dCJdLCJzdXBlcnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiXX19fSwiY29uc3RyYWludHMiOm51bGwsIm1ldGFkYXRhX3BvbGljeV9jcml0IjpudWxsLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fdGhyZWUvZmVkZXJhdGlvbl9mZXRjaF9lbmRwb2ludCJ9.ZnPDr-p8_RF9vI_DUqEuld-iJSPTMC5IL_B6rp_7mK1L4F_TXg0WJBP7uyn1dpkuS-Cd0V5oqHjtsxJgCoToqXGc2qvewktHOPEVKmIEVm25ALMVfiU0HZE1fU78crpF7xEo4UVBMHq78_Kk1QUg-SPmjGtS3IJ1e-EW8kxdnUVXvSsqP1pPh1iXVIjUHlQsh0SbfIbmLDmu5xYjlXXzad56zJv1G0Jov8gWw8wPYOwWY2j06MwQghu_N-ViyeFDa1UYjo4XChtU_tirFF5NzcxYfUnJUnATRgC_GuuQz5zmBEbrry252EED86lPV8UVTd9RhS1Ks9k8yJeAN8-LvA",
-            )
-        )
+        lateinit var listOfEntityConfigurationStatementList: MutableList<MutableList<EntityConfigurationStatement>>
+        lateinit var listOfSubordinateStatementList: MutableList<MutableList<String>>
 
         @JvmStatic
         @BeforeClass
         fun setup(): Unit {
 
             // Party B Entity Configuration (federation)
-
             partyBConfiguration = entityConfiguration(
                 publicKey = partyBKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(
@@ -149,7 +140,8 @@ class TrustChainValidationTest {
                     "https://edugain.org/federation_two"
                 ),
                 iss = "https://openid.sunet.se",
-                sub = "https://openid.sunet.se"
+                sub = "https://openid.sunet.se",
+                federationFetchEndpoint = "https://edugain.org/federation/federation_fetch_endpoint"
             )
 
             partyBJwt = sign(
@@ -163,7 +155,6 @@ class TrustChainValidationTest {
             )
 
             // Intermediate 1 ( Federation 2 )
-
             intermediateEntityConfiguration = entityConfiguration(
                 publicKey = intermediateEntityKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(
@@ -171,7 +162,8 @@ class TrustChainValidationTest {
                     "https://edugain.org/federation_four"
                 ),
                 iss = "https://openid.sunet.se",
-                sub = "https://openid.sunet.se"
+                sub = "https://openid.sunet.se",
+                federationFetchEndpoint = "https://edugain.org/federation_two/federation_fetch_endpoint"
             )
 
             intermediateEntityConfigurationJwt = sign(
@@ -188,14 +180,26 @@ class TrustChainValidationTest {
             intermediateEntitySubordinateStatement = intermediateEntity(
                 publicKey = intermediateEntityKeyPair.toPublicJWK(),
                 iss = "https://openid.sunetone.se",
-                sub = "https://openid.sunet.se"
+                sub = "https://openid.sunet.se",
             )
 
+            intermediateEntitySubordinateStatementJwt = sign(
+                payload = Json.encodeToJsonElement(serializer = SubordinateStatement.serializer(), intermediateEntitySubordinateStatement).jsonObject,
+                header = JWTHeader(
+                    alg = "ES256",
+                    typ = "entity-statement+jwt",
+                    kid = intermediateEntityKeyPair.keyID
+                ),
+                key = intermediateEntityConfigurationJwk
+            )
+
+            // Federation 4
             intermediateEntityConfiguration1 = entityConfiguration(
                 publicKey = intermediateEntity1KeyPair.toPublicJWK(),
                 authorityHints = arrayOf("https://edugain.org/federation_five"),
                 iss = "https://openid.sunetone.se",
-                sub = "https://openid.sunetone.se"
+                sub = "https://openid.sunetone.se",
+                federationFetchEndpoint = "https://edugain.org/federation_four/federation_fetch_endpoint"
             )
 
             intermediateEntityConfiguration1Jwt = sign(
@@ -214,12 +218,23 @@ class TrustChainValidationTest {
                 sub = "https://openid.sunetone.se"
             )
 
+            intermediateEntity1SubordinateStatementJwt = sign(
+                payload = Json.encodeToJsonElement(serializer = SubordinateStatement.serializer(), intermediateEntity1SubordinateStatement).jsonObject,
+                header = JWTHeader(
+                    alg = "ES256",
+                    typ = "entity-statement+jwt",
+                    kid = intermediateEntity1KeyPair.keyID
+                ),
+                key = intermediateEntityConfiguration1Jwk
+            )
+
             // Federation 4
             validTrustAnchorConfiguration = entityConfiguration(
                 publicKey = validTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
                 iss = "https://openid.sunetthree.se",
-                sub = "https://openid.sunettwo.se"
+                sub = "https://openid.sunettwo.se",
+                federationFetchEndpoint = "https://edugain.org/federation_five/federation_fetch_endpoint"
             )
 
             validTrustAnchorConfigurationJwt = sign(
@@ -232,18 +247,13 @@ class TrustChainValidationTest {
                 key = validTrustAnchorConfigurationJwk
             )
 
-            validTrustAnchorSubordinateStatement = intermediateEntity(
-                publicKey = validTrustAnchorKeyPair.toPublicJWK(),
-                iss = "https://openid.sunetthree.se",
-                sub = "https://openid.sunetthree.se"
-            )
-
             // Federation 3
             unknownTrustAnchorConfiguration = entityConfiguration(
                 publicKey = unknownTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
                 iss = "https://openid.sunetfour.se",
-                sub = "https://openid.sunetone.se"
+                sub = "https://openid.sunetone.se",
+                federationFetchEndpoint = "https://edugain.org/federation_three/federation_fetch_endpoint"
             )
 
             unknownTrustAnchorConfigurationJwt = sign(
@@ -256,18 +266,13 @@ class TrustChainValidationTest {
                 key = unknownTrustAnchorConfigurationJwk
             )
 
-            unknownTrustAnchorSubordinateStatement = intermediateEntity(
-                publicKey = unknownTrustAnchorKeyPair.toPublicJWK(),
-                iss = "https://openid.sunetfour.se",
-                sub = "https://openid.sunetfour.se"
-            )
-
             // Federation 1
             invalidTrustAnchorConfiguration = entityConfiguration(
                 publicKey = invalidTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
                 iss = "https://openid.sunetfive.se",
-                sub = "https://openid.sunetfour.se"
+                sub = "https://openid.sunetfour.se",
+                federationFetchEndpoint = "https://edugain.org/federation_one/federation_fetch_endpoint"
             )
 
             invalidTrustAnchorConfigurationJwt = sign(
@@ -278,12 +283,6 @@ class TrustChainValidationTest {
                     kid = invalidTrustAnchorKeyPair.keyID
                 ),
                 key = invalidTrustAnchorConfigurationJwk
-            )
-
-            invalidTrustAnchorSubordinateStatement = intermediateEntity(
-                publicKey = invalidTrustAnchorKeyPair.toPublicJWK(),
-                iss = "https://openid.sunetfive.se",
-                sub = "https://openid.sunetfive.se"
             )
 
             listOfEntityConfigurationStatementList = mutableListOf(
@@ -297,6 +296,18 @@ class TrustChainValidationTest {
                     partyBConfiguration, intermediateEntityConfiguration, intermediateEntityConfiguration1, validTrustAnchorConfiguration
                 )
             )
+
+            listOfSubordinateStatementList = mutableListOf(
+                mutableListOf(
+                    partyBJwt, invalidTrustAnchorConfigurationJwt
+                ),
+                mutableListOf(
+                    partyBJwt, intermediateEntitySubordinateStatementJwt, unknownTrustAnchorConfigurationJwt
+                ),
+                mutableListOf(
+                    partyBJwt, intermediateEntitySubordinateStatementJwt, intermediateEntity1SubordinateStatementJwt, validTrustAnchorConfigurationJwt
+                )
+            )
         }
     }
 
@@ -308,7 +319,21 @@ class TrustChainValidationTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
 
+            // Entity Configuration - sub and key binding
+            Url("https://edugain.org/federation/federation_fetch_endpoint") -> respond(
+                content = partyBJwt,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+
             Url("https://edugain.org/federation_one") -> respond(
+                content = invalidTrustAnchorConfigurationJwt,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+
+            // Entity Configuration - Trust Anchor
+            Url("https://edugain.org/federation_one/federation_fetch_endpoint") -> respond(
                 content = invalidTrustAnchorConfigurationJwt,
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
@@ -320,7 +345,21 @@ class TrustChainValidationTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
 
+            // Subordinate Statement - sub and key binding
+            Url("https://edugain.org/federation_two/federation_fetch_endpoint") -> respond(
+                content = intermediateEntitySubordinateStatementJwt,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+
             Url("https://edugain.org/federation_three") -> respond(
+                content = unknownTrustAnchorConfigurationJwt,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+
+            // Entity Configuration - Trust Anchor
+            Url("https://edugain.org/federation_three/federation_fetch_endpoint") -> respond(
                 content = unknownTrustAnchorConfigurationJwt,
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
@@ -332,32 +371,22 @@ class TrustChainValidationTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
 
+            // Subordinate Statement
+            Url("https://edugain.org/federation_four/federation_fetch_endpoint") -> respond(
+                content = intermediateEntity1SubordinateStatementJwt,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+
             Url("https://edugain.org/federation_five") -> respond(
                 content = validTrustAnchorConfigurationJwt,
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
 
-            Url("https://edugain.org/federation/federation_fetch_endpoint") -> respond(
-                content = intermediateEntityConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
-
-            Url("https://edugain.org/federation_one/federation_fetch_endpoint") -> respond(
+            // Entity Configuration - Trust Chain
+            Url("https://edugain.org/federation_five/federation_fetch_endpoint") -> respond(
                 content = validTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
-
-            Url("https://edugain.org/federation_two/federation_fetch_endpoint") -> respond(
-                content = invalidTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
-
-            Url("https://edugain.org/federation_three/federation_fetch_endpoint") -> respond(
-                content = "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJodHRwczovL29wZW5pZC5zdW5ldG9uZS5zZSIsInN1YiI6Imh0dHBzOi8vb3BlbmlkLnN1bmV0LnNlIiwiZXhwIjoyMSwiaWF0IjoyMSwiandrcyI6eyJrZXlzIjpbeyJraWQiOm51bGwsImt0eSI6IkVDIiwiY3J2IjoiUC0yNTYiLCJ4IjoiQWdKQzZLb3R2X1FubEI2UENoZEdpeXRydkg2dnVabkFrdzFCN0ZYVlBvZyIsInkiOiJ1M19qOWVETW90RjVDV0R4M2c2V3EybjVWUE1ZZ2plX01Sb1BWME5QX1YwIn1dfSwibWV0YWRhdGEiOnsiZmVkZXJhdGlvbl9lbnRpdHkiOnsib3JnYW5pemF0aW9uX25hbWUiOiJTVU5FVCJ9LCJvcGVuaWRfcHJvdmlkZXIiOnsic3ViamVjdF90eXBlc19zdXBwb3J0ZWQiOlsicGFpcndpc2UiXSwidG9rZW5fZW5kcG9pbnRfYXV0aF9tZXRob2RzX3N1cHBvcnRlZCI6WyJwcml2YXRlX2tleV9qd3QiXX19LCJjcml0IjpudWxsLCJtZXRhZGF0YV9wb2xpY3kiOnsib3BlbmlkX3Byb3ZpZGVyIjp7InN1YmplY3RfdHlwZXNfc3VwcG9ydGVkIjp7InZhbHVlIjpbInBhaXJ3aXNlIl19LCJ0b2tlbl9lbmRwb2ludF9hdXRoX21ldGhvZHNfc3VwcG9ydGVkIjp7ImRlZmF1bHQiOlsicHJpdmF0ZV9rZXlfand0Il0sInN1YnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiLCJjbGllbnRfc2VjcmV0X2p3dCJdLCJzdXBlcnNldF9vZiI6WyJwcml2YXRlX2tleV9qd3QiXX19fSwiY29uc3RyYWludHMiOm51bGwsIm1ldGFkYXRhX3BvbGljeV9jcml0IjpudWxsLCJzb3VyY2VfZW5kcG9pbnQiOiJodHRwczovL2VkdWdhaW4ub3JnL2ZlZGVyYXRpb25fdGhyZWUvZmVkZXJhdGlvbl9mZXRjaF9lbmRwb2ludCJ9.ZnPDr-p8_RF9vI_DUqEuld-iJSPTMC5IL_B6rp_7mK1L4F_TXg0WJBP7uyn1dpkuS-Cd0V5oqHjtsxJgCoToqXGc2qvewktHOPEVKmIEVm25ALMVfiU0HZE1fU78crpF7xEo4UVBMHq78_Kk1QUg-SPmjGtS3IJ1e-EW8kxdnUVXvSsqP1pPh1iXVIjUHlQsh0SbfIbmLDmu5xYjlXXzad56zJv1G0Jov8gWw8wPYOwWY2j06MwQghu_N-ViyeFDa1UYjo4XChtU_tirFF5NzcxYfUnJUnATRgC_GuuQz5zmBEbrry252EED86lPV8UVTd9RhS1Ks9k8yJeAN8-LvA",
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
             )
@@ -472,7 +501,8 @@ fun entityConfiguration(
     publicKey: ECKey,
     authorityHints: Array<String>? = arrayOf(),
     iss: String = "https://openid.sunet.se",
-    sub: String = "https://openid.sunet.se"
+    sub: String = "https://openid.sunet.se",
+    federationFetchEndpoint: String = "https://sunet.se/openid/fedapi",
 ): EntityConfigurationStatement {
 
     return EntityConfigurationStatement(
@@ -484,7 +514,7 @@ fun entityConfiguration(
             mapOf(
                 "federation_entity" to JsonObject(
                     mapOf(
-                        "federation_fetch_endpoint" to JsonPrimitive("https://sunet.se/openid/fedapi"),
+                        "federation_fetch_endpoint" to JsonPrimitive(federationFetchEndpoint),
                         "homepage_uri" to JsonPrimitive("https://www.sunet.se"),
                         "organization_name" to JsonPrimitive("SUNET")
                     )

@@ -1,18 +1,22 @@
-package com.sphereon.oid.fed.common.httpclient
+package com.sphereon.oid.fed.client.httpclient
 
 import io.ktor.client.*
-import io.ktor.client.call.*
+import io.ktor.client.call.body
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.cache.*
 import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
+import io.ktor.client.plugins.logging.DEFAULT
 import io.ktor.client.request.forms.*
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.http.*
 import io.ktor.http.HttpMethod.Companion.Get
 import io.ktor.http.HttpMethod.Companion.Post
-import io.ktor.utils.io.core.*
+import io.ktor.utils.io.core.use
 
 class OidFederationClient(
     engine: HttpClientEngine,
@@ -20,9 +24,9 @@ class OidFederationClient(
     private val isRequestCached: Boolean = false
 ) {
     private val client: HttpClient = HttpClient(engine) {
-        install(HttpCache)
-        install(Logging) {
-            logger = Logger.DEFAULT
+        install(HttpCache.Companion)
+        install(Logging.Companion) {
+            logger = Logger.Companion.DEFAULT
             level = LogLevel.INFO
         }
         if (isRequestAuthenticated) {
@@ -36,14 +40,14 @@ class OidFederationClient(
             }
         }
         if (isRequestCached) {
-            install(HttpCache)
+            install(HttpCache.Companion)
         }
     }
 
     suspend fun fetchEntityStatement(
         url: String,
         httpMethod: HttpMethod = Get,
-        parameters: Parameters = Parameters.Empty
+        parameters: Parameters = Parameters.Companion.Empty
     ): String {
         return when (httpMethod) {
             Get -> getEntityStatement(url)
