@@ -33,22 +33,6 @@ sqldelight {
 
 kotlin {
     jvm()
-    js {
-        browser {
-            commonWebpackConfig {
-                devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8083
-                }
-            }
-        }
-        nodejs {
-            testTask {
-                useMocha {
-                    timeout = "5000"
-                }
-            }
-        }
-    }
 
     sourceSets {
         commonMain {
@@ -68,13 +52,13 @@ kotlin {
             }
         }
 
-        jsMain {
-            dependencies {
-                implementation(npm("typescript", "5.5.3"))
-                implementation(npm("jose", "5.6.3"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-            }
-        }
+//        jsMain {
+//            dependencies {
+//                implementation(npm("typescript", "5.5.3"))
+//                implementation(npm("jose", "5.6.3"))
+//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+//            }
+//        }
 
         jvmTest {
             dependencies {

@@ -74,7 +74,6 @@ kotlin {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
-                implementation(project(":modules:local-kms"))
                 implementation(project(":modules:openid-federation-common"))
             }
         }
@@ -136,6 +135,7 @@ kotlin {
                 implementation(npm("jose", "5.6.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                implementation(project(":modules:openid-federation-common"))
             }
         }
 
