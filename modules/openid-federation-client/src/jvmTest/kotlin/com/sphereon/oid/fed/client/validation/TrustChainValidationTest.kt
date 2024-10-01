@@ -15,7 +15,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.BeforeClass
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -154,14 +154,14 @@ class TrustChainValidationTest {
                 key = partyBJwk
             )
 
-            // Intermediate 1 ( Federation 2 )
+            // Federation 2
             intermediateEntityConfiguration = entityConfiguration(
                 publicKey = intermediateEntityKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(
                     "https://edugain.org/federation_three",
                     "https://edugain.org/federation_four"
                 ),
-                iss = "https://openid.sunet.se",
+                iss = "https://openid.sunet-one.se",
                 sub = "https://openid.sunet.se",
                 federationFetchEndpoint = "https://edugain.org/federation_two/federation_fetch_endpoint"
             )
@@ -173,13 +173,13 @@ class TrustChainValidationTest {
                     typ = "entity-statement+jwt",
                     kid = intermediateEntityKeyPair.keyID
                 ),
-                key = intermediateEntityConfigurationJwk
+                key = intermediateEntityConfiguration1Jwk
             )
 
             //signed with intermediateEntity1 Private Key
             intermediateEntitySubordinateStatement = intermediateEntity(
                 publicKey = intermediateEntityKeyPair.toPublicJWK(),
-                iss = "https://openid.sunetone.se",
+                iss = "https://openid.sunet-one.se",
                 sub = "https://openid.sunet.se",
             )
 
@@ -190,15 +190,15 @@ class TrustChainValidationTest {
                     typ = "entity-statement+jwt",
                     kid = intermediateEntityKeyPair.keyID
                 ),
-                key = intermediateEntityConfigurationJwk
+                key = intermediateEntityConfiguration1Jwk
             )
 
             // Federation 4
             intermediateEntityConfiguration1 = entityConfiguration(
                 publicKey = intermediateEntity1KeyPair.toPublicJWK(),
                 authorityHints = arrayOf("https://edugain.org/federation_five"),
-                iss = "https://openid.sunetone.se",
-                sub = "https://openid.sunetone.se",
+                iss = "https://openid.sunet-two.se",
+                sub = "https://openid.sunet-one.se",
                 federationFetchEndpoint = "https://edugain.org/federation_four/federation_fetch_endpoint"
             )
 
@@ -209,13 +209,13 @@ class TrustChainValidationTest {
                     typ = "entity-statement+jwt",
                     kid = intermediateEntity1KeyPair.keyID
                 ),
-                key = intermediateEntityConfiguration1Jwk
+                key = validTrustAnchorConfigurationJwk
             )
 
             intermediateEntity1SubordinateStatement = intermediateEntity(
                 publicKey = intermediateEntity1KeyPair.toPublicJWK(),
-                iss = "https://openid.sunettwo.se",
-                sub = "https://openid.sunetone.se"
+                iss = "https://openid.sunet-two.se",
+                sub = "https://openid.sunet-one.se"
             )
 
             intermediateEntity1SubordinateStatementJwt = sign(
@@ -225,15 +225,15 @@ class TrustChainValidationTest {
                     typ = "entity-statement+jwt",
                     kid = intermediateEntity1KeyPair.keyID
                 ),
-                key = intermediateEntityConfiguration1Jwk
+                key = validTrustAnchorConfigurationJwk
             )
 
-            // Federation 4
+            // Federation 5
             validTrustAnchorConfiguration = entityConfiguration(
                 publicKey = validTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
-                iss = "https://openid.sunetthree.se",
-                sub = "https://openid.sunettwo.se",
+                iss = "https://openid.sunet-five.se",
+                sub = "https://openid.sunet-five.se",
                 federationFetchEndpoint = "https://edugain.org/federation_five/federation_fetch_endpoint"
             )
 
@@ -251,8 +251,8 @@ class TrustChainValidationTest {
             unknownTrustAnchorConfiguration = entityConfiguration(
                 publicKey = unknownTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
-                iss = "https://openid.sunetfour.se",
-                sub = "https://openid.sunetone.se",
+                iss = "https://openid.sunet-three.se",
+                sub = "https://openid.sunet-three.se",
                 federationFetchEndpoint = "https://edugain.org/federation_three/federation_fetch_endpoint"
             )
 
@@ -270,8 +270,8 @@ class TrustChainValidationTest {
             invalidTrustAnchorConfiguration = entityConfiguration(
                 publicKey = invalidTrustAnchorKeyPair.toPublicJWK(),
                 authorityHints = arrayOf(),
-                iss = "https://openid.sunetfive.se",
-                sub = "https://openid.sunetfour.se",
+                iss = "https://openid.sunet-invalid.se",
+                sub = "https://openid.sunet-invalid.se",
                 federationFetchEndpoint = "https://edugain.org/federation_one/federation_fetch_endpoint"
             )
 
@@ -420,7 +420,7 @@ class TrustChainValidationTest {
     @Test
     fun validateTrustChainTest() {
         assertTrue(
-            listOfSubordinateStatementList.all {  TrustChainValidation().validateTrustChain(it) }
+           TrustChainValidation().validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
         )
     }
 }
@@ -434,8 +434,8 @@ fun intermediateEntity(
     return SubordinateStatement(
         iss = iss,
         sub = sub,
-        iat = LocalDateTime.now().second,
-        exp = LocalDateTime.now().plusHours(1).second,
+        iat = OffsetDateTime.now().toEpochSecond().toInt(),
+        exp = OffsetDateTime.now().plusHours(1).toEpochSecond().toInt(),
         sourceEndpoint = "https://edugain.org/federation/federation_fetch_endpoint",
         jwks = JsonObject(
             mapOf(
@@ -508,8 +508,8 @@ fun entityConfiguration(
     return EntityConfigurationStatement(
         iss = iss,
         sub = sub,
-        iat = LocalDateTime.now().second,
-        exp = LocalDateTime.now().plusHours(1).second,
+        iat = OffsetDateTime.now().toEpochSecond().toInt(),
+        exp = OffsetDateTime.now().plusHours(1).toEpochSecond().toInt(),
         metadata = JsonObject(
             mapOf(
                 "federation_entity" to JsonObject(
