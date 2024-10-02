@@ -8,24 +8,43 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import io.ktor.client.engine.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.await
+import kotlinx.coroutines.promise
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.time.OffsetDateTime
+import kotlin.also
+import kotlin.collections.any
+import kotlin.collections.forEach
+import kotlin.collections.forEachIndexed
+import kotlin.collections.isNullOrEmpty
+import kotlin.collections.last
+import kotlin.collections.map
+import kotlin.collections.toMutableList
+import kotlin.js.Date
+import kotlin.js.Promise
+import kotlin.let
+import kotlin.run
+import kotlin.text.substring
+import kotlin.toString
 
-class TrustChainValidation {
+object TrustChainValidation {
 
+    private val NAME = "TrustChainValidation"
+
+    @OptIn(ExperimentalJsExport::class)
     fun readAuthorityHints(
         partyBId: String,
         engine: HttpClientEngine,
         trustChains: MutableList<List<EntityConfigurationStatement>> = mutableListOf(),
         trustChain: MutableSet<EntityConfigurationStatement> = mutableSetOf()
-    ): List<List<EntityConfigurationStatement>> {
+    ): Promise<List<List<EntityConfigurationStatement>>> = CoroutineScope(context = CoroutineName(NAME)).promise {
         requestEntityStatement(partyBId, engine).run {
-            JsonMapper().mapEntityConfigurationStatement(this).let {
+            JsonMapper().mapEntityConfigurationStatement(this.await()).let {
                 if (it.authorityHints.isNullOrEmpty()) {
                     trustChain.add(it)
                     trustChains.add(trustChain.map { content -> content.copy() })
@@ -43,27 +62,27 @@ class TrustChainValidation {
                 }
             }
         }
-        return trustChains
+        return@promise trustChains
     }
 
     fun fetchSubordinateStatements(
         entityConfigurationStatementsList: List<List<EntityConfigurationStatement>>,
         engine: HttpClientEngine
-    ): List<List<String>> {
+    ): Promise<List<List<String>>> = CoroutineScope(context = CoroutineName(NAME)).promise {
         val trustChains: MutableList<List<String>> = mutableListOf()
         val trustChain: MutableList<String> = mutableListOf()
         entityConfigurationStatementsList.forEach { entityConfigurationStatements ->
             entityConfigurationStatements.forEach { it ->
                 it.metadata?.jsonObject?.get("federation_entity")?.jsonObject?.get("federation_fetch_endpoint")?.jsonPrimitive?.content.let { url ->
                     requestEntityStatement(url.toString(), engine).run {
-                        trustChain.add(this)
+                        trustChain.add(this.await())
                     }
                 }
             }
             trustChains.add(trustChain.map { content -> content.substring(0) })
             trustChain.clear()
         }
-        return trustChains
+        return@promise trustChains
     }
 
     fun validateTrustChains(
@@ -71,16 +90,17 @@ class TrustChainValidation {
         knownTrustChainIds: List<String>
     ): List<List<Any>> {
         val trustChains: MutableList<List<Any>> = mutableListOf()
-            for(it in jwts) {
-                try {
-                    trustChains.add(validateTrustChain(it, knownTrustChainIds))
-                } catch (e: Exception) {
-                    Logger.debug("TrustChainValidation", e.message.toString())
-                }
+        for(it in jwts) {
+            try {
+                trustChains.add(validateTrustChain(it, knownTrustChainIds))
+            } catch (e: Exception) {
+                Logger.debug("TrustChainValidation", e.message.toString())
             }
+        }
         return trustChains
     }
 
+    @OptIn(ExperimentalJsExport::class)
     private fun validateTrustChain(jwts: List<String>, knownTrustChainIds: List<String>): List<Any> {
         val entityStatements = jwts.toMutableList()
         val firstEntityConfiguration =
@@ -100,7 +120,7 @@ class TrustChainValidation {
         subordinateStatements.forEachIndexed { index, current ->
             val next =
                 if (index < subordinateStatements.size - 1) subordinateStatements[index + 1] else lastEntityConfiguration
-            val now = OffsetDateTime.now().toEpochSecond().toInt()
+            val now = Date.now().toInt() / 1000
 
             if (current.iat > now) {
                 throw IllegalArgumentException("Invalid iat")
@@ -154,7 +174,8 @@ class TrustChainValidation {
         }
     }
 
-    private fun requestEntityStatement(url: String, engine: HttpClientEngine) = runBlocking {
-        return@runBlocking OidFederationClient(engine).fetchEntityStatement(url)
-    }
+    private fun requestEntityStatement(url: String, engine: HttpClientEngine): Promise<String> =
+        CoroutineScope(context = CoroutineName(NAME)).promise {
+            OidFederationClient(engine).fetchEntityStatement(url)
+        }
 }

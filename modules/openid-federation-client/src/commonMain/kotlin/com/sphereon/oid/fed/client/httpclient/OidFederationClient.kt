@@ -25,7 +25,7 @@ class OidFederationClient(
 ) {
     private val client: HttpClient = HttpClient(engine) {
         install(HttpCache.Companion)
-        install(Logging.Companion) {
+        install(Logging) {
             logger = Logger.Companion.DEFAULT
             level = LogLevel.INFO
         }

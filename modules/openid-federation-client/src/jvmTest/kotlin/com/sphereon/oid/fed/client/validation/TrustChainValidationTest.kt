@@ -3,7 +3,7 @@ package com.sphereon.oid.fed.client.validation
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import com.sphereon.oid.fed.kms.local.jwt.sign
+import com.sphereon.oid.fed.common.jwt.sign
 import com.sphereon.oid.fed.openapi.models.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.BeforeClass
 import java.time.OffsetDateTime
+import kotlin.js.ExperimentalJsExport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -395,6 +396,7 @@ class TrustChainValidationTest {
         }
 }
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun readAuthorityHintsTest() {
         assertEquals(
@@ -406,6 +408,7 @@ class TrustChainValidationTest {
         )
     }
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun fetchSubordinateStatementsTest() {
         assertEquals(
@@ -417,6 +420,7 @@ class TrustChainValidationTest {
         )
     }
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun validateTrustChainTest() {
         assertTrue(

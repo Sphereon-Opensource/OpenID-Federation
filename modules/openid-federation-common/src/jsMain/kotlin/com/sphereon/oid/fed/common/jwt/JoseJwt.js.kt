@@ -26,6 +26,7 @@ external object Jose {
     fun generateKeyPair(alg: String, options: dynamic = definedExternally): dynamic
     fun jwtVerify(jwt: String, key: Any, options: dynamic = definedExternally): dynamic
     fun importJWK(key: Any, alg: String): dynamic
+    fun exportJWK(key: Any): dynamic
 }
 
 @ExperimentalJsExport
@@ -33,11 +34,9 @@ external object Jose {
 actual fun sign(
     payload: JsonObject, header: JWTHeader, key: Jwk
 ): String {
-    val privateKey = key.d ?: throw IllegalArgumentException("JWK private key is required")
-
     return Jose.SignJWT(JSON.parse<Any>(Json.encodeToString(payload)))
         .setProtectedHeader(JSON.parse<Any>(Json.encodeToString(header)))
-        .sign(key = privateKey, null)
+        .sign(key = key, null)
 }
 
 @ExperimentalJsExport

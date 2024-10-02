@@ -6,7 +6,7 @@ plugins {
     kotlin("plugin.serialization") version "2.0.0"
 }
 
-val ktorVersion = "2.3.11"
+val ktorVersion = "3.0.0-beta-2"
 
 repositories {
     mavenCentral()
@@ -17,7 +17,7 @@ repositories {
 kotlin {
     jvm()
 
-    js {
+    js(IR) {
         browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
@@ -134,7 +134,7 @@ kotlin {
                 implementation(npm("typescript", "5.5.3"))
                 implementation(npm("jose", "5.6.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
                 implementation(project(":modules:openid-federation-common"))
             }
         }
@@ -143,6 +143,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
         }
     }

@@ -18,3 +18,31 @@ actual fun generateKeyPair(): Jwk {
         use = key.use,
     )
 }
+
+@ExperimentalJsExport
+@JsExport
+fun convertToJwk(keyPair: dynamic): Jwk {
+    val privateJWK = Jose.exportJWK(keyPair.privateKey)
+    val publicJWK = Jose.exportJWK(keyPair.publicKey)
+    return Jwk(
+        crv = privateJWK.crv,
+        d = privateJWK.d,
+        kty = privateJWK.kty,
+        x = privateJWK.x,
+        y = privateJWK.y,
+        alg = publicJWK.alg,
+        kid = publicJWK.kid,
+        use = publicJWK.use,
+        x5c = publicJWK.x5c,
+        x5t = publicJWK.x5t,
+        x5tS256 = privateJWK.x5tS256,
+        x5u = publicJWK.x5u,
+        dp = privateJWK.dp,
+        dq = privateJWK.dq,
+        e = privateJWK.e,
+        n = privateJWK.n,
+        p = privateJWK.p,
+        q = privateJWK.q,
+        qi = privateJWK.qi
+    )
+}
