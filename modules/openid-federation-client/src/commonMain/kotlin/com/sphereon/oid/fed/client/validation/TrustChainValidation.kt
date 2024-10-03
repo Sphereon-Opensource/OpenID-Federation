@@ -3,10 +3,14 @@ package com.sphereon.oid.fed.client.validation
 import com.sphereon.oid.fed.client.httpclient.OidFederationClient
 import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.engine.HttpClientEngine
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
 
 expect class TrustChainValidation {
     fun validateTrustChains(
@@ -15,10 +19,10 @@ expect class TrustChainValidation {
     ): List<List<Any>>
 }
 
-
+@ExperimentalJsExport
+@JsExport
 class TrustChainValidationCommon {
 
-    @ExperimentalJsExport
     suspend fun readAuthorityHints(
         partyBId: String,
         engine: HttpClientEngine,
@@ -65,5 +69,18 @@ class TrustChainValidationCommon {
             trustChain.clear()
         }
         return trustChains
+    }
+
+    fun retrieveJwk(key: JsonElement): Jwk {
+        return when (key) {
+            is JsonObject -> Jwk(
+                kid = key["kid"]?.jsonPrimitive?.content,
+                kty = key["kty"]?.jsonPrimitive?.content ?: "EC",
+                crv = key["crv"]?.jsonPrimitive?.content,
+                x = key["x"]?.jsonPrimitive?.content,
+                y = key["y"]?.jsonPrimitive?.content
+            )
+            else -> throw IllegalArgumentException("Invalid key")
+        }
     }
 }
