@@ -9,6 +9,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.http.*
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -16,7 +17,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.BeforeClass
 import java.time.OffsetDateTime
-import kotlin.js.ExperimentalJsExport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -396,35 +396,32 @@ class TrustChainValidationTest {
         }
 }
 
-    @OptIn(ExperimentalJsExport::class)
     @Test
-    fun readAuthorityHintsTest() {
+    fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList.toString(),
-            TrustChainValidation().readAuthorityHints(
+            TrustChainValidationCommon().readAuthorityHints(
                 partyBId = "https://edugain.org/federation",
                 engine = mockEngine
             ).toString()
         )
     }
 
-    @OptIn(ExperimentalJsExport::class)
     @Test
-    fun fetchSubordinateStatementsTest() {
+    fun fetchSubordinateStatementsTest() = runTest {
         assertEquals(
             listOfSubordinateStatementList,
-            TrustChainValidation().fetchSubordinateStatements(
+            TrustChainValidationCommon().fetchSubordinateStatements(
             entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
             engine = mockEngine
             )
         )
     }
 
-    @OptIn(ExperimentalJsExport::class)
     @Test
     fun validateTrustChainTest() {
         assertTrue(
-           TrustChainValidation().validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
+            TrustChainValidation().validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
         )
     }
 }

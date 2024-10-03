@@ -48,6 +48,13 @@ kotlin {
 //    iosSimulatorArm64()
 
     sourceSets {
+
+        all {
+            languageSettings.optIn("kotlin.js.ExperimentalJsExport")
+            languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
+            languageSettings.optIn("kotlin.ExperimentalUnsignedTypes")
+        }
+
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openapi)
@@ -59,6 +66,8 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
                 implementation(libs.kermit.logging)
+                implementation(libs.kotlinx.datetime)
+                implementation(project(":modules:openid-federation-common"))
             }
         }
         val commonTest by getting {
@@ -134,7 +143,7 @@ kotlin {
                 implementation(npm("typescript", "5.5.3"))
                 implementation(npm("jose", "5.6.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
                 implementation(project(":modules:openid-federation-common"))
             }
         }

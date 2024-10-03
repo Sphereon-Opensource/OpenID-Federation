@@ -1,8 +1,5 @@
 package com.sphereon.oid.fed.client.validation
 
-import com.sphereon.oid.fed.client.validation.TrustChainValidation.fetchSubordinateStatements
-import com.sphereon.oid.fed.client.validation.TrustChainValidation.readAuthorityHints
-import com.sphereon.oid.fed.client.validation.TrustChainValidation.validateTrustChains
 import com.sphereon.oid.fed.common.jwk.convertToJwk
 import com.sphereon.oid.fed.common.jwt.Jose
 import com.sphereon.oid.fed.common.jwt.sign
@@ -13,7 +10,6 @@ import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.client.engine.mock.respond
-import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
@@ -29,7 +25,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlin.js.Date
 import kotlin.test.BeforeTest
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -365,7 +360,7 @@ class TrustChainValidationTest {
     fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList,
-            readAuthorityHints(
+            TrustChainValidation().readAuthorityHints(
                 partyBId = "https://edugain.org/federation",
                 engine = mockEngine
             ).await()
@@ -373,11 +368,10 @@ class TrustChainValidationTest {
     }
 
     @Test
-    @Ignore
     fun fetchSubordinateStatementsTest() = runTest {
         assertEquals(
             listOfSubordinateStatementList,
-            fetchSubordinateStatements(
+            TrustChainValidation().fetchSubordinateStatements(
                 entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
                 engine = mockEngine
             ).await()
@@ -385,10 +379,9 @@ class TrustChainValidationTest {
     }
 
     @Test
-    @Ignore
     fun validateTrustChainTest() {
         assertTrue(
-            validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
+            TrustChainValidation().validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
         )
     }
 }

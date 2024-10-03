@@ -2,8 +2,9 @@ package com.sphereon.oid.fed.client.httpclient
 
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
+import io.ktor.client.engine.mock.respond
 import io.ktor.http.*
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -33,8 +34,7 @@ class OidFederationClientTest {
     }
 
     @Test
-    fun testGetEntityStatement() {
-        runBlocking {
+    fun testGetEntityStatement() = runTest {
             val client = OidFederationClient(mockEngine)
             val response = client.fetchEntityStatement(
                 "https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se",
@@ -42,19 +42,16 @@ class OidFederationClientTest {
             )
             assertEquals(jwt, response)
         }
-    }
 
     @Test
-    fun testPostEntityStatement() {
-        runBlocking {
-            val client = OidFederationClient(mockEngine)
-            val response = client.fetchEntityStatement("https://www.example.com",
-                    HttpMethod.Post,
-                    Parameters.build {
-                        append("iss", "https://edugain.org/federation")
-                        append("sub", "https://openid.sunet.se")
-                    })
-            assertEquals(jwt, response)
-        }
+    fun testPostEntityStatement() = runTest {
+        val client = OidFederationClient(mockEngine)
+        val response = client.fetchEntityStatement("https://www.example.com",
+            HttpMethod.Post,
+            Parameters.build {
+                append("iss", "https://edugain.org/federation")
+                append("sub", "https://openid.sunet.se")
+            })
+        assertEquals(jwt, response)
     }
 }
