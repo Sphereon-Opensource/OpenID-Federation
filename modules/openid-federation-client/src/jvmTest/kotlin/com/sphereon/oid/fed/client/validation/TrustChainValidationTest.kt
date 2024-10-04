@@ -1,15 +1,27 @@
 package com.sphereon.oid.fed.client.validation
 
+import com.nimbusds.jose.JOSEObjectType
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.JWSSigner
+import com.nimbusds.jose.JWSVerifier
+import com.nimbusds.jose.crypto.ECDSASigner
+import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import com.sphereon.oid.fed.common.jwt.sign
+import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.SignedJWT
+import com.sphereon.oid.fed.common.jwt.JwtService
+import com.sphereon.oid.fed.common.jwt.JwtSignInput
+import com.sphereon.oid.fed.common.jwt.JwtVerifyInput
 import com.sphereon.oid.fed.openapi.models.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.http.*
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -20,9 +32,48 @@ import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+class JwtServiceImpl : JwtService {
+    override fun sign(input: JwtSignInput): String {
+        val jwkJsonString = Json.encodeToString(input.key)
+        val ecJWK = ECKey.parse(jwkJsonString)
+        val signer: JWSSigner = ECDSASigner(ecJWK)
+        val jwsHeader = input.header.toJWSHeader()
+
+        val signedJWT = SignedJWT(
+            jwsHeader, JWTClaimsSet.parse(input.payload.toString())
+        )
+
+        signedJWT.sign(signer)
+        return signedJWT.serialize()
+    }
+
+    override fun verify(input: JwtVerifyInput): Boolean {
+        try {
+            val jwkJsonString = Json.encodeToString(input.key)
+            val ecKey = ECKey.parse(jwkJsonString)
+            val verifier: JWSVerifier = ECDSAVerifier(ecKey)
+            val signedJWT = SignedJWT.parse(input.jwt)
+            val verified = signedJWT.verify(verifier)
+            return verified
+        } catch (e: Exception) {
+            throw Exception("Couldn't verify the JWT Signature: ${e.message}", e)
+        }
+    }
+
+    private fun JWTHeader.toJWSHeader(): JWSHeader {
+        val type = typ
+        return JWSHeader.Builder(JWSAlgorithm.parse(alg)).apply {
+            type(JOSEObjectType(type))
+            keyID(kid)
+        }.build()
+    }
+}
+
 class TrustChainValidationTest {
 
     companion object {
+
+        val jwtService = JwtServiceImpl()
 
         // key pairs
         val partyBKeyPair = ECKeyGenerator(Curve.P_256).generate()
@@ -131,7 +182,7 @@ class TrustChainValidationTest {
 
         @JvmStatic
         @BeforeClass
-        fun setup(): Unit {
+        fun setup() {
 
             // Party B Entity Configuration (federation)
             partyBConfiguration = entityConfiguration(
@@ -145,14 +196,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation/federation_fetch_endpoint"
             )
 
-            partyBJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), partyBConfiguration).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = partyBKeyPair.keyID
-                ),
-                key = partyBJwk
+            partyBJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        partyBConfiguration
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = partyBKeyPair.keyID
+                    ),
+                    key = partyBJwk
+                )
             )
 
             // Federation 2
@@ -167,14 +223,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_two/federation_fetch_endpoint"
             )
 
-            intermediateEntityConfigurationJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), intermediateEntityConfiguration).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = intermediateEntityKeyPair.keyID
-                ),
-                key = intermediateEntityConfiguration1Jwk
+            intermediateEntityConfigurationJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        intermediateEntityConfiguration
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = intermediateEntityKeyPair.keyID
+                    ),
+                    key = intermediateEntityConfiguration1Jwk
+                )
             )
 
             //signed with intermediateEntity1 Private Key
@@ -184,14 +245,19 @@ class TrustChainValidationTest {
                 sub = "https://openid.sunet.se",
             )
 
-            intermediateEntitySubordinateStatementJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = SubordinateStatement.serializer(), intermediateEntitySubordinateStatement).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = intermediateEntityKeyPair.keyID
-                ),
-                key = intermediateEntityConfiguration1Jwk
+            intermediateEntitySubordinateStatementJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = SubordinateStatement.serializer(),
+                        intermediateEntitySubordinateStatement
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = intermediateEntityKeyPair.keyID
+                    ),
+                    key = intermediateEntityConfiguration1Jwk
+                )
             )
 
             // Federation 4
@@ -203,14 +269,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_four/federation_fetch_endpoint"
             )
 
-            intermediateEntityConfiguration1Jwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), intermediateEntityConfiguration1).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = intermediateEntity1KeyPair.keyID
-                ),
-                key = validTrustAnchorConfigurationJwk
+            intermediateEntityConfiguration1Jwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        intermediateEntityConfiguration1
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = intermediateEntity1KeyPair.keyID
+                    ),
+                    key = validTrustAnchorConfigurationJwk
+                )
             )
 
             intermediateEntity1SubordinateStatement = intermediateEntity(
@@ -219,14 +290,19 @@ class TrustChainValidationTest {
                 sub = "https://openid.sunet-one.se"
             )
 
-            intermediateEntity1SubordinateStatementJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = SubordinateStatement.serializer(), intermediateEntity1SubordinateStatement).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = intermediateEntity1KeyPair.keyID
-                ),
-                key = validTrustAnchorConfigurationJwk
+            intermediateEntity1SubordinateStatementJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = SubordinateStatement.serializer(),
+                        intermediateEntity1SubordinateStatement
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = intermediateEntity1KeyPair.keyID
+                    ),
+                    key = validTrustAnchorConfigurationJwk
+                )
             )
 
             // Federation 5
@@ -238,14 +314,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_five/federation_fetch_endpoint"
             )
 
-            validTrustAnchorConfigurationJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), validTrustAnchorConfiguration).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = validTrustAnchorKeyPair.keyID
-                ),
-                key = validTrustAnchorConfigurationJwk
+            validTrustAnchorConfigurationJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        validTrustAnchorConfiguration
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = validTrustAnchorKeyPair.keyID
+                    ),
+                    key = validTrustAnchorConfigurationJwk
+                )
             )
 
             // Federation 3
@@ -257,14 +338,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_three/federation_fetch_endpoint"
             )
 
-            unknownTrustAnchorConfigurationJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), unknownTrustAnchorConfiguration).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = unknownTrustAnchorKeyPair.keyID
-                ),
-                key = unknownTrustAnchorConfigurationJwk
+            unknownTrustAnchorConfigurationJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        unknownTrustAnchorConfiguration
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = unknownTrustAnchorKeyPair.keyID
+                    ),
+                    key = unknownTrustAnchorConfigurationJwk
+                )
             )
 
             // Federation 1
@@ -276,14 +362,19 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_one/federation_fetch_endpoint"
             )
 
-            invalidTrustAnchorConfigurationJwt = sign(
-                payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), invalidTrustAnchorConfiguration).jsonObject,
-                header = JWTHeader(
-                    alg = "ES256",
-                    typ = "entity-statement+jwt",
-                    kid = invalidTrustAnchorKeyPair.keyID
-                ),
-                key = invalidTrustAnchorConfigurationJwk
+            invalidTrustAnchorConfigurationJwt = jwtService.sign(
+                JwtSignInput(
+                    payload = Json.encodeToJsonElement(
+                        serializer = EntityConfigurationStatement.serializer(),
+                        invalidTrustAnchorConfiguration
+                    ).jsonObject,
+                    header = JWTHeader(
+                        alg = "ES256",
+                        typ = "entity-statement+jwt",
+                        kid = invalidTrustAnchorKeyPair.keyID
+                    ),
+                    key = invalidTrustAnchorConfigurationJwk
+                )
             )
 
             listOfEntityConfigurationStatementList = mutableListOf(
@@ -294,7 +385,10 @@ class TrustChainValidationTest {
                     partyBConfiguration, intermediateEntityConfiguration, unknownTrustAnchorConfiguration
                 ),
                 mutableListOf(
-                    partyBConfiguration, intermediateEntityConfiguration, intermediateEntityConfiguration1, validTrustAnchorConfiguration
+                    partyBConfiguration,
+                    intermediateEntityConfiguration,
+                    intermediateEntityConfiguration1,
+                    validTrustAnchorConfiguration
                 )
             )
 
@@ -306,7 +400,10 @@ class TrustChainValidationTest {
                     partyBJwt, intermediateEntitySubordinateStatementJwt, unknownTrustAnchorConfigurationJwt
                 ),
                 mutableListOf(
-                    partyBJwt, intermediateEntitySubordinateStatementJwt, intermediateEntity1SubordinateStatementJwt, validTrustAnchorConfigurationJwt
+                    partyBJwt,
+                    intermediateEntitySubordinateStatementJwt,
+                    intermediateEntity1SubordinateStatementJwt,
+                    validTrustAnchorConfigurationJwt
                 )
             )
         }
@@ -394,13 +491,13 @@ class TrustChainValidationTest {
 
             else -> error("Unhandled ${request.url}")
         }
-}
+    }
 
     @Test
     fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList.toString(),
-            TrustChainValidationCommon().readAuthorityHints(
+            TrustChainValidationCommon(jwtService).readAuthorityHints(
                 partyBId = "https://edugain.org/federation",
                 engine = mockEngine
             ).toString()
@@ -411,17 +508,20 @@ class TrustChainValidationTest {
     fun fetchSubordinateStatementsTest() = runTest {
         assertEquals(
             listOfSubordinateStatementList,
-            TrustChainValidationCommon().fetchSubordinateStatements(
-            entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
-            engine = mockEngine
+            TrustChainValidationCommon(jwtService).fetchSubordinateStatements(
+                entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
+                engine = mockEngine
             )
         )
     }
 
     @Test
-    fun validateTrustChainTest() {
+    fun validateTrustChainTest() = runTest {
         assertTrue(
-            TrustChainValidation().validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1
+            TrustChainValidationCommon(jwtService).validateTrustChains(
+                listOfSubordinateStatementList,
+                listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")
+            ).size == 1
         )
     }
 }

@@ -82,13 +82,13 @@ kotlin {
             dependencies {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
                 implementation(project(":modules:openid-federation-common"))
             }
         }
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
+                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
 //  TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
@@ -141,7 +141,6 @@ kotlin {
                 runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
                 implementation(npm("typescript", "5.5.3"))
-                implementation(npm("jose", "5.6.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
                 implementation(project(":modules:openid-federation-common"))
@@ -151,6 +150,7 @@ kotlin {
         val jsTest by getting {
             dependencies {
                 implementation(kotlin("test-js"))
+                implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
