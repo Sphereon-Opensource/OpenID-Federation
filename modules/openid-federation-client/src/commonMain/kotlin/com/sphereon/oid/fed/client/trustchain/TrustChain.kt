@@ -23,7 +23,7 @@ class TrustChain(engine: HttpClientEngine) {
     private val fetchClient = Fetch(engine)
     private val mapper = JsonMapper()
 
-    suspend fun resolveTrustChain(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
+    suspend fun resolve(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache)

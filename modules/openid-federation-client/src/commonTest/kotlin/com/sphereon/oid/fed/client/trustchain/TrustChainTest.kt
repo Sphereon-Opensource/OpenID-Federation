@@ -24,7 +24,7 @@ class TrustChainTest {
             mockEngine
         )
 
-        val trustChain = trustChainService.resolveTrustChain(
+        val trustChain = trustChainService.resolve(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
@@ -51,7 +51,7 @@ class TrustChainTest {
             mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation")]
         )
 
-        val trustChain2 = trustChainService.resolveTrustChain(
+        val trustChain2 = trustChainService.resolve(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
