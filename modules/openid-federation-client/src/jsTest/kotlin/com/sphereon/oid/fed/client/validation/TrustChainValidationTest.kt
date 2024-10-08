@@ -443,7 +443,9 @@ class TrustChainValidationTest {
             listOfEntityConfigurationStatementList,
             TrustChainValidation(jwtServiceImpl).readAuthorityHints(
                 partyBId = "https://edugain.org/federation",
-                engine = mockEngine
+                engine = mockEngine,
+                trustChains = mutableListOf(mutableListOf<EntityConfigurationStatement>()),
+                trustChain = mutableListOf<EntityConfigurationStatement>(),
             ).await()
         )
     }

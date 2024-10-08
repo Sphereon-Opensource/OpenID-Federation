@@ -1,8 +1,6 @@
 package com.sphereon.oid.fed.client.validation
 
 import com.sphereon.oid.fed.common.jwt.JwtService
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import io.ktor.client.engine.*
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.promise
@@ -16,10 +14,10 @@ class TrustChainValidation(val jwtService: JwtService) {
 
     fun readAuthorityHints(
         partyBId: String,
-        engine: HttpClientEngine,
-        trustChains: MutableList<List<EntityConfigurationStatement>> = mutableListOf(),
-        trustChain: MutableSet<EntityConfigurationStatement> = mutableSetOf()
-    ): Promise<List<List<EntityConfigurationStatement>>> = CoroutineScope(context = CoroutineName(NAME)).promise {
+        engine: dynamic,
+        trustChains: dynamic,
+        trustChain: dynamic
+    ): Promise<dynamic> = CoroutineScope(context = CoroutineName(NAME)).promise {
         TrustChainValidationCommon(jwtService)
             .readAuthorityHints(
                 partyBId = partyBId,
@@ -30,8 +28,8 @@ class TrustChainValidation(val jwtService: JwtService) {
     }
 
     fun fetchSubordinateStatements(
-        entityConfigurationStatementsList: List<List<EntityConfigurationStatement>>,
-        engine: HttpClientEngine
+        entityConfigurationStatementsList: dynamic,
+        engine: dynamic
     ): Promise<List<List<String>>> = CoroutineScope(context = CoroutineName(NAME)).promise {
         TrustChainValidationCommon(jwtService)
             .fetchSubordinateStatements(

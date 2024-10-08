@@ -2,11 +2,10 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-//    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
 }
 
-val ktorVersion = "3.0.0-beta-2"
+val ktorVersion = "2.3.12"
 
 repositories {
     mavenCentral()
@@ -33,19 +32,6 @@ kotlin {
             }
         }
     }
-
-    // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
-
-//    androidTarget {
-//        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-//        compilerOptions {
-//            jvmTarget.set(JvmTarget.JVM_11)
-//        }
-//    }
-
-//    iosX64()
-//    iosArm64()
-//    iosSimulatorArm64()
 
     sourceSets {
 
@@ -91,50 +77,6 @@ kotlin {
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
-//  TODO Should be placed back at a later point in time: https://sphereon.atlassian.net/browse/OIDF-50
-//        val androidMain by getting {
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-//            }
-//        }
-//        val androidUnitTest by getting {
-//            dependencies {
-//                implementation(kotlin("test-junit"))
-//            }
-//        }
-
-//        val iosMain by creating {
-//            dependsOn(commonMain)
-//        }
-//        val iosX64Main by getting {
-//            dependsOn(iosMain)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iosx64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iosx64:$ktorVersion")
-//            }
-//        }
-//        val iosArm64Main by getting {
-//            dependsOn(iosMain)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iosarm64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iosarm64:$ktorVersion")
-//            }
-//        }
-//        val iosSimulatorArm64Main by getting {
-//            dependsOn(iosMain)
-//            dependencies {
-//                implementation("io.ktor:ktor-client-core-iossimulatorarm64:$ktorVersion")
-//                implementation("io.ktor:ktor-client-cio-iossimulatorarm64:$ktorVersion")
-//            }
-//        }
-//
-//        val iosTest by creating {
-//            dependsOn(commonTest)
-//            dependencies {
-//                implementation(kotlin("test"))
-//            }
-//        }
 
         val jsMain by getting {
             dependencies {
@@ -152,27 +94,9 @@ kotlin {
                 implementation(kotlin("test-js"))
                 implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-annotations-common"))
+                implementation("io.ktor:ktor-client-mock-js:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
         }
     }
 }
-
-//tasks.register("printSdkLocation") {
-//    doLast {
-//        println("Android SDK Location: ${android.sdkDirectory}")
-//    }
-//}
-//
-//android {
-//    namespace = "com.sphereon.oid.fed.common"
-//    compileSdk = libs.versions.android.compileSdk.get().toInt()
-//    compileOptions {
-//        sourceCompatibility = JavaVersion.VERSION_11
-//        targetCompatibility = JavaVersion.VERSION_11
-//    }
-//    defaultConfig {
-//        minSdk = libs.versions.android.minSdk.get().toInt()
-//    }
-//}
-
