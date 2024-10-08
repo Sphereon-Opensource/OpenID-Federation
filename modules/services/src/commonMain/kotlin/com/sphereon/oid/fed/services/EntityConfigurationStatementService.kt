@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.extensions.toJwkDto
+import com.sphereon.oid.fed.services.extensions.toJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -34,7 +34,7 @@ class EntityConfigurationStatementService {
             .iss(identifier)
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
-            .jwks(keys.map { it.toJwkDto() }.toTypedArray())
+            .jwks(keys.map { it.toJwk() }.toMutableList())
 
         if (hasSubordinates) {
             val federationEntityMetadata = FederationEntityMetadataBuilder()

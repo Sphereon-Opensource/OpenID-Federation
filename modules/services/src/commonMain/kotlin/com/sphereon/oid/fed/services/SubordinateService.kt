@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
-import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.extensions.toJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -67,7 +67,7 @@ class SubordinateService {
             )
 
         subordinateJwks.forEach {
-            subordinateStatement.jwks(it.toJwkDTO())
+            subordinateStatement.jwks(it.toJwk())
         }
 
         return subordinateStatement.build()

@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.mapper
+package com.sphereon.oid.fed.client.mapper
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean

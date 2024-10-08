@@ -1,16 +1,16 @@
-package com.sphereon.oid.fed.common.mapper
+package com.sphereon.oid.fed.client.mapper
 
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWTSignature
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.serializer
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.reflect.KClass
 
 @ExperimentalJsExport
 @JsExport
@@ -19,24 +19,14 @@ class JsonMapper {
     /*
      * Used for mapping JWT token to EntityStatement object
      */
-    fun mapEntityStatement(jwtToken: String): Any? =
-        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
-
+    @OptIn(InternalSerializationApi::class)
+    fun <T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
+        val payload: JsonElement = decodeJWTComponents(jwtToken).payload
+        return Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }.decodeFromJsonElement(targetType.serializer(), payload)
     }
-
-    fun mapEntityConfigurationStatement(jwtToken: String): EntityConfigurationStatement =
-        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
-    }
-
-    fun mapSubordinateStatement(jwtToken: String): SubordinateStatement =
-        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
-    }
-
-    /*
-     * Used for mapping trust chain
-     */
-    fun mapTrustChain(jwtTokenList: List<String>): List<Any?> =
-        jwtTokenList.map { mapEntityStatement(it) }
 
     /*
      * Used for decoding JWT to an object of JWT with Header, Payload and Signature
@@ -61,7 +51,6 @@ class JsonMapper {
     }
 
     data class JWT(val header: JWTHeader, val payload: JsonElement, val signature: JWTSignature)
-
 
     // Custom Exceptions
     class InvalidJwtException(message: String) : Exception(message)

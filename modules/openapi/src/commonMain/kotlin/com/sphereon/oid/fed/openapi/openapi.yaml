@@ -1883,7 +1883,13 @@ components:
           format: date-time
           description: The time the statement was issued.
         jwks:
-          additionalProperties: true
+          type:
+            object
+          properties:
+            keys:
+              type: array
+              items:
+                $ref: '#/components/schemas/Jwk'
         metadata:
           additionalProperties: true
         crit:
@@ -1971,8 +1977,6 @@ components:
             - jwks
           properties:
             metadata_policy:
-              additionalProperties: true
-            constraints:
               additionalProperties: true
             crit:
               type: array

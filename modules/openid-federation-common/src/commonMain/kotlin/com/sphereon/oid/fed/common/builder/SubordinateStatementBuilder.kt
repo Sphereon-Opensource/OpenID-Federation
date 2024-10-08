@@ -1,24 +1,22 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.JwkDTO
+import com.sphereon.oid.fed.openapi.models.BaseEntityStatementJwks
+import com.sphereon.oid.fed.openapi.models.Constraints
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.builtins.ArraySerializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 
 class SubordinateStatementBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private lateinit var jwks: Array<JwkDTO>
+    private lateinit var jwks: MutableList<Jwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
-    private var constraints: MutableMap<String, JsonObject> = mutableMapOf()
+    private lateinit var constraints: Constraints
     private val crit: MutableList<String> = mutableListOf()
     private var source_endpoint: String? = null
 
@@ -26,7 +24,8 @@ class SubordinateStatementBuilder {
     fun sub(sub: String) = apply { this.sub = sub }
     fun exp(exp: Int) = apply { this.exp = exp }
     fun iat(iat: Int) = apply { this.iat = iat }
-    fun jwks(jwks: JwkDTO) = apply { this.jwks = arrayOf(jwks) }
+
+    fun jwks(jwk: Jwk) = apply { this.jwks.add(jwk) }
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
@@ -44,18 +43,17 @@ class SubordinateStatementBuilder {
         this.crit.add(claim)
     }
 
+    fun constraints(constraints: Constraints) = apply {
+        this.constraints = constraints
+    }
+
     fun sourceEndpoint(sourceEndpoint: String) = apply {
         this.source_endpoint = sourceEndpoint
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun createJwks(jwks: Array<JwkDTO>): JsonObject {
-        val jsonArray: JsonArray =
-            Json.encodeToJsonElement(ArraySerializer(JwkDTO.serializer()), jwks) as JsonArray
-
-        return buildJsonObject {
-            put("keys", jsonArray)
-        }
+    private fun createJwks(jwks: MutableList<Jwk>): BaseEntityStatementJwks {
+        return BaseEntityStatementJwks(jwks.toTypedArray())
     }
 
     fun build(): SubordinateStatement {
@@ -69,7 +67,6 @@ class SubordinateStatementBuilder {
             metadata = JsonObject(metadata),
             metadataPolicy = JsonObject(metadata_policy),
             metadataPolicyCrit = JsonObject(metadata_policy_crit),
-            constraints = JsonObject(constraints),
             sourceEndpoint = source_endpoint,
         )
     }
