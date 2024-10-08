@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.common.builder
 
 import com.sphereon.oid.fed.openapi.models.BaseEntityStatementJwks
-import com.sphereon.oid.fed.openapi.models.Constraints
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -16,7 +15,6 @@ class SubordinateStatementBuilder {
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
-    private lateinit var constraints: Constraints
     private val crit: MutableList<String> = mutableListOf()
     private var source_endpoint: String? = null
 
@@ -41,10 +39,6 @@ class SubordinateStatementBuilder {
 
     fun crit(claim: String) = apply {
         this.crit.add(claim)
-    }
-
-    fun constraints(constraints: Constraints) = apply {
-        this.constraints = constraints
     }
 
     fun sourceEndpoint(sourceEndpoint: String) = apply {
