@@ -91,8 +91,8 @@ class SubordinateService {
                 SubordinateStatement.serializer(),
                 subordinateStatement
             ).jsonObject,
-            header = JWTHeader(typ = "entity-statement+jwt"),
-            keyId = key!!
+            header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
+            keyId = key
         )
 
         if (dryRun == true) {

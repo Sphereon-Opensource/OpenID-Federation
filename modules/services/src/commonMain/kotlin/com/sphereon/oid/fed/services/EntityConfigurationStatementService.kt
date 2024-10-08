@@ -84,8 +84,8 @@ class EntityConfigurationStatementService {
                 EntityConfigurationStatement.serializer(),
                 entityConfigurationStatement
             ).jsonObject,
-            header = JWTHeader(typ = "entity-statement+jwt"),
-            keyId = key!!
+            header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
+            keyId = key
         )
 
         if (dryRun == true) {

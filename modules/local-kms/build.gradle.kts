@@ -1,6 +1,3 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-import kotlin.apply
-
 plugins {
     kotlin("multiplatform") version "2.0.0"
     id("app.cash.sqldelight") version "2.0.2"
@@ -51,14 +48,6 @@ kotlin {
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
-
-//        jsMain {
-//            dependencies {
-//                implementation(npm("typescript", "5.5.3"))
-//                implementation(npm("jose", "5.6.3"))
-//                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-//            }
-//        }
 
         jvmTest {
             dependencies {
