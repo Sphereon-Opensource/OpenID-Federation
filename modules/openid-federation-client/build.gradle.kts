@@ -64,5 +64,17 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
             }
         }
+
+        val jvmMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-cio:$ktorVersion")
+            }
+        }
+
+        val jsMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-js:$ktorVersion")
+            }
+        }
     }
 }

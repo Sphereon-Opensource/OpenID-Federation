@@ -78,52 +78,59 @@ class TrustChain(engine: HttpClientEngine) {
         lastStatementKid: String,
         cache: SimpleCache<String, String>
     ): MutableList<String>? {
-        val authorityConfigurationEndpoint = fetchClient.getEntityConfigurationEndpoint(authority)
 
-        // Avoid processing the same entity twice
-        if (cache.get(authorityConfigurationEndpoint) != null) return null
+        try {
+            val authorityConfigurationEndpoint = fetchClient.getEntityConfigurationEndpoint(authority)
 
-        val authorityEntityConfigurationJwt = fetchClient.fetchStatement(authorityConfigurationEndpoint) ?: return null
-        cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
+            // Avoid processing the same entity twice
+            if (cache.get(authorityConfigurationEndpoint) != null) return null
 
-        val authorityEntityConfiguration: EntityConfigurationStatement =
-            mapper.mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class)
-                ?: return null
+            val authorityEntityConfigurationJwt =
+                fetchClient.fetchStatement(authorityConfigurationEndpoint) ?: return null
+            cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
-        val federationEntityMetadata = authorityEntityConfiguration.metadata?.get("federation_entity") as? JsonObject
-        if (federationEntityMetadata == null || !federationEntityMetadata.containsKey("federation_fetch_endpoint")) return null
+            val authorityEntityConfiguration: EntityConfigurationStatement =
+                mapper.mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class)
+                    ?: return null
 
-        val authorityEntityFetchEndpoint =
-            federationEntityMetadata["federation_fetch_endpoint"]?.toString() ?: return null
+            val federationEntityMetadata =
+                authorityEntityConfiguration.metadata?.get("federation_entity") as? JsonObject
+            if (federationEntityMetadata == null || !federationEntityMetadata.containsKey("federation_fetch_endpoint")) return null
 
-        val subordinateStatementEndpoint =
-            fetchClient.getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier) ?: return null
+            val authorityEntityFetchEndpoint =
+                federationEntityMetadata["federation_fetch_endpoint"]?.toString()?.trim('"') ?: return null
 
-        val subordinateStatementJwt = fetchClient.fetchStatement(subordinateStatementEndpoint) ?: return null
-        val subordinateStatement: SubordinateStatement =
-            mapper.mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
-                ?: return null
+            val subordinateStatementEndpoint =
+                fetchClient.getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
+                    ?: return null
 
-        val jwks = subordinateStatement.jwks
-        val keys = jwks.propertyKeys ?: return null
+            val subordinateStatementJwt = fetchClient.fetchStatement(subordinateStatementEndpoint) ?: return null
+            val subordinateStatement: SubordinateStatement =
+                mapper.mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
+                    ?: return null
 
-        // Check if the entity key exists in subordinate statement
-        val entityKeyExistsInSubordinateStatement = checkKidInJwks(keys, lastStatementKid)
-        if (!entityKeyExistsInSubordinateStatement) return null
+            val jwks = subordinateStatement.jwks
+            val keys = jwks.propertyKeys ?: return null
 
-        // If authority is in trust anchors, return the completed chain
-        if (trustAnchors.contains(authority)) {
-            chain.add(subordinateStatementJwt)
-            chain.add(authorityEntityConfigurationJwt)
-            return chain
-        }
+            // Check if the entity key exists in subordinate statement
+            val entityKeyExistsInSubordinateStatement = checkKidInJwks(keys, lastStatementKid)
+            if (!entityKeyExistsInSubordinateStatement) return null
+            // If authority is in trust anchors, return the completed chain
+            if (trustAnchors.contains(authority)) {
+                chain.add(subordinateStatementJwt)
+                chain.add(authorityEntityConfigurationJwt)
+                return chain
+            }
 
-        // Recursively build trust chain if there are authority hints
-        if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
-            chain.add(subordinateStatementJwt)
-            val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache)
-            if (result != null) return result
-            chain.removeLast()
+            // Recursively build trust chain if there are authority hints
+            if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
+                chain.add(subordinateStatementJwt)
+                val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache)
+                if (result != null) return result
+                chain.removeLast()
+            }
+        } catch (_: Exception) {
+            return null
         }
 
         return null

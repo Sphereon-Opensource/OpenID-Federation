@@ -5,6 +5,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 
@@ -15,6 +16,7 @@ class Fetch(engine: HttpClientEngine) {
                 prettyPrint = true
                 isLenient = true
             })
+
         }
     }
 
@@ -34,7 +36,11 @@ class Fetch(engine: HttpClientEngine) {
     }
 
     suspend fun fetchStatement(endpoint: String): String? {
-        val response = httpClient.get(endpoint)
+        val response = httpClient.get(endpoint) {
+            headers {
+                append(HttpHeaders.Accept, "application/entity-statement+jwt")
+            }
+        }
 
         return response.body()
     }
