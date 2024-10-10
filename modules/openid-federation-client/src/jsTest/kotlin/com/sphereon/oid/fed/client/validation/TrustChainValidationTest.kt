@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.client.validation
 
-import com.sphereon.oid.fed.common.jwt.JwtService
+import com.sphereon.oid.fed.client.OidFederationClientServiceJS.TRUST_CHAIN_VALIDATION
+import com.sphereon.oid.fed.common.jwt.IJwtServiceJS
 import com.sphereon.oid.fed.common.jwt.JwtSignInput
 import com.sphereon.oid.fed.common.jwt.JwtVerifyInput
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
@@ -15,7 +16,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
 import io.ktor.http.headersOf
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.await
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
@@ -24,7 +24,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import kotlin.coroutines.suspendCoroutine
 import kotlin.js.Date
+import kotlin.js.Promise
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,7 +44,7 @@ external object Jose {
             definedExternally
         }
 
-        fun sign(key: Any?, signOptions: Any?): String {
+        fun sign(key: Any?, signOptions: Any?): Promise<String> {
             definedExternally
         }
     }
@@ -79,16 +81,16 @@ fun convertToJwk(keyPair: dynamic): Jwk {
     )
 }
 
-class JwtServiceImpl: JwtService {
-    override fun sign(input: JwtSignInput): String {
+class JwtServiceImpl: IJwtServiceJS {
+    override fun sign(input: JwtSignInput): Promise<String> {
         return Jose.SignJWT(JSON.parse<Any>(Json.encodeToString(input.payload)))
             .setProtectedHeader(JSON.parse<Any>(Json.encodeToString(input.header)))
             .sign(key = input.key, null)
     }
 
-    override fun verify(input: JwtVerifyInput): Boolean {
+    override fun verify(input: JwtVerifyInput): Promise<Boolean> {
         val publicKey = Jose.importJWK(input.key, alg = input.key.alg ?: "RS256")
-        return Jose.jwtVerify(input.jwt, publicKey)
+        return Promise.resolve(Jose.jwtVerify(input.jwt, publicKey) !== undefined)
     }
 
 }
@@ -171,7 +173,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation/federation_fetch_endpoint"
         )
 
-        partyBJwt = jwtServiceImpl.sign(
+        partyBJwt = suspendCoroutine { jwtServiceImpl.sign(
             JwtSignInput(
                 payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), partyBConfiguration).jsonObject,
                 header = JWTHeader(
@@ -441,12 +443,9 @@ class TrustChainValidationTest {
     fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList,
-            TrustChainValidation(jwtServiceImpl).readAuthorityHints(
-                partyBId = "https://edugain.org/federation",
-                engine = mockEngine,
-                trustChains = mutableListOf(mutableListOf<EntityConfigurationStatement>()),
-                trustChain = mutableListOf<EntityConfigurationStatement>(),
-            ).await()
+            TRUST_CHAIN_VALIDATION.readAuthorityHints(
+                partyBId = "https://edugain.org/federation"
+            )
         )
     }
 
@@ -454,18 +453,15 @@ class TrustChainValidationTest {
     fun fetchSubordinateStatementsTest() = runTest {
         assertEquals(
             listOfSubordinateStatementList,
-            TrustChainValidation(jwtServiceImpl).fetchSubordinateStatements(
-                entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
-                engine = mockEngine
-            ).await()
+            TRUST_CHAIN_VALIDATION.fetchSubordinateStatements(
+                entityConfigurationStatementsList = listOfEntityConfigurationStatementList
+            )
         )
     }
 
     @Test
     fun validateTrustChainTest() = runTest {
-        assertTrue(
-            TrustChainValidation(jwtServiceImpl).validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).await().size == 1
-        )
+        assertTrue(TRUST_CHAIN_VALIDATION.validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1)
     }
 }
 

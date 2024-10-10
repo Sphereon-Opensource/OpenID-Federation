@@ -1,9 +1,11 @@
 package com.sphereon.oid.fed.client
 
 import com.sphereon.oid.fed.client.httpclient.httpService
+import com.sphereon.oid.fed.client.validation.trustChainValidationService
 
 object OidFederationClientService {
     val HTTP = httpService()
+    val TRUST_CHAIN_VALIDATION = trustChainValidationService()
 }
 
 

@@ -12,7 +12,8 @@ import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import com.sphereon.oid.fed.common.jwt.JwtService
+import com.sphereon.oid.fed.client.OidFederationClientService.TRUST_CHAIN_VALIDATION
+import com.sphereon.oid.fed.common.jwt.IJwtService
 import com.sphereon.oid.fed.common.jwt.JwtSignInput
 import com.sphereon.oid.fed.common.jwt.JwtVerifyInput
 import com.sphereon.oid.fed.openapi.models.*
@@ -20,6 +21,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.http.*
 import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -32,22 +34,22 @@ import java.time.OffsetDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class JwtServiceImpl : JwtService {
-    override fun sign(input: JwtSignInput): String {
+class JwtServiceImpl : IJwtService {
+    override suspend fun sign(input: JwtSignInput): String {
         val jwkJsonString = Json.encodeToString(input.key)
         val ecJWK = ECKey.parse(jwkJsonString)
         val signer: JWSSigner = ECDSASigner(ecJWK)
         val jwsHeader = input.header.toJWSHeader()
 
         val signedJWT = SignedJWT(
-            jwsHeader, JWTClaimsSet.parse(input.payload.toString())
+            jwsHeader, JWTClaimsSet.parse(JsonObject(input.payload).toString())
         )
 
         signedJWT.sign(signer)
         return signedJWT.serialize()
     }
 
-    override fun verify(input: JwtVerifyInput): Boolean {
+    override suspend fun verify(input: JwtVerifyInput): Boolean {
         try {
             val jwkJsonString = Json.encodeToString(input.key)
             val ecKey = ECKey.parse(jwkJsonString)
@@ -196,7 +198,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation/federation_fetch_endpoint"
             )
 
-            partyBJwt = jwtService.sign(
+            partyBJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -209,7 +211,7 @@ class TrustChainValidationTest {
                     ),
                     key = partyBJwk
                 )
-            )
+            ) }
 
             // Federation 2
             intermediateEntityConfiguration = entityConfiguration(
@@ -223,7 +225,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_two/federation_fetch_endpoint"
             )
 
-            intermediateEntityConfigurationJwt = jwtService.sign(
+            intermediateEntityConfigurationJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -236,7 +238,7 @@ class TrustChainValidationTest {
                     ),
                     key = intermediateEntityConfiguration1Jwk
                 )
-            )
+            ) }
 
             //signed with intermediateEntity1 Private Key
             intermediateEntitySubordinateStatement = intermediateEntity(
@@ -245,7 +247,7 @@ class TrustChainValidationTest {
                 sub = "https://openid.sunet.se",
             )
 
-            intermediateEntitySubordinateStatementJwt = jwtService.sign(
+            intermediateEntitySubordinateStatementJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = SubordinateStatement.serializer(),
@@ -258,7 +260,7 @@ class TrustChainValidationTest {
                     ),
                     key = intermediateEntityConfiguration1Jwk
                 )
-            )
+            ) }
 
             // Federation 4
             intermediateEntityConfiguration1 = entityConfiguration(
@@ -269,7 +271,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_four/federation_fetch_endpoint"
             )
 
-            intermediateEntityConfiguration1Jwt = jwtService.sign(
+            intermediateEntityConfiguration1Jwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -282,7 +284,7 @@ class TrustChainValidationTest {
                     ),
                     key = validTrustAnchorConfigurationJwk
                 )
-            )
+            ) }
 
             intermediateEntity1SubordinateStatement = intermediateEntity(
                 publicKey = intermediateEntity1KeyPair.toPublicJWK(),
@@ -290,7 +292,7 @@ class TrustChainValidationTest {
                 sub = "https://openid.sunet-one.se"
             )
 
-            intermediateEntity1SubordinateStatementJwt = jwtService.sign(
+            intermediateEntity1SubordinateStatementJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = SubordinateStatement.serializer(),
@@ -303,7 +305,7 @@ class TrustChainValidationTest {
                     ),
                     key = validTrustAnchorConfigurationJwk
                 )
-            )
+            ) }
 
             // Federation 5
             validTrustAnchorConfiguration = entityConfiguration(
@@ -314,7 +316,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_five/federation_fetch_endpoint"
             )
 
-            validTrustAnchorConfigurationJwt = jwtService.sign(
+            validTrustAnchorConfigurationJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -327,7 +329,7 @@ class TrustChainValidationTest {
                     ),
                     key = validTrustAnchorConfigurationJwk
                 )
-            )
+            ) }
 
             // Federation 3
             unknownTrustAnchorConfiguration = entityConfiguration(
@@ -338,7 +340,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_three/federation_fetch_endpoint"
             )
 
-            unknownTrustAnchorConfigurationJwt = jwtService.sign(
+            unknownTrustAnchorConfigurationJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -351,7 +353,7 @@ class TrustChainValidationTest {
                     ),
                     key = unknownTrustAnchorConfigurationJwk
                 )
-            )
+            ) }
 
             // Federation 1
             invalidTrustAnchorConfiguration = entityConfiguration(
@@ -362,7 +364,7 @@ class TrustChainValidationTest {
                 federationFetchEndpoint = "https://edugain.org/federation_one/federation_fetch_endpoint"
             )
 
-            invalidTrustAnchorConfigurationJwt = jwtService.sign(
+            invalidTrustAnchorConfigurationJwt = runBlocking { jwtService.sign(
                 JwtSignInput(
                     payload = Json.encodeToJsonElement(
                         serializer = EntityConfigurationStatement.serializer(),
@@ -375,7 +377,7 @@ class TrustChainValidationTest {
                     ),
                     key = invalidTrustAnchorConfigurationJwk
                 )
-            )
+            ) }
 
             listOfEntityConfigurationStatementList = mutableListOf(
                 mutableListOf(
@@ -497,9 +499,8 @@ class TrustChainValidationTest {
     fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList.toString(),
-            TrustChainValidationCommon(jwtService).readAuthorityHints(
-                partyBId = "https://edugain.org/federation",
-                engine = mockEngine
+            TRUST_CHAIN_VALIDATION.readAuthorityHints(
+                partyBId = "https://edugain.org/federation"
             ).toString()
         )
     }
@@ -508,9 +509,8 @@ class TrustChainValidationTest {
     fun fetchSubordinateStatementsTest() = runTest {
         assertEquals(
             listOfSubordinateStatementList,
-            TrustChainValidationCommon(jwtService).fetchSubordinateStatements(
-                entityConfigurationStatementsList = listOfEntityConfigurationStatementList,
-                engine = mockEngine
+            TRUST_CHAIN_VALIDATION.fetchSubordinateStatements(
+                entityConfigurationStatementsList = listOfEntityConfigurationStatementList
             )
         )
     }
@@ -518,7 +518,7 @@ class TrustChainValidationTest {
     @Test
     fun validateTrustChainTest() = runTest {
         assertTrue(
-            TrustChainValidationCommon(jwtService).validateTrustChains(
+            TRUST_CHAIN_VALIDATION.validateTrustChains(
                 listOfSubordinateStatementList,
                 listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")
             ).size == 1

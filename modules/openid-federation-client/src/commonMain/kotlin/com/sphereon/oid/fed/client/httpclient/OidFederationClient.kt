@@ -33,6 +33,7 @@ interface HttpClientCallbackService: ICallbackService<IHttpClientService>, IHttp
 
 expect fun httpService(): HttpClientCallbackService
 
+//FIXME Extract the implementation to a separate class
 object OidFederationHttpClientObject: HttpClientCallbackService {
 
     private val isRequestAuthenticated: Boolean = false
