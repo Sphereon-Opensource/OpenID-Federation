@@ -31,6 +31,9 @@ kotlin {
                 }
             }
         }
+        useEsModules()
+        generateTypeScriptDefinitions()
+        binaries.executable()
     }
 
     sourceSets {
@@ -61,7 +64,7 @@ kotlin {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("io.ktor:ktor-client-mock:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
             }
         }
         val jvmMain by getting {
@@ -84,7 +87,7 @@ kotlin {
                 runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
                 implementation(npm("typescript", "5.5.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
                 implementation(project(":modules:openid-federation-common"))
             }
         }
@@ -95,7 +98,7 @@ kotlin {
                 implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("io.ktor:ktor-client-mock-js:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test-js:1.9.0")
             }
         }
     }
