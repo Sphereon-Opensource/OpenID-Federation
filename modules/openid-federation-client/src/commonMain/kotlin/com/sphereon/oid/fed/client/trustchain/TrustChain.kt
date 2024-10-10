@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.client.trustchain
 
 import com.sphereon.oid.fed.client.fetch.Fetch
+import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
+import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
@@ -19,8 +21,8 @@ class SimpleCache<K, V> {
     }
 }
 
-class TrustChain(engine: HttpClientEngine) {
-    private val fetchClient = Fetch(engine)
+class TrustChain(httpEngine: HttpClientEngine?) {
+    private val fetchClient = Fetch(httpEngine)
     private val mapper = JsonMapper()
 
     suspend fun resolve(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
@@ -37,7 +39,7 @@ class TrustChain(engine: HttpClientEngine) {
     ): MutableList<String>? {
 
         val entityConfigurationJwt =
-            fetchClient.fetchStatement(fetchClient.getEntityConfigurationEndpoint(entityIdentifier)) ?: return null
+            fetchClient.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier)) ?: return null
 
         val decodedEntityConfiguration = mapper.decodeJWTComponents(entityConfigurationJwt)
 
@@ -80,7 +82,7 @@ class TrustChain(engine: HttpClientEngine) {
     ): MutableList<String>? {
 
         try {
-            val authorityConfigurationEndpoint = fetchClient.getEntityConfigurationEndpoint(authority)
+            val authorityConfigurationEndpoint = getEntityConfigurationEndpoint(authority)
 
             // Avoid processing the same entity twice
             if (cache.get(authorityConfigurationEndpoint) != null) return null
@@ -101,7 +103,7 @@ class TrustChain(engine: HttpClientEngine) {
                 federationEntityMetadata["federation_fetch_endpoint"]?.toString()?.trim('"') ?: return null
 
             val subordinateStatementEndpoint =
-                fetchClient.getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
+                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
                     ?: return null
 
             val subordinateStatementJwt = fetchClient.fetchStatement(subordinateStatementEndpoint) ?: return null

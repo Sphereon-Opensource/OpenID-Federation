@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.Client
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
@@ -21,9 +20,9 @@ class TrustChainTest {
 
     @Test
     fun buildTrustChain() = runTest {
-        val client = Client(mockEngine)
+        val trustChainService = TrustChain(mockEngine)
 
-        val trustChain = client.trustChain.resolve(
+        val trustChain = trustChainService.resolve(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
@@ -50,7 +49,7 @@ class TrustChainTest {
             mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation")]
         )
 
-        val trustChain2 = client.trustChain.resolve(
+        val trustChain2 = trustChainService.resolve(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
