@@ -33,7 +33,7 @@ class LocalKms {
 
         val jwkObject: Jwk = Json.decodeFromString(aesEncryption.decrypt(jwk.key))
 
-        val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid)
+        val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid!!)
 
         return sign(header = mHeader, payload = payload, key = jwkObject)
     }

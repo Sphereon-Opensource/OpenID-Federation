@@ -45,3 +45,21 @@ fun JwkAdminDTO.toJwkDto(): JwkDTO {
         x5tS256 = x5tHashS256,
     )
 }
+
+fun JwkAdminDTO.toJwk(): Jwk {
+    return Jwk(
+        crv = crv,
+        e = e,
+        x = x,
+        y = y,
+        n = n,
+        alg = alg,
+        kid = kid,
+        kty = kty!!,
+        use = use,
+        x5c = x5c,
+        x5t = x5t,
+        x5u = x5u,
+        x5tS256 = x5tHashS256,
+    )
+}

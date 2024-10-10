@@ -73,6 +73,7 @@ kotlin {
             dependencies {
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
         val jvmTest by getting {
@@ -129,6 +130,7 @@ kotlin {
             dependencies {
                 runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
                 runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
+                implementation(npm("typescript", "5.5.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
             }
@@ -136,6 +138,7 @@ kotlin {
 
         val jsTest by getting {
             dependencies {
+                implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))
             }
@@ -160,4 +163,3 @@ kotlin {
 //        minSdk = libs.versions.android.minSdk.get().toInt()
 //    }
 //}
-
