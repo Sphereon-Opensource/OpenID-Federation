@@ -1,13 +1,12 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.fetch.Fetch
+import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import io.ktor.client.engine.*
 import kotlinx.serialization.json.JsonObject
 import kotlin.collections.set
 
@@ -21,8 +20,7 @@ class SimpleCache<K, V> {
     }
 }
 
-class TrustChain(httpEngine: HttpClientEngine?) {
-    private val fetchClient = Fetch(httpEngine)
+class TrustChain(private val fetchService: IFetchCallbackService) {
     private val mapper = JsonMapper()
 
     suspend fun resolve(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
@@ -39,7 +37,7 @@ class TrustChain(httpEngine: HttpClientEngine?) {
     ): MutableList<String>? {
 
         val entityConfigurationJwt =
-            fetchClient.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier)) ?: return null
+            fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
 
         val decodedEntityConfiguration = mapper.decodeJWTComponents(entityConfigurationJwt)
 
@@ -88,7 +86,7 @@ class TrustChain(httpEngine: HttpClientEngine?) {
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
             val authorityEntityConfigurationJwt =
-                fetchClient.fetchStatement(authorityConfigurationEndpoint) ?: return null
+                fetchService.fetchStatement(authorityConfigurationEndpoint) ?: return null
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val authorityEntityConfiguration: EntityConfigurationStatement =
@@ -104,9 +102,8 @@ class TrustChain(httpEngine: HttpClientEngine?) {
 
             val subordinateStatementEndpoint =
                 getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
-                    ?: return null
 
-            val subordinateStatementJwt = fetchClient.fetchStatement(subordinateStatementEndpoint) ?: return null
+            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
             val subordinateStatement: SubordinateStatement =
                 mapper.mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
                     ?: return null
