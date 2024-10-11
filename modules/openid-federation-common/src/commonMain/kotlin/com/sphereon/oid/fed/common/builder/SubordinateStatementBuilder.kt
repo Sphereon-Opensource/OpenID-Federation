@@ -2,8 +2,7 @@ package com.sphereon.oid.fed.common.builder
 
 import com.sphereon.oid.fed.openapi.models.JwkDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.builtins.ArraySerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -14,7 +13,7 @@ class SubordinateStatementBuilder {
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private lateinit var jwks: Array<JwkDTO>
+    private var jwks: MutableList<JwkDTO> = mutableListOf();
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
@@ -26,7 +25,6 @@ class SubordinateStatementBuilder {
     fun sub(sub: String) = apply { this.sub = sub }
     fun exp(exp: Int) = apply { this.exp = exp }
     fun iat(iat: Int) = apply { this.iat = iat }
-    fun jwks(jwks: JwkDTO) = apply { this.jwks = arrayOf(jwks) }
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
@@ -44,14 +42,17 @@ class SubordinateStatementBuilder {
         this.crit.add(claim)
     }
 
+    fun jwks(jwk: JwkDTO) = apply {
+        this.jwks.add(jwk)
+    }
+
     fun sourceEndpoint(sourceEndpoint: String) = apply {
         this.source_endpoint = sourceEndpoint
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
-    private fun createJwks(jwks: Array<JwkDTO>): JsonObject {
+    private fun createJwks(jwks: MutableList<JwkDTO>): JsonObject {
         val jsonArray: JsonArray =
-            Json.encodeToJsonElement(ArraySerializer(JwkDTO.serializer()), jwks) as JsonArray
+            Json.encodeToJsonElement(ListSerializer(JwkDTO.serializer()), jwks) as JsonArray
 
         return buildJsonObject {
             put("keys", jsonArray)

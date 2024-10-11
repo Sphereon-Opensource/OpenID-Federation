@@ -1801,6 +1801,27 @@ components:
           example: 2024-08-06T12:34:56Z
           nullable: true
 
+    SubordinateAdminJwkDto:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate key record.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinated account associated with this key.
+          example: 1
+        key:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the key  was created.
+          example: 2024-08-06T12:34:56Z
+          nullable: false
 
     JWTRevoked:
       type: object
@@ -1898,12 +1919,6 @@ components:
               type: array
               items:
                 type: string
-            metadata:
-              additionalProperties: true
-            crit:
-              type: array
-              items:
-                type: string
             trust_marks:
               type: array
               description: An array of JSON objects, each representing a Trust Mark.
@@ -1943,6 +1958,42 @@ components:
           type: string
           format: date-time
           description: The timestamp when the Entity Configuration Metadata was deleted.
+          example: 2024-08-06T12:34:56Z
+          nullable: true
+
+    SubordinateMetadataDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate Metadata record.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this Metadata.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinate associated with this Metadata.
+          example: 1
+        key:
+          type: string
+          description: The key of the metadata.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was created.
+          example: 2024-08-06T12:34:56Z
+          nullable: false
+        deleted_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was deleted.
           example: 2024-08-06T12:34:56Z
           nullable: true
 

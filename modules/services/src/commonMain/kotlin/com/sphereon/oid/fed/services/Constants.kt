@@ -9,6 +9,7 @@ class Constants {
         const val SUBORDINATE_ALREADY_EXISTS = "Subordinate already exists"
         const val ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS = "Entity configuration metadata already exists"
         const val FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA = "Failed to create entity configuration metadata"
+        const val FAILED_TO_CREATE_SUBORDINATE_METADATA = "Failed to create subordinate metadata"
         const val ENTITY_CONFIGURATION_METADATA_NOT_FOUND = "Entity configuration metadata not found"
         const val FAILED_TO_CREATE_AUTHORITY_HINT = "Failed to create authority hint"
         const val AUTHORITY_HINT_NOT_FOUND = "Authority hint not found"
@@ -22,5 +23,7 @@ class Constants {
         const val SUBORDINATE_NOT_FOUND = "Subordinate not found"
         const val SUBORDINATE_JWK_NOT_FOUND = "Subordinate JWK not found"
         const val SUBORDINATE_STATEMENT_NOT_FOUND = "Subordinate statement not found"
+        const val SUBORDINATE_METADATA_NOT_FOUND = "Subordinate metadata not found"
+        const val SUBORDINATE_METADATA_ALREADY_EXISTS = "Subordinate metadata already exists"
     }
 }
