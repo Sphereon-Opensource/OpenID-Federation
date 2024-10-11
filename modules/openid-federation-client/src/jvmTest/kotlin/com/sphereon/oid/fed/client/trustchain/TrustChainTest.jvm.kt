@@ -4,42 +4,32 @@ import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
 import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.*
 import io.ktor.client.engine.mock.*
-import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class PlatformCallback(engine: HttpClientEngine) : IFetchService {
-    private val httpClient = HttpClient(engine)
+class PlatformCallback() : IFetchService {
+    override fun getHttpClient(): HttpClient {
+        return HttpClient(MockEngine { request ->
+            val responseContent = mockResponses.find { it[0] == request.url.toString() }?.get(1)
+                ?: error("Unhandled ${request.url}")
 
-    override suspend fun fetchStatement(endpoint: String): String {
-        return httpClient.get(endpoint) {
-            headers {
-                append(HttpHeaders.Accept, "application/entity-statement+jwt")
-            }
-        }.body()
+            respond(
+                content = responseContent,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+            )
+        })
     }
 }
 
 class TrustChainTest() {
-    private val mockEngine = MockEngine { request ->
-        val responseContent = mockResponses[request.url] ?: error("Unhandled ${request.url}")
-        respond(
-            content = responseContent,
-            status = HttpStatusCode.OK,
-            headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-        )
-    }
-    private val platformCallback = PlatformCallback(mockEngine)
-
     @Test
     fun buildTrustChain() = runTest {
-        val fetchService = fetchService().register(platformCallback)
+        val fetchService = fetchService().register(PlatformCallback())
 
         val trustChainService = TrustChain(fetchService as IFetchCallbackService)
 
@@ -53,21 +43,26 @@ class TrustChainTest() {
 
         assertEquals(
             trustChain[0],
-            mockResponses[Url("https://spid.wbss.it/Spid/oidc/rp/ipasv_lt/.well-known/openid-federation")]
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt/.well-known/openid-federation" }
+                ?.get(1)
         )
 
         assertEquals(
             trustChain[1],
-            mockResponses[Url("https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt")]
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
+                ?.get(1)
         )
 
         assertEquals(
             trustChain[2],
-            mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa")]
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+                ?.get(1)
         )
+
         assertEquals(
             trustChain[3],
-            mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation")]
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
+                ?.get(1)
         )
 
         val trustChain2 = trustChainService.resolve(
@@ -79,15 +74,19 @@ class TrustChainTest() {
         assertEquals(trustChain2.size, 3)
         assertEquals(
             trustChain2[0],
-            mockResponses[Url("https://spid.wbss.it/Spid/oidc/sa/.well-known/openid-federation")]
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/.well-known/openid-federation" }?.get(1)
         )
+
         assertEquals(
             trustChain2[1],
-            mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa")]
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+                ?.get(1)
         )
+
         assertEquals(
             trustChain2[2],
-            mockResponses[Url("https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation")]
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
+                ?.get(1)
         )
     }
 }

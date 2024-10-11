@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client.fetch
 
+import io.ktor.client.*
 import kotlinx.coroutines.await
 import kotlin.js.Promise
 
@@ -38,6 +39,10 @@ open class FetchServiceJSAdapter(private val fetchCallbackJS: FetchServiceJS = F
 
     override fun register(platformCallback: IFetchService): IFetchCallbackService {
         throw Error("Register function should not be used on the adapter.")
+    }
+
+    override fun getHttpClient(): HttpClient {
+        return HttpClient()
     }
 }
 

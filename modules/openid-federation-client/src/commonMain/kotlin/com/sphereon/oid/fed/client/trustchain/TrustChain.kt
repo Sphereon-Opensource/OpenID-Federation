@@ -41,6 +41,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
 
         val decodedEntityConfiguration = mapper.decodeJWTComponents(entityConfigurationJwt)
 
+
         // need to verify JWT
 
         val entityStatement: EntityConfigurationStatement =
@@ -59,7 +60,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
                     entityIdentifier,
                     trustAnchors,
                     chain,
-                    decodedEntityConfiguration.header.kid,
+                    decodedEntityConfiguration.header.kid!!,
                     cache
                 )
             if (result != null) {
