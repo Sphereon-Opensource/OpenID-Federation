@@ -409,97 +409,105 @@ class TrustChainValidationTest {
                 )
             )
         }
-    }
 
-    private val mockEngine = MockEngine { request ->
-        when (request.url) {
-            Url("https://edugain.org/federation") -> respond(
-                content = partyBJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+        val mockEngine = MockEngine { request ->
+            when (request.url) {
+                Url("https://edugain.org/federation") -> respond(
+                    content = partyBJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Entity Configuration - sub and key binding
-            Url("https://edugain.org/federation/federation_fetch_endpoint") -> respond(
-                content = partyBJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Entity Configuration - sub and key binding
+                Url("https://edugain.org/federation/federation_fetch_endpoint") -> respond(
+                    content = partyBJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            Url("https://edugain.org/federation_one") -> respond(
-                content = invalidTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                Url("https://edugain.org/federation_one") -> respond(
+                    content = invalidTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Entity Configuration - Trust Anchor
-            Url("https://edugain.org/federation_one/federation_fetch_endpoint") -> respond(
-                content = invalidTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Entity Configuration - Trust Anchor
+                Url("https://edugain.org/federation_one/federation_fetch_endpoint") -> respond(
+                    content = invalidTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            Url("https://edugain.org/federation_two") -> respond(
-                content = intermediateEntityConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                Url("https://edugain.org/federation_two") -> respond(
+                    content = intermediateEntityConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Subordinate Statement - sub and key binding
-            Url("https://edugain.org/federation_two/federation_fetch_endpoint") -> respond(
-                content = intermediateEntitySubordinateStatementJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Subordinate Statement - sub and key binding
+                Url("https://edugain.org/federation_two/federation_fetch_endpoint") -> respond(
+                    content = intermediateEntitySubordinateStatementJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            Url("https://edugain.org/federation_three") -> respond(
-                content = unknownTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                Url("https://edugain.org/federation_three") -> respond(
+                    content = unknownTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Entity Configuration - Trust Anchor
-            Url("https://edugain.org/federation_three/federation_fetch_endpoint") -> respond(
-                content = unknownTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Entity Configuration - Trust Anchor
+                Url("https://edugain.org/federation_three/federation_fetch_endpoint") -> respond(
+                    content = unknownTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            Url("https://edugain.org/federation_four") -> respond(
-                content = intermediateEntityConfiguration1Jwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                Url("https://edugain.org/federation_four") -> respond(
+                    content = intermediateEntityConfiguration1Jwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Subordinate Statement
-            Url("https://edugain.org/federation_four/federation_fetch_endpoint") -> respond(
-                content = intermediateEntity1SubordinateStatementJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Subordinate Statement
+                Url("https://edugain.org/federation_four/federation_fetch_endpoint") -> respond(
+                    content = intermediateEntity1SubordinateStatementJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            Url("https://edugain.org/federation_five") -> respond(
-                content = validTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                Url("https://edugain.org/federation_five") -> respond(
+                    content = validTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            // Entity Configuration - Trust Chain
-            Url("https://edugain.org/federation_five/federation_fetch_endpoint") -> respond(
-                content = validTrustAnchorConfigurationJwt,
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
-            )
+                // Entity Configuration - Trust Chain
+                Url("https://edugain.org/federation_five/federation_fetch_endpoint") -> respond(
+                    content = validTrustAnchorConfigurationJwt,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
+                )
 
-            else -> error("Unhandled ${request.url}")
+                else -> error("Unhandled ${request.url}")
+            }
         }
     }
 
+
     @Test
     fun readAuthorityHintsTest() = runTest {
+        val trustChainValidationService = trustChainValidationService().register(
+            MockTrustChainValidationCallback(
+                jwtService = jwtService,
+                httpService = MockHttpClientCallbackService(
+                    engine = mockEngine
+                )
+            ))
         assertEquals(
             listOfEntityConfigurationStatementList.toString(),
-            TRUST_CHAIN_VALIDATION.readAuthorityHints(
+            trustChainValidationService.readAuthorityHints(
                 partyBId = "https://edugain.org/federation"
             ).toString()
         )
@@ -507,9 +515,16 @@ class TrustChainValidationTest {
 
     @Test
     fun fetchSubordinateStatementsTest() = runTest {
+        val trustChainValidationService = trustChainValidationService().register(
+            MockTrustChainValidationCallback(
+                jwtService = jwtService,
+                httpService = MockHttpClientCallbackService(
+                    engine = mockEngine
+                )
+            ))
         assertEquals(
             listOfSubordinateStatementList,
-            TRUST_CHAIN_VALIDATION.fetchSubordinateStatements(
+            trustChainValidationService.fetchSubordinateStatements(
                 entityConfigurationStatementsList = listOfEntityConfigurationStatementList
             )
         )
@@ -517,8 +532,15 @@ class TrustChainValidationTest {
 
     @Test
     fun validateTrustChainTest() = runTest {
+        val trustChainValidationService = trustChainValidationService().register(
+            MockTrustChainValidationCallback(
+                jwtService = jwtService,
+                httpService = MockHttpClientCallbackService(
+                    engine = mockEngine
+                )
+            ))
         assertTrue(
-            TRUST_CHAIN_VALIDATION.validateTrustChains(
+            trustChainValidationService.validateTrustChains(
                 listOfSubordinateStatementList,
                 listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")
             ).size == 1

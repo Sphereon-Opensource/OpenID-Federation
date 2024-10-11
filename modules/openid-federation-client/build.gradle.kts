@@ -75,6 +75,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+                implementation("io.ktor:ktor-client-logging:$ktorVersion")
+                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+                implementation("io.ktor:ktor-client-auth:$ktorVersion")
+                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
             }
         }
 
