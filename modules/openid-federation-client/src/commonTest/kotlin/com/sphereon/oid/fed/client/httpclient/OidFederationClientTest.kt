@@ -1,10 +1,12 @@
 package com.sphereon.oid.fed.client.httpclient
 
+import com.sphereon.oid.fed.client.OidFederationClientService.HTTP
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -33,9 +35,16 @@ class OidFederationClientTest {
         )
     }
 
+    private lateinit var client: HttpClientCallbackService
+
+    @BeforeTest
+    fun setup() {
+       HTTP.register(MockHttpClientCallbackService(mockEngine))
+       client = HTTP
+    }
+
     @Test
     fun testGetEntityStatement() = runTest {
-            val client = OidFederationClient(mockEngine)
             val response = client.fetchEntityStatement(
                 "https://www.example.com?iss=https://edugain.org/federation&sub=https://openid.sunet.se",
                 HttpMethod.Get
@@ -45,7 +54,6 @@ class OidFederationClientTest {
 
     @Test
     fun testPostEntityStatement() = runTest {
-        val client = OidFederationClient(mockEngine)
         val response = client.fetchEntityStatement("https://www.example.com",
             HttpMethod.Post,
             Parameters.build {
