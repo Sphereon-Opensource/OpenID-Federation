@@ -100,6 +100,7 @@ kotlin {
                 implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-annotations-common"))
                 implementation("io.ktor:ktor-client-mock-js:$ktorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.9.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test-js:1.9.0")
             }
         }
