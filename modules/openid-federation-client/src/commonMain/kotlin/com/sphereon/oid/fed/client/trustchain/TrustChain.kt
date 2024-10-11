@@ -37,7 +37,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
     ): MutableList<String>? {
 
         val entityConfigurationJwt =
-            fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
+            fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier)).await()
 
         val decodedEntityConfiguration = mapper.decodeJWTComponents(entityConfigurationJwt)
 
@@ -87,7 +87,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
             val authorityEntityConfigurationJwt =
-                fetchService.fetchStatement(authorityConfigurationEndpoint) ?: return null
+                fetchService.fetchStatement(authorityConfigurationEndpoint).await() ?: return null
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val authorityEntityConfiguration: EntityConfigurationStatement =
@@ -104,7 +104,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
             val subordinateStatementEndpoint =
                 getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
-            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
+            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint).await()
             val subordinateStatement: SubordinateStatement =
                 mapper.mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
                     ?: return null

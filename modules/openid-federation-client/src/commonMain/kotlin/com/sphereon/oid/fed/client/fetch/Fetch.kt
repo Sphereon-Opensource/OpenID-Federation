@@ -4,10 +4,14 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
+import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
 interface ICallbackService<PlatformCallbackType> {
-    fun register(platformCallback: PlatformCallbackType): ICallbackService<PlatformCallbackType>
+    fun register(platformCallback: PlatformCallbackType?): ICallbackService<PlatformCallbackType>
 }
 
 interface IFetchService {
@@ -15,34 +19,42 @@ interface IFetchService {
 }
 
 interface IFetchServiceInternal {
-    suspend fun fetchStatement(
+    fun fetchStatement(
         endpoint: String
-    ): String
+    ): Deferred<String>
 }
 
 interface IFetchCallbackService : ICallbackService<IFetchService>, IFetchService, IFetchServiceInternal
 
-expect fun fetchService(): IFetchCallbackService
-
+@JsExport
 object FetchServiceObject : IFetchCallbackService {
     @JvmStatic
     private lateinit var platformCallback: IFetchService
     private lateinit var httpClient: HttpClient
 
-    override suspend fun fetchStatement(endpoint: String): String {
-        return this.httpClient.get(endpoint) {
-            headers {
-                append(HttpHeaders.Accept, "application/entity-statement+jwt")
-            }
-        }.body()
+    override fun fetchStatement(endpoint: String): Deferred<String> {
+        return GlobalScope.async {
+            httpClient.get(endpoint) {
+                headers {
+                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                }
+            }.body()
+        }
     }
 
     override fun getHttpClient(): HttpClient {
         return this.platformCallback.getHttpClient()
     }
 
-    override fun register(platformCallback: IFetchService): IFetchCallbackService {
-        this.platformCallback = platformCallback
+    override fun register(platformCallback: IFetchService?): IFetchCallbackService {
+
+        class DefaultPlatformCallback : IFetchService {
+            override fun getHttpClient(): HttpClient {
+                return HttpClient()
+            }
+        }
+
+        this.platformCallback = platformCallback ?: DefaultPlatformCallback()
         this.httpClient = this.platformCallback.getHttpClient()
         return this
     }
