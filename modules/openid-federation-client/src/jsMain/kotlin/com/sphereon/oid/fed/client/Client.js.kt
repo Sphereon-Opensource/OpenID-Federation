@@ -14,7 +14,7 @@ class FederationClient1 {
 
     @OptIn(DelicateCoroutinesApi::class)
     @JsName("validateTrustChain")
-    fun validateTrustChain1(entityIdentifier: String, trustAnchors: Array<String>): Promise<MutableList<String>?> {
-        return GlobalScope.promise{ resolve(entityIdentifier, trustAnchors, fetchService) }
+    fun validateTrustChain1(entityIdentifier: String, trustAnchors: Array<String>): Promise<Array<String>?> {
+        return GlobalScope.promise{ resolve(entityIdentifier, trustAnchors, fetchService)?.toTypedArray() }
     }
 }
