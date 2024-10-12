@@ -31,7 +31,7 @@ class TrustChainTest() {
 
         val client = FederationClient(PlatformCallback())
 
-        val trustChain = client.validateTrustChain(
+        val trustChain = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
@@ -63,7 +63,7 @@ class TrustChainTest() {
                 ?.get(1)
         )
 
-        val trustChain2 = client.validateTrustChain(
+        val trustChain2 = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )

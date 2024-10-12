@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.client.trustchain.resolve
 class FederationClient(platformCallback: IFetchService?) {
     private val fetchService = FetchServiceObject.register(platformCallback)
 
-    suspend fun validateTrustChain(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
+    suspend fun resolveTrustChain(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
         return resolve(entityIdentifier, trustAnchors, fetchService)
     }
 }
