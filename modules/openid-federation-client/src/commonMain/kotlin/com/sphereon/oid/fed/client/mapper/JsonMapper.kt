@@ -12,9 +12,6 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
-@ExperimentalJsExport
-@JsExport
-class JsonMapper {
 
     /*
      * Used for mapping JWT token to EntityStatement object
@@ -55,4 +52,3 @@ class JsonMapper {
     // Custom Exceptions
     class InvalidJwtException(message: String) : Exception(message)
     class JwtDecodingException(message: String, cause: Throwable) : Exception(message, cause)
-}

@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.ClientPlatformCallback
 import com.sphereon.oid.fed.client.FederationClient
+import com.sphereon.oid.fed.client.fetch.IFetchService
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -10,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class PlatformCallback() : ClientPlatformCallback {
+class PlatformCallback() : IFetchService {
     override fun getHttpClient(): HttpClient {
         return HttpClient(MockEngine { request ->
             val responseContent = mockResponses.find { it[0] == request.url.toString() }?.get(1)
@@ -31,7 +31,7 @@ class TrustChainTest() {
 
         val client = FederationClient(PlatformCallback())
 
-        val trustChain = client.trustChain.resolve(
+        val trustChain = client.validateTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
@@ -63,7 +63,7 @@ class TrustChainTest() {
                 ?.get(1)
         )
 
-        val trustChain2 = client.trustChain.resolve(
+        val trustChain2 = client.validateTrustChain(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )

@@ -3,7 +3,8 @@ package com.sphereon.oid.fed.client.trustchain
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
-import com.sphereon.oid.fed.client.mapper.JsonMapper
+import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
@@ -20,32 +21,30 @@ class SimpleCache<K, V> {
     }
 }
 
-class TrustChain(private val fetchService: IFetchCallbackService) {
-    private val mapper = JsonMapper()
-
-    suspend fun resolve(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
+    suspend fun resolve(entityIdentifier: String, trustAnchors: Array<String>, fetchService: IFetchCallbackService): MutableList<String>? {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
-        return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache)
+        return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, fetchService)
     }
 
     private suspend fun buildTrustChainRecursive(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         chain: MutableList<String>,
-        cache: SimpleCache<String, String>
+        cache: SimpleCache<String, String>,
+        fetchService: IFetchCallbackService
     ): MutableList<String>? {
 
         val entityConfigurationJwt =
             fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier)).await()
 
-        val decodedEntityConfiguration = mapper.decodeJWTComponents(entityConfigurationJwt)
+        val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
 
         // need to verify JWT
 
         val entityStatement: EntityConfigurationStatement =
-            mapper.mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return null
+            mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return null
 
         if (chain.isEmpty()) {
             chain.add(entityConfigurationJwt)
@@ -61,7 +60,8 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
                     trustAnchors,
                     chain,
                     decodedEntityConfiguration.header.kid!!,
-                    cache
+                    cache,
+                    fetchService
                 )
             if (result != null) {
                 return result
@@ -77,7 +77,8 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
         trustAnchors: Array<String>,
         chain: MutableList<String>,
         lastStatementKid: String,
-        cache: SimpleCache<String, String>
+        cache: SimpleCache<String, String>,
+        fetchService: IFetchCallbackService
     ): MutableList<String>? {
 
         try {
@@ -91,7 +92,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val authorityEntityConfiguration: EntityConfigurationStatement =
-                mapper.mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class)
+                mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class)
                     ?: return null
 
             val federationEntityMetadata =
@@ -106,7 +107,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
 
             val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint).await()
             val subordinateStatement: SubordinateStatement =
-                mapper.mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
+                mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
                     ?: return null
 
             val jwks = subordinateStatement.jwks
@@ -125,7 +126,7 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
             // Recursively build trust chain if there are authority hints
             if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
                 chain.add(subordinateStatementJwt)
-                val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache)
+                val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache, fetchService)
                 if (result != null) return result
                 chain.removeLast()
             }
@@ -144,4 +145,4 @@ class TrustChain(private val fetchService: IFetchCallbackService) {
         }
         return false
     }
-}
+
