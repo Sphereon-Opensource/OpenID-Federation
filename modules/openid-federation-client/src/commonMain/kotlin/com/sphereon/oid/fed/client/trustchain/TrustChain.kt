@@ -36,10 +36,9 @@ class SimpleCache<K, V> {
     ): MutableList<String>? {
 
         val entityConfigurationJwt =
-            fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier)).await()
+            fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
 
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
-
 
         // need to verify JWT
 
@@ -88,7 +87,7 @@ class SimpleCache<K, V> {
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
             val authorityEntityConfigurationJwt =
-                fetchService.fetchStatement(authorityConfigurationEndpoint).await() ?: return null
+                fetchService.fetchStatement(authorityConfigurationEndpoint)
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val authorityEntityConfiguration: EntityConfigurationStatement =
@@ -105,7 +104,7 @@ class SimpleCache<K, V> {
             val subordinateStatementEndpoint =
                 getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
-            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint).await()
+            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
             val subordinateStatement: SubordinateStatement =
                 mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
                     ?: return null

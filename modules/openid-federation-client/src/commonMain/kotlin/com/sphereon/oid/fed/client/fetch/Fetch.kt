@@ -4,11 +4,6 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlin.js.JsExport
-import kotlin.jvm.JvmStatic
 
 interface ICallbackService<PlatformCallbackType> {
     fun register(platformCallback: PlatformCallbackType?): ICallbackService<PlatformCallbackType>
@@ -19,27 +14,23 @@ interface IFetchService {
 }
 
 interface IFetchServiceInternal {
-    fun fetchStatement(
+    suspend fun fetchStatement(
         endpoint: String
-    ): Deferred<String>
+    ): String
 }
 
 interface IFetchCallbackService : ICallbackService<IFetchService>, IFetchService, IFetchServiceInternal
 
-@JsExport
 object FetchServiceObject : IFetchCallbackService {
-    @JvmStatic
     private lateinit var platformCallback: IFetchService
     private lateinit var httpClient: HttpClient
 
-    override fun fetchStatement(endpoint: String): Deferred<String> {
-        return GlobalScope.async {
-            httpClient.get(endpoint) {
-                headers {
-                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
-                }
-            }.body()
-        }
+    override suspend fun fetchStatement(endpoint: String): String {
+        return httpClient.get(endpoint) {
+            headers {
+                append(HttpHeaders.Accept, "application/entity-statement+jwt")
+            }
+        }.body()
     }
 
     override fun getHttpClient(): HttpClient {
