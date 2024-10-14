@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.common.mapper
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.js.ExperimentalJsExport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -10,26 +11,29 @@ import kotlin.test.assertIs
 
 class JsonMapperTest {
 
+    @OptIn(ExperimentalJsExport::class)
     private val mapper = JsonMapper()
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun testDecodeValidJWT() {
         val jwt =
             "eyJraWQiOiJCNkVCODQ4OENDODRDNDEwMTcxMzRCQzc3RjQxMzJBMDQ2N0NDQzBFIiwidHlwIjoiZW50aXR5LXN0YXRlbWVudFx1MDAyQmp3dCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImV4cCI6MTUxNjIzOTAyMn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc"
         val (header, payload, signature) = mapper.decodeJWTComponents(jwt)
 
-        assertEquals("RS256", header?.alg)
-        assertEquals("B6EB8488CC84C41017134BC77F4132A0467CCC0E", header?.kid)
-        assertEquals("entity-statement+jwt", header?.typ)
+        assertEquals("RS256", header.alg)
+        assertEquals("B6EB8488CC84C41017134BC77F4132A0467CCC0E", header.kid)
+        assertEquals("entity-statement+jwt", header.typ)
 
         payload as JsonObject
         assertEquals("1234567890", payload["sub"]?.jsonPrimitive?.content) // Check payload
         assertEquals("John Doe", payload["name"]?.jsonPrimitive?.content)
         assertEquals(true, payload["admin"]?.jsonPrimitive?.boolean)
 
-        assertEquals("NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc", signature?.value) // Check signature
+        assertEquals("NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc", signature.value) // Check signature
     }
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun testDecodeJWTWithInvalidStructure() {
         val invalidJWT =
@@ -42,6 +46,7 @@ class JsonMapperTest {
         assertIs<JsonMapper.InvalidJwtException>(exception)
     }
 
+    @OptIn(ExperimentalJsExport::class)
     @Test
     fun testDecodeJWTWithInvalidJSON() {
         val jwtWithInvalidJson =
