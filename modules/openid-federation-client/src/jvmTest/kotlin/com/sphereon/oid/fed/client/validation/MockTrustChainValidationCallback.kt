@@ -7,6 +7,7 @@ import com.sphereon.oid.fed.common.mapper.JsonMapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -49,7 +50,7 @@ class MockTrustChainValidationCallback(
         return trustChains
     }
 
-    override suspend fun fetchSubordinateStatements(entityConfigurationStatementsList: List<List<EntityConfigurationStatement>>): List<List<String>> {
+    override suspend fun fetchSubordinateStatements(entityConfigurationStatementsList: List<List<EntityConfigurationStatement>>): List<List<String>> = runBlocking {
         val trustChains: MutableList<List<String>> = mutableListOf()
         val trustChain: MutableList<String> = mutableListOf()
         entityConfigurationStatementsList.forEach { entityConfigurationStatements ->
@@ -63,7 +64,11 @@ class MockTrustChainValidationCallback(
             trustChains.add(trustChain.map { content -> content.substring(0) })
             trustChain.clear()
         }
-        return trustChains
+        trustChains
+    }
+
+    private fun blockingFetchEntityStatements(url: String) = runBlocking {
+        httpService.fetchEntityStatement(url)
     }
 
     override suspend fun validateTrustChains(

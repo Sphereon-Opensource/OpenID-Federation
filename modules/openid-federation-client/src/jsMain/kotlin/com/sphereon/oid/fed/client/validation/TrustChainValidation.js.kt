@@ -27,7 +27,6 @@ interface ITrustChainValidationCallbackJS {
 @JsExport
 object TrustChainValidationServiceJS: ICallbackServiceJS<ITrustChainValidationCallbackJS>, ITrustChainValidationCallbackJS {
 
-    private val NAME = "TrustChainValidation"
     private var disable = false
 
     private lateinit var platformCallback: ITrustChainValidationCallbackJS

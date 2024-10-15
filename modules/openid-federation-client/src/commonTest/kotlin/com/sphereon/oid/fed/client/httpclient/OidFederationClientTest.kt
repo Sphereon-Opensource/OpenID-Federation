@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.client.httpclient
 
-import com.sphereon.oid.fed.client.OidFederationClientService.HTTP
 import io.ktor.client.engine.mock.*
 import io.ktor.client.engine.mock.MockEngine.Companion.invoke
 import io.ktor.client.engine.mock.respond
@@ -39,8 +38,8 @@ class OidFederationClientTest {
 
     @BeforeTest
     fun setup() {
-       HTTP.register(MockHttpClientCallbackService(mockEngine))
-       client = HTTP
+       httpService().register(MockHttpClientCallbackService(mockEngine))
+       client = httpService()
     }
 
     @Test

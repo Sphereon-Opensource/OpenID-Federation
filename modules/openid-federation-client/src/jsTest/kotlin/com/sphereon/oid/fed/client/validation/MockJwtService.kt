@@ -56,7 +56,7 @@ fun convertToJwk(keyPair: dynamic): Jwk {
     )
 }
 
-class MockJwtService: IJwtServiceJS {
+class MockJwtServiceJS: IJwtServiceJS {
 
     override fun sign(input: JwtSignInput): Promise<String> {
         return Jose.SignJWT(JSON.parse<Any>(stringify(input.payload)))

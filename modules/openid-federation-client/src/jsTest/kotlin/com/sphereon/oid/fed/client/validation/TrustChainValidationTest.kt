@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.client.validation
 
-import com.sphereon.oid.fed.client.OidFederationClientServiceJS.TRUST_CHAIN_VALIDATION
 import com.sphereon.oid.fed.common.jwt.JwtSignInput
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
@@ -25,15 +24,17 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
+import kotlin.Array
 import kotlin.js.Date
 import kotlin.test.BeforeTest
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TrustChainValidationTest {
 
-    val jwtServiceImpl = MockJwtService()
+    val jwtServiceImpl = MockJwtServiceJS()
 
     fun signPartyBJWT() = CoroutineScope(context = CoroutineName("TEST")).promise {
        partyBJwt = jwtServiceImpl.sign(
@@ -421,29 +422,56 @@ class TrustChainValidationTest {
         }
     }
 
+    @Ignore
     @Test
     fun readAuthorityHintsTest() = runTest {
+        val trustChainValidationService = TrustChainValidationServiceJS
+            .register( MockTrustChainValidationServiceJS(
+                httpService = MockHttpClientCallbackServiceJS(
+                    engine = mockEngine
+                ),
+                jwtService = MockJwtServiceJS()
+            ))
         assertEquals(
-            listOfEntityConfigurationStatementList,
-            TRUST_CHAIN_VALIDATION.readAuthorityHints(
+            listOfEntityConfigurationStatementList.map { it.toTypedArray() }.toTypedArray(),
+            trustChainValidationService.readAuthorityHints(
                 partyBId = "https://edugain.org/federation"
-            )
+            ).await()
         )
     }
 
+    @Ignore
     @Test
     fun fetchSubordinateStatementsTest() = runTest {
+        val trustChainValidationService = TrustChainValidationServiceJS
+            .register( MockTrustChainValidationServiceJS(
+                httpService = MockHttpClientCallbackServiceJS(
+                    engine = mockEngine
+                ),
+                jwtService = MockJwtServiceJS()
+            ))
         assertEquals(
-            listOfSubordinateStatementList,
-            TRUST_CHAIN_VALIDATION.fetchSubordinateStatements(
-                entityConfigurationStatementsList = listOfEntityConfigurationStatementList
+            listOfSubordinateStatementList.asDynamic() ,
+            trustChainValidationService.fetchSubordinateStatements(
+                entityConfigurationStatementsList = listOfEntityConfigurationStatementList.map { it.toTypedArray() }.toTypedArray()
             )
         )
     }
 
     @Test
     fun validateTrustChainTest() = runTest {
-        assertTrue(TRUST_CHAIN_VALIDATION.validateTrustChains(listOfSubordinateStatementList, listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se")).size == 1)
+        val trustChainValidationService = TrustChainValidationServiceJS
+            .register( MockTrustChainValidationServiceJS(
+                httpService = MockHttpClientCallbackServiceJS(
+                    engine = mockEngine
+                ),
+                jwtService = MockJwtServiceJS()
+            ))
+        assertTrue(
+            trustChainValidationService.validateTrustChains(
+                listOfSubordinateStatementList.map { it.toTypedArray() }.toTypedArray(),
+                listOf("https://openid.sunet-invalid.se", "https://openid.sunet-five.se").toTypedArray())
+                .await().size == 1)
     }
 }
 

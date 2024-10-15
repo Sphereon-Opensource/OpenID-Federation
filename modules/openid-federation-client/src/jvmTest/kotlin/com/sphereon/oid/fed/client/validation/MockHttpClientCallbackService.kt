@@ -23,29 +23,7 @@ import java.lang.IllegalArgumentException
 
 class MockHttpClientCallbackService(engine: HttpClientEngine) : IHttpClientService {
 
-    private val isRequestAuthenticated: Boolean = false
-    private val isRequestCached: Boolean = false
-
-    private val client: HttpClient = HttpClient(engine) {
-            install(HttpCache.Companion)
-            install(Logging) {
-                logger = Logger.Companion.DEFAULT
-                level = LogLevel.INFO
-        }
-        if (isRequestAuthenticated) {
-                install(Auth) {
-                bearer {
-                        loadTokens {
-                        //TODO add correct implementation later
-                        BearerTokens("accessToken", "refreshToken")
-                    }
-                }
-            }
-        }
-        if (isRequestCached) {
-                install(HttpCache.Companion)
-        }
-    }
+    private val client: HttpClient = HttpClient(engine)
 
     override suspend fun fetchEntityStatement(
         url: String,

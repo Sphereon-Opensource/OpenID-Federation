@@ -76,10 +76,8 @@ kotlin {
                 implementation(kotlin("test-junit"))
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
                 implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-auth:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.9.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test-jvm:1.9.0")
             }
         }
 
@@ -89,7 +87,7 @@ kotlin {
                 runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
                 implementation(npm("typescript", "5.5.3"))
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-js:1.9.0")
                 implementation(project(":modules:openid-federation-common"))
             }
         }
