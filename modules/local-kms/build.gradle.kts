@@ -38,8 +38,8 @@ kotlin {
         commonMain {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
 

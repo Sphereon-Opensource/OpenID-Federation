@@ -13,7 +13,8 @@ androidx-test-junit = "1.1.5"
 compose-plugin = "1.6.10"
 junit = "4.13.2"
 kotlin = "2.0.20"
-kotlinxSerializationJson = "1.7.0-RC"
+kotlinxSerializationCore = "1.7.3"
+kotlinxSerializationJson = "1.7.3"
 springboot = "3.3.1"
 springDependencyManagement = "1.1.5"
 kermitLogging = "2.0.4"
@@ -30,6 +31,7 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-material = { group = "com.google.android.material", name = "material", version.ref = "androidx-material" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore"}
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging"}
 
