@@ -26,7 +26,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlin.Array
 import kotlin.js.Date
-import kotlin.test.BeforeTest
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,17 +37,17 @@ class TrustChainValidationTest {
 
     // key pairs
     @OptIn(ExperimentalJsExport::class)
-    val partyBKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var partyBKeyPair: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var intermediateEntityKeyPair: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val intermediateEntity1KeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var intermediateEntity1KeyPair: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val validTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var validTrustAnchorKeyPair: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val unknownTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var unknownTrustAnchorKeyPair: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val invalidTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    var invalidTrustAnchorKeyPair: dynamic = null
 
     // configurations
     lateinit var partyBConfiguration: EntityConfigurationStatement
@@ -63,22 +62,17 @@ class TrustChainValidationTest {
     lateinit var intermediateEntity1SubordinateStatement: SubordinateStatement
 
     @OptIn(ExperimentalJsExport::class)
-    val partyBJwk = convertToJwk(partyBKeyPair)
-
+    var partyBJwk: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityConfigurationJwk = convertToJwk(intermediateEntityKeyPair)
-
+    var intermediateEntityConfigurationJwk: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityConfiguration1Jwk = convertToJwk(intermediateEntity1KeyPair)
-
+    var intermediateEntityConfiguration1Jwk: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val validTrustAnchorConfigurationJwk = convertToJwk(validTrustAnchorKeyPair)
-
+    var validTrustAnchorConfigurationJwk: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val unknownTrustAnchorConfigurationJwk = convertToJwk(unknownTrustAnchorKeyPair)
-
+    var unknownTrustAnchorConfigurationJwk: dynamic = null
     @OptIn(ExperimentalJsExport::class)
-    val invalidTrustAnchorConfigurationJwk = convertToJwk(invalidTrustAnchorKeyPair)
+    var invalidTrustAnchorConfigurationJwk: dynamic = null
 
     lateinit var partyBJwt: String
     lateinit var intermediateEntityConfigurationJwt: String
@@ -221,8 +215,21 @@ class TrustChainValidationTest {
     }
 
     @OptIn(ExperimentalJsExport::class)
-    @BeforeTest
-    fun setup() {
+    suspend fun setup() {
+
+        partyBKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+        intermediateEntityKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+        intermediateEntity1KeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+        validTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+        unknownTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+        invalidTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+
+        partyBJwk = convertToJwk(partyBKeyPair)
+        intermediateEntityConfigurationJwk = convertToJwk(intermediateEntityKeyPair)
+        intermediateEntityConfiguration1Jwk = convertToJwk(intermediateEntity1KeyPair)
+        validTrustAnchorConfigurationJwk = convertToJwk(validTrustAnchorKeyPair)
+        unknownTrustAnchorConfigurationJwk = convertToJwk(unknownTrustAnchorKeyPair)
+        invalidTrustAnchorConfigurationJwk = convertToJwk(invalidTrustAnchorKeyPair)
 
         // Party B Entity Configuration (federation)
         partyBConfiguration = entityConfiguration(
@@ -236,7 +243,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation/federation_fetch_endpoint"
         )
 
-        signPartyBJWT()
+        signPartyBJWT().await()
 
         // Federation 2
         intermediateEntityConfiguration = entityConfiguration(
@@ -250,7 +257,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation_two/federation_fetch_endpoint"
         )
 
-        signIntermediateEntityConfiguration()
+        signIntermediateEntityConfiguration().await()
 
         //signed with intermediateEntity1 Private Key
         intermediateEntitySubordinateStatement = intermediateEntity(
@@ -259,7 +266,7 @@ class TrustChainValidationTest {
             sub = "https://openid.sunet.se",
         )
 
-        signIntermediateSubordinateStatement()
+        signIntermediateSubordinateStatement().await()
 
         // Federation 4
         intermediateEntityConfiguration1 = entityConfiguration(
@@ -270,7 +277,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation_four/federation_fetch_endpoint"
         )
 
-        signIntermediateEntityConfiguration1()
+        signIntermediateEntityConfiguration1().await()
 
         intermediateEntity1SubordinateStatement = intermediateEntity(
             publicKey = intermediateEntityConfiguration1Jwk,
@@ -278,7 +285,7 @@ class TrustChainValidationTest {
             sub = "https://openid.sunet-one.se"
         )
 
-        signIntermediateEntity1SubordinateStatement()
+        signIntermediateEntity1SubordinateStatement().await()
 
         // Federation 5
         validTrustAnchorConfiguration = entityConfiguration(
@@ -289,7 +296,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation_five/federation_fetch_endpoint"
         )
 
-        signValidTrustAnchorConfiguration()
+        signValidTrustAnchorConfiguration().await()
 
         // Federation 3
         unknownTrustAnchorConfiguration = entityConfiguration(
@@ -300,7 +307,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation_three/federation_fetch_endpoint"
         )
 
-        signUnknownTrustAnchorConfiguration()
+        signUnknownTrustAnchorConfiguration().await()
 
         // Federation 1
         invalidTrustAnchorConfiguration = entityConfiguration(
@@ -311,7 +318,7 @@ class TrustChainValidationTest {
             federationFetchEndpoint = "https://edugain.org/federation_one/federation_fetch_endpoint"
         )
 
-        signInvalidTrustChainConfiguration()
+        signInvalidTrustChainConfiguration().await()
 
         listOfEntityConfigurationStatementList = mutableListOf(
             mutableListOf(
@@ -460,6 +467,7 @@ class TrustChainValidationTest {
 
     @Test
     fun validateTrustChainTest() = runTest {
+        setup()
         val trustChainValidationService = TrustChainValidationServiceJS
             .register( MockTrustChainValidationServiceJS(
                 httpService = MockHttpClientCallbackServiceJS(
