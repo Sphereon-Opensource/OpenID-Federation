@@ -21,7 +21,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.js.Promise
 
-class MockTrustChainValidationService(
+class MockTrustChainValidationServiceJS(
     private val httpService: IHttpClientServiceJS,
     private val jwtService: IJwtServiceJS
 ): ITrustChainValidationCallbackJS {

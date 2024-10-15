@@ -5,14 +5,6 @@ import com.sphereon.oid.fed.client.httpclient.OidFederationHttpClientJS.NAME
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.plugins.auth.Auth
-import io.ktor.client.plugins.auth.providers.BearerTokens
-import io.ktor.client.plugins.auth.providers.bearer
-import io.ktor.client.plugins.cache.HttpCache
-import io.ktor.client.plugins.logging.DEFAULT
-import io.ktor.client.plugins.logging.LogLevel
-import io.ktor.client.plugins.logging.Logger
-import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -27,31 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.promise
 import kotlin.js.Promise
 
-class MockHttpClientCallbackService(engine: HttpClientEngine) : IHttpClientServiceJS {
+class MockHttpClientCallbackServiceJS(engine: HttpClientEngine) : IHttpClientServiceJS {
 
-    private val isRequestAuthenticated: Boolean = false
-    private val isRequestCached: Boolean = false
-
-    private val client: HttpClient = HttpClient(engine) {
-        install(HttpCache)
-        install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.INFO
-        }
-        if (isRequestAuthenticated) {
-            install(Auth) {
-                bearer {
-                    loadTokens {
-                        //TODO add correct implementation later
-                        BearerTokens("accessToken", "refreshToken")
-                    }
-                }
-            }
-        }
-        if (isRequestCached) {
-            install(HttpCache.Companion)
-        }
-    }
+    private val client: HttpClient = HttpClient(engine)
 
     override fun fetchEntityStatement(
         url: String,

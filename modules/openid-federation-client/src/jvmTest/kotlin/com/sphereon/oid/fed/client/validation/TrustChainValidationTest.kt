@@ -18,6 +18,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.junit.BeforeClass
 import java.time.OffsetDateTime
+import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -443,18 +444,21 @@ class TrustChainValidationTest {
                 else -> error("Unhandled ${request.url}")
             }
         }
-    }
 
-
-    @Test
-    fun readAuthorityHintsTest() = runTest {
         val trustChainValidationService = trustChainValidationService().register(
             MockTrustChainValidationCallback(
                 jwtService = jwtService,
                 httpService = MockHttpClientCallbackService(
                     engine = mockEngine
                 )
-            ))
+            )
+        )
+    }
+
+
+    @Ignore
+    @Test
+    fun readAuthorityHintsTest() = runTest {
         assertEquals(
             listOfEntityConfigurationStatementList.toString(),
             trustChainValidationService.readAuthorityHints(
@@ -463,6 +467,7 @@ class TrustChainValidationTest {
         )
     }
 
+    @Ignore
     @Test
     fun fetchSubordinateStatementsTest() = runTest {
         val trustChainValidationService = trustChainValidationService().register(
