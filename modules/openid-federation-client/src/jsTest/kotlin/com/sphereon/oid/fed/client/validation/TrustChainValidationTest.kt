@@ -36,8 +36,65 @@ class TrustChainValidationTest {
 
     val jwtServiceImpl = MockJwtServiceJS()
 
+    // key pairs
+    @OptIn(ExperimentalJsExport::class)
+    val partyBKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    @OptIn(ExperimentalJsExport::class)
+    val intermediateEntityKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    @OptIn(ExperimentalJsExport::class)
+    val intermediateEntity1KeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    @OptIn(ExperimentalJsExport::class)
+    val validTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    @OptIn(ExperimentalJsExport::class)
+    val unknownTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+    @OptIn(ExperimentalJsExport::class)
+    val invalidTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
+
+    // configurations
+    lateinit var partyBConfiguration: EntityConfigurationStatement
+    lateinit var intermediateEntityConfiguration: EntityConfigurationStatement
+    lateinit var intermediateEntityConfiguration1: EntityConfigurationStatement
+    lateinit var validTrustAnchorConfiguration: EntityConfigurationStatement
+    lateinit var unknownTrustAnchorConfiguration: EntityConfigurationStatement
+    lateinit var invalidTrustAnchorConfiguration: EntityConfigurationStatement
+
+    // subordinate statements
+    lateinit var intermediateEntitySubordinateStatement: SubordinateStatement
+    lateinit var intermediateEntity1SubordinateStatement: SubordinateStatement
+
+    @OptIn(ExperimentalJsExport::class)
+    val partyBJwk = convertToJwk(partyBKeyPair)
+
+    @OptIn(ExperimentalJsExport::class)
+    val intermediateEntityConfigurationJwk = convertToJwk(intermediateEntityKeyPair)
+
+    @OptIn(ExperimentalJsExport::class)
+    val intermediateEntityConfiguration1Jwk = convertToJwk(intermediateEntity1KeyPair)
+
+    @OptIn(ExperimentalJsExport::class)
+    val validTrustAnchorConfigurationJwk = convertToJwk(validTrustAnchorKeyPair)
+
+    @OptIn(ExperimentalJsExport::class)
+    val unknownTrustAnchorConfigurationJwk = convertToJwk(unknownTrustAnchorKeyPair)
+
+    @OptIn(ExperimentalJsExport::class)
+    val invalidTrustAnchorConfigurationJwk = convertToJwk(invalidTrustAnchorKeyPair)
+
+    lateinit var partyBJwt: String
+    lateinit var intermediateEntityConfigurationJwt: String
+    lateinit var intermediateEntityConfiguration1Jwt: String
+    lateinit var validTrustAnchorConfigurationJwt: String
+    lateinit var unknownTrustAnchorConfigurationJwt: String
+    lateinit var invalidTrustAnchorConfigurationJwt: String
+
+    lateinit var intermediateEntitySubordinateStatementJwt: String
+    lateinit var intermediateEntity1SubordinateStatementJwt: String
+
+    lateinit var listOfEntityConfigurationStatementList: MutableList<MutableList<EntityConfigurationStatement>>
+    lateinit var listOfSubordinateStatementList: MutableList<MutableList<String>>
+
     fun signPartyBJWT() = CoroutineScope(context = CoroutineName("TEST")).promise {
-       partyBJwt = jwtServiceImpl.sign(
+        partyBJwt = jwtServiceImpl.sign(
             JwtSignInput(
                 payload = Json.encodeToJsonElement(serializer = EntityConfigurationStatement.serializer(), partyBConfiguration).jsonObject,
                 header = JWTHeader(
@@ -162,63 +219,6 @@ class TrustChainValidationTest {
             )
         ).await()
     }
-
-    // key pairs
-    @OptIn(ExperimentalJsExport::class)
-    val partyBKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-    @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-    @OptIn(ExperimentalJsExport::class)
-    val intermediateEntity1KeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-    @OptIn(ExperimentalJsExport::class)
-    val validTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-    @OptIn(ExperimentalJsExport::class)
-    val unknownTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-    @OptIn(ExperimentalJsExport::class)
-    val invalidTrustAnchorKeyPair = Jose.generateKeyPair("PS256", JsonObject(mapOf("extractable" to JsonPrimitive(true))))
-
-    // configurations
-    lateinit var partyBConfiguration: EntityConfigurationStatement
-    lateinit var intermediateEntityConfiguration: EntityConfigurationStatement
-    lateinit var intermediateEntityConfiguration1: EntityConfigurationStatement
-    lateinit var validTrustAnchorConfiguration: EntityConfigurationStatement
-    lateinit var unknownTrustAnchorConfiguration: EntityConfigurationStatement
-    lateinit var invalidTrustAnchorConfiguration: EntityConfigurationStatement
-
-    // subordinate statements
-    lateinit var intermediateEntitySubordinateStatement: SubordinateStatement
-    lateinit var intermediateEntity1SubordinateStatement: SubordinateStatement
-
-    @OptIn(ExperimentalJsExport::class)
-    val partyBJwk = convertToJwk(partyBKeyPair)
-
-    @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityConfigurationJwk = convertToJwk(intermediateEntityKeyPair)
-
-    @OptIn(ExperimentalJsExport::class)
-    val intermediateEntityConfiguration1Jwk = convertToJwk(intermediateEntity1KeyPair)
-
-    @OptIn(ExperimentalJsExport::class)
-    val validTrustAnchorConfigurationJwk = convertToJwk(validTrustAnchorKeyPair)
-
-    @OptIn(ExperimentalJsExport::class)
-    val unknownTrustAnchorConfigurationJwk = convertToJwk(unknownTrustAnchorKeyPair)
-
-    @OptIn(ExperimentalJsExport::class)
-    val invalidTrustAnchorConfigurationJwk = convertToJwk(invalidTrustAnchorKeyPair)
-
-    lateinit var partyBJwt: String
-    lateinit var intermediateEntityConfigurationJwt: String
-    lateinit var intermediateEntityConfiguration1Jwt: String
-    lateinit var validTrustAnchorConfigurationJwt: String
-    lateinit var unknownTrustAnchorConfigurationJwt: String
-    lateinit var invalidTrustAnchorConfigurationJwt: String
-
-    lateinit var intermediateEntitySubordinateStatementJwt: String
-    lateinit var intermediateEntity1SubordinateStatementJwt: String
-
-    lateinit var listOfEntityConfigurationStatementList: MutableList<MutableList<EntityConfigurationStatement>>
-    lateinit var listOfSubordinateStatementList: MutableList<MutableList<String>>
 
     @OptIn(ExperimentalJsExport::class)
     @BeforeTest
