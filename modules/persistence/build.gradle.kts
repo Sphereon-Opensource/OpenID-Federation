@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.20"
+    alias(libs.plugins.kotlinMultiplatform)
     id("app.cash.sqldelight") version "2.0.2"
 }
 
