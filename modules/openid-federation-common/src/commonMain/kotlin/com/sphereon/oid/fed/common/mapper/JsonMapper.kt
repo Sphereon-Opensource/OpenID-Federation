@@ -3,24 +3,39 @@ package com.sphereon.oid.fed.common.mapper
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JWTSignature
+import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.js.ExperimentalJsExport
+import kotlin.js.JsExport
 
+@ExperimentalJsExport
+@JsExport
 class JsonMapper {
 
     /*
      * Used for mapping JWT token to EntityStatement object
      */
-    fun mapEntityStatement(jwtToken: String): EntityConfigurationStatement? =
-        decodeJWTComponents(jwtToken)?.payload?.let { Json.decodeFromJsonElement(it) }
+    fun mapEntityStatement(jwtToken: String): Any? =
+        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
+
+    }
+
+    fun mapEntityConfigurationStatement(jwtToken: String): EntityConfigurationStatement =
+        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
+    }
+
+    fun mapSubordinateStatement(jwtToken: String): SubordinateStatement =
+        decodeJWTComponents(jwtToken).payload.let { Json.decodeFromJsonElement(it)
+    }
 
     /*
      * Used for mapping trust chain
      */
-    fun mapTrustChain(jwtTokenList: List<String>): List<EntityConfigurationStatement?> =
+    fun mapTrustChain(jwtTokenList: List<String>): List<Any?> =
         jwtTokenList.map { mapEntityStatement(it) }
 
     /*
