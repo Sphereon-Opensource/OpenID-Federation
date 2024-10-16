@@ -1,12 +1,3 @@
-//package com.sphereon.oid.fed.client.crypto
-//
-//data class JWTVerifyOptions(val currentDate: String? = null, val typ: String? = null)
-//
-//expect suspend fun verify(
-//    jwt: String,
-//): Boolean
-
-
 package com.sphereon.oid.fed.client.crypto
 
 import com.sphereon.oid.fed.client.types.ICallbackService

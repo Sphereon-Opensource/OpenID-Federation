@@ -1593,90 +1593,90 @@ components:
     JwkDTO:
       allOf:
         - $ref: '#/components/schemas/BaseJwk'
-      type: object
-      x-tags:
-        - federation
-      properties:
-        revoked:
-          $ref: '#/components/schemas/JwkRevoked'
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            revoked:
+              $ref: '#/components/schemas/JwkRevoked'
 
     Jwk:
       allOf:
         - $ref: '#/components/schemas/BaseJwk'
-      type: object
-      x-tags:
-        - federation
-      required:
-        - kty
-      properties:
-        d:
-          type: string
-          description: The private key value (for RSA and EC keys).
-          example: base64url_encoded_private_key
-          nullable: true
-        p:
-          type: string
-          description: The first prime factor (for RSA private key).
-          example: base64url_encoded_p
-          nullable: true
-        q:
-          type: string
-          description: The second prime factor (for RSA private key).
-          example: base64url_encoded_q
-          nullable: true
-        dp:
-          type: string
-          description: The first factor CRT exponent (for RSA private key).
-          example: base64url_encoded_dp
-          nullable: true
-        dq:
-          type: string
-          description: The second factor CRT exponent (for RSA private key).
-          example: base64url_encoded_dq
-          nullable: true
-        qi:
-          type: string
-          description: The first CRT coefficient (for RSA private key).
-          example: base64url_encoded_qi
-          nullable: true
+        - type: object
+          x-tags:
+            - federation
+          required:
+            - kty
+          properties:
+            d:
+              type: string
+              description: The private key value (for RSA and EC keys).
+              example: base64url_encoded_private_key
+              nullable: true
+            p:
+              type: string
+              description: The first prime factor (for RSA private key).
+              example: base64url_encoded_p
+              nullable: true
+            q:
+              type: string
+              description: The second prime factor (for RSA private key).
+              example: base64url_encoded_q
+              nullable: true
+            dp:
+              type: string
+              description: The first factor CRT exponent (for RSA private key).
+              example: base64url_encoded_dp
+              nullable: true
+            dq:
+              type: string
+              description: The second factor CRT exponent (for RSA private key).
+              example: base64url_encoded_dq
+              nullable: true
+            qi:
+              type: string
+              description: The first CRT coefficient (for RSA private key).
+              example: base64url_encoded_qi
+              nullable: true
 
     JwkAdminDTO:
       allOf:
         - $ref: '#/components/schemas/BaseJwk'
-      type: object
-      x-tags:
-        - federation
-      properties:
-        id:
-          type: integer
-          description: The unique identifier for the JWK record.
-          example: 1
-        uuid:
-          type: string
-          format: uuid
-          description: The universally unique identifier for the JWK record.
-          example: 123e4567-e89b-12d3-a456-426614174000
-        account_id:
-          type: integer
-          description: The ID of the account associated with this JWK.
-          example: 100
-        revoked_at:
-          type: string
-          format: date-time
-          description: The timestamp when the JWK was revoked, if applicable.
-          example: 2024-09-01T12:34:56Z
-          nullable: true
-        revoked_reason:
-          type: string
-          description: The reason for revoking the JWK, if applicable.
-          example: Key compromise
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the JWK was created.
-          example: 2024-08-06T12:34:56Z
-          nullable: true
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            id:
+              type: integer
+              description: The unique identifier for the JWK record.
+              example: 1
+            uuid:
+              type: string
+              format: uuid
+              description: The universally unique identifier for the JWK record.
+              example: 123e4567-e89b-12d3-a456-426614174000
+            account_id:
+              type: integer
+              description: The ID of the account associated with this JWK.
+              example: 100
+            revoked_at:
+              type: string
+              format: date-time
+              description: The timestamp when the JWK was revoked, if applicable.
+              example: 2024-09-01T12:34:56Z
+              nullable: true
+            revoked_reason:
+              type: string
+              description: The reason for revoking the JWK, if applicable.
+              example: Key compromise
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+              description: The timestamp when the JWK was created.
+              example: 2024-08-06T12:34:56Z
+              nullable: true
 
 
     JwkRevoked:
