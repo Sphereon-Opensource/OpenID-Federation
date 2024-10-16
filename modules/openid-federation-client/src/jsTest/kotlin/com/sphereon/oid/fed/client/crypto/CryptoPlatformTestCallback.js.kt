@@ -22,7 +22,7 @@ class CryptoPlatformCallback : ICryptoServiceCallbackJS {
                 JSON.parse<dynamic>(Json.encodeToString(jwk)), alg = decodedJwt.header.alg ?: "RS256"
             ).then { publicKey: dynamic ->
                 val options: dynamic = js("({})")
-                options["currentDate"] = js("new Date(Date.parse(\"Aug 14, 2024 11:30:00\"))")
+                options["currentDate"] = js("new Date(Date.parse(\"Oct 14, 2024 01:00:00\"))")
 
                 Jose.jwtVerify(jwt, publicKey, options).then { verification: dynamic ->
                     verification != undefined
