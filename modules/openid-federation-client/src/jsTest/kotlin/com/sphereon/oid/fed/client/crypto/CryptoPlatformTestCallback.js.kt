@@ -24,21 +24,15 @@ class CryptoPlatformCallback : ICryptoServiceCallbackJS {
                 val options: dynamic = js("({})")
                 options["currentDate"] = js("new Date(Date.parse(\"Aug 14, 2024 11:30:00\"))")
 
-                println(options);
-
                 Jose.jwtVerify(jwt, publicKey, options).then { verification: dynamic ->
-                    println("Verification result: $verification")
                     verification != undefined
-                }.catch { error ->
-                    println("Error during JWT verification: $error")
+                }.catch {
                     false
                 }
-            }.catch { error ->
-                println("Error importing JWK: $error")
+            }.catch {
                 false
             }
         } catch (e: Throwable) {
-            println("Error: $e")
             Promise.resolve(false)
         }
     }

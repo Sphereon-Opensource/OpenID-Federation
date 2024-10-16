@@ -16,8 +16,8 @@ private val json = Json {
 }
 
 /*
-     * Used for mapping JWT token to EntityStatement object
-     */
+ * Used for mapping JWT token to EntityStatement object
+ */
 @OptIn(InternalSerializationApi::class)
 fun <T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
     val payload: JsonObject = decodeJWTComponents(jwtToken).payload

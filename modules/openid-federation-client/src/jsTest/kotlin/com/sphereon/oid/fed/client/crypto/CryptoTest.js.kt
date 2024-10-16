@@ -17,7 +17,6 @@ external object Jose {
 
 class CryptoTest {
     private val cryptoService = CryptoServiceJS.register(CryptoPlatformCallback())
-//    private val cryptoService = CryptoServiceJS.register(null)
 
     @Test
     fun testVerifyValidJwt() = runTest {
