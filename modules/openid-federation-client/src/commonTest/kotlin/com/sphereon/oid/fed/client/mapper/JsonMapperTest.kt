@@ -25,7 +25,7 @@ class JsonMapperTest {
         assertEquals("John Doe", payload["name"]?.jsonPrimitive?.content)
         assertEquals(true, payload["admin"]?.jsonPrimitive?.boolean)
 
-        assertEquals("NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc", signature?.value) // Check signature
+        assertEquals("NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc", signature) // Check signature
     }
 
     @Test

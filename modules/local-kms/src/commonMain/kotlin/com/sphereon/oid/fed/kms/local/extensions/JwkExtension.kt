@@ -16,5 +16,5 @@ fun Jwk.toJwkAdminDto(): JwkAdminDTO = JwkAdminDTO(
     x5u = this.x5u,
     x5t = this.x5t,
     x5c = this.x5c,
-    x5tHashS256 = this.x5tS256
+    x5tS256 = this.x5tS256
 )

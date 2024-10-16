@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client.trustchain
 
+import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
@@ -24,11 +25,12 @@ class SimpleCache<K, V> {
 suspend fun resolve(
     entityIdentifier: String,
     trustAnchors: Array<String>,
-    fetchService: IFetchCallbackService
+    fetchService: IFetchCallbackService,
+    cryptoService: ICryptoCallbackService
 ): MutableList<String>? {
     val cache = SimpleCache<String, String>()
     val chain: MutableList<String> = arrayListOf()
-    return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, fetchService)
+    return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, fetchService, cryptoService)
 }
 
 private suspend fun buildTrustChainRecursive(
@@ -36,7 +38,8 @@ private suspend fun buildTrustChainRecursive(
     trustAnchors: Array<String>,
     chain: MutableList<String>,
     cache: SimpleCache<String, String>,
-    fetchService: IFetchCallbackService
+    fetchService: IFetchCallbackService,
+    cryptoService: ICryptoCallbackService
 ): MutableList<String>? {
 
     val entityConfigurationJwt =
@@ -44,7 +47,9 @@ private suspend fun buildTrustChainRecursive(
 
     val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
-    // need to verify JWT
+    if (!cryptoService.verify(entityConfigurationJwt)) {
+        return null
+    }
 
     val entityStatement: EntityConfigurationStatement =
         mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return null
@@ -64,7 +69,8 @@ private suspend fun buildTrustChainRecursive(
                 chain,
                 decodedEntityConfiguration.header.kid,
                 cache,
-                fetchService
+                fetchService,
+                cryptoService
             )
         if (result != null) {
             return result
@@ -81,7 +87,8 @@ private suspend fun processAuthority(
     chain: MutableList<String>,
     lastStatementKid: String,
     cache: SimpleCache<String, String>,
-    fetchService: IFetchCallbackService
+    fetchService: IFetchCallbackService,
+    cryptoService: ICryptoCallbackService
 ): MutableList<String>? {
 
     try {
@@ -129,7 +136,7 @@ private suspend fun processAuthority(
         // Recursively build trust chain if there are authority hints
         if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
             chain.add(subordinateStatementJwt)
-            val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache, fetchService)
+            val result = buildTrustChainRecursive(authority, trustAnchors, chain, cache, fetchService, cryptoService)
             if (result != null) return result
             chain.removeLast()
         }
@@ -148,4 +155,3 @@ private fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
     }
     return false
 }
-

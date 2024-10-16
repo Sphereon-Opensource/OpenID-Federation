@@ -1516,7 +1516,7 @@ paths:
 
 components:
   schemas:
-    JwkDTO:
+    BaseJwk:
       type: object
       x-tags:
         - federation
@@ -1589,83 +1589,26 @@ components:
           description: The SHA-256 thumbprint of the X.509 certificate.
           example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
           nullable: true
+
+    JwkDTO:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
+      type: object
+      x-tags:
+        - federation
+      properties:
         revoked:
-          $ref: '#/components/schemas/JWTRevoked'
+          $ref: '#/components/schemas/JwkRevoked'
 
     Jwk:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
       type: object
       x-tags:
         - federation
       required:
         - kty
       properties:
-        kty:
-          type: string
-          description: The key type (e.g., EC, RSA).
-          example: RSA
-        crv:
-          type: string
-          description: The elliptic curve used (only for EC keys).
-          example: P-256
-          nullable: true
-        kid:
-          type: string
-          description: The key ID (optional).
-          example: 12345
-          nullable: true
-        x:
-          type: string
-          description: The X coordinate for EC keys (optional).
-          example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
-          nullable: true
-        y:
-          type: string
-          description: The Y coordinate for EC keys (optional).
-          example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
-          nullable: true
-        n:
-          type: string
-          description: The modulus for RSA keys.
-          example: modulus_value
-          nullable: true
-        e:
-          type: string
-          description: The exponent for RSA keys.
-          example: AQAB
-          nullable: true
-        alg:
-          type: string
-          description: The algorithm associated with the key.
-          example: ES256
-        use:
-          type: string
-          description: The intended use of the key (e.g., sig, enc).
-          example: sig
-          nullable: true
-        x5u:
-          type: string
-          format: uri
-          description: A URL that points to an X.509 public key certificate or certificate chain.
-          example: https://example.com/cert.pem
-          nullable: true
-        x5c:
-          type: array
-          items:
-            type: string
-            description: A base64-encoded string representing an X.509 certificate.
-            example: MIICoTCCAYkCAQ...
-          description: The X.509 certificate chain.
-          nullable: true
-        x5t:
-          type: string
-          description: The SHA-1 thumbprint of the X.509 certificate.
-          example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
-          nullable: true
-        x5tS256:
-          type: string
-          description: The SHA-256 thumbprint of the X.509 certificate.
-          example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
-          nullable: true
         d:
           type: string
           description: The private key value (for RSA and EC keys).
@@ -1698,6 +1641,8 @@ components:
           nullable: true
 
     JwkAdminDTO:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
       type: object
       x-tags:
         - federation
@@ -1715,74 +1660,6 @@ components:
           type: integer
           description: The ID of the account associated with this JWK.
           example: 100
-        kty:
-          type: string
-          description: The key type (e.g., EC, RSA).
-          example: RSA
-        crv:
-          type: string
-          description: The elliptic curve used (only for EC keys).
-          example: P-256
-          nullable: true
-        kid:
-          type: string
-          description: The key ID (optional).
-          example: 12345
-          nullable: true
-        x:
-          type: string
-          description: The X coordinate for EC keys (optional).
-          example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
-          nullable: true
-        y:
-          type: string
-          description: The Y coordinate for EC keys (optional).
-          example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
-          nullable: true
-        n:
-          type: string
-          description: The modulus for RSA keys.
-          example: modulus_value
-          nullable: true
-        e:
-          type: string
-          description: The exponent for RSA keys.
-          example: AQAB
-          nullable: true
-        alg:
-          type: string
-          description: The algorithm associated with the key.
-          example: ES256
-          nullable: true
-        use:
-          type: string
-          description: The intended use of the key (e.g., sig, enc).
-          example: sig
-          nullable: true
-        x5u:
-          type: string
-          format: uri
-          description: A URL that points to an X.509 public key certificate or certificate chain.
-          example: https://example.com/cert.pem
-          nullable: true
-        x5c:
-          type: array
-          items:
-            type: string
-            description: A base64-encoded string representing an X.509 certificate.
-            example: MIICoTCCAYkCAQ...
-          description: The X.509 certificate chain.
-          nullable: true
-        x5t:
-          type: string
-          description: The SHA-1 thumbprint of the X.509 certificate.
-          example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
-          nullable: true
-        x5t#S256:
-          type: string
-          description: The SHA-256 thumbprint of the X.509 certificate.
-          example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
-          nullable: true
         revoked_at:
           type: string
           format: date-time
@@ -1802,7 +1679,7 @@ components:
           nullable: true
 
 
-    JWTRevoked:
+    JwkRevoked:
       type: object
       x-tags:
         - federation
@@ -1849,14 +1726,23 @@ components:
             type: string
           nullable: true
 
-    JWTSignature:
+    JWT:
       type: object
-      x-tags:
-        - federation
+      description: A JWT (JSON Web Token) object, composed of a header, payload, and signature.
+      required:
+        - header
+        - payload
+        - signature
       properties:
-        value:
+        header:
+          $ref: '#/components/schemas/JWTHeader'
+        payload:
+          type: object
+          description: The payload of the JWT, typically containing claims (as JSON key-value pairs).
+          additionalProperties: true
+        signature:
           type: string
-          description: The encoded JWT signature value.
+          description: The cryptographic signature of the JWT.
 
     BaseEntityStatement:
       type: object

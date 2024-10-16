@@ -1,0 +1,36 @@
+//package com.sphereon.oid.fed.client.crypto
+//
+//data class JWTVerifyOptions(val currentDate: String? = null, val typ: String? = null)
+//
+//expect suspend fun verify(
+//    jwt: String,
+//): Boolean
+
+
+package com.sphereon.oid.fed.client.crypto
+
+import com.sphereon.oid.fed.client.types.ICallbackService
+
+
+interface ICryptoService {
+    suspend fun verify(
+        jwt: String,
+    ): Boolean
+}
+
+interface ICryptoCallbackService : ICallbackService<ICryptoService>, ICryptoService
+
+expect fun cryptoService(): ICryptoCallbackService
+
+object CryptoServiceObject : ICryptoCallbackService {
+    private lateinit var platformCallback: ICryptoService
+
+    override suspend fun verify(jwt: String): Boolean {
+        return this.platformCallback.verify(jwt)
+    }
+
+    override fun register(platformCallback: ICryptoService?): ICryptoCallbackService {
+        this.platformCallback = platformCallback!!
+        return this
+    }
+}

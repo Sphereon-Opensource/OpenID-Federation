@@ -1,13 +1,11 @@
 package com.sphereon.oid.fed.client.fetch
 
+import com.sphereon.oid.fed.client.types.ICallbackService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 
-interface ICallbackService<PlatformCallbackType> {
-    fun register(platformCallback: PlatformCallbackType?): ICallbackService<PlatformCallbackType>
-}
 
 interface IFetchService {
     fun getHttpClient(): HttpClient
@@ -37,14 +35,13 @@ object FetchServiceObject : IFetchCallbackService {
         return this.platformCallback.getHttpClient()
     }
 
-    override fun register(platformCallback: IFetchService?): IFetchCallbackService {
-
-        class DefaultPlatformCallback : IFetchService {
-            override fun getHttpClient(): HttpClient {
-                return HttpClient()
-            }
+    class DefaultPlatformCallback : IFetchService {
+        override fun getHttpClient(): HttpClient {
+            return HttpClient()
         }
+    }
 
+    override fun register(platformCallback: IFetchService?): IFetchCallbackService {
         this.platformCallback = platformCallback ?: DefaultPlatformCallback()
         this.httpClient = this.platformCallback.getHttpClient()
         return this
