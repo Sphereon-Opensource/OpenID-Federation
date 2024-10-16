@@ -6,7 +6,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.js.Date
 import kotlin.js.Promise
 
 class CryptoPlatformCallback : ICryptoServiceCallbackJS {
@@ -22,10 +21,12 @@ class CryptoPlatformCallback : ICryptoServiceCallbackJS {
             Jose.importJWK(
                 JSON.parse<dynamic>(Json.encodeToString(jwk)), alg = decodedJwt.header.alg ?: "RS256"
             ).then { publicKey: dynamic ->
-                Jose.jwtVerify(jwt, publicKey, {
-                    val currentDate = Date.parse("2021-01-01T00:00:00Z")
-                    val maxTokenAge = 0
-                }).then { verification: dynamic ->
+                val options: dynamic = js("({})")
+                options["currentDate"] = js("new Date(Date.parse(\"Aug 14, 2024 11:30:00\"))")
+
+                println(options);
+
+                Jose.jwtVerify(jwt, publicKey, options).then { verification: dynamic ->
                     println("Verification result: $verification")
                     verification != undefined
                 }.catch { error ->

@@ -101,6 +101,10 @@ private suspend fun processAuthority(
             fetchService.fetchStatement(authorityConfigurationEndpoint)
         cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
+        if (!cryptoService.verify(authorityEntityConfigurationJwt)) {
+            return null
+        }
+
         val authorityEntityConfiguration: EntityConfigurationStatement =
             mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class)
                 ?: return null
@@ -116,6 +120,11 @@ private suspend fun processAuthority(
             getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
         val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
+
+        if (!cryptoService.verify(subordinateStatementJwt)) {
+            return null
+        }
+
         val subordinateStatement: SubordinateStatement =
             mapEntityStatement(subordinateStatementJwt, SubordinateStatement::class)
                 ?: return null

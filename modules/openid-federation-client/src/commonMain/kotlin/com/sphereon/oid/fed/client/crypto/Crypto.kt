@@ -13,6 +13,12 @@ interface ICryptoCallbackService : ICallbackService<ICryptoService>, ICryptoServ
 
 expect fun cryptoService(): ICryptoCallbackService
 
+class DefaultPlatformCallback : ICryptoService {
+    override suspend fun verify(jwt: String): Boolean {
+        return verify(jwt)
+    }
+}
+
 object CryptoServiceObject : ICryptoCallbackService {
     private lateinit var platformCallback: ICryptoService
 
@@ -21,7 +27,7 @@ object CryptoServiceObject : ICryptoCallbackService {
     }
 
     override fun register(platformCallback: ICryptoService?): ICryptoCallbackService {
-        this.platformCallback = platformCallback!!
+        this.platformCallback = platformCallback ?: DefaultPlatformCallback()
         return this
     }
 }
