@@ -58,7 +58,6 @@ kotlin {
                 implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
-                implementation(libs.kermit.logging)
             }
         }
         val commonTest by getting {
