@@ -89,7 +89,6 @@ open class CryptoServiceJSAdapter(private val cryptoServiceCallbackJS: CryptoSer
 
 object CryptoServiceJSAdapterObject : CryptoServiceJSAdapter(CryptoServiceJS)
 
-
 actual fun cryptoService(): ICryptoCallbackService = CryptoServiceJSAdapterObject
 
 @JsModule("jose")
