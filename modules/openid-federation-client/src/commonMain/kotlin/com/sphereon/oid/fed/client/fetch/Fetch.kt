@@ -24,11 +24,12 @@ object FetchServiceObject : IFetchCallbackService {
     private lateinit var httpClient: HttpClient
 
     override suspend fun fetchStatement(endpoint: String): String {
-        return httpClient.get(endpoint) {
-            headers {
-                append(HttpHeaders.Accept, "application/entity-statement+jwt")
-            }
-        }.body()
+        return httpClient
+            .get(endpoint) {
+                headers {
+                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                }
+            }.body()
     }
 
     override fun getHttpClient(): HttpClient {

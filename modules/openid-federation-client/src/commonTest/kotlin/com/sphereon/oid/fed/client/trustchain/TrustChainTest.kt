@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.client.trustchain
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -27,7 +28,7 @@ class PlatformCallback : IFetchService {
 }
 
 class CryptoServiceCallback : ICryptoService {
-    override suspend fun verify(jwt: String): Boolean {
+    override suspend fun verify(jwt: String, jwk: Jwk): Boolean {
         return true
     }
 }
@@ -44,7 +45,8 @@ class TrustChainTest() {
         )
 
         assertNotNull(trustChain)
-        assertEquals(trustChain.size, 4)
+
+        assertEquals(4, trustChain.size)
 
         assertEquals(
             trustChain[0],

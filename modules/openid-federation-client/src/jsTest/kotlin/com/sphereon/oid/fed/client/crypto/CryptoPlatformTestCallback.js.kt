@@ -1,25 +1,18 @@
 package com.sphereon.oid.fed.client.crypto
 
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.js.Promise
 
 class CryptoPlatformCallback : ICryptoServiceCallbackJS {
-    override fun verify(jwt: String): Promise<Boolean> {
+    override fun verify(jwt: String, key: Jwk): Promise<Boolean> {
         return try {
             val decodedJwt = decodeJWTComponents(jwt)
-            val kid = decodedJwt.header.kid
-
-            val jwk = decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray
-                ?.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content == kid }
-                ?: throw Exception("JWK not found")
 
             Jose.importJWK(
-                JSON.parse<dynamic>(Json.encodeToString(jwk)), alg = decodedJwt.header.alg ?: "RS256"
+                JSON.parse<dynamic>(Json.encodeToString(key)), alg = decodedJwt.header.alg ?: "RS256"
             ).then { publicKey: dynamic ->
                 val options: dynamic = js("({})")
                 options["currentDate"] = js("new Date(Date.parse(\"Oct 14, 2024 01:00:00\"))")

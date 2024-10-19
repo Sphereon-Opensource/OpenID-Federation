@@ -9,7 +9,12 @@ import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
 
 class SimpleCache<K, V> {
@@ -28,7 +33,20 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
     ): MutableList<String>? {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
-        return buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache)
+        return try {
+            buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache)
+        } catch (_: Exception) {
+            // Log error
+            null
+        }
+    }
+
+    private fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
+        val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
+
+        if (key == null) return null
+
+        return Json.decodeFromJsonElement(Jwk.serializer(), key)
     }
 
     private suspend fun buildTrustChainRecursive(
@@ -37,12 +55,17 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
         chain: MutableList<String>,
         cache: SimpleCache<String, String>
     ): MutableList<String>? {
-
         val entityConfigurationJwt = this.fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
-
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
-        if (!cryptoService.verify(entityConfigurationJwt)) {
+        val key = findKeyInJwks(
+            decodedEntityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
+            decodedEntityConfiguration.header.kid
+        )
+
+        if (key == null) return null
+
+        if (!cryptoService.verify(entityConfigurationJwt, key)) {
             return null
         }
 
@@ -64,6 +87,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
                 decodedEntityConfiguration.header.kid,
                 cache
             )
+
             if (result != null) {
                 return result
             }
@@ -90,7 +114,21 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             val authorityEntityConfigurationJwt = fetchService.fetchStatement(authorityConfigurationEndpoint)
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
-            if (!cryptoService.verify(authorityEntityConfigurationJwt)) {
+            val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
+            val kid = decodedJwt.header.kid
+
+            val key = findKeyInJwks(
+                decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
+                kid
+            )
+
+            if (key == null) return null
+
+            if (!cryptoService.verify(
+                    authorityEntityConfigurationJwt,
+                    key
+                )
+            ) {
                 return null
             }
 
@@ -109,7 +147,17 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
 
             val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
 
-            if (!cryptoService.verify(subordinateStatementJwt)) {
+            val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
+
+            val subordinateStatementKey = findKeyInJwks(
+                decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray
+                    ?: return null,
+                decodedSubordinateStatement.header.kid.trim()
+            )
+
+            if (subordinateStatementKey == null) return null
+
+            if (!cryptoService.verify(subordinateStatementJwt, subordinateStatementKey)) {
                 return null
             }
 
