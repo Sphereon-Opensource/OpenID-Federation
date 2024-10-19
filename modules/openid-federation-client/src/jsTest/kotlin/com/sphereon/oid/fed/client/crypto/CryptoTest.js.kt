@@ -1,14 +1,8 @@
 package com.sphereon.oid.fed.client.crypto
 
-import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.await
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.js.Promise
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,25 +16,6 @@ external object Jose {
 
 class CryptoTest {
     private val cryptoService = CryptoServiceJS.register(CryptoPlatformCallback())
-
-    private fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
-        val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
-
-        if (key == null) return null
-
-        return Json.decodeFromJsonElement(Jwk.serializer(), key)
-    }
-
-    private fun getKeyFromJwt(jwt: String): Jwk {
-        val decodedJwt = decodeJWTComponents(jwt)
-
-        val key = findKeyInJwks(
-            decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: JsonArray(emptyList()),
-            decodedJwt.header.kid
-        ) ?: throw IllegalStateException("Key not found")
-
-        return key
-    }
 
     @Test
     fun testVerifyValidJwt() = runTest {

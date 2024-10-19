@@ -5,5 +5,5 @@ fun getEntityConfigurationEndpoint(iss: String): String {
 }
 
 fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String {
-    return "${fetchEndpoint.trim('"')}?sub=$sub"
+    return "${fetchEndpoint}?sub=$sub"
 }

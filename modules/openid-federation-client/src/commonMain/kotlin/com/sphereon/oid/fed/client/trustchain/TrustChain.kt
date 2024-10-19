@@ -42,7 +42,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
     }
 
     private fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
-        val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
+        val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content == kid }
 
         if (key == null) return null
 
@@ -140,7 +140,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             if (federationEntityMetadata == null || !federationEntityMetadata.containsKey("federation_fetch_endpoint")) return null
 
             val authorityEntityFetchEndpoint =
-                federationEntityMetadata["federation_fetch_endpoint"]?.toString()?.trim('"') ?: return null
+                federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content ?: return null
 
             val subordinateStatementEndpoint =
                 getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
@@ -152,7 +152,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             val subordinateStatementKey = findKeyInJwks(
                 decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray
                     ?: return null,
-                decodedSubordinateStatement.header.kid.trim()
+                decodedSubordinateStatement.header.kid
             )
 
             if (subordinateStatementKey == null) return null
