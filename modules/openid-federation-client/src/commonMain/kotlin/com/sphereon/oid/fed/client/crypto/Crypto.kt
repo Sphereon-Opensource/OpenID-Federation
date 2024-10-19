@@ -44,7 +44,7 @@ expect fun cryptoService(): ICryptoCallbackService
 
 expect suspend fun verifyImpl(jwt: String, key: Jwk): Boolean
 
-private fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
+fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
     val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
 
     if (key == null) return null

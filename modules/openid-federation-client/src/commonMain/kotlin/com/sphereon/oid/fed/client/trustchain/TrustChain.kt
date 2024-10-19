@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.client.trustchain
 
 import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
+import com.sphereon.oid.fed.client.crypto.findKeyInJwks
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
@@ -9,8 +10,6 @@ import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -39,14 +38,6 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             // Log error
             null
         }
-    }
-
-    private fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
-        val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content == kid }
-
-        if (key == null) return null
-
-        return Json.decodeFromJsonElement(Jwk.serializer(), key)
     }
 
     private suspend fun buildTrustChainRecursive(
