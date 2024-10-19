@@ -1,16 +1,9 @@
 package com.sphereon.oid.fed.client.helpers
 
 fun getEntityConfigurationEndpoint(iss: String): String {
-    val sb = StringBuilder()
-    sb.append(iss.trim('"'))
-    sb.append("/.well-known/openid-federation")
-    return sb.toString()
+    return "${if (iss.endsWith("/")) iss.dropLast(1) else iss}/.well-known/openid-federation"
 }
 
 fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String {
-    val sb = StringBuilder()
-    sb.append(fetchEndpoint.trim('"'))
-    sb.append("?sub=")
-    sb.append(sub)
-    return sb.toString()
+    return "${fetchEndpoint.trim('"')}?sub=$sub"
 }
