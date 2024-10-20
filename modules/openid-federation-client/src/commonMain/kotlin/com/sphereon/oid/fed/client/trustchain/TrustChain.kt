@@ -69,7 +69,11 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
 
         val authorityHints = entityStatement.authorityHints ?: return null
 
-        for (authority in authorityHints) {
+        val reorderedAuthorityHints = authorityHints.sortedBy { hint ->
+            if (trustAnchors.contains(hint)) 0 else 1
+        }
+
+        for (authority in reorderedAuthorityHints) {
             val result = processAuthority(
                 authority,
                 entityIdentifier,
@@ -161,6 +165,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             // Check if the entity key exists in subordinate statement
             val entityKeyExistsInSubordinateStatement = checkKidInJwks(keys, lastStatementKid)
             if (!entityKeyExistsInSubordinateStatement) return null
+
             // If authority is in trust anchors, return the completed chain
             if (trustAnchors.contains(authority)) {
                 chain.add(subordinateStatementJwt)
