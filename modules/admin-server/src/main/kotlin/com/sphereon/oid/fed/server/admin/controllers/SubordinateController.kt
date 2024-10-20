@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.openapi.models.SubordinateAdminDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.Subordinate
-import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.extensions.toSubordinateAdminDTO
 import kotlinx.serialization.json.JsonObject
@@ -41,7 +40,7 @@ class SubordinateController {
         @PathVariable accountUsername: String,
         @PathVariable id: Int,
         @RequestBody jwk: JsonObject
-    ): SubordinateJwk {
+    ): SubordinateAdminJwkDto {
         return subordinateService.createSubordinateJwk(accountUsername, id, jwk)
     }
 

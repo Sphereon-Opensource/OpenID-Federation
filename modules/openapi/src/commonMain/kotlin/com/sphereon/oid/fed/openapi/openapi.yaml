@@ -1516,7 +1516,7 @@ paths:
 
 components:
   schemas:
-    BaseJwk:
+    Jwk:
       type: object
       x-tags:
         - federation
@@ -1587,25 +1587,38 @@ components:
           description: The SHA-1 thumbprint of the X.509 certificate.
           example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
           nullable: true
-        x5tS256: # Renamed to comply with OpenAPI restrictions
+        x5tS256:
           type: string
           description: The SHA-256 thumbprint of the X.509 certificate.
           example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
           nullable: true
 
-    JwkDTO:
+    EntityJwkDTO:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
           properties:
             revoked:
-              $ref: '#/components/schemas/JwkRevoked'
+              $ref: '#/components/schemas/EntityJwkRevoked'
 
-    Jwk:
+    EntityJwkRevoked:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - revoked_at
+      properties:
+        revoked_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    JwkWithPrivateKey:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
@@ -1643,7 +1656,7 @@ components:
 
     JwkAdminDTO:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
@@ -1679,7 +1692,7 @@ components:
               example: 2024-08-06T12:34:56Z
               nullable: true
 
-    SubordinateAdminJwkDto:
+    SubordinateJwkDto:
       type: object
       x-tags:
         - federation
@@ -1701,19 +1714,6 @@ components:
           example: 2024-08-06T12:34:56Z
           nullable: false
 
-    JwkRevoked:
-      type: object
-      x-tags:
-        - federation
-      required:
-        - revoked_at
-      properties:
-        revoked_at:
-          type: string
-          format: date-time
-        reason:
-          type: string
-
     JWKS:
       type: object
       x-tags:
@@ -1722,7 +1722,7 @@ components:
         keys:
           type: array
           items:
-            $ref: '#/components/schemas/JwkDTO'
+            $ref: '#/components/schemas/Jwk'
 
     JWTHeader:
       type: object
@@ -1791,19 +1791,23 @@ components:
           format: date-time
           description: The time the statement was issued.
         jwks:
-          type:
-            object
-          properties:
-            keys:
-              type: array
-              items:
-                $ref: '#/components/schemas/Jwk'
+          $ref: '#/components/schemas/EntityJwks'
         metadata:
           additionalProperties: true
         crit:
           type: array
           items:
             type: string
+
+    EntityJwks:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/Jwk'
 
     EntityConfigurationStatement:
       allOf:
@@ -3373,7 +3377,7 @@ components:
         keys:
           type: array
           items:
-            $ref: '#/components/schemas/JwkDTO'
+            $ref: '#/components/schemas/Jwk'
 
     ResolveResponse:
       type: object

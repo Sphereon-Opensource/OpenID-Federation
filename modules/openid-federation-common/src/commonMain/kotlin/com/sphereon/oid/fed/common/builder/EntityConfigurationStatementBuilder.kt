@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.BaseEntityStatementJwks
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.JsonObject
@@ -33,8 +33,8 @@ class EntityConfigurationStatementBuilder {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    private fun createJwks(jwks: List<Jwk>): BaseEntityStatementJwks {
-        return BaseEntityStatementJwks(jwks.toTypedArray())
+    private fun createJwks(jwks: List<Jwk>): EntityJwks {
+        return EntityJwks(jwks.toTypedArray())
     }
 
     fun build(): EntityConfigurationStatement {

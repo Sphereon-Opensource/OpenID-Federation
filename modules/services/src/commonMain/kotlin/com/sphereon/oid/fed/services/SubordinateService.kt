@@ -123,7 +123,7 @@ class SubordinateService {
         return jwt
     }
 
-    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwk {
+    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateAdminJwkDto {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -135,6 +135,7 @@ class SubordinateService {
         }
 
         return subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id).executeAsOne()
+            .toSubordinateAdminJwkDTO()
     }
 
     fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateAdminJwkDto> {

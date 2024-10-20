@@ -1,20 +1,16 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.BaseEntityStatementJwks
+import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 
 class SubordinateStatementBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private var jwks: MutableList<Jwk> = mutableListOf();
+    private var jwks: MutableList<Jwk> = mutableListOf()
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
@@ -50,22 +46,15 @@ class SubordinateStatementBuilder {
         this.source_endpoint = sourceEndpoint
     }
 
-    private fun createJwks(jwks: MutableList<Jwk>): BaseEntityStatementJwks {
-        val jsonArray: JsonArray =
-            Json.encodeToJsonElement(ListSerializer(Jwk.serializer()), jwks) as JsonArray
-
-        return buildJsonObject {
-            put("keys", jsonArray)
-        } as BaseEntityStatementJwks
-    }
-
     fun build(): SubordinateStatement {
         return SubordinateStatement(
             iss = iss ?: throw IllegalArgumentException("iss must be provided"),
             sub = sub ?: throw IllegalArgumentException("sub must be provided"),
             exp = exp ?: throw IllegalArgumentException("exp must be provided"),
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
-            jwks = createJwks(jwks),
+            jwks = EntityJwks(
+                propertyKeys = jwks.toTypedArray()
+            ),
             crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
             metadata = JsonObject(metadata),
             metadataPolicy = JsonObject(metadata_policy),
