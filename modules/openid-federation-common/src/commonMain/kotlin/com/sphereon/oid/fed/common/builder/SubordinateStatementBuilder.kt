@@ -3,15 +3,18 @@ package com.sphereon.oid.fed.common.builder
 import com.sphereon.oid.fed.openapi.models.BaseEntityStatementJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
 
 class SubordinateStatementBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private lateinit var jwks: MutableList<Jwk>
+    private var jwks: MutableList<Jwk> = mutableListOf();
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
@@ -22,8 +25,6 @@ class SubordinateStatementBuilder {
     fun sub(sub: String) = apply { this.sub = sub }
     fun exp(exp: Int) = apply { this.exp = exp }
     fun iat(iat: Int) = apply { this.iat = iat }
-
-    fun jwks(jwk: Jwk) = apply { this.jwks.add(jwk) }
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
@@ -41,13 +42,21 @@ class SubordinateStatementBuilder {
         this.crit.add(claim)
     }
 
+    fun jwks(jwk: Jwk) = apply {
+        this.jwks.add(jwk)
+    }
+
     fun sourceEndpoint(sourceEndpoint: String) = apply {
         this.source_endpoint = sourceEndpoint
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     private fun createJwks(jwks: MutableList<Jwk>): BaseEntityStatementJwks {
-        return BaseEntityStatementJwks(jwks.toTypedArray())
+        val jsonArray: JsonArray =
+            Json.encodeToJsonElement(ListSerializer(Jwk.serializer()), jwks) as JsonArray
+
+        return buildJsonObject {
+            put("keys", jsonArray)
+        } as BaseEntityStatementJwks
     }
 
     fun build(): SubordinateStatement {

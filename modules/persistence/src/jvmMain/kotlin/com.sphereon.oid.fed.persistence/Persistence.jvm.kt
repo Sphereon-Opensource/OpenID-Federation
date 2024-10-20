@@ -11,6 +11,7 @@ import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQuerie
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
 import com.sphereon.oid.fed.persistence.models.KeyQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 
@@ -24,6 +25,7 @@ actual object Persistence {
     actual val critQueries: CritQueries
     actual val subordinateStatementQueries: SubordinateStatementQueries
     actual val subordinateJwkQueries: SubordinateJwkQueries
+    actual val subordinateMetadataQueries: SubordinateMetadataQueries
 
     init {
         val driver = getDriver()
@@ -39,6 +41,7 @@ actual object Persistence {
         critQueries = database.critQueries
         subordinateStatementQueries = database.subordinateStatementQueries
         subordinateJwkQueries = database.subordinateJwkQueries
+        subordinateMetadataQueries = database.subordinateMetadataQueries
     }
 
     private fun getDriver(): SqlDriver {

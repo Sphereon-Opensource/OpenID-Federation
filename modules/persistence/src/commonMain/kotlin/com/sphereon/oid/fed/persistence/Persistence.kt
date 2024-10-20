@@ -7,6 +7,7 @@ import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQuerie
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
 import com.sphereon.oid.fed.persistence.models.KeyQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 
@@ -20,4 +21,5 @@ expect object Persistence {
     val critQueries: CritQueries
     val subordinateStatementQueries: SubordinateStatementQueries
     val subordinateJwkQueries: SubordinateJwkQueries
+    val subordinateMetadataQueries: SubordinateMetadataQueries
 }

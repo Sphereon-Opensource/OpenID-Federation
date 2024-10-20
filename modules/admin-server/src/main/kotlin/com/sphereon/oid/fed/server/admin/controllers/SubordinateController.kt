@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateAdminDTO
+import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
@@ -48,7 +49,7 @@ class SubordinateController {
     fun getSubordinateJwks(
         @PathVariable accountUsername: String,
         @PathVariable id: Int
-    ): Array<SubordinateJwk> {
+    ): Array<SubordinateAdminJwkDto> {
         return subordinateService.getSubordinateJwks(accountUsername, id)
     }
 
