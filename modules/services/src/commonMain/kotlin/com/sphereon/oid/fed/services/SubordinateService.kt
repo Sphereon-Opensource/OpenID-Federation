@@ -3,7 +3,7 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.builder.SubordinateStatementBuilder
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
+import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadataDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.Persistence
@@ -123,7 +123,7 @@ class SubordinateService {
         return jwt
     }
 
-    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateAdminJwkDto {
+    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -138,7 +138,7 @@ class SubordinateService {
             .toSubordinateAdminJwkDTO()
     }
 
-    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateAdminJwkDto> {
+    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
