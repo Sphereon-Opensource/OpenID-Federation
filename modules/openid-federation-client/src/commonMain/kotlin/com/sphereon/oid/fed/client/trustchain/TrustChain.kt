@@ -28,12 +28,12 @@ class SimpleCache<K, V> {
 
 class TrustChain(private val fetchService: IFetchCallbackService, private val cryptoService: ICryptoCallbackService) {
     suspend fun resolve(
-        entityIdentifier: String, trustAnchors: Array<String>
+        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
     ): MutableList<String>? {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return try {
-            buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache)
+            buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
         } catch (_: Exception) {
             // Log error
             null
@@ -44,8 +44,12 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
         entityIdentifier: String,
         trustAnchors: Array<String>,
         chain: MutableList<String>,
-        cache: SimpleCache<String, String>
+        cache: SimpleCache<String, String>,
+        depth: Int,
+        maxDepth: Int
     ): MutableList<String>? {
+        if(depth == maxDepth) return null
+
         val entityConfigurationJwt = this.fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
@@ -80,7 +84,9 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
                 trustAnchors,
                 chain,
                 decodedEntityConfiguration.header.kid,
-                cache
+                cache,
+                depth + 1,
+                maxDepth
             )
 
             if (result != null) {
@@ -97,7 +103,9 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
         trustAnchors: Array<String>,
         chain: MutableList<String>,
         lastStatementKid: String,
-        cache: SimpleCache<String, String>
+        cache: SimpleCache<String, String>,
+        depth: Int,
+        maxDepth: Int
     ): MutableList<String>? {
 
         try {
@@ -177,7 +185,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
                 chain.add(subordinateStatementJwt)
                 val result =
-                    buildTrustChainRecursive(authority, trustAnchors, chain, cache)
+                    buildTrustChainRecursive(authority, trustAnchors, chain, cache, depth, maxDepth)
                 if (result != null) return result
                 chain.removeLast()
             }
