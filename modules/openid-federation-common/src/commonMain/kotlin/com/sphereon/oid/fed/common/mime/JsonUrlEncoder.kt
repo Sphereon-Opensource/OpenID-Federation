@@ -4,6 +4,7 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 private val qpAllowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~".toSet()
@@ -14,6 +15,7 @@ private val qpAllowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
  * input   an input string
  * @return URL encoded String
  */
+@OptIn(ExperimentalJsExport::class)
 @JsExport
 fun urlEncodeValue(input: String): String {
     return buildString {
