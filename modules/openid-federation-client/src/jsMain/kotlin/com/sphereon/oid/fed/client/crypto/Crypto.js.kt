@@ -30,6 +30,8 @@ external interface ICallbackCryptoServiceJS<PlatformCallbackType> {
     fun register(platformCallback: PlatformCallbackType?): ICallbackCryptoServiceJS<PlatformCallbackType>
 }
 
+@JsExport
+@JsName("ICryptoServiceCallback")
 external interface ICryptoServiceCallbackJS {
     fun verify(
         jwt: String,
