@@ -21,6 +21,9 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+}
 
 dependencyResolutionManagement {
     repositories {
@@ -48,4 +51,6 @@ include(":modules:federation-server")
 include(":modules:openapi")
 include(":modules:persistence")
 include(":modules:services")
-include("modules:local-kms")
+include(":modules:local-kms")
+include(":modules:openid-federation-client")
+include(":modules:logger")

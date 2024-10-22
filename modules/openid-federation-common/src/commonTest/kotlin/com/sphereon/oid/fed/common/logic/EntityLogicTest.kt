@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.common.logic
 import EntityLogic
 import EntityType
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityJwks
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
@@ -49,7 +50,7 @@ class EntityLogicTest {
             iat = 0,
             iss = "",
             sub = "",
-            jwks = JsonObject(emptyMap())
+            jwks = EntityJwks()
         )
 
         assertEquals(EntityType.UNDEFINED, entityLogic.getEntityType(entityStatement))

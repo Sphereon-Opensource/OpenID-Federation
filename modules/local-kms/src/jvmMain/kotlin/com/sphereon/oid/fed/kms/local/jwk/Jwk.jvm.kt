@@ -4,11 +4,11 @@ import com.nimbusds.jose.Algorithm
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import java.util.*
 
 
-actual fun generateKeyPair(): Jwk {
+actual fun generateKeyPair(): JwkWithPrivateKey {
     try {
         val ecKey: ECKey = ECKeyGenerator(Curve.P_256)
             .keyIDFromThumbprint(true)
@@ -16,7 +16,7 @@ actual fun generateKeyPair(): Jwk {
             .issueTime(Date())
             .generate()
 
-        return Jwk(
+        return JwkWithPrivateKey(
             d = ecKey.d.toString(),
             alg = ecKey.algorithm.name,
             crv = ecKey.curve.name,

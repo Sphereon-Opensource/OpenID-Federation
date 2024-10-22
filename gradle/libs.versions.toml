@@ -17,6 +17,7 @@ kotlinxSerializationJson = "1.7.0-RC"
 springboot = "3.3.1"
 springDependencyManagement = "1.1.5"
 kermitLogging = "2.0.4"
+kotlinxDatetime = "0.6.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -42,6 +43,8 @@ postgres = { module = "org.postgresql:postgresql" }
 springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers"}
 testcontainer-postgres = { group = "org.testcontainers", name = "postgresql"}
 testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter"}
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

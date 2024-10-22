@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadata
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-
 fun EntityConfigurationMetadata.toEntityConfigurationMetadataDTO(): EntityConfigurationMetadataDTO {
     return EntityConfigurationMetadataDTO(
         id = this.id,
