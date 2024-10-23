@@ -13,7 +13,6 @@ FROM openjdk:21-jdk as runner
 
 WORKDIR /app
 
-COPY .env .env
 COPY --from=builder /app/modules/federation-server/build/libs/federation-server-0.0.1.jar ./federation-server-0.0.1.jar
 
 ENTRYPOINT ["java", "-jar", "federation-server-0.0.1.jar"]
