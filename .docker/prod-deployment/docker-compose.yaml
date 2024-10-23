@@ -1,3 +1,5 @@
+version: '3.9'
+
 services:
   db:
     image: postgres:latest
@@ -6,17 +8,16 @@ services:
       POSTGRES_USER: ${DATASOURCE_USER}
       POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
       POSTGRES_DB: ${DATASOURCE_DB}
-    ports:
-      - "5436:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /mnt/openid-federation/volumes/postgres:/var/lib/postgresql/data
     networks:
-      - openid_network
+      - backend
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -d ${DATASOURCE_DB} -U ${DATASOURCE_USER}" ]
       interval: 3s
       timeout: 5s
       retries: 20
+    restart: unless-stopped
 
   local-kms-db:
     image: postgres:latest
@@ -25,12 +26,10 @@ services:
       POSTGRES_USER: ${LOCAL_KMS_DATASOURCE_USER}
       POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
       POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
-    ports:
-      - "5437:5432"
     volumes:
-      - local_kms_data:/var/lib/postgresql/data
+      - /mnt/openid-federation/volumes/local-kms:/var/lib/postgresql/data
     networks:
-      - openid_network
+      - backend
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -d ${LOCAL_KMS_DATASOURCE_DB} -U ${LOCAL_KMS_DATASOURCE_USER}" ]
       interval: 3s
@@ -38,11 +37,7 @@ services:
       retries: 20
 
   federation-server:
-    build:
-      context: .
-      dockerfile: ./.docker/federation-server/Dockerfile
-    ports:
-      - "8080:8080"
+    image: sphereonregistry.azurecr.io/federation-server:latest
     container_name: openid-federation-server
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}
@@ -55,20 +50,28 @@ services:
       LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
       LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+    volumes:
+      - ./config/federation-server/application.properties:/app/application.properties
     depends_on:
       admin-server:
         condition: service_started
       db:
         condition: service_healthy
     networks:
-      - openid_network
+      - frontend
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=frontend"
+      - "traefik.http.routers.federation-server.entrypoints=websecure"
+      - "traefik.http.routers.federation-server.rule=Host(`${FEDERATION_HOSTS}`)"
+      - "traefik.http.routers.federation-server.tls.certresolver=acmeresolver"
+      - "traefik.http.services.federation-server.loadbalancer.server.port=8080"
+      - "traefik.http.services.federation-server.loadbalancer.server.scheme=http"
+    restart: unless-stopped
 
   admin-server:
-    build:
-      context: .
-      dockerfile: ./.docker/admin-server/Dockerfile
-    ports:
-      - "8081:8080"
+    image: sphereonregistry.azurecr.io/federation-admin-server:latest
     container_name: openid-federation-server-admin
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}
@@ -81,19 +84,31 @@ services:
       LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
       LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-
+    volumes:
+      - ./config/admin-server/application.properties:/app/application.properties
     depends_on:
       db:
         condition: service_healthy
       local-kms-db:
         condition: service_healthy
     networks:
-      - openid_network
+      - frontend
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=frontend"
+      - "traefik.http.routers.federation-admin.entrypoints=websecure"
+      - "traefik.http.routers.federation-admin.rule=Host(`${FEDERATION_ADMIN_HOSTS}`)"
+      - "traefik.http.routers.federation-admin.tls.certresolver=acmeresolver"
+      - "traefik.http.services.federation-admin.loadbalancer.server.port=8080"
+      - "traefik.http.services.federation-admin.loadbalancer.server.scheme=http"
+         # IP Whitelist middleware
+      - "traefik.http.routers.federation-admin.middlewares=admin-whitelist-sourceip"
+      - "traefik.http.middlewares.admin-whitelist-sourceip.ipwhitelist.sourcerange=${ADMIN_IP_WHITELIST}"
+    restart: unless-stopped
 
 networks:
-  openid_network:
+  frontend:
+    external: true
+  backend:
     driver: bridge
-
-volumes:
-  postgres_data:
-  local_kms_data:
