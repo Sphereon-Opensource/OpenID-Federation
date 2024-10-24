@@ -18,7 +18,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
-import kotlin.js.JsExport
 
 class SimpleCache<K, V> {
     private val cacheMap = mutableMapOf<K, V>()
@@ -30,7 +29,6 @@ class SimpleCache<K, V> {
     }
 }
 
-@JsExport
 class TrustChain(private val fetchService: IFetchCallbackMarkerType?, private val cryptoService: ICryptoCallbackMarkerType?) {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5

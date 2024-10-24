@@ -43,10 +43,10 @@ abstract class AbstractFetchService<CallbackServiceType>(open val platformCallba
 
     protected fun assertEnabled() {
         if (!isEnabled()) {
-            //FetchConst.LOG.info("CRYPTO verify has been disabled")
+            FetchConst.LOG.info("CRYPTO verify has been disabled")
             throw IllegalStateException("CRYPTO service is disable; cannot verify")
         } else if (this.platformCallback == null) {
-            //FetchConst.LOG.error("CRYPTO callback is not registered")
+            FetchConst.LOG.error("CRYPTO callback is not registered")
             throw IllegalStateException("CRYPTO has not been initialized. Please register your CryptoCallback implementation, or register a default implementation")
         }
     }

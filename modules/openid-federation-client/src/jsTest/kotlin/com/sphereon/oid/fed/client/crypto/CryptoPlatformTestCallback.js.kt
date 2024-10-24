@@ -6,7 +6,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.js.Promise
 
-class CryptoPlatformCallback : ICryptoServiceCallbackJS {
+class CryptoPlatformCallback : ICryptoCallbackServiceJS {
     override fun verify(jwt: String, key: Jwk): Promise<Boolean> {
         return try {
             val decodedJwt = decodeJWTComponents(jwt)

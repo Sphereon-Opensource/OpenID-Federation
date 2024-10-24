@@ -5,8 +5,6 @@ plugins {
     kotlin("plugin.serialization") version "2.0.0"
 }
 
-val ktorVersion = "3.0.0-beta-2"
-
 repositories {
     mavenCentral()
     mavenLocal()
@@ -44,15 +42,15 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-auth:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
-                implementation(libs.kermit.logging)
+                implementation(projects.modules.logger)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.auth)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.datetime)
             }
         }
@@ -61,21 +59,21 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("io.ktor:ktor-client-mock:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-cio:$ktorVersion")
+                implementation(libs.ktor.client.cio)
                 implementation("com.nimbusds:nimbus-jose-jwt:9.40")
             }
         }
 
         val jsMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-js:$ktorVersion")
+                implementation(libs.ktor.client.js)
                 implementation(npm("jose", "5.9.4"))
             }
         }

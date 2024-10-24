@@ -49,10 +49,10 @@ abstract class AbstractCryptoService<CallbackServiceType>(open val platformCallb
 
     protected fun assertEnabled() {
         if (!isEnabled()) {
-            //CryptoConst.LOG.info("CRYPTO verify has been disabled")
+            CryptoConst.LOG.info("CRYPTO verify has been disabled")
             throw IllegalStateException("CRYPTO service is disable; cannot verify")
         } else if (this.platformCallback == null) {
-            //CryptoConst.LOG.error("CRYPTO callback is not registered")
+            CryptoConst.LOG.error("CRYPTO callback is not registered")
             throw IllegalStateException("CRYPTO has not been initialized. Please register your CryptoCallback implementation, or register a default implementation")
         }
     }
@@ -68,35 +68,6 @@ class CryptoService(override val platformCallback: ICryptoCallbackService = Defa
     }
 
 }
-
-// ###########################################################################
-
-
-//class DefaultPlatformCallback : ICryptoCallbackService {
-//    override suspend fun verify(jwt: String, key: Jwk): Boolean {
-//        return verifyImpl(jwt, key)
-//    }
-//}
-//
-//object CryptoServiceObject : ICryptoCallbackService {
-//    private lateinit var platformCallback: ICryptoCallbackService
-//
-//    override suspend fun verify(jwt: String, key: Jwk): Boolean {
-//        if (!::platformCallback.isInitialized) {
-//            throw IllegalStateException("CryptoServiceObject not initialized")
-//        }
-//        return platformCallback.verify(jwt, key)
-//    }
-//
-//    override fun register(platformCallback: ICryptoCallbackService?): ICryptoCallbackService {
-//        this.platformCallback = platformCallback ?: DefaultPlatformCallback()
-//        return this
-//    }
-//}
-
-//expect fun cryptoService(): ICryptoCallbackService
-//
-//expect suspend fun verifyImpl(jwt: String, key: Jwk): Boolean
 
 fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
     val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
