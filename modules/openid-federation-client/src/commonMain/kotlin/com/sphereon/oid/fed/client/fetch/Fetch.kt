@@ -1,50 +1,68 @@
 package com.sphereon.oid.fed.client.fetch
 
-import com.sphereon.oid.fed.client.types.ICallbackService
+import com.sphereon.oid.fed.client.service.DefaultCallbacks
+import com.sphereon.oid.fed.client.service.ICallbackService
 import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import kotlin.js.JsExport
 
+expect interface IFetchCallbackMarkerType
+interface IFetchMarkerType
 
-interface IFetchService {
-    fun getHttpClient(): HttpClient
-}
-
-interface IFetchServiceInternal {
+@JsExport.Ignore
+interface IFetchCallbackService: IFetchCallbackMarkerType {
     suspend fun fetchStatement(
         endpoint: String
     ): String
+    suspend fun getHttpClient(): HttpClient
 }
 
-interface IFetchCallbackService : ICallbackService<IFetchService>, IFetchService, IFetchServiceInternal
+@JsExport.Ignore
+interface IFetchService: IFetchMarkerType {
+    suspend fun fetchStatement(
+        endpoint: String
+    ): String
+    suspend fun getHttpClient(): HttpClient
+}
 
-object FetchServiceObject : IFetchCallbackService {
-    private lateinit var platformCallback: IFetchService
-    private lateinit var httpClient: HttpClient
+expect fun fetchService(platformCallback: IFetchCallbackMarkerType = DefaultCallbacks.fetchService()): IFetchService
 
-    override suspend fun fetchStatement(endpoint: String): String {
-        return httpClient
-            .get(endpoint) {
-                headers {
-                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
-                }
-            }.body()
+abstract class AbstractFetchService<CallbackServiceType>(open val platformCallback: CallbackServiceType): ICallbackService<CallbackServiceType> {
+    private var disabled = false
+
+    override fun isEnabled(): Boolean {
+        return !this.disabled
     }
 
-    override fun getHttpClient(): HttpClient {
-        return this.platformCallback.getHttpClient()
+    override fun disable() = apply {
+        this.disabled = true
     }
 
-    class DefaultPlatformCallback : IFetchService {
-        override fun getHttpClient(): HttpClient {
-            return HttpClient()
+    override fun enable() = apply {
+        this.disabled = false
+    }
+
+    protected fun assertEnabled() {
+        if (!isEnabled()) {
+            //FetchConst.LOG.info("CRYPTO verify has been disabled")
+            throw IllegalStateException("CRYPTO service is disable; cannot verify")
+        } else if (this.platformCallback == null) {
+            //FetchConst.LOG.error("CRYPTO callback is not registered")
+            throw IllegalStateException("CRYPTO has not been initialized. Please register your CryptoCallback implementation, or register a default implementation")
         }
     }
+}
 
-    override fun register(platformCallback: IFetchService?): IFetchCallbackService {
-        this.platformCallback = platformCallback ?: DefaultPlatformCallback()
-        this.httpClient = this.platformCallback.getHttpClient()
-        return this
+class FetchService(override val platformCallback: IFetchCallbackService = DefaultCallbacks.jwtService()): AbstractFetchService<IFetchCallbackService>(platformCallback), IFetchService {
+
+    override fun platform(): IFetchCallbackService {
+        return this.platformCallback
+    }
+
+    override suspend fun fetchStatement(endpoint: String): String {
+        return this.platformCallback.fetchStatement(endpoint)
+    }
+
+    override suspend fun getHttpClient(): HttpClient {
+        return this.platformCallback.getHttpClient()
     }
 }

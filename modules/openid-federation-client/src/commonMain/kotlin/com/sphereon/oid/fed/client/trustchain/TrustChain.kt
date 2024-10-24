@@ -1,12 +1,15 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
+import com.sphereon.oid.fed.client.crypto.ICryptoCallbackMarkerType
+import com.sphereon.oid.fed.client.crypto.cryptoService
 import com.sphereon.oid.fed.client.crypto.findKeyInJwks
-import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
+import com.sphereon.oid.fed.client.fetch.IFetchCallbackMarkerType
+import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.mapper.mapEntityStatement
+import com.sphereon.oid.fed.client.service.DefaultCallbacks
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
@@ -15,6 +18,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
+import kotlin.js.JsExport
 
 class SimpleCache<K, V> {
     private val cacheMap = mutableMapOf<K, V>()
@@ -26,7 +30,8 @@ class SimpleCache<K, V> {
     }
 }
 
-class TrustChain(private val fetchService: IFetchCallbackService, private val cryptoService: ICryptoCallbackService) {
+@JsExport
+class TrustChain(private val fetchService: IFetchCallbackMarkerType?, private val cryptoService: ICryptoCallbackMarkerType?) {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
     ): MutableList<String>? {
@@ -50,7 +55,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
     ): MutableList<String>? {
         if(depth == maxDepth) return null
 
-        val entityConfigurationJwt = this.fetchService.fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
+        val entityConfigurationJwt = fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
         val key = findKeyInJwks(
@@ -60,7 +65,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
 
         if (key == null) return null
 
-        if (!cryptoService.verify(entityConfigurationJwt, key)) {
+        if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(entityConfigurationJwt, key)) {
             return null
         }
 
@@ -114,7 +119,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             // Avoid processing the same entity twice
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
-            val authorityEntityConfigurationJwt = fetchService.fetchStatement(authorityConfigurationEndpoint)
+            val authorityEntityConfigurationJwt = fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(authorityConfigurationEndpoint)
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
@@ -127,7 +132,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
 
             if (key == null) return null
 
-            if (!cryptoService.verify(
+            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(
                     authorityEntityConfigurationJwt,
                     key
                 )
@@ -148,7 +153,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
             val subordinateStatementEndpoint =
                 getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
-            val subordinateStatementJwt = fetchService.fetchStatement(subordinateStatementEndpoint)
+            val subordinateStatementJwt = fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(subordinateStatementEndpoint)
 
             val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
 
@@ -160,7 +165,7 @@ class TrustChain(private val fetchService: IFetchCallbackService, private val cr
 
             if (subordinateStatementKey == null) return null
 
-            if (!cryptoService.verify(subordinateStatementJwt, subordinateStatementKey)) {
+            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(subordinateStatementJwt, subordinateStatementKey)) {
                 return null
             }
 

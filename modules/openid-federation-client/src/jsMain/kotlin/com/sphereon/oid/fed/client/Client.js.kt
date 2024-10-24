@@ -1,9 +1,7 @@
 package com.sphereon.oid.fed.client
 
-import com.sphereon.oid.fed.client.crypto.CryptoServiceObject
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.FetchServiceObject
-import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.crypto.ICryptoCallbackServiceJS
+import com.sphereon.oid.fed.client.fetch.IFetchCallbackServiceJS
 import com.sphereon.oid.fed.client.trustchain.TrustChain
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -14,12 +12,10 @@ import kotlin.js.Promise
 @JsName("FederationClient")
 class FederationClientJS
     (
-    fetchServiceCallbackk: IFetchService?,
-    cryptoServiceCallback: ICryptoService?,
+    fetchServiceCallback: IFetchCallbackServiceJS,
+    cryptoServiceCallback: ICryptoCallbackServiceJS,
 ) {
-    val fetchService = FetchServiceObject.register(fetchServiceCallbackk)
-    val cryptoService = CryptoServiceObject.register(cryptoServiceCallback)
-    val trustChainService = TrustChain(fetchService, cryptoService)
+    val trustChainService = TrustChain(fetchServiceCallback, cryptoServiceCallback)
 
     @OptIn(DelicateCoroutinesApi::class)
     @JsName("resolveTrustChain")

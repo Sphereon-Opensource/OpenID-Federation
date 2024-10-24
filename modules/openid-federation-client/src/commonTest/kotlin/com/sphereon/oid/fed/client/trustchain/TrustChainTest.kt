@@ -1,19 +1,22 @@
 package com.sphereon.oid.fed.client.trustchain
 
 import com.sphereon.oid.fed.client.FederationClient
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
+import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
+import io.ktor.client.call.body
 import io.ktor.client.engine.mock.*
+import io.ktor.client.request.get
 import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class PlatformCallback : IFetchService {
-    override fun getHttpClient(): HttpClient {
+class PlatformCallback : IFetchCallbackService {
+
+    override suspend fun getHttpClient(): HttpClient {
         return HttpClient(MockEngine { request ->
             val responseContent = mockResponses.find { it[0] == request.url.toString() }?.get(1)
                 ?: error("Unhandled ${request.url}")
@@ -25,9 +28,17 @@ class PlatformCallback : IFetchService {
             )
         })
     }
+
+    override suspend fun fetchStatement(endpoint: String): String {
+        return getHttpClient().get(endpoint) {
+                headers {
+                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                }
+            }.body()
+    }
 }
 
-class CryptoServiceCallback : ICryptoService {
+class CryptoCallbackServiceCallback : ICryptoCallbackService {
     override suspend fun verify(jwt: String, jwk: Jwk): Boolean {
         return true
     }
@@ -37,7 +48,7 @@ class TrustChainTest() {
     @Test
     fun buildTrustChain() = runTest {
 
-        val client = FederationClient(PlatformCallback(), CryptoServiceCallback())
+        val client = FederationClient(PlatformCallback(), CryptoCallbackServiceCallback())
 
         val trustChain = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
