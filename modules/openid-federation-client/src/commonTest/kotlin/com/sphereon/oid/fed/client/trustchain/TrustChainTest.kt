@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.client.trustchain
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
+import com.sphereon.oid.fed.client.service.DefaultCallbacks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
 import io.ktor.client.call.body
@@ -47,8 +48,14 @@ class CryptoCallbackServiceCallback : ICryptoCallbackService {
 class TrustChainTest() {
     @Test
     fun buildTrustChain() = runTest {
+        val fetchService = PlatformCallback()
+        DefaultCallbacks.setFetchServiceDefault(fetchService)
+        val cryptoService = CryptoCallbackServiceCallback()
+        DefaultCallbacks.setCryptoServiceDefault(cryptoService)
+        val trustChainService = DefaultTrustChainImpl(null, null)
+        DefaultCallbacks.setTrustChainServiceDefault(trustChainService)
 
-        val client = FederationClient(PlatformCallback(), CryptoCallbackServiceCallback())
+        val client = FederationClient()
 
         val trustChain = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",

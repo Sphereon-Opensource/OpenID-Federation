@@ -64,6 +64,7 @@ class CryptoService(override val platformCallback: ICryptoCallbackService = Defa
     }
 
     override suspend fun verify(jwt: String, key: Jwk): Boolean {
+        assertEnabled()
         return this.platformCallback.verify(jwt, key)
     }
 

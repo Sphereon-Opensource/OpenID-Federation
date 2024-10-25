@@ -2,12 +2,14 @@ package com.sphereon.oid.fed.client.service
 
 import com.sphereon.oid.fed.client.crypto.ICryptoCallbackMarkerType
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackMarkerType
+import com.sphereon.oid.fed.client.trustchain.ITrustChainCallbackMarkerType
 import kotlin.js.JsExport
 
 @JsExport
 object DefaultCallbacks {
     private var cryptoCallbackService: ICryptoCallbackMarkerType? = null
     private var fetchCallbackService: IFetchCallbackMarkerType? = null
+    private var trustChainCallbackService: ITrustChainCallbackMarkerType? = null
 
     fun <CallbackType: ICryptoCallbackMarkerType> jwtService(): CallbackType {
         if (cryptoCallbackService == null) {
@@ -29,6 +31,17 @@ object DefaultCallbacks {
 
     fun setFetchServiceDefault(fetchCallbackService: IFetchCallbackMarkerType?) {
         this.fetchCallbackService = fetchCallbackService
+    }
+
+    fun <CallbackType: ITrustChainCallbackMarkerType> trustChainService(): CallbackType {
+        if (trustChainCallbackService == null) {
+            throw IllegalStateException("No default TrustChain Platform Callback implementation was registered")
+        }
+        return this.trustChainCallbackService as CallbackType
+    }
+
+    fun setTrustChainServiceDefault(trustChainCallbackService: ITrustChainCallbackMarkerType?) {
+        this.trustChainCallbackService = trustChainCallbackService
     }
 }
 

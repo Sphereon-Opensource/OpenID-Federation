@@ -59,10 +59,12 @@ class FetchService(override val platformCallback: IFetchCallbackService = Defaul
     }
 
     override suspend fun fetchStatement(endpoint: String): String {
+        assertEnabled()
         return this.platformCallback.fetchStatement(endpoint)
     }
 
     override suspend fun getHttpClient(): HttpClient {
+        assertEnabled()
         return this.platformCallback.getHttpClient()
     }
 }

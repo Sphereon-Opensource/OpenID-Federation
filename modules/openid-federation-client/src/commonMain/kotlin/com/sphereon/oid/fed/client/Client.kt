@@ -1,13 +1,11 @@
 package com.sphereon.oid.fed.client
 
-import com.sphereon.oid.fed.client.crypto.ICryptoCallbackMarkerType
-import com.sphereon.oid.fed.client.fetch.IFetchCallbackMarkerType
-import com.sphereon.oid.fed.client.trustchain.TrustChain
+import com.sphereon.oid.fed.client.service.DefaultCallbacks
+import com.sphereon.oid.fed.client.trustchain.ITrustChainCallbackService
 
-class FederationClient(fetchServiceCallback: IFetchCallbackMarkerType?, cryptoServiceCallback: ICryptoCallbackMarkerType) {
-    private val trustChainService = TrustChain(fetchServiceCallback, cryptoServiceCallback)
+class FederationClient(val trustChainService: ITrustChainCallbackService? = DefaultCallbacks.trustChainService()) {
 
     suspend fun resolveTrustChain(entityIdentifier: String, trustAnchors: Array<String>): MutableList<String>? {
-        return trustChainService.resolve(entityIdentifier, trustAnchors)
+        return trustChainService?.resolve(entityIdentifier, trustAnchors)
     }
 }

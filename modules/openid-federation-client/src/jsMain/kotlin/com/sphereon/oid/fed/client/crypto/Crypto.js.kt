@@ -9,13 +9,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.await
 import kotlin.js.Promise
 
-//@JsModule("jose")
-//@JsNonModule
-//external object Jose {
-//    fun importJWK(jwk: Jwk, alg: String, options: dynamic = definedExternally): Promise<dynamic>
-//    fun jwtVerify(jwt: String, key: Any, options: dynamic = definedExternally): Promise<dynamic>
-//}
-
 @JsExport
 external interface ICryptoCallbackServiceJS: ICryptoCallbackMarkerType {
     fun verify(
@@ -33,12 +26,6 @@ external interface ICryptoServiceJS {
 }
 
 private const val CRYPTO_SERVICE_JS_SCOPE = "CryptoServiceJS"
-//class DefaultPlatformCallbackJS : ICryptoServiceCallbackJS {
-//    @OptIn(DelicateCoroutinesApi::class)
-//    override fun verify(jwt: String, key: Jwk): Promise<Boolean> {
-//        return GlobalScope.promise { verifyImpl(jwt, key) }
-//    }
-//}
 
 @JsExport
 class CryptoServiceJS(override val platformCallback: ICryptoCallbackServiceJS = DefaultCallbacks.jwtService()): AbstractCryptoService<ICryptoCallbackServiceJS>(platformCallback), ICryptoServiceJS {

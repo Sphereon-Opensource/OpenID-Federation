@@ -10,6 +10,7 @@ import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
+import com.sphereon.oid.fed.client.service.ICallbackService
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
@@ -18,6 +19,68 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
+import kotlin.js.JsExport
+
+expect interface ITrustChainCallbackMarkerType
+interface ITrustChainMarkerType
+
+@JsExport.Ignore
+interface ITrustChainCallbackService: ITrustChainMarkerType {
+    suspend fun resolve(
+        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
+    ): MutableList<String>?
+}
+
+@JsExport.Ignore
+interface ITrustChainService: ITrustChainMarkerType {
+    suspend fun resolve(
+        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
+    ): MutableList<String>?
+}
+
+expect fun trustChainService(platformCallback: ITrustChainCallbackMarkerType = DefaultCallbacks.trustChainService()): ITrustChainService
+
+abstract class AbstractTrustChainService<CallbackServiceType>(open val platformCallback: CallbackServiceType): ICallbackService<CallbackServiceType> {
+    private var disabled = false
+
+    override fun isEnabled(): Boolean {
+        return !this.disabled
+    }
+
+    override fun disable() = apply {
+        this.disabled = true
+    }
+
+    override fun enable() = apply {
+        this.disabled = false
+    }
+
+    protected fun assertEnabled() {
+        if (!isEnabled()) {
+            TrustChainConst.LOG.info("TRUST CHAIN verify has been disabled")
+            throw IllegalStateException("TRUST CHAIN service is disable; cannot verify")
+        } else if (this.platformCallback == null) {
+            TrustChainConst.LOG.error("TRUST CHAIN callback is not registered")
+            throw IllegalStateException("TRUST CHAIN has not been initialized. Please register your TrustChainCallback implementation, or register a default implementation")
+        }
+    }
+}
+
+class TrustChainService(override val platformCallback: ITrustChainCallbackService = DefaultCallbacks.trustChainService()): AbstractTrustChainService<ITrustChainCallbackService>(platformCallback), ITrustChainService {
+
+    override fun platform(): ITrustChainCallbackService {
+        return this.platformCallback
+    }
+
+    override suspend fun resolve(
+        entityIdentifier: String,
+        trustAnchors: Array<String>,
+        maxDepth: Int
+    ): MutableList<String>? {
+        assertEnabled()
+        return platformCallback.resolve(entityIdentifier, trustAnchors, maxDepth)
+    }
+}
 
 class SimpleCache<K, V> {
     private val cacheMap = mutableMapOf<K, V>()
@@ -29,9 +92,9 @@ class SimpleCache<K, V> {
     }
 }
 
-class TrustChain(private val fetchService: IFetchCallbackMarkerType?, private val cryptoService: ICryptoCallbackMarkerType?) {
-    suspend fun resolve(
-        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
+class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?, private val cryptoService: ICryptoCallbackMarkerType?): ITrustChainCallbackService, ITrustChainCallbackMarkerType {
+    override suspend fun resolve(
+        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
     ): MutableList<String>? {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()

@@ -29,6 +29,8 @@ kotlin {
                 }
             }
         }
+        generateTypeScriptDefinitions()
+        binaries.executable()
     }
 
     sourceSets {
@@ -71,10 +73,24 @@ kotlin {
             }
         }
 
+        val jvmTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test.junit)
+            }
+        }
+
         val jsMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
                 implementation(npm("jose", "5.9.4"))
+            }
+        }
+
+        val jsTest by getting {
+            dependencies {
+                //implementation(kotlin("test-js"))
+                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(libs.kotlinx.coroutines.test.js)
             }
         }
     }

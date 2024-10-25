@@ -47,8 +47,6 @@ class FetchServiceJS(override val platformCallback: IFetchCallbackServiceJS = De
             return@async platformCallback.getHttpClient().await()
         }.asPromise()
     }
-
-
 }
 
 class FetchServiceJSAdapter(val fetchCallbackJS: FetchServiceJS = FetchServiceJS()): AbstractFetchService<IFetchCallbackServiceJS>(fetchCallbackJS.platformCallback), IFetchService {
