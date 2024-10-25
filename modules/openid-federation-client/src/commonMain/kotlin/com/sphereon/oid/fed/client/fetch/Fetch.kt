@@ -52,7 +52,7 @@ abstract class AbstractFetchService<CallbackServiceType>(open val platformCallba
     }
 }
 
-class FetchService(override val platformCallback: IFetchCallbackService = DefaultCallbacks.jwtService()): AbstractFetchService<IFetchCallbackService>(platformCallback), IFetchService {
+class FetchService(override val platformCallback: IFetchCallbackService = DefaultCallbacks.fetchService()): AbstractFetchService<IFetchCallbackService>(platformCallback), IFetchService {
 
     override fun platform(): IFetchCallbackService {
         return this.platformCallback

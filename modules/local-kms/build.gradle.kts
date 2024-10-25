@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.0"
+    alias(libs.plugins.kotlinMultiplatform)
     id("app.cash.sqldelight") version "2.0.2"
 }
 
@@ -35,8 +35,8 @@ kotlin {
         commonMain {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.core)
             }
         }
 

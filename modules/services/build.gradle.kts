@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.0"
+    alias(libs.plugins.kotlinMultiplatform)
     kotlin("plugin.serialization") version "2.0.0"
 }
 
@@ -22,7 +22,7 @@ kotlin {
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
                 api(projects.modules.localKms)
-                implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
+                implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
 
