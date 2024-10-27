@@ -21,7 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class PlatformCallbackJS : IFetchCallbackServiceJS {
+actual class PlatformCallback : IFetchCallbackServiceJS {
 
     private val FETCH_SERVICE_JS_SCOPE = "FetchServiceTestJS"
 
@@ -51,18 +51,18 @@ class PlatformCallbackJS : IFetchCallbackServiceJS {
     }
 }
 
-class CryptoCallbackServiceCallbackJS : ICryptoCallbackServiceJS {
+actual class CryptoCallbackService : ICryptoCallbackServiceJS {
     override fun verify(jwt: String, jwk: Jwk): Promise<Boolean> {
         return Promise.resolve(true)
     }
 }
 
-class TrustChainTestJS() {
+actual class TrustChainTest {
     @Test
     fun buildTrustChain() = runTest {
-        val fetchService = PlatformCallbackJS()
+        val fetchService = PlatformCallback()
         DefaultCallbacks.setFetchServiceDefault(fetchService)
-        val cryptoService = CryptoCallbackServiceCallbackJS()
+        val cryptoService = CryptoCallbackService()
         DefaultCallbacks.setCryptoServiceDefault(cryptoService)
         val trustChainService = DefaultTrustChainJSImpl()
         DefaultCallbacks.setTrustChainServiceDefault(trustChainService)
