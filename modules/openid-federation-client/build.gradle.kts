@@ -82,15 +82,16 @@ kotlin {
         val jsMain by getting {
             dependencies {
                 implementation(libs.ktor.client.js)
+                implementation(libs.kotlinx.coroutines.core.js)
                 implementation(npm("jose", "5.9.4"))
             }
         }
 
         val jsTest by getting {
             dependencies {
-                //implementation(kotlin("test-js"))
-                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(kotlin("test-js"))
                 implementation(libs.kotlinx.coroutines.test.js)
+                implementation(libs.ktor.client.mock.js)
             }
         }
     }

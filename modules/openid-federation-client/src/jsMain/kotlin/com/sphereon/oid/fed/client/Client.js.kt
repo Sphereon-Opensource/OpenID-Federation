@@ -14,11 +14,13 @@ import kotlin.js.Promise
 @JsName("FederationClient")
 class FederationClientJS(val trustChainServiceCallback: ITrustChainCallbackServiceJS? = DefaultCallbacks.trustChainService()) {
 
+    private val CLIENT_JS_SCOPE = "ClientJS"
+
     @OptIn(DelicateCoroutinesApi::class)
     @JsName("resolveTrustChain")
     fun resolveTrustChainJS(entityIdentifier: String, trustAnchors: Array<String>): Promise<Array<String>?> {
-        return CoroutineScope(context = CoroutineName("")).async {
-            return@async trustChainServiceCallback?.resolve(entityIdentifier, trustAnchors)?.await()?.toTypedArray()
+        return CoroutineScope(context = CoroutineName(CLIENT_JS_SCOPE)).async {
+            return@async trustChainServiceCallback?.resolve(entityIdentifier, trustAnchors)?.await()
         }.asPromise()
     }
 }
