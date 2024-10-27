@@ -72,32 +72,32 @@ actual class TrustChainTest {
         val trustChain = client.resolveTrustChainJS(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
-        )
+        ).await()
 
         assertNotNull(trustChain)
 
-        assertEquals(4, trustChain.await()?.size ?: 0)
+        assertEquals(4, trustChain.size)
 
         assertEquals(
-            trustChain.await()?.get(0),
+            trustChain[0],
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt/.well-known/openid-federation" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain.await()?.get(1),
+            trustChain[1],
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain.await()?.get(2),
+            trustChain[2],
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain.await()?.get(3),
+            trustChain[3],
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
                 ?.get(1)
         )
@@ -105,23 +105,23 @@ actual class TrustChainTest {
         val trustChain2 = client.resolveTrustChainJS(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
-        )
+        ).await()
 
         assertNotNull(trustChain2)
-        assertEquals(3, trustChain2.await()?.size ?: 0)
+        assertEquals(3, trustChain2.size)
         assertEquals(
-            trustChain2.await()?.get(0),
+            trustChain2[0],
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/.well-known/openid-federation" }?.get(1)
         )
 
         assertEquals(
-            trustChain2.await()?.get(1),
+            trustChain2[1],
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain2.await()?.get(2),
+            trustChain2[2],
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
                 ?.get(1)
         )

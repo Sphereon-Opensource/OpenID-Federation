@@ -24,7 +24,7 @@ object DefaultCallbacks {
 
     fun <CallbackType: IFetchCallbackMarkerType> fetchService(): CallbackType {
         if (fetchCallbackService == null) {
-            throw IllegalStateException("No default Crypto Platform Callback implementation was registered")
+            throw IllegalStateException("No default Fetch Platform Callback implementation was registered")
         }
         return fetchCallbackService as CallbackType
     }

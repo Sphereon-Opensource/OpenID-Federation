@@ -91,7 +91,7 @@ class DefaultTrustChainJSImpl(
 ) : ITrustChainCallbackServiceJS, ITrustChainCallbackMarkerType {
     override fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
-    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName("")).async {
+    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName(TRUST_CHAIN_SERVICE_JS_SCOPE)).async {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return@async try {
@@ -109,7 +109,7 @@ class DefaultTrustChainJSImpl(
         cache: SimpleCache<String, String>,
         depth: Int,
         maxDepth: Int
-    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName("TEST")).async {
+    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName(TRUST_CHAIN_SERVICE_JS_SCOPE)).async {
         if (depth == maxDepth) return@async null
 
         val entityConfigurationJwt = fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
@@ -171,7 +171,7 @@ class DefaultTrustChainJSImpl(
         cache: SimpleCache<String, String>,
         depth: Int,
         maxDepth: Int
-    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName("TEST")).async {
+    ): Promise<Array<String>?> = CoroutineScope(context = CoroutineName(TRUST_CHAIN_SERVICE_JS_SCOPE)).async {
         try {
             val authorityConfigurationEndpoint = getEntityConfigurationEndpoint(authority)
 
@@ -260,8 +260,8 @@ class DefaultTrustChainJSImpl(
             if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
                 chain.add(subordinateStatementJwt)
                 val result =
-                    buildTrustChainRecursive(authority, trustAnchors, chain, cache, depth, maxDepth)
-                if (result != null) return@async result.await()
+                    buildTrustChainRecursive(authority, trustAnchors, chain, cache, depth, maxDepth).await()
+                if (result != null) return@async result
                 chain.removeLast()
             }
         } catch (_: Exception) {
