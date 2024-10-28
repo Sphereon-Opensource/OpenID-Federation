@@ -133,9 +133,10 @@ class DefaultTrustChainJSImpl(
             mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return@async null
 
         if (chain.isEmpty()) {
-            chain[chain.size] = entityConfigurationJwt
+            chain.add(entityConfigurationJwt)
         }
 
+        println("Getting authority hints")
         val authorityHints = entityStatement.authorityHints ?: return@async null
 
         val reorderedAuthorityHints = authorityHints.sortedBy { hint ->
