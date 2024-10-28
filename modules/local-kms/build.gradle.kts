@@ -42,10 +42,10 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
-                implementation("com.zaxxer:HikariCP:5.1.0")
-                implementation("org.postgresql:postgresql:42.7.3")
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(libs.sqldelight.jdbc.driver)
+                implementation(libs.hikari)
+                implementation(libs.postgresql)
+                implementation(libs.nimbus.jose.jwt)
             }
         }
 

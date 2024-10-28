@@ -6,8 +6,6 @@ plugins {
     kotlin("plugin.serialization") version "2.0.0"
 }
 
-val ktorVersion = "2.3.11"
-
 repositories {
     mavenCentral()
     mavenLocal()
@@ -70,9 +68,9 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(libs.ktor.client.core.jvm)
+                runtimeOnly(libs.ktor.client.cio.jvm)
+                implementation(libs.nimbus.jose.jwt)
             }
         }
         val jvmTest by getting {
@@ -127,11 +125,11 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
+                runtimeOnly(libs.ktor.client.core.js)
+                runtimeOnly(libs.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core.js)
             }
         }
 

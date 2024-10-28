@@ -16,7 +16,6 @@ project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")
 
 val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyList()
 val isModelsOnlyProfile = profiles.contains("models-only")
-val ktorVersion = "2.3.11"
 
 repositories {
     mavenCentral()

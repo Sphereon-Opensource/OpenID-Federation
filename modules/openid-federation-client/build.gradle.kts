@@ -69,7 +69,7 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation(libs.ktor.client.cio)
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(libs.nimbus.jose.jwt)
             }
         }
 
