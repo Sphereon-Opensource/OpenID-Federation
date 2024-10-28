@@ -40,7 +40,12 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Execute Gradle build
-        run: ./gradlew build
+        run: |
+          ./gradlew build
+          ./gradlew publishAllPublicationsToSphereon-opensourceRepository
+          ./gradlew :modules:openapi:jsPublicPackageJson
+          ./gradlew :modules:openid-federation-common:jsPublicPackageJson
+          ./gradlew createNpmConfig publishNpmPackages
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
           DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
@@ -49,4 +54,6 @@ jobs:
           LOCAL_KMS_DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
           LOCAL_KMS_DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
           LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           KMS_PROVIDER: local

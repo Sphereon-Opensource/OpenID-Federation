@@ -1,10 +1,10 @@
 plugins {
     kotlin("multiplatform") version "2.0.0"
     id("app.cash.sqldelight") version "2.0.2"
+    id("maven-publish")
 }
 
 group = "com.sphereon.oid.fed.persistence"
-version = "0.1.0"
 
 repositories {
     google()
@@ -43,6 +43,25 @@ kotlin {
                 implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
                 implementation("com.zaxxer:HikariCP:5.1.0")
                 implementation("org.postgresql:postgresql:42.7.3")
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            
+            pom {
+                name.set("OpenID Federation Persistence")
+                description.set("Persistence module for OpenID Federation")
+                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
             }
         }
     }

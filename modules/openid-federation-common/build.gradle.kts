@@ -4,7 +4,10 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
 //    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
+    id("maven-publish")
+
 }
+
 
 val ktorVersion = "2.3.11"
 
@@ -31,6 +34,25 @@ kotlin {
                     timeout = "5000"
                 }
             }
+        }
+        compilations["main"].packageJson {
+            name = "@sphereon/openid-federation-common"
+            version = rootProject.extra["npmVersion"] as String
+            description = "OpenID Federation Common Library"
+            customField("description", "OpenID Federation Common Library")
+            customField("license", "Apache-2.0")
+            customField("author", "Sphereon International")
+            customField("repository", mapOf(
+                "type" to "git",
+                "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+            ))
+
+            // For public scoped packages
+            customField("publishConfig", mapOf(
+                "access" to "public"
+            ))
+
+            types = "./index.d.ts"
         }
     }
 
@@ -138,6 +160,31 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))
+            }
+        }
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            from(components["kotlin"])
+            artifact(tasks["jsJar"]) {
+                classifier = "js"
+            }
+            artifact(tasks["allMetadataJar"]) {
+                classifier = "metadata"
+            }
+            pom {
+                name.set("OpenID Federation Common")
+                description.set("OpenID Federation Common Library")
+                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
             }
         }
     }

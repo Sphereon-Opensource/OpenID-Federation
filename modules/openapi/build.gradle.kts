@@ -9,9 +9,6 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.sphereon.oid.fed"
-version = "0.1.0-SNAPSHOT"
-
 project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")
 
 val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyList()
@@ -111,6 +108,25 @@ kotlin {
             }
         }
         nodejs()
+
+        compilations["main"].packageJson {
+            name = "@sphereon/openid-federation-openapi"
+            version = rootProject.extra["npmVersion"] as String
+            description = "OpenID Federation OpenAPI Library"
+            customField("description", "OpenID Federation OpenAPI Library")
+            customField("license", "Apache-2.0")
+            customField("author", "Sphereon International")
+            customField("repository", mapOf(
+                "type" to "git",
+                "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+            ))
+
+            customField("publishConfig", mapOf(
+                "access" to "public"
+            ))
+
+            types = "./index.d.ts"
+        }
     }
 
     iosX64 {
@@ -160,26 +176,11 @@ kotlin {
 publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
-            artifacts {
-                from(components["kotlin"])
-                artifact(tasks["jsJar"]) {
-                    classifier = "js"
-                }
-                artifact(tasks["allMetadataJar"]) {
-                    classifier = "metadata"
-                }
+            artifact(tasks["jsJar"]) {
+                classifier = "js"
             }
-        }
-    }
-    repositories {
-        maven {
-            name = "sphereon-opensource-snapshots"
-            val snapshotsUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-snapshots/"
-            val releasesUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-releases/"
-            url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl)
-            credentials {
-                username = System.getenv("NEXUS_USERNAME")
-                password = System.getenv("NEXUS_PASSWORD")
+            artifact(tasks["allMetadataJar"]) {
+                classifier = "metadata"
             }
         }
     }
