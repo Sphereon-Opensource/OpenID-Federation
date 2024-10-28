@@ -56,4 +56,5 @@ jobs:
           LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           KMS_PROVIDER: local
