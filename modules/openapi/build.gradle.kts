@@ -112,7 +112,7 @@ kotlin {
         nodejs()
 
         compilations["main"].packageJson {
-            name = "@sphereon/openid-federation-openapi"
+            name = "@sphereon/openid-federation-open-api"
             version = rootProject.extra["npmVersion"] as String
             description = "OpenID Federation OpenAPI Library"
             customField("description", "OpenID Federation OpenAPI Library")
@@ -189,7 +189,7 @@ npmPublish {
     packages{
         named("js") {
             packageJson {
-                "name" by "@sphereon/openid-federation-openapi"
+                "name" by "@sphereon/openid-federation-open-api"
                 "version" by rootProject.extra["npmVersion"] as String
             }
             scope.set("@sphereon")
