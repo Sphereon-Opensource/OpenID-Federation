@@ -37,6 +37,18 @@ kotlin {
                     "kotlinx.serialization.json.JsonObject"
                 )
             }
+            filter { line: String ->
+                line.replace(
+                    regex = Regex("(@SerialName\\(value = \\\"(\\w+)\\\"\\))"),
+                    replacement = "@JsName(\"$2\") $1"
+                )
+            }
+            filter { line: String ->
+                line.replace(
+                    regex = Regex("(import kotlinx\\.serialization\\.\\*)"),
+                    replacement = "$1 \nimport kotlin.js.JsName"
+                )
+            }
         }
 
         withType<KotlinCompileCommon> {
