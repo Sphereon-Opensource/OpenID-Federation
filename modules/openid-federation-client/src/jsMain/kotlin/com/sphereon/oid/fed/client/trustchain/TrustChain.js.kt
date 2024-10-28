@@ -136,7 +136,6 @@ class DefaultTrustChainJSImpl(
             chain.add(entityConfigurationJwt)
         }
 
-        println("Getting authority hints")
         val authorityHints = entityStatement.authorityHints ?: return@async null
 
         val reorderedAuthorityHints = authorityHints.sortedBy { hint ->
