@@ -3,13 +3,13 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.builder.SubordinateStatementBuilder
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
+import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadataDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
-import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.extensions.toJwk
 import com.sphereon.oid.fed.services.extensions.toSubordinateAdminJwkDTO
 import com.sphereon.oid.fed.services.extensions.toSubordinateMetadataDTO
 import kotlinx.serialization.json.Json
@@ -74,7 +74,7 @@ class SubordinateService {
             )
 
         subordinateJwks.forEach {
-            subordinateStatement.jwks(it.toJwkDTO())
+            subordinateStatement.jwks(it.toJwk())
         }
 
         subordinateMetadataList.forEach {
@@ -123,7 +123,7 @@ class SubordinateService {
         return jwt
     }
 
-    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwk {
+    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -135,9 +135,10 @@ class SubordinateService {
         }
 
         return subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id).executeAsOne()
+            .toSubordinateAdminJwkDTO()
     }
 
-    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateAdminJwkDto> {
+    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
