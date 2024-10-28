@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
       POSTGRES_DB: ${DATASOURCE_DB}
     ports:
-      - "5436:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -26,7 +26,7 @@ services:
       POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
       POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
     ports:
-      - "5437:5432"
+      - "5433:5432"
     volumes:
       - local_kms_data:/var/lib/postgresql/data
     networks:
