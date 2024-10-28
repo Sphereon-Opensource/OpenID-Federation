@@ -7,6 +7,7 @@ plugins {
     kotlin("plugin.serialization") version "2.0.0"
     id("org.openapi.generator") version "7.7.0"
     id("maven-publish")
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")
@@ -98,7 +99,7 @@ kotlin {
         }
     }
 
-    js {
+    js(IR) {
         tasks {
             named("compileKotlinJs") {
                 dependsOn("fixOpenApiGeneratorIssue")
@@ -107,6 +108,7 @@ kotlin {
                 dependsOn("fixOpenApiGeneratorIssue")
             }
         }
+        binaries.library()
         nodejs()
 
         compilations["main"].packageJson {
@@ -116,14 +118,18 @@ kotlin {
             customField("description", "OpenID Federation OpenAPI Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
-            customField("repository", mapOf(
-                "type" to "git",
-                "url" to "https://github.com/Sphereon-Opensource/openid-federation"
-            ))
+            customField(
+                "repository", mapOf(
+                    "type" to "git",
+                    "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+                )
+            )
 
-            customField("publishConfig", mapOf(
-                "access" to "public"
-            ))
+            customField(
+                "publishConfig", mapOf(
+                    "access" to "public"
+                )
+            )
 
             types = "./index.d.ts"
         }
@@ -173,15 +179,21 @@ kotlin {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenKotlin") {
-            artifact(tasks["jsJar"]) {
-                classifier = "js"
+npmPublish {
+    registries {
+        register("npmjs") {
+            uri.set("https://registry.npmjs.org")
+            authToken.set(System.getenv("NPM_TOKEN") ?: "")
+        }
+    }
+    packages{
+        named("js") {
+            packageJson {
+                "name" by "@sphereon/openid-federation-openapi"
+                "version" by rootProject.extra["npmVersion"] as String
             }
-            artifact(tasks["allMetadataJar"]) {
-                classifier = "metadata"
-            }
+            scope.set("@sphereon")
+            packageName.set("openid-federation-openapi")
         }
     }
 }

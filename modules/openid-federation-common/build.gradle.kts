@@ -5,7 +5,7 @@ plugins {
 //    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
     id("maven-publish")
-
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 
@@ -20,7 +20,7 @@ repositories {
 kotlin {
     jvm()
 
-    js {
+    js(IR) {
         browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
@@ -35,6 +35,8 @@ kotlin {
                 }
             }
         }
+        binaries.library()
+
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-common"
             version = rootProject.extra["npmVersion"] as String
@@ -42,18 +44,21 @@ kotlin {
             customField("description", "OpenID Federation Common Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
-            customField("repository", mapOf(
-                "type" to "git",
-                "url" to "https://github.com/Sphereon-Opensource/openid-federation"
-            ))
+            customField(
+                "repository", mapOf(
+                    "type" to "git",
+                    "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+                )
+            )
 
-            // For public scoped packages
-            customField("publishConfig", mapOf(
-                "access" to "public"
-            ))
+            customField(
+                "publishConfig", mapOf(
+                    "access" to "public"
+                )
+            )
 
             types = "./index.d.ts"
-        }
+        }        
     }
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
@@ -167,30 +172,26 @@ kotlin {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenKotlin") {
-            from(components["kotlin"])
-            artifact(tasks["jsJar"]) {
-                classifier = "js"
+
+npmPublish {
+    registries {
+        register("npmjs") {
+            uri.set("https://registry.npmjs.org")
+            authToken.set(System.getenv("NPM_TOKEN") ?: "")
+        }
+    }
+    packages{
+        named("js") {
+            packageJson {
+                "name" by "@sphereon/openid-federation-common"
+                "version" by rootProject.extra["npmVersion"] as String
             }
-            artifact(tasks["allMetadataJar"]) {
-                classifier = "metadata"
-            }
-            pom {
-                name.set("OpenID Federation Common")
-                description.set("OpenID Federation Common Library")
-                url.set("https://github.com/Sphereon-Opensource/openid-federation")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
-                }
-            }
+            scope.set("@sphereon")
+            packageName.set("openid-federation-common")
         }
     }
 }
+
 
 //tasks.register("printSdkLocation") {
 //    doLast {
