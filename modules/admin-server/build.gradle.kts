@@ -3,11 +3,11 @@ plugins {
     alias(libs.plugins.springDependencyManagement)
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.kotlinPluginSpring)
+    id("maven-publish")
     application
 }
 
 group = "com.sphereon.oid.fed.server.admin"
-version = "0.0.1"
 
 java {
     toolchain {
@@ -48,4 +48,30 @@ tasks.withType<Test> {
         events("started", "skipped", "passed", "failed")
         showStandardStreams = true
     }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            
+            artifact(tasks.named("bootJar"))
+            
+            pom {
+                name.set("OpenID Federation Admin Server")
+                description.set("Admin Server for OpenID Federation")
+                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.named<Jar>("jar") {
+    enabled = false
 }

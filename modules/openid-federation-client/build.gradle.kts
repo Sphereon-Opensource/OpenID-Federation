@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     kotlin("plugin.serialization") version "2.0.0"
+    id("maven-publish")
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 repositories {
@@ -29,8 +31,30 @@ kotlin {
                 }
             }
         }
+        binaries.library()
         generateTypeScriptDefinitions()
-        binaries.executable()
+        compilations["main"].packageJson {
+            name = "@sphereon/openid-federation-client"
+            version = rootProject.extra["npmVersion"] as String
+            description = "OpenID Federation Client Library"
+            customField("description", "OpenID Federation Client Library")
+            customField("license", "Apache-2.0")
+            customField("author", "Sphereon International")
+            customField(
+                "repository", mapOf(
+                    "type" to "git",
+                    "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+                )
+            )
+
+            customField(
+                "publishConfig", mapOf(
+                    "access" to "public"
+                )
+            )
+
+            types = "./index.d.ts"
+        }
     }
 
     sourceSets {
@@ -93,6 +117,25 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test.js)
                 implementation(libs.ktor.client.mock.js)
             }
+        }
+    }
+}
+
+npmPublish {
+    registries {
+        register("npmjs") {
+            uri.set("https://registry.npmjs.org")
+            authToken.set(System.getenv("NPM_TOKEN") ?: "")
+        }
+    }
+    packages{
+        named("js") {
+            packageJson {
+                "name" by "@sphereon/openid-federation-client"
+                "version" by rootProject.extra["npmVersion"] as String
+            }
+            scope.set("@sphereon")
+            packageName.set("openid-federation-client")
         }
     }
 }

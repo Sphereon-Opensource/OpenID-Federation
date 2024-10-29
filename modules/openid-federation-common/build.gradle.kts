@@ -4,7 +4,10 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
 //    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
+    id("maven-publish")
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
+
 
 repositories {
     mavenCentral()
@@ -15,7 +18,7 @@ repositories {
 kotlin {
     jvm()
 
-    js {
+    js(IR) {
         browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
@@ -30,6 +33,31 @@ kotlin {
                 }
             }
         }
+        binaries.library()
+        generateTypeScriptDefinitions()
+
+        compilations["main"].packageJson {
+            name = "@sphereon/openid-federation-common"
+            version = rootProject.extra["npmVersion"] as String
+            description = "OpenID Federation Common Library"
+            customField("description", "OpenID Federation Common Library")
+            customField("license", "Apache-2.0")
+            customField("author", "Sphereon International")
+            customField(
+                "repository", mapOf(
+                    "type" to "git",
+                    "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+                )
+            )
+
+            customField(
+                "publishConfig", mapOf(
+                    "access" to "public"
+                )
+            )
+
+            types = "./index.d.ts"
+        }        
     }
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
@@ -142,6 +170,27 @@ kotlin {
         }
     }
 }
+
+
+npmPublish {
+    registries {
+        register("npmjs") {
+            uri.set("https://registry.npmjs.org")
+            authToken.set(System.getenv("NPM_TOKEN") ?: "")
+        }
+    }
+    packages{
+        named("js") {
+            packageJson {
+                "name" by "@sphereon/openid-federation-common"
+                "version" by rootProject.extra["npmVersion"] as String
+            }
+            scope.set("@sphereon")
+            packageName.set("openid-federation-common")
+        }
+    }
+}
+
 
 //tasks.register("printSdkLocation") {
 //    doLast {
