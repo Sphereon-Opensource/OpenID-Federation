@@ -78,6 +78,7 @@ fun <T> T.toUrlEncodedJsonValue(serializer: KSerializer<T>): String {
  * input   An URL encoded input string
  * @return Decoded String
  */
+@ExperimentalJsExport
 @JsExport
 fun urlDecodeValue(input: String): String {
     return buildString {

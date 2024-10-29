@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
-    kotlin("multiplatform") version "2.0.0"
+    alias(libs.plugins.kotlinMultiplatform)
     kotlin("plugin.serialization") version "2.0.0"
     id("org.openapi.generator") version "7.7.0"
     id("maven-publish")
@@ -14,7 +14,6 @@ project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")
 
 val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyList()
 val isModelsOnlyProfile = profiles.contains("models-only")
-val ktorVersion = "2.3.11"
 
 repositories {
     mavenCentral()
@@ -34,6 +33,18 @@ kotlin {
                 line.replace(
                     "kotlin.collections.Map<kotlin.String, kotlin.Any>",
                     "kotlinx.serialization.json.JsonObject"
+                )
+            }
+            filter { line: String ->
+                line.replace(
+                    regex = Regex("(@SerialName\\(value = \\\"(\\w+)\\\"\\))"),
+                    replacement = "@JsName(\"$2\") $1"
+                )
+            }
+            filter { line: String ->
+                line.replace(
+                    regex = Regex("(import kotlinx\\.serialization\\.\\*)"),
+                    replacement = "$1 \nimport kotlin.js.JsName"
                 )
             }
         }
@@ -171,10 +182,10 @@ kotlin {
         val commonMain by getting {
             kotlin.srcDir("build/copy/src/commonMain/kotlin")
             dependencies {
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
     }

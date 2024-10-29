@@ -1,34 +1,26 @@
 package com.sphereon.oid.fed.client
 
-import com.sphereon.oid.fed.client.crypto.CryptoServiceObject
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.FetchServiceObject
-import com.sphereon.oid.fed.client.fetch.IFetchService
-import com.sphereon.oid.fed.client.trustchain.TrustChain
+import com.sphereon.oid.fed.client.service.DefaultCallbacks
+import com.sphereon.oid.fed.client.trustchain.ITrustChainCallbackServiceJS
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.promise
+import kotlinx.coroutines.asPromise
+import kotlinx.coroutines.async
+import kotlinx.coroutines.await
 import kotlin.js.Promise
 
 @JsExport
 @JsName("FederationClient")
-class FederationClientJS
-    (
-    fetchServiceCallbackk: IFetchService?,
-    cryptoServiceCallback: ICryptoService?,
-) {
-    val fetchService = FetchServiceObject.register(fetchServiceCallbackk)
-    val cryptoService = CryptoServiceObject.register(cryptoServiceCallback)
-    val trustChainService = TrustChain(fetchService, cryptoService)
+class FederationClientJS(val trustChainServiceCallback: ITrustChainCallbackServiceJS? = DefaultCallbacks.trustChainService()) {
+
+    private val CLIENT_JS_SCOPE = "ClientJS"
 
     @OptIn(DelicateCoroutinesApi::class)
     @JsName("resolveTrustChain")
     fun resolveTrustChainJS(entityIdentifier: String, trustAnchors: Array<String>): Promise<Array<String>?> {
-        return GlobalScope.promise {
-            trustChainService.resolve(
-                entityIdentifier,
-                trustAnchors
-            )?.toTypedArray()
-        }
+        return CoroutineScope(context = CoroutineName(CLIENT_JS_SCOPE)).async {
+            return@async trustChainServiceCallback?.resolve(entityIdentifier, trustAnchors)?.await()
+        }.asPromise()
     }
 }

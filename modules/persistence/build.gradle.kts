@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.0"
+    alias(libs.plugins.kotlinMultiplatform)
     id("app.cash.sqldelight") version "2.0.2"
     id("maven-publish")
 }
@@ -40,9 +40,9 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
-                implementation("com.zaxxer:HikariCP:5.1.0")
-                implementation("org.postgresql:postgresql:42.7.3")
+                implementation(libs.sqldelight.jdbc.driver)
+                implementation(libs.hikari)
+                implementation(libs.postgresql)
             }
         }
     }

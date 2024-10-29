@@ -32,7 +32,7 @@ dependencies {
     testImplementation(libs.testcontainer.postgres)
     runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.11")
+    implementation(libs.ktor.serialization.kotlinx.json)
 }
 
 kotlin {

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("multiplatform") version "2.0.0"
+    alias(libs.plugins.kotlinMultiplatform)
     id("app.cash.sqldelight") version "2.0.2"
     id("maven-publish")
 }
@@ -35,17 +35,17 @@ kotlin {
         commonMain {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.core)
             }
         }
 
         jvmMain {
             dependencies {
-                implementation("app.cash.sqldelight:jdbc-driver:2.0.2")
-                implementation("com.zaxxer:HikariCP:5.1.0")
-                implementation("org.postgresql:postgresql:42.7.3")
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(libs.sqldelight.jdbc.driver)
+                implementation(libs.hikari)
+                implementation(libs.postgresql)
+                implementation(libs.nimbus.jose.jwt)
             }
         }
 

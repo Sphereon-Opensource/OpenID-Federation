@@ -9,8 +9,6 @@ plugins {
 }
 
 
-val ktorVersion = "2.3.11"
-
 repositories {
     mavenCentral()
     mavenLocal()
@@ -79,28 +77,28 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-auth:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.auth)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.core)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("io.ktor:ktor-client-mock:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-                implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+                implementation(libs.ktor.client.core.jvm)
+                runtimeOnly(libs.ktor.client.cio.jvm)
+                implementation(libs.nimbus.jose.jwt)
             }
         }
         val jvmTest by getting {
@@ -155,11 +153,11 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
+                runtimeOnly(libs.ktor.client.core.js)
+                runtimeOnly(libs.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core.js)
             }
         }
 
