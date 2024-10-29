@@ -3,6 +3,11 @@ package com.sphereon.oid.fed.client.fetch
 import com.sphereon.oid.fed.client.crypto.AbstractCryptoService
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.js.Js
+import io.ktor.client.request.get
+import io.ktor.http.HttpHeaders
+import io.ktor.http.headers
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asPromise
@@ -70,3 +75,25 @@ actual fun fetchService(platformCallback: IFetchCallbackMarkerType): IFetchServi
 
 @JsExport
 actual external interface IFetchCallbackMarkerType
+
+@JsExport
+class DefaultFetchJSImpl : IFetchCallbackServiceJS {
+
+    private val FETCH_SERVICE_JS_SCOPE = "FetchServiceJS"
+
+    override fun getHttpClient(): Promise<HttpClient> {
+        return CoroutineScope(context = CoroutineName(FETCH_SERVICE_JS_SCOPE)).async {
+            return@async HttpClient(Js)
+        }.asPromise()
+    }
+
+    override fun fetchStatement(endpoint: String): Promise<String> {
+        return CoroutineScope(context = CoroutineName(FETCH_SERVICE_JS_SCOPE)).async {
+            return@async getHttpClient().await().get(endpoint) {
+                headers {
+                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                }
+            }.body() as String
+        }.asPromise()
+    }
+}

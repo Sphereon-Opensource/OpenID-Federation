@@ -68,7 +68,7 @@ kotlin {
 
         val jvmMain by getting {
             dependencies {
-                implementation(libs.ktor.client.cio)
+                implementation(libs.ktor.client.java)
                 implementation(libs.nimbus.jose.jwt)
             }
         }
