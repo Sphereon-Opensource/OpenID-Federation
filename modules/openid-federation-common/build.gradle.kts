@@ -36,6 +36,7 @@ kotlin {
             }
         }
         binaries.library()
+        generateTypeScriptDefinitions()
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-common"

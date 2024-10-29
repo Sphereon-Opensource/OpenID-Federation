@@ -34,6 +34,7 @@ kotlin {
             }
         }
         binaries.library()
+        generateTypeScriptDefinitions()
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-client"
             version = rootProject.extra["npmVersion"] as String

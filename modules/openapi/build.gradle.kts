@@ -109,6 +109,7 @@ kotlin {
             }
         }
         binaries.library()
+        generateTypeScriptDefinitions()
         nodejs()
 
         compilations["main"].packageJson {
