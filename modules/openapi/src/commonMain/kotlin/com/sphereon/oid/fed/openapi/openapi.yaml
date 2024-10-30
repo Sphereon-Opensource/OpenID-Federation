@@ -175,15 +175,8 @@ paths:
       tags:
         - federation
       summary: Fetch Subordinate Statement
-      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub``.
+      description: Fetch the Subordinate Statement for a subordinate entity `sub``.
       parameters:
-        - name: iss
-          in: query
-          description: The issuer identifier (URI) of the entity that issues the Subordinate Statement.
-          required: true
-          schema:
-            type: string
-            format: uri
         - name: sub
           in: query
           description: The subject identifier (URI) of the entity for whom the Subordinate Statement is created.

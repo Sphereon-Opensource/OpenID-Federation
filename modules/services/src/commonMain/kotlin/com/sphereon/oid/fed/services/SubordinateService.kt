@@ -243,4 +243,16 @@ class SubordinateService {
 
         return deletedMetadata.toSubordinateMetadataDTO()
     }
+
+    fun fetchSubordinateStatementByUsernameAndSubject(username: String, sub: String): String {
+        val account = accountQueries.findByUsername(username).executeAsOne()
+
+        val accountIss = accountService.getAccountIdentifier(account.username)
+
+        val subordinateStatement =
+            Persistence.subordinateStatementQueries.findByIssAndSub(accountIss, sub).executeAsOneOrNull()
+                ?: throw IllegalArgumentException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
+
+        return subordinateStatement.statement
+    }
 }

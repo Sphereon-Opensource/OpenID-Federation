@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.server.federation.controllers
 
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.server.federation.services.SubordinateService
+import com.sphereon.oid.fed.services.SubordinateService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
@@ -49,12 +49,12 @@ class FederationController {
     }
 
     @GetMapping("/fetch", produces = ["application/entity-statement+jwt"])
-    fun getRootSubordinateStatement(@RequestParam("iss") iss: String, @RequestParam("sub") sub: String): String {
-        return subordinateService.fetchSubordinateStatement(iss, sub)
+    fun getRootSubordinateStatement(@RequestParam("sub") sub: String): String {
+        return subordinateService.fetchSubordinateStatementByUsernameAndSubject("root", sub)
     }
 
     @GetMapping("/{username}/fetch", produces = ["application/entity-statement+jwt"])
-    fun getSubordinateStatement(@RequestParam("iss") iss: String, @RequestParam("sub") sub: String): String {
-        return subordinateService.fetchSubordinateStatement(iss, sub)
+    fun getSubordinateStatement(@PathVariable username: String, @RequestParam("sub") sub: String): String {
+        return subordinateService.fetchSubordinateStatementByUsernameAndSubject(username, sub)
     }
 }
