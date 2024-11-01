@@ -1,5 +1,5 @@
 package com.sphereon.oid.fed.kms.local.jwk
 
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 
-expect fun generateKeyPair(): Jwk
+expect fun generateKeyPair(): JwkWithPrivateKey

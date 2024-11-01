@@ -4,9 +4,10 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
 //    alias(libs.plugins.androidLibrary)
     kotlin("plugin.serialization") version "2.0.0"
+    id("maven-publish")
+    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
-val ktorVersion = "2.3.11"
 
 repositories {
     mavenCentral()
@@ -17,7 +18,7 @@ repositories {
 kotlin {
     jvm()
 
-    js {
+    js(IR) {
         browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
@@ -32,6 +33,31 @@ kotlin {
                 }
             }
         }
+        binaries.library()
+        generateTypeScriptDefinitions()
+
+        compilations["main"].packageJson {
+            name = "@sphereon/openid-federation-common"
+            version = rootProject.extra["npmVersion"] as String
+            description = "OpenID Federation Common Library"
+            customField("description", "OpenID Federation Common Library")
+            customField("license", "Apache-2.0")
+            customField("author", "Sphereon International")
+            customField(
+                "repository", mapOf(
+                    "type" to "git",
+                    "url" to "https://github.com/Sphereon-Opensource/openid-federation"
+                )
+            )
+
+            customField(
+                "publishConfig", mapOf(
+                    "access" to "public"
+                )
+            )
+
+            types = "./index.d.ts"
+        }        
     }
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
@@ -51,28 +77,28 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openapi)
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-logging:$ktorVersion")
-                implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-                implementation("io.ktor:ktor-client-auth:$ktorVersion")
-                implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.7.1")
-                implementation(libs.kermit.logging)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.logging)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.auth)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.serialization.core)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("io.ktor:ktor-client-mock:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC")
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+                implementation(libs.ktor.client.core.jvm)
+                runtimeOnly(libs.ktor.client.cio.jvm)
+                implementation(libs.nimbus.jose.jwt)
             }
         }
         val jvmTest by getting {
@@ -127,21 +153,44 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly("io.ktor:ktor-client-core-js:$ktorVersion")
-                runtimeOnly("io.ktor:ktor-client-js:$ktorVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0-RC")
+                runtimeOnly(libs.ktor.client.core.js)
+                runtimeOnly(libs.ktor.client.js)
+                implementation(npm("typescript", "5.5.3"))
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.kotlinx.coroutines.core.js)
             }
         }
 
         val jsTest by getting {
             dependencies {
+                implementation(npm("jose", "5.6.3"))
                 implementation(kotlin("test-js"))
                 implementation(kotlin("test-annotations-common"))
             }
         }
     }
 }
+
+
+npmPublish {
+    registries {
+        register("npmjs") {
+            uri.set("https://registry.npmjs.org")
+            authToken.set(System.getenv("NPM_TOKEN") ?: "")
+        }
+    }
+    packages{
+        named("js") {
+            packageJson {
+                "name" by "@sphereon/openid-federation-common"
+                "version" by rootProject.extra["npmVersion"] as String
+            }
+            scope.set("@sphereon")
+            packageName.set("openid-federation-common")
+        }
+    }
+}
+
 
 //tasks.register("printSdkLocation") {
 //    doLast {
@@ -160,4 +209,3 @@ kotlin {
 //        minSdk = libs.versions.android.minSdk.get().toInt()
 //    }
 //}
-

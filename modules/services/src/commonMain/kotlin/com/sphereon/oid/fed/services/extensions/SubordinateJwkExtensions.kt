@@ -1,20 +1,26 @@
 package com.sphereon.oid.fed.services.extensions
 
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
-import com.sphereon.oid.fed.openapi.models.JwkDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-fun SubordinateJwk.toJwkDTO(): JwkDTO {
-    val key = Json.decodeFromString<JwkAdminDTO>(this.key)
-
-    return key.toJwkDto()
+private val json = Json {
+    ignoreUnknownKeys = true
 }
 
-fun SubordinateJwk.toSubordinateAdminJwkDTO(): SubordinateAdminJwkDto {
-    return SubordinateAdminJwkDto(
+fun SubordinateJwk.toJwk(): Jwk {
+    return json.decodeFromString<Jwk>(this.key)
+}
+
+fun SubordinateJwk.toSubordinateJwkDto(): SubordinateJwkDto {
+    return json.decodeFromString<SubordinateJwkDto>(this.key)
+}
+
+
+fun SubordinateJwk.toSubordinateAdminJwkDTO(): SubordinateJwkDto {
+    return SubordinateJwkDto(
         id = this.id,
         subordinateId = this.subordinate_id,
         key = Json.parseToJsonElement(this.key).jsonObject,

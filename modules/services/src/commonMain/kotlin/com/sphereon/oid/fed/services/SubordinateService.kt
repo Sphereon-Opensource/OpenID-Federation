@@ -3,13 +3,13 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.builder.SubordinateStatementBuilder
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminJwkDto
+import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadataDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
-import com.sphereon.oid.fed.services.extensions.toJwkDTO
+import com.sphereon.oid.fed.services.extensions.toJwk
 import com.sphereon.oid.fed.services.extensions.toSubordinateAdminJwkDTO
 import com.sphereon.oid.fed.services.extensions.toSubordinateMetadataDTO
 import kotlinx.serialization.json.Json
@@ -68,13 +68,11 @@ class SubordinateService {
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
             .sourceEndpoint(
-                accountService.getAccountIdentifier(account.username) + "/fetch/?iss=" + accountService.getAccountIdentifier(
-                    account.username
-                ) + "&sub=" + subordinate.identifier
+                accountService.getAccountIdentifier(account.username) + "/fetch?sub=" + subordinate.identifier
             )
 
         subordinateJwks.forEach {
-            subordinateStatement.jwks(it.toJwkDTO())
+            subordinateStatement.jwks(it.toJwk())
         }
 
         subordinateMetadataList.forEach {
@@ -123,7 +121,7 @@ class SubordinateService {
         return jwt
     }
 
-    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwk {
+    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -135,9 +133,10 @@ class SubordinateService {
         }
 
         return subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id).executeAsOne()
+            .toSubordinateAdminJwkDTO()
     }
 
-    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateAdminJwkDto> {
+    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
 
@@ -241,5 +240,17 @@ class SubordinateService {
             ?: throw IllegalArgumentException(Constants.SUBORDINATE_METADATA_NOT_FOUND)
 
         return deletedMetadata.toSubordinateMetadataDTO()
+    }
+
+    fun fetchSubordinateStatementByUsernameAndSubject(username: String, sub: String): String {
+        val account = accountQueries.findByUsername(username).executeAsOne()
+
+        val accountIss = accountService.getAccountIdentifier(account.username)
+
+        val subordinateStatement =
+            Persistence.subordinateStatementQueries.findByIssAndSub(accountIss, sub).executeAsOneOrNull()
+                ?: throw IllegalArgumentException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
+
+        return subordinateStatement.statement
     }
 }

@@ -1,23 +1,19 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.JwkDTO
+import com.sphereon.oid.fed.openapi.models.EntityJwks
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.buildJsonObject
 
 class SubordinateStatementBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private var jwks: MutableList<JwkDTO> = mutableListOf();
+    private var jwks: MutableList<Jwk> = mutableListOf()
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
-    private var constraints: MutableMap<String, JsonObject> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
     private var source_endpoint: String? = null
 
@@ -42,21 +38,12 @@ class SubordinateStatementBuilder {
         this.crit.add(claim)
     }
 
-    fun jwks(jwk: JwkDTO) = apply {
+    fun jwks(jwk: Jwk) = apply {
         this.jwks.add(jwk)
     }
 
     fun sourceEndpoint(sourceEndpoint: String) = apply {
         this.source_endpoint = sourceEndpoint
-    }
-
-    private fun createJwks(jwks: MutableList<JwkDTO>): JsonObject {
-        val jsonArray: JsonArray =
-            Json.encodeToJsonElement(ListSerializer(JwkDTO.serializer()), jwks) as JsonArray
-
-        return buildJsonObject {
-            put("keys", jsonArray)
-        }
     }
 
     fun build(): SubordinateStatement {
@@ -65,12 +52,13 @@ class SubordinateStatementBuilder {
             sub = sub ?: throw IllegalArgumentException("sub must be provided"),
             exp = exp ?: throw IllegalArgumentException("exp must be provided"),
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
-            jwks = createJwks(jwks),
+            jwks = EntityJwks(
+                propertyKeys = jwks.toTypedArray()
+            ),
             crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
             metadata = JsonObject(metadata),
             metadataPolicy = JsonObject(metadata_policy),
             metadataPolicyCrit = JsonObject(metadata_policy_crit),
-            constraints = JsonObject(constraints),
             sourceEndpoint = source_endpoint,
         )
     }

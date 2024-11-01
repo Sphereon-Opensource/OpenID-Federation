@@ -9,6 +9,7 @@ import com.sphereon.oid.fed.kms.local.jwt.verify
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
@@ -22,7 +23,7 @@ class LocalKms {
 
         database.insertKey(
             keyId = jwk.kid!!,
-            key = aesEncryption.encrypt(Json.encodeToString(Jwk.serializer(), jwk))
+            key = aesEncryption.encrypt(Json.encodeToString(JwkWithPrivateKey.serializer(), jwk))
         )
 
         return jwk.toJwkAdminDto()
@@ -31,9 +32,9 @@ class LocalKms {
     fun sign(header: JWTHeader, payload: JsonObject, keyId: String): String {
         val jwk = database.getKey(keyId)
 
-        val jwkObject: Jwk = Json.decodeFromString(aesEncryption.decrypt(jwk.key))
+        val jwkObject: JwkWithPrivateKey = Json.decodeFromString(aesEncryption.decrypt(jwk.key))
 
-        val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid)
+        val mHeader = header.copy(alg = jwkObject.alg, kid = jwkObject.kid!!)
 
         return sign(header = mHeader, payload = payload, key = jwkObject)
     }
