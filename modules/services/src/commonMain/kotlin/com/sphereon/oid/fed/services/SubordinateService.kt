@@ -68,9 +68,7 @@ class SubordinateService {
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
             .sourceEndpoint(
-                accountService.getAccountIdentifier(account.username) + "/fetch/?iss=" + accountService.getAccountIdentifier(
-                    account.username
-                ) + "&sub=" + subordinate.identifier
+                accountService.getAccountIdentifier(account.username) + "/fetch?sub=" + subordinate.identifier
             )
 
         subordinateJwks.forEach {
