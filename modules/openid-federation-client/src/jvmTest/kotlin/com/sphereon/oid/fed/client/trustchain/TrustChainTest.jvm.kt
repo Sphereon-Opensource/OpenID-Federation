@@ -5,16 +5,11 @@ import com.sphereon.oid.fed.client.crypto.ICryptoCallbackService
 import com.sphereon.oid.fed.client.fetch.IFetchCallbackService
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
 import com.sphereon.oid.fed.openapi.models.Jwk
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.mock.MockEngine
-import io.ktor.client.engine.mock.MockEngine.Companion.invoke
-import io.ktor.client.engine.mock.respond
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.engine.mock.*
 import io.ktor.client.request.get
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.headers
-import io.ktor.http.headersOf
+import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -79,13 +74,13 @@ actual class TrustChainTest {
 
         assertEquals(
             trustChain[1],
-            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt&iss=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
             trustChain[2],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
                 ?.get(1)
         )
 
@@ -101,7 +96,7 @@ actual class TrustChainTest {
         )
 
         assertNotNull(trustChain2)
-        assertEquals(trustChain2.size, 3)
+        assertEquals(3, trustChain2.size)
         assertEquals(
             trustChain2[0],
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/.well-known/openid-federation" }?.get(1)
@@ -109,7 +104,7 @@ actual class TrustChainTest {
 
         assertEquals(
             trustChain2[1],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
                 ?.get(1)
         )
 

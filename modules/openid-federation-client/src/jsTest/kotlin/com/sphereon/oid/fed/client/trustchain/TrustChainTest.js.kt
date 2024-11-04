@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.client.fetch.IFetchCallbackServiceJS
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
-import io.ktor.client.call.body
+import io.ktor.client.call.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.request.get
 import io.ktor.http.*
@@ -42,11 +42,11 @@ actual class PlatformCallback : IFetchCallbackServiceJS {
 
     override fun fetchStatement(endpoint: String): Promise<String> {
         return CoroutineScope(context = CoroutineName(FETCH_SERVICE_JS_SCOPE)).async {
-           return@async getHttpClient().await().get(endpoint) {
-               headers {
-                   append(HttpHeaders.Accept, "application/entity-statement+jwt")
-               }
-           }.body() as String
+            return@async getHttpClient().await().get(endpoint) {
+                headers {
+                    append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                }
+            }.body() as String
         }.asPromise()
     }
 }
@@ -86,13 +86,13 @@ actual class TrustChainTest {
 
         assertEquals(
             trustChain[1],
-            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt&iss=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
             trustChain[2],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
                 ?.get(1)
         )
 
@@ -116,7 +116,7 @@ actual class TrustChainTest {
 
         assertEquals(
             trustChain2[1],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
                 ?.get(1)
         )
 

@@ -214,7 +214,7 @@ class DefaultTrustChainJSImpl(
                 federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content ?: return@async null
 
             val subordinateStatementEndpoint =
-                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
+                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier, authority)
 
             val subordinateStatementJwt =
                 fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
