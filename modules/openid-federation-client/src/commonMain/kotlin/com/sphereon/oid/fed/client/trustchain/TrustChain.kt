@@ -25,14 +25,14 @@ expect interface ITrustChainCallbackMarkerType
 interface ITrustChainMarkerType
 
 @JsExport.Ignore
-interface ITrustChainCallbackService: ITrustChainMarkerType {
+interface ITrustChainCallbackService : ITrustChainMarkerType {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
     ): MutableList<String>?
 }
 
 @JsExport.Ignore
-interface ITrustChainService: ITrustChainMarkerType {
+interface ITrustChainService : ITrustChainMarkerType {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
     ): MutableList<String>?
@@ -40,7 +40,8 @@ interface ITrustChainService: ITrustChainMarkerType {
 
 expect fun trustChainService(platformCallback: ITrustChainCallbackMarkerType = DefaultCallbacks.trustChainService()): ITrustChainService
 
-abstract class AbstractTrustChainService<CallbackServiceType>(open val platformCallback: CallbackServiceType): ICallbackService<CallbackServiceType> {
+abstract class AbstractTrustChainService<CallbackServiceType>(open val platformCallback: CallbackServiceType) :
+    ICallbackService<CallbackServiceType> {
     private var disabled = false
 
     override fun isEnabled(): Boolean {
@@ -66,7 +67,8 @@ abstract class AbstractTrustChainService<CallbackServiceType>(open val platformC
     }
 }
 
-class TrustChainService(override val platformCallback: ITrustChainCallbackService = DefaultCallbacks.trustChainService()): AbstractTrustChainService<ITrustChainCallbackService>(platformCallback), ITrustChainService {
+class TrustChainService(override val platformCallback: ITrustChainCallbackService = DefaultCallbacks.trustChainService()) :
+    AbstractTrustChainService<ITrustChainCallbackService>(platformCallback), ITrustChainService {
 
     override fun platform(): ITrustChainCallbackService {
         return this.platformCallback
@@ -92,7 +94,10 @@ class SimpleCache<K, V> {
     }
 }
 
-class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?, private val cryptoService: ICryptoCallbackMarkerType?): ITrustChainCallbackService, ITrustChainCallbackMarkerType {
+class DefaultTrustChainImpl(
+    private val fetchService: IFetchCallbackMarkerType?,
+    private val cryptoService: ICryptoCallbackMarkerType?
+) : ITrustChainCallbackService, ITrustChainCallbackMarkerType {
     override suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
     ): MutableList<String>? {
@@ -114,9 +119,11 @@ class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?,
         depth: Int,
         maxDepth: Int
     ): MutableList<String>? {
-        if(depth == maxDepth) return null
+        if (depth == maxDepth) return null
 
-        val entityConfigurationJwt = fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(getEntityConfigurationEndpoint(entityIdentifier))
+        val entityConfigurationJwt = fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+            getEntityConfigurationEndpoint(entityIdentifier)
+        )
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
 
         val key = findKeyInJwks(
@@ -180,7 +187,10 @@ class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?,
             // Avoid processing the same entity twice
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
-            val authorityEntityConfigurationJwt = fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(authorityConfigurationEndpoint)
+            val authorityEntityConfigurationJwt =
+                fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+                    authorityConfigurationEndpoint
+                )
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
             val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
@@ -212,9 +222,12 @@ class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?,
                 federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content ?: return null
 
             val subordinateStatementEndpoint =
-                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
+                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier, authority)
 
-            val subordinateStatementJwt = fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(subordinateStatementEndpoint)
+            val subordinateStatementJwt =
+                fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+                    subordinateStatementEndpoint
+                )
 
             val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
 
@@ -226,7 +239,11 @@ class DefaultTrustChainImpl(private val fetchService: IFetchCallbackMarkerType?,
 
             if (subordinateStatementKey == null) return null
 
-            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(subordinateStatementJwt, subordinateStatementKey)) {
+            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(
+                    subordinateStatementJwt,
+                    subordinateStatementKey
+                )
+            ) {
                 return null
             }
 
