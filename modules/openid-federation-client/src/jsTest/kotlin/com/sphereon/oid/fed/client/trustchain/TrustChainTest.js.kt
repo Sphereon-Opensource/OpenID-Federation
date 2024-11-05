@@ -8,7 +8,6 @@ import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.call.*
-import io.ktor.client.engine.js.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.request.get
 import io.ktor.http.*
@@ -29,8 +28,6 @@ actual class PlatformCallback : IFetchCallbackServiceJS {
 
     override fun getHttpClient(): Promise<HttpClient> {
         return CoroutineScope(context = CoroutineName(FETCH_SERVICE_JS_SCOPE)).async {
-            return@async HttpClient(Js)
-/*
             return@async HttpClient(MockEngine { request ->
                 val responseContent = mockResponses.find { it[0] == request.url.toString() }?.get(1)
                     ?: error("Unhandled ${request.url}")
@@ -41,7 +38,6 @@ actual class PlatformCallback : IFetchCallbackServiceJS {
                     headers = headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt")
                 )
             })
-*/
         }.asPromise()
     }
 
@@ -75,8 +71,8 @@ actual class TrustChainTest {
         val client = FederationClientJS()
 
         val trustChain = client.resolveTrustChainJS(
-            "https://agent.findynet.demo.sphereon.com/oid4vci",
-            arrayOf("https://federation.demo.sphereon.com")
+            "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
+            arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         ).await()
 
         assertNotNull(trustChain)
