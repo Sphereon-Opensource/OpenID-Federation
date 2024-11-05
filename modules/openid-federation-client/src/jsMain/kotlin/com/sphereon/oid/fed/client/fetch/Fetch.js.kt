@@ -1,7 +1,9 @@
 package com.sphereon.oid.fed.client.fetch
 
 import com.sphereon.oid.fed.client.crypto.AbstractCryptoService
+import com.sphereon.oid.fed.client.crypto.CryptoConst
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
+import com.sphereon.oid.fed.client.trustchain.TrustChainConst
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.js.Js
@@ -58,8 +60,11 @@ class FetchServiceJSAdapter(val fetchCallbackJS: FetchServiceJS = FetchServiceJS
 
     override fun platform(): IFetchCallbackServiceJS = fetchCallbackJS.platformCallback
 
-    override suspend fun fetchStatement(endpoint: String): String =
-        this.platformCallback.fetchStatement(endpoint).await()
+    override suspend fun fetchStatement(endpoint: String): String {
+        val result = this.platformCallback.fetchStatement(endpoint).await()
+        TrustChainConst.LOG.info("fetchStatement returned ${result}")
+        return result
+    }
 
     override suspend fun getHttpClient(): HttpClient = this.platformCallback.getHttpClient().await()
 }
@@ -92,7 +97,7 @@ class DefaultFetchJSImpl : IFetchCallbackServiceJS {
             return@async getHttpClient().await().get(endpoint) {
                 headers {
                     append(HttpHeaders.Accept, "application/entity-statement+jwt")
-                    append(HttpHeaders.AcceptCharset, "ascii, utf-8")
+                    append(HttpHeaders.AcceptCharset, "iso-8859-1, us-ascii, utf-8")
                 }
             }.body() as String
         }.asPromise()
