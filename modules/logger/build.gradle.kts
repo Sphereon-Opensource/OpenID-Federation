@@ -20,5 +20,11 @@ kotlin {
                 implementation(libs.kermit.logging)
             }
         }
+
+        val jsMain by getting {
+            dependencies {
+                implementation(libs.kermit.logging)
+            }
+        }
     }
 }

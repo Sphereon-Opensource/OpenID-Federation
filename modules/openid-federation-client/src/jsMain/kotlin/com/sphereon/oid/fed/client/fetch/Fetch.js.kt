@@ -92,6 +92,7 @@ class DefaultFetchJSImpl : IFetchCallbackServiceJS {
             return@async getHttpClient().await().get(endpoint) {
                 headers {
                     append(HttpHeaders.Accept, "application/entity-statement+jwt")
+                    append(HttpHeaders.AcceptCharset, "ascii, utf-8")
                 }
             }.body() as String
         }.asPromise()
