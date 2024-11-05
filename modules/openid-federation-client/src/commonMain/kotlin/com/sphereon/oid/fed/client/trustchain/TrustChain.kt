@@ -105,7 +105,8 @@ class DefaultTrustChainImpl(
         val chain: MutableList<String> = arrayListOf()
         return try {
             buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            TrustChainConst.LOG.error("buildTrustChainRecursive failed", e)
             // Log error
             null
         }
@@ -272,7 +273,8 @@ class DefaultTrustChainImpl(
                 if (result != null) return result
                 chain.removeLast()
             }
-        } catch (_: Exception) { // TODO distinguish between remote HTTP errors and internal errors
+        } catch (e: Exception) { // TODO distinguish between remote HTTP errors and internal errors
+            TrustChainConst.LOG.error("no trust", e)
             return null
         }
 
