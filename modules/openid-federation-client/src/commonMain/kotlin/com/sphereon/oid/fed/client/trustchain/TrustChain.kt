@@ -272,7 +272,7 @@ class DefaultTrustChainImpl(
                 if (result != null) return result
                 chain.removeLast()
             }
-        } catch (_: Exception) {
+        } catch (_: Exception) { // TODO distinguish between remote HTTP errors and internal errors
             return null
         }
 
