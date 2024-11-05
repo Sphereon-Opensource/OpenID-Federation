@@ -21,7 +21,6 @@ class DefaultFetchJvmImpl : IFetchCallbackService {
         return getHttpClient().get(endpoint) {
             headers {
                 append(HttpHeaders.Accept, "application/entity-statement+jwt")
-                append(HttpHeaders.AcceptCharset, "iso-8859-1, us-ascii, utf-8")
             }
         }.body() as String
     }

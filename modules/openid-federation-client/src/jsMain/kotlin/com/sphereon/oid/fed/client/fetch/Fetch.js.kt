@@ -1,14 +1,12 @@
 package com.sphereon.oid.fed.client.fetch
 
 import com.sphereon.oid.fed.client.crypto.AbstractCryptoService
-import com.sphereon.oid.fed.client.crypto.CryptoConst
 import com.sphereon.oid.fed.client.service.DefaultCallbacks
-import com.sphereon.oid.fed.client.trustchain.TrustChainConst
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.engine.js.Js
+import io.ktor.client.*
+import io.ktor.client.engine.js.*
 import io.ktor.client.request.get
-import io.ktor.http.HttpHeaders
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.http.headers
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -62,7 +60,6 @@ class FetchServiceJSAdapter(val fetchCallbackJS: FetchServiceJS = FetchServiceJS
 
     override suspend fun fetchStatement(endpoint: String): String {
         val result = this.platformCallback.fetchStatement(endpoint).await()
-        TrustChainConst.LOG.info("fetchStatement returned ${result}")
         return result
     }
 
@@ -94,12 +91,13 @@ class DefaultFetchJSImpl : IFetchCallbackServiceJS {
 
     override fun fetchStatement(endpoint: String): Promise<String> {
         return CoroutineScope(context = CoroutineName(FETCH_SERVICE_JS_SCOPE)).async {
-            return@async getHttpClient().await().get(endpoint) {
+            val client = getHttpClient().await()
+            val response = client.get(endpoint) {
                 headers {
                     append(HttpHeaders.Accept, "application/entity-statement+jwt")
-                    append(HttpHeaders.AcceptCharset, "iso-8859-1, us-ascii, utf-8")
                 }
-            }.body() as String
+            }
+            return@async response.bodyAsText()
         }.asPromise()
     }
 }
