@@ -1,26 +1,34 @@
-package com.sphereon.oid.fed.client
-
-import com.sphereon.oid.fed.client.service.DefaultCallbacks
-import com.sphereon.oid.fed.client.trustchain.ITrustChainCallbackServiceJS
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.CoroutineScope
+import com.sphereon.oid.fed.client.crypto.ICryptoService
+import com.sphereon.oid.fed.client.crypto.cryptoService
+import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.fetch.fetchService
+import com.sphereon.oid.fed.client.trustchain.TrustChain
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.asPromise
-import kotlinx.coroutines.async
-import kotlinx.coroutines.await
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.promise
 import kotlin.js.Promise
 
 @JsExport
-@JsName("FederationClient")
-class FederationClientJS(val trustChainServiceCallback: ITrustChainCallbackServiceJS? = DefaultCallbacks.trustChainService()) {
+@JsName("init")
+class FederationClientJS(
+    fetchServiceCallback: IFetchService?,
+    cryptoServiceCallback: ICryptoService?,
+) {
+    private val fetchService: IFetchService =
+        fetchServiceCallback ?: fetchService()
+    private val cryptoService: ICryptoService = cryptoServiceCallback ?: cryptoService()
 
-    private val CLIENT_JS_SCOPE = "ClientJS"
+    private val trustChainService: TrustChain = TrustChain(fetchService, cryptoService)
 
     @OptIn(DelicateCoroutinesApi::class)
     @JsName("resolveTrustChain")
     fun resolveTrustChainJS(entityIdentifier: String, trustAnchors: Array<String>): Promise<Array<String>?> {
-        return CoroutineScope(context = CoroutineName(CLIENT_JS_SCOPE)).async {
-            return@async trustChainServiceCallback?.resolve(entityIdentifier, trustAnchors)?.await()
-        }.asPromise()
+        return GlobalScope.promise {
+            trustChainService.resolve(
+                entityIdentifier,
+                trustAnchors,
+                10
+            )?.toTypedArray()
+        }
     }
 }

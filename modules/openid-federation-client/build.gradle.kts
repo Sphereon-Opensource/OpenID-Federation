@@ -68,7 +68,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openapi)
-                implementation(projects.modules.logger)
+                api(projects.modules.logger)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.ktor.client.content.negotiation)
@@ -128,7 +128,7 @@ npmPublish {
             authToken.set(System.getenv("NPM_TOKEN") ?: "")
         }
     }
-    packages{
+    packages {
         named("js") {
             packageJson {
                 "name" by "@sphereon/openid-federation-client"
