@@ -5,6 +5,20 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.js.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.coroutines.await
+import kotlin.js.Promise
+
+@JsExport
+@JsName("IFetchService")
+interface IFetchServiceJS {
+    fun fetchStatement(endpoint: String): Promise<String>
+}
+
+class FetchServiceAdapter(private val jsFetchService: IFetchServiceJS) : IFetchService {
+    override suspend fun fetchStatement(endpoint: String): String {
+        return jsFetchService.fetchStatement(endpoint).await()
+    }
+}
 
 actual fun fetchService(): IFetchService {
     return object : IFetchService {

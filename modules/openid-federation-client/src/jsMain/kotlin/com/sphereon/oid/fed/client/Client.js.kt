@@ -1,36 +1,14 @@
+import com.sphereon.oid.fed.client.crypto.CryptoServiceAdapter
 import com.sphereon.oid.fed.client.crypto.ICryptoService
+import com.sphereon.oid.fed.client.crypto.ICryptoServiceJS
 import com.sphereon.oid.fed.client.crypto.cryptoService
+import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
 import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.fetch.IFetchServiceJS
 import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.trustchain.TrustChain
-import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.*
-import kotlinx.serialization.json.Json
 import kotlin.js.Promise
-
-@JsExport
-@JsName("IFetchService")
-interface IFetchServiceJS {
-    fun fetchStatement(endpoint: String): Promise<String>
-}
-
-@JsExport
-@JsName("ICryptoService")
-interface ICryptoServiceJS {
-    fun verify(data: String, key: String): Promise<Boolean>
-}
-
-class FetchServiceAdapter(private val jsFetchService: IFetchServiceJS) : IFetchService {
-    override suspend fun fetchStatement(endpoint: String): String {
-        return jsFetchService.fetchStatement(endpoint).await()
-    }
-}
-
-class CryptoServiceAdapter(private val jsCryptoService: ICryptoServiceJS) : ICryptoService {
-    override suspend fun verify(jwt: String, key: Jwk): Boolean {
-        return jsCryptoService.verify(jwt, Json.encodeToString(Jwk.serializer(), key)).await()
-    }
-}
 
 @JsExport
 @JsName("FederationClient")

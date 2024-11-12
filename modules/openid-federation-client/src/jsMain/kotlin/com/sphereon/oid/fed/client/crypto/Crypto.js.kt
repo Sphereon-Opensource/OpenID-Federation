@@ -19,12 +19,18 @@ external object Jose {
 external interface ICryptoServiceJS {
     fun verify(
         jwt: String,
-        key: Jwk
+        key: String
     ): Promise<Boolean>
 }
 
+class CryptoServiceAdapter(private val jsCryptoService: ICryptoServiceJS) : ICryptoService {
+    override suspend fun verify(jwt: String, key: Jwk): Boolean {
+        return jsCryptoService.verify(jwt, Json.encodeToString(Jwk.serializer(), key)).await()
+    }
+}
+
 object CryptoServiceJS : ICryptoServiceJS {
-    override fun verify(jwt: String, key: Jwk): Promise<Boolean> {
+    override fun verify(jwt: String, key: String): Promise<Boolean> {
         return Promise { resolve, reject ->
             try {
                 val decodedJwt = decodeJWTComponents(jwt)
@@ -52,7 +58,7 @@ object CryptoServiceJS : ICryptoServiceJS {
 actual fun cryptoService(): ICryptoService {
     return object : ICryptoService {
         override suspend fun verify(jwt: String, key: Jwk): Boolean {
-            return CryptoServiceJS.verify(jwt, key).await()
+            return CryptoServiceJS.verify(jwt, Json.encodeToString(key)).await()
         }
     }
 }

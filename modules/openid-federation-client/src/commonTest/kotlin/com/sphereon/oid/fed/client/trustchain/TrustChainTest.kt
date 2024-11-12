@@ -1,7 +1,9 @@
 package com.sphereon.oid.fed.client.trustchain
 
 import com.sphereon.oid.fed.client.FederationClient
+import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,10 +15,16 @@ object FetchService : IFetchService {
     }
 }
 
+object CryptoService : ICryptoService {
+    override suspend fun verify(jwt: String, key: Jwk): Boolean {
+        return true
+    }
+}
+
 class TrustChainTest {
     @Test
     fun buildTrustChain() = runTest {
-        val client = FederationClient(FetchService)
+        val client = FederationClient(FetchService, CryptoService)
 
         val trustChain = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
