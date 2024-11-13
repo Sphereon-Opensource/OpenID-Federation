@@ -148,7 +148,7 @@ class TrustChain
                 federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content ?: return null
 
             val subordinateStatementEndpoint =
-                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier, authority)
+                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
             val subordinateStatementJwt =
                 this.fetchService.fetchStatement(

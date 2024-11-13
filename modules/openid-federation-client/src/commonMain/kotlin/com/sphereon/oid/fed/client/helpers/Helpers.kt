@@ -10,8 +10,8 @@ fun getEntityConfigurationEndpoint(iss: String): String {
     return "${if (iss.endsWith("/")) iss.dropLast(1) else iss}/.well-known/openid-federation"
 }
 
-fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String, iss: String): String {
-    return "${fetchEndpoint}?sub=$sub&iss=$iss"
+fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String {
+    return "${fetchEndpoint}?sub=$sub"
 }
 
 fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {

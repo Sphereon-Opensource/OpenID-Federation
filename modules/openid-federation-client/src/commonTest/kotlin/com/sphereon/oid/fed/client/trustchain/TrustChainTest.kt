@@ -43,13 +43,13 @@ class TrustChainTest {
 
         assertEquals(
             trustChain[1],
-            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt&iss=https://spid.wbss.it/Spid/oidc/sa" }
+            mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
                 ?.get(1)
         )
 
         assertEquals(
             trustChain[2],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
@@ -73,7 +73,7 @@ class TrustChainTest {
 
         assertEquals(
             trustChain2[1],
-            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa&iss=https://oidc.registry.servizicie.interno.gov.it" }
+            mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
