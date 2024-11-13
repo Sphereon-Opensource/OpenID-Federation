@@ -1530,7 +1530,6 @@ components:
           type: string
           description: The key ID.
           example: 12345
-          nullable: true
         x:
           type: string
           description: The X coordinate for EC keys (optional).

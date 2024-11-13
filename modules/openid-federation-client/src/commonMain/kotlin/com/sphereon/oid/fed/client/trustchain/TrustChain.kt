@@ -1,104 +1,30 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.crypto.ICryptoCallbackMarkerType
-import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.crypto.findKeyInJwks
-import com.sphereon.oid.fed.client.fetch.IFetchCallbackMarkerType
-import com.sphereon.oid.fed.client.fetch.fetchService
+import com.sphereon.oid.fed.client.crypto.ICryptoService
+import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.helpers.checkKidInJwks
+import com.sphereon.oid.fed.client.helpers.findKeyInJwks
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.mapper.mapEntityStatement
-import com.sphereon.oid.fed.client.service.DefaultCallbacks
-import com.sphereon.oid.fed.client.service.ICallbackService
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
-import kotlin.js.JsExport
 
-expect interface ITrustChainCallbackMarkerType
-interface ITrustChainMarkerType
-
-@JsExport.Ignore
-interface ITrustChainCallbackService : ITrustChainMarkerType {
+/*
+ * TrustChain is a class that implements the logic to resolve and validate a trust chain.
+ */
+class TrustChain
+    (
+    private val fetchService: IFetchService,
+    private val cryptoService: ICryptoService
+) {
     suspend fun resolve(
-        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
-    ): MutableList<String>?
-}
-
-@JsExport.Ignore
-interface ITrustChainService : ITrustChainMarkerType {
-    suspend fun resolve(
-        entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int = 5
-    ): MutableList<String>?
-}
-
-expect fun trustChainService(platformCallback: ITrustChainCallbackMarkerType = DefaultCallbacks.trustChainService()): ITrustChainService
-
-abstract class AbstractTrustChainService<CallbackServiceType>(open val platformCallback: CallbackServiceType) :
-    ICallbackService<CallbackServiceType> {
-    private var disabled = false
-
-    override fun isEnabled(): Boolean {
-        return !this.disabled
-    }
-
-    override fun disable() = apply {
-        this.disabled = true
-    }
-
-    override fun enable() = apply {
-        this.disabled = false
-    }
-
-    protected fun assertEnabled() {
-        if (!isEnabled()) {
-            TrustChainConst.LOG.info("TRUST CHAIN verify has been disabled")
-            throw IllegalStateException("TRUST CHAIN service is disable; cannot verify")
-        } else if (this.platformCallback == null) {
-            TrustChainConst.LOG.error("TRUST CHAIN callback is not registered")
-            throw IllegalStateException("TRUST CHAIN has not been initialized. Please register your TrustChainCallback implementation, or register a default implementation")
-        }
-    }
-}
-
-class TrustChainService(override val platformCallback: ITrustChainCallbackService = DefaultCallbacks.trustChainService()) :
-    AbstractTrustChainService<ITrustChainCallbackService>(platformCallback), ITrustChainService {
-
-    override fun platform(): ITrustChainCallbackService {
-        return this.platformCallback
-    }
-
-    override suspend fun resolve(
-        entityIdentifier: String,
-        trustAnchors: Array<String>,
-        maxDepth: Int
-    ): MutableList<String>? {
-        assertEnabled()
-        return platformCallback.resolve(entityIdentifier, trustAnchors, maxDepth)
-    }
-}
-
-class SimpleCache<K, V> {
-    private val cacheMap = mutableMapOf<K, V>()
-
-    fun get(key: K): V? = cacheMap[key]
-
-    fun put(key: K, value: V) {
-        cacheMap[key] = value
-    }
-}
-
-class DefaultTrustChainImpl(
-    private val fetchService: IFetchCallbackMarkerType?,
-    private val cryptoService: ICryptoCallbackMarkerType?
-) : ITrustChainCallbackService, ITrustChainCallbackMarkerType {
-    override suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
     ): MutableList<String>? {
         val cache = SimpleCache<String, String>()
@@ -122,7 +48,7 @@ class DefaultTrustChainImpl(
     ): MutableList<String>? {
         if (depth == maxDepth) return null
 
-        val entityConfigurationJwt = fetchService(fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+        val entityConfigurationJwt = this.fetchService.fetchStatement(
             getEntityConfigurationEndpoint(entityIdentifier)
         )
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
@@ -134,7 +60,7 @@ class DefaultTrustChainImpl(
 
         if (key == null) return null
 
-        if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(entityConfigurationJwt, key)) {
+        if (!this.cryptoService.verify(entityConfigurationJwt, key)) {
             return null
         }
 
@@ -189,7 +115,7 @@ class DefaultTrustChainImpl(
             if (cache.get(authorityConfigurationEndpoint) != null) return null
 
             val authorityEntityConfigurationJwt =
-                fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+                this.fetchService.fetchStatement(
                     authorityConfigurationEndpoint
                 )
             cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
@@ -204,7 +130,7 @@ class DefaultTrustChainImpl(
 
             if (key == null) return null
 
-            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(
+            if (!this.cryptoService.verify(
                     authorityEntityConfigurationJwt,
                     key
                 )
@@ -223,10 +149,10 @@ class DefaultTrustChainImpl(
                 federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content ?: return null
 
             val subordinateStatementEndpoint =
-                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier, authority)
+                getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
 
             val subordinateStatementJwt =
-                fetchService(this.fetchService ?: DefaultCallbacks.fetchService()).fetchStatement(
+                this.fetchService.fetchStatement(
                     subordinateStatementEndpoint
                 )
 
@@ -240,7 +166,7 @@ class DefaultTrustChainImpl(
 
             if (subordinateStatementKey == null) return null
 
-            if (!cryptoService(this.cryptoService ?: DefaultCallbacks.jwtService()).verify(
+            if (!this.cryptoService.verify(
                     subordinateStatementJwt,
                     subordinateStatementKey
                 )
@@ -280,13 +206,14 @@ class DefaultTrustChainImpl(
 
         return null
     }
+}
 
-    private fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
-        for (key in keys) {
-            if (key.kid == kid) {
-                return true
-            }
-        }
-        return false
+class SimpleCache<K, V> {
+    private val cacheMap = mutableMapOf<K, V>()
+
+    fun get(key: K): V? = cacheMap[key]
+
+    fun put(key: K, value: V) {
+        cacheMap[key] = value
     }
 }
