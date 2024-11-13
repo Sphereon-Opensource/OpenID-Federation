@@ -46,6 +46,5 @@ fun decodeJWTComponents(jwtToken: String): JWT {
     }
 }
 
-// Custom Exceptions
 class InvalidJwtException(message: String) : Exception(message)
 class JwtDecodingException(message: String, cause: Throwable) : Exception(message, cause)
