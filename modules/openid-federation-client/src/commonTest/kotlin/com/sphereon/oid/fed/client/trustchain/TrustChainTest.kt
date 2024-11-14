@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.FederationClient
+import FederationClient
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.openapi.models.Jwk
