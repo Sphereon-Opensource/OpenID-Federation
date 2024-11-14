@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client.trustchain
 
+import TrustChainResolveResponse
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.helpers.checkKidInJwks
@@ -15,31 +16,6 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
-import kotlin.js.JsExport
-import kotlin.js.JsName
-
-/**
- * Response object for the resolve operation.
- */
-@JsExport
-@JsName("TrustChainResolveResponse")
-data class TrustChainResolveResponse(
-    /**
-     * A list of strings representing the resolved trust chain.
-     * Each string contains a JWT.
-     */
-    val trustChain: List<String>? = null,
-
-    /**
-     * Indicates whether the resolve operation was successful.
-     */
-    val error: Boolean = false,
-
-    /**
-     * Error message in case of a failure, if any.
-     */
-    val errorMessage: String? = null
-)
 
 /*
  * TrustChain is a class that implements the logic to resolve and validate a trust chain.

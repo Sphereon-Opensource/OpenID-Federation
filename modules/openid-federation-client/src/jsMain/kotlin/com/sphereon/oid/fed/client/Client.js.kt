@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.trustchain.TrustChain
-import com.sphereon.oid.fed.client.trustchain.TrustChainResolveResponse
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
