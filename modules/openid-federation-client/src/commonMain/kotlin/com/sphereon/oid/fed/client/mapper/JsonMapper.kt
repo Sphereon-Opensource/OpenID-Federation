@@ -34,8 +34,8 @@ fun decodeJWTComponents(jwtToken: String): JWT {
         throw InvalidJwtException("Invalid JWT format: Expected 3 parts, found ${parts.size}")
     }
 
-    val headerJson = Base64.UrlSafe.decode(parts[0]).decodeToString()
-    val payloadJson = Base64.UrlSafe.decode(parts[1]).decodeToString()
+    val headerJson = Base64.decode(parts[0]).decodeToString()
+    val payloadJson = Base64.decode(parts[1]).decodeToString()
 
     return try {
         JWT(
