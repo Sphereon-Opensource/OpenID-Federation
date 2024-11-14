@@ -5,6 +5,7 @@ import com.sphereon.oid.fed.client.crypto.cryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.trustchain.TrustChain
+import com.sphereon.oid.fed.client.trustchain.TrustChainResolveResponse
 import kotlin.js.JsExport
 
 @JsExport.Ignore
@@ -28,7 +29,7 @@ class FederationClient(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         maxDepth: Int = 5
-    ): MutableList<String>? {
+    ): TrustChainResolveResponse {
         return trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)
     }
 }

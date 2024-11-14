@@ -5,6 +5,7 @@ import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.trustchain.TrustChain
+import com.sphereon.oid.fed.client.trustchain.TrustChainResolveResponse
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,13 +48,9 @@ class FederationClientJS(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         maxDepth: Int = 10
-    ): Promise<Array<String>?> {
+    ): Promise<TrustChainResolveResponse> {
         return scope.promise {
-            try {
-                trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)?.toTypedArray()
-            } catch (e: Exception) {
-                throw RuntimeException("Failed to resolve trust chain: ${e.message}", e)
-            }
+            trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)
         }
     }
 }

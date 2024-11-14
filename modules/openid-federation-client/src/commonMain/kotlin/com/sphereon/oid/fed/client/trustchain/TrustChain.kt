@@ -15,6 +15,31 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
+import kotlin.js.JsExport
+import kotlin.js.JsName
+
+/**
+ * Response object for the resolve operation.
+ */
+@JsExport
+@JsName("TrustChainResolveResponse")
+data class TrustChainResolveResponse(
+    /**
+     * A list of strings representing the resolved trust chain.
+     * Each string contains a JWT.
+     */
+    val trustChain: List<String>? = null,
+
+    /**
+     * Indicates whether the resolve operation was successful.
+     */
+    val error: Boolean = false,
+
+    /**
+     * Error message in case of a failure, if any.
+     */
+    val errorMessage: String? = null
+)
 
 /*
  * TrustChain is a class that implements the logic to resolve and validate a trust chain.
@@ -26,15 +51,19 @@ class TrustChain
 ) {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
-    ): MutableList<String>? {
+    ): TrustChainResolveResponse {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return try {
-            buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
+            val trustChain = buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
+            if (trustChain != null) {
+                TrustChainResolveResponse(trustChain, false, null)
+            } else {
+                TrustChainResolveResponse(null, true, "A Trust chain could not be established")
+            }
         } catch (e: Exception) {
             TrustChainConst.LOG.error("buildTrustChainRecursive failed", e)
-            // Log error
-            null
+            TrustChainResolveResponse(null, true, e.message)
         }
     }
 
