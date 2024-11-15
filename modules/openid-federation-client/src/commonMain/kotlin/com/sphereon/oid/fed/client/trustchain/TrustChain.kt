@@ -37,7 +37,7 @@ class TrustChain
             } else {
                 TrustChainResolveResponse(null, true, "A Trust chain could not be established")
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             TrustChainConst.LOG.error("buildTrustChainRecursive failed", e)
             TrustChainResolveResponse(null, true, e.message)
         }
