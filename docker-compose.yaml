@@ -90,6 +90,20 @@ services:
     networks:
       - openid_network
 
+  keycloak:
+    image: keycloak/keycloak:26.0
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - "8082:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    volumes:
+      - ./.docker/keycloak:/opt/keycloak/data/import/
+    restart: always
+
 networks:
   openid_network:
     driver: bridge

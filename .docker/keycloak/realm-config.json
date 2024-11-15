@@ -1,0 +1,63 @@
+{
+  "id": "1427c8c3-5062-4015-816c-a241182ccb64",
+  "realm": "openid-federation",
+  "displayName": "OpenID Federation Keycloak",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "users": [
+    {
+      "username": "admin",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@example.org",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin"
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "id": "ff805070-808f-4ba4-8673-bcd4247249b2",
+        "name": "admin",
+        "description": "Administrator role with full permissions.",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "1427c8c3-5062-4015-816c-a241182ccb64"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "id": "4037f19b-70f7-4380-bf31-8b0b45d95810",
+      "clientId": "openid-client",
+      "name": "OpenID Federation Client",
+      "description": "Client for OpenID Federation integration",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://admin-server:8080/callback"
+      ],
+      "webOrigins": [
+        "http://admin-server:8080"
+      ],
+      "fullScopeAllowed": true
+    }
+  ],
+  "defaultRoles": [
+    "admin"
+  ],
+  "requiredCredentials": [
+    "password"
+  ],
+  "browserFlow": "browser"
+}
