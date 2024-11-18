@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if ! source ./version-config.sh; then
-    echo "Error: Failed to source version-config.sh"
+if ! source ./setup-env.sh; then
+    echo "Error: Failed to source setup-env.sh"
     exit 1
 fi
 
