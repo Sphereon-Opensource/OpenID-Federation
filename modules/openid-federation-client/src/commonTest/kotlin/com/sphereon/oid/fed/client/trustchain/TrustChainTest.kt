@@ -1,13 +1,13 @@
 package com.sphereon.oid.fed.client.trustchain
 
-import com.sphereon.oid.fed.client.FederationClient
+import FederationClient
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import kotlin.test.assertFalse
 
 object FetchService : IFetchService {
     override suspend fun fetchStatement(endpoint: String): String {
@@ -26,59 +26,59 @@ class TrustChainTest {
     fun buildTrustChain() = runTest {
         val client = FederationClient(FetchService, CryptoService)
 
-        val trustChain = client.resolveTrustChain(
+        val response = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertNotNull(trustChain)
+        assertFalse(response.error)
 
-        assertEquals(4, trustChain.size)
+        assertEquals(4, response.trustChain?.size)
 
         assertEquals(
-            trustChain[0],
+            response.trustChain?.get(0),
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt/.well-known/openid-federation" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain[1],
+            response.trustChain?.get(1),
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/fetch?sub=https://spid.wbss.it/Spid/oidc/rp/ipasv_lt" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain[2],
+            response.trustChain?.get(2),
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain[3],
+            response.trustChain?.get(3),
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
                 ?.get(1)
         )
 
-        val trustChain2 = client.resolveTrustChain(
+        val response2 = client.resolveTrustChain(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertNotNull(trustChain2)
-        assertEquals(3, trustChain2.size)
+        assertFalse(response2.error)
+        assertEquals(3, response2.trustChain?.size)
         assertEquals(
-            trustChain2[0],
+            response2.trustChain?.get(0),
             mockResponses.find { it[0] == "https://spid.wbss.it/Spid/oidc/sa/.well-known/openid-federation" }?.get(1)
         )
 
         assertEquals(
-            trustChain2[1],
+            response2.trustChain?.get(1),
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/fetch?sub=https://spid.wbss.it/Spid/oidc/sa" }
                 ?.get(1)
         )
 
         assertEquals(
-            trustChain2[2],
+            response2.trustChain?.get(2),
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
                 ?.get(1)
         )

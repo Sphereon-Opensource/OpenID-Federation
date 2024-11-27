@@ -47,13 +47,9 @@ class FederationClientJS(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         maxDepth: Int = 10
-    ): Promise<Array<String>?> {
+    ): Promise<TrustChainResolveResponse> {
         return scope.promise {
-            try {
-                trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)?.toTypedArray()
-            } catch (e: Exception) {
-                throw RuntimeException("Failed to resolve trust chain: ${e.message}", e)
-            }
+            trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)
         }
     }
 }

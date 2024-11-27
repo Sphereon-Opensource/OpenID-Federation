@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client.trustchain
 
+import TrustChainResolveResponse
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.helpers.checkKidInJwks
@@ -26,15 +27,19 @@ class TrustChain
 ) {
     suspend fun resolve(
         entityIdentifier: String, trustAnchors: Array<String>, maxDepth: Int
-    ): MutableList<String>? {
+    ): TrustChainResolveResponse {
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return try {
-            buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
+            val trustChain = buildTrustChainRecursive(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
+            if (trustChain != null) {
+                TrustChainResolveResponse(trustChain, false, null)
+            } else {
+                TrustChainResolveResponse(null, true, "A Trust chain could not be established")
+            }
         } catch (e: Exception) {
             TrustChainConst.LOG.error("buildTrustChainRecursive failed", e)
-            // Log error
-            null
+            TrustChainResolveResponse(null, true, e.message)
         }
     }
 
