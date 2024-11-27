@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.springboot.actuator) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)

@@ -12,13 +12,13 @@ pluginManagement {
         }
         mavenLocal()
         mavenCentral()
+        gradlePluginPortal()
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
         }
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
         }
-        gradlePluginPortal()
     }
 }
 plugins {

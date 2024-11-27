@@ -16,9 +16,6 @@ class SecurityConfig {
             authorizeRequests {
                 authorize("/**", hasAuthority("ADMIN"))
             }
-            formLogin {
-                loginPage = "/log-in"
-            }
         }
         return http.build()
     }
