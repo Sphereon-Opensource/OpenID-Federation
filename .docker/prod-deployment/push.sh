@@ -1,15 +1,15 @@
 #!/bin/bash
 
-source ./version-config.sh
+source ./setup-env.sh
 
 # Push federation server images
-docker tag ${FED_IMAGE}:${FED_VERSION} ${REGISTRY}/${FED_IMAGE}:${FED_VERSION}
-docker push ${REGISTRY}/${FED_IMAGE}:${FED_VERSION}
-docker tag ${FED_IMAGE}:${FED_VERSION} ${REGISTRY}/${FED_IMAGE}:latest
-docker push ${REGISTRY}/${FED_IMAGE}:latest
+docker tag ${FED_IMAGE}:${FED_VERSION} ${DOCKER_REGISTRY}/${FED_IMAGE}:${FED_VERSION}
+docker push ${DOCKER_REGISTRY}/${FED_IMAGE}:${FED_VERSION}
+docker tag ${FED_IMAGE}:${FED_VERSION} ${DOCKER_REGISTRY}/${FED_IMAGE}:latest
+docker push ${DOCKER_REGISTRY}/${FED_IMAGE}:latest
 
 # Push admin server images
-docker tag ${ADMIN_IMAGE}:${ADMIN_VERSION} ${REGISTRY}/${ADMIN_IMAGE}:${ADMIN_VERSION}
-docker push ${REGISTRY}/${ADMIN_IMAGE}:${ADMIN_VERSION}
-docker tag ${ADMIN_IMAGE}:${ADMIN_VERSION} ${REGISTRY}/${ADMIN_IMAGE}:latest
-docker push ${REGISTRY}/${ADMIN_IMAGE}:latest
+docker tag ${ADMIN_IMAGE}:${FED_VERSION} ${DOCKER_REGISTRY}/${ADMIN_IMAGE}:${FED_VERSION}
+docker push ${DOCKER_REGISTRY}/${ADMIN_IMAGE}:${FED_VERSION}
+docker tag ${ADMIN_IMAGE}:${FED_VERSION} ${DOCKER_REGISTRY}/${ADMIN_IMAGE}:latest
+docker push ${DOCKER_REGISTRY}/${ADMIN_IMAGE}:latest

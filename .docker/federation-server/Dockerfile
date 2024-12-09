@@ -13,6 +13,6 @@ FROM openjdk:21-jdk as runner
 
 WORKDIR /app
 
-COPY --from=builder /app/modules/federation-server/build/libs/federation-server-0.1.1-SNAPSHOT.jar ./federation-server-0.1.1.jar
+COPY --from=builder /app/modules/federation-server/build/libs/federation-server-0.1.2-SNAPSHOT.jar ./federation-server-0.1.2.jar
 
-ENTRYPOINT ["java", "-jar", "federation-server-0.1.1.jar"]
+ENTRYPOINT ["java", "-jar", "federation-server-0.1.2.jar"]

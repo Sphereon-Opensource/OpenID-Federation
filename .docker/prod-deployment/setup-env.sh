@@ -18,14 +18,14 @@ get_version() {
 
 # Base paths
 MODULES_PATH="../../"
-REGISTRY="sphereonregistry.azurecr.io"
+DOCKER_REGISTRY="${DOCKER_REGISTRY:-sphereonregistry.azurecr.io}"
 
 # Get versions with error handling
 FED_VERSION=$(get_version "${MODULES_PATH}/build.gradle.kts") || exit 1
 
 # Image names
-FED_IMAGE="${REGISTRY}/federation-server"
-ADMIN_IMAGE="${REGISTRY}/federation-admin-server"
+FED_IMAGE="federation-server"
+ADMIN_IMAGE="federation-admin-server"
 
 # Export variables
 export FED_VERSION
