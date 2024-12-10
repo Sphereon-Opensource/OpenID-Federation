@@ -24,6 +24,9 @@ dependencies {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)

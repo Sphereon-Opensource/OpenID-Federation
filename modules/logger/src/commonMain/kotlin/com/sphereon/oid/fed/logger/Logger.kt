@@ -29,6 +29,7 @@ class Logger(val tag: String = "") {
     object Static {
         fun tag(tag: String = "", severity: Severity = Severity.Info) = Logger(tag).also { it.setMinSeverity(severity) }
     }
+
 }
 
 val DefaultLogger = Logger("")

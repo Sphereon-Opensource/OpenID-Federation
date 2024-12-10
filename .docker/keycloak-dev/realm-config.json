@@ -6,7 +6,7 @@
   "sslRequired": "external",
   "accessTokenLifespan": 360000,
   "attributes": {
-    "frontendUrl": "http://keycloak:8080"
+    "frontendUrl": "http://localhost:8082"
   },
   "users": [
     {
