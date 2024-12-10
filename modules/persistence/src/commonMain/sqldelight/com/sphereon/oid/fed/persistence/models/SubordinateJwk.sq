@@ -1,8 +1,8 @@
 findBySubordinateId:
-SELECT * FROM SubordinateJwk WHERE subordinate_id = ?;
+SELECT * FROM SubordinateJwk WHERE subordinate_id = ? AND deleted_at IS NULL;
 
 findById:
-SELECT * FROM SubordinateJwk WHERE id = ?;
+SELECT * FROM SubordinateJwk WHERE id = ? AND deleted_at IS NULL;
 
 create:
 INSERT INTO SubordinateJwk (
