@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.builder.SubordinateStatementBuilder
+import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
@@ -38,13 +40,13 @@ class SubordinateService {
 
     fun createSubordinate(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinateAlreadyExists =
             subordinateQueries.findByAccountIdAndIdentifier(account.id, subordinateDTO.identifier).executeAsList()
 
         if (subordinateAlreadyExists.isNotEmpty()) {
-            throw IllegalArgumentException(Constants.SUBORDINATE_ALREADY_EXISTS)
+            throw EntityAlreadyExistsException(Constants.SUBORDINATE_ALREADY_EXISTS)
         }
 
         return subordinateQueries.create(account.id, subordinateDTO.identifier).executeAsOne()
@@ -52,10 +54,10 @@ class SubordinateService {
 
     fun getSubordinateStatement(accountUsername: String, id: Int): SubordinateStatement {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         val subordinateJwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList()
         val subordinateMetadataList =
@@ -123,13 +125,13 @@ class SubordinateService {
 
     fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         if (subordinate.account_id != account.id) {
-            throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
         }
 
         return subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id).executeAsOne()
@@ -138,10 +140,10 @@ class SubordinateService {
 
     fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         return subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList()
             .map { it.toSubordinateAdminJwkDTO() }.toTypedArray()
@@ -149,20 +151,20 @@ class SubordinateService {
 
     fun deleteSubordinateJwk(accountUsername: String, subordinateId: Int, id: Int): SubordinateJwk {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = subordinateQueries.findById(subordinateId).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         if (subordinate.account_id != account.id) {
-            throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
         }
 
         val subordinateJwk = subordinateJwkQueries.findById(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_JWK_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_JWK_NOT_FOUND)
 
         if (subordinateJwk.subordinate_id != subordinate.id) {
-            throw IllegalArgumentException(Constants.SUBORDINATE_JWK_NOT_FOUND)
+            throw NotFoundException(Constants.SUBORDINATE_JWK_NOT_FOUND)
         }
 
         return subordinateJwkQueries.delete(subordinateJwk.id).executeAsOne()
@@ -170,7 +172,7 @@ class SubordinateService {
 
     fun fetchSubordinateStatement(iss: String, sub: String): String {
         val subordinateStatement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
 
         return subordinateStatement.statement
     }
@@ -180,10 +182,10 @@ class SubordinateService {
         subordinateId: Int
     ): Array<SubordinateMetadataDTO> {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
-            .executeAsOneOrNull() ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         return Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateId(account.id, subordinate.id)
             .executeAsList()
@@ -197,17 +199,17 @@ class SubordinateService {
         metadata: JsonObject
     ): SubordinateMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
-            .executeAsOneOrNull() ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         val metadataAlreadyExists =
             Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndKey(account.id, subordinateId, key)
                 .executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
-            throw IllegalStateException(Constants.SUBORDINATE_METADATA_ALREADY_EXISTS)
+            throw EntityAlreadyExistsException(Constants.SUBORDINATE_METADATA_ALREADY_EXISTS)
         }
 
         val createdMetadata =
@@ -224,20 +226,20 @@ class SubordinateService {
         id: Int
     ): SubordinateMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
-            .executeAsOneOrNull() ?: throw IllegalArgumentException(Constants.SUBORDINATE_NOT_FOUND)
+            .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
 
         val metadata =
             Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndId(
                 account.id,
                 subordinate.id,
                 id
-            ).executeAsOneOrNull() ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
+            ).executeAsOneOrNull() ?: throw NotFoundException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
 
         val deletedMetadata = Persistence.subordinateMetadataQueries.delete(metadata.id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.SUBORDINATE_METADATA_NOT_FOUND)
+            ?: throw NotFoundException(Constants.SUBORDINATE_METADATA_NOT_FOUND)
 
         return deletedMetadata.toSubordinateMetadataDTO()
     }
@@ -249,7 +251,7 @@ class SubordinateService {
 
         val subordinateStatement =
             Persistence.subordinateStatementQueries.findByIssAndSub(accountIss, sub).executeAsOneOrNull()
-                ?: throw IllegalArgumentException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
+                ?: throw NotFoundException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
 
         return subordinateStatement.statement
     }

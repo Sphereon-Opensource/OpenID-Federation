@@ -1,5 +1,7 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
@@ -13,7 +15,7 @@ class AccountService {
         val accountAlreadyExists = accountQueries.findByUsername(account.username).executeAsOneOrNull()
 
         if (accountAlreadyExists != null) {
-            throw IllegalArgumentException(Constants.ACCOUNT_ALREADY_EXISTS)
+            throw EntityAlreadyExistsException(Constants.ACCOUNT_ALREADY_EXISTS)
         }
 
         return accountQueries.create(
@@ -37,6 +39,13 @@ class AccountService {
 
     fun getAccountByUsername(accountUsername: String): Account {
         return accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+    }
+
+    fun deleteAccount(accountUsername: String): Account {
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+
+        return accountQueries.delete(account.id).executeAsOne()
     }
 }

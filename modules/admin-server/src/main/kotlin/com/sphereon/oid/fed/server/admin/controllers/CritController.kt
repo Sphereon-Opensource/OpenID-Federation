@@ -12,30 +12,30 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/crits")
+@RequestMapping("/accounts/{username}/crits")
 class CritController {
     private val critService = CritService()
 
     @PostMapping
     fun createCrit(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @RequestBody body: CreateCritDTO
     ): Crit {
-        return critService.create(accountUsername, body.claim)
+        return critService.create(username, body.claim)
     }
 
     @GetMapping
     fun getCrits(
-        @PathVariable accountUsername: String
+        @PathVariable username: String
     ): Array<Crit> {
-        return critService.findByAccountUsername(accountUsername)
+        return critService.findByAccountUsername(username)
     }
 
     @DeleteMapping("/{id}")
     fun deleteCrit(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int
     ): Crit {
-        return critService.delete(accountUsername, id)
+        return critService.delete(username, id)
     }
 }

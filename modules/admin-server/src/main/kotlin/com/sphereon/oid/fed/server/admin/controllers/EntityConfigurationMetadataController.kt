@@ -12,24 +12,24 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/metadata")
+@RequestMapping("/accounts/{username}/metadata")
 class EntityConfigurationMetadataController {
     private val entityConfigurationMetadataService = EntityConfigurationMetadataService()
 
     @GetMapping
     fun get(
-        @PathVariable accountUsername: String
+        @PathVariable username: String
     ): Array<EntityConfigurationMetadataDTO> {
-        return entityConfigurationMetadataService.findByAccountUsername(accountUsername)
+        return entityConfigurationMetadataService.findByAccountUsername(username)
     }
 
     @PostMapping
     fun create(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @RequestBody body: CreateMetadataDTO
     ): EntityConfigurationMetadataDTO {
         return entityConfigurationMetadataService.createEntityConfigurationMetadata(
-            accountUsername,
+            username,
             body.key,
             body.metadata
         )
@@ -37,9 +37,9 @@ class EntityConfigurationMetadataController {
 
     @DeleteMapping("/{id}")
     fun delete(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int
     ): EntityConfigurationMetadataDTO {
-        return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(accountUsername, id)
+        return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(username, id)
     }
 }

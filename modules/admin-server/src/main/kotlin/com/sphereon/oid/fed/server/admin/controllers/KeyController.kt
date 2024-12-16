@@ -11,28 +11,28 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/keys")
+@RequestMapping("/accounts/{username}/keys")
 class KeyController {
     private val keyService = KeyService()
 
     @PostMapping
-    fun create(@PathVariable accountUsername: String): JwkAdminDTO {
-        val key = keyService.create(accountUsername)
+    fun create(@PathVariable username: String): JwkAdminDTO {
+        val key = keyService.create(username)
         return key
     }
 
     @GetMapping
-    fun getKeys(@PathVariable accountUsername: String): Array<JwkAdminDTO> {
-        val keys = keyService.getKeys(accountUsername)
+    fun getKeys(@PathVariable username: String): Array<JwkAdminDTO> {
+        val keys = keyService.getKeys(username)
         return keys
     }
 
     @DeleteMapping("/{keyId}")
     fun revokeKey(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable keyId: Int,
         @RequestParam reason: String?
     ): JwkAdminDTO {
-        return keyService.revokeKey(accountUsername, keyId, reason)
+        return keyService.revokeKey(username, keyId, reason)
     }
 }

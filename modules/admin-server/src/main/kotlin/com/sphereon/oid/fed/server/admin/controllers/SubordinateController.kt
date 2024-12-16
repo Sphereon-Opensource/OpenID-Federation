@@ -17,64 +17,64 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/subordinates")
+@RequestMapping("/accounts/{username}/subordinates")
 class SubordinateController {
     private val subordinateService = SubordinateService()
 
     @GetMapping
-    fun getSubordinates(@PathVariable accountUsername: String): Array<SubordinateAdminDTO> {
-        return subordinateService.findSubordinatesByAccount(accountUsername).map { it.toSubordinateAdminDTO() }
+    fun getSubordinates(@PathVariable username: String): Array<SubordinateAdminDTO> {
+        return subordinateService.findSubordinatesByAccount(username).map { it.toSubordinateAdminDTO() }
             .toTypedArray()
     }
 
     @PostMapping
     fun createSubordinate(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @RequestBody subordinate: CreateSubordinateDTO
     ): Subordinate {
-        return subordinateService.createSubordinate(accountUsername, subordinate)
+        return subordinateService.createSubordinate(username, subordinate)
     }
 
     @PostMapping("/{id}/jwks")
     fun createSubordinateJwk(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int,
         @RequestBody jwk: JsonObject
     ): SubordinateJwkDto {
-        return subordinateService.createSubordinateJwk(accountUsername, id, jwk)
+        return subordinateService.createSubordinateJwk(username, id, jwk)
     }
 
     @GetMapping("/{id}/jwks")
     fun getSubordinateJwks(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int
     ): Array<SubordinateJwkDto> {
-        return subordinateService.getSubordinateJwks(accountUsername, id)
+        return subordinateService.getSubordinateJwks(username, id)
     }
 
     @DeleteMapping("/{id}/jwks/{jwkId}")
     fun deleteSubordinateJwk(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int,
         @PathVariable jwkId: Int
     ) {
-        subordinateService.deleteSubordinateJwk(accountUsername, id, jwkId)
+        subordinateService.deleteSubordinateJwk(username, id, jwkId)
     }
 
     @GetMapping("/{id}/statement")
     fun getSubordinateStatement(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int
     ): SubordinateStatement {
-        return subordinateService.getSubordinateStatement(accountUsername, id)
+        return subordinateService.getSubordinateStatement(username, id)
     }
 
     @PostMapping("/{id}/statement")
     fun publishSubordinateStatement(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int,
         @RequestBody dryRun: Boolean?
     ): String {
-        return subordinateService.publishSubordinateStatement(accountUsername, id, dryRun)
+        return subordinateService.publishSubordinateStatement(username, id, dryRun)
     }
 }

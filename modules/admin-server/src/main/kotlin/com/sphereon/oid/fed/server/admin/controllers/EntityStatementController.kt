@@ -11,20 +11,20 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/entity-statement")
+@RequestMapping("/accounts/{username}/entity-statement")
 class EntityStatementController {
     private val entityConfigurationStatementService = EntityConfigurationStatementService()
 
     @GetMapping
-    fun getEntityStatement(@PathVariable accountUsername: String): EntityConfigurationStatement {
-        return entityConfigurationStatementService.findByUsername(accountUsername)
+    fun getEntityStatement(@PathVariable username: String): EntityConfigurationStatement {
+        return entityConfigurationStatementService.findByUsername(username)
     }
 
     @PostMapping
     fun publishEntityStatement(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @RequestBody body: PublishEntityStatementDTO?
     ): String {
-        return entityConfigurationStatementService.publishByUsername(accountUsername, body?.dryRun ?: false)
+        return entityConfigurationStatementService.publishByUsername(username, body?.dryRun ?: false)
     }
 }

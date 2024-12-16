@@ -57,7 +57,7 @@ kotlin {
             )
 
             types = "./index.d.ts"
-        }        
+        }
     }
 
     // wasmJs is not available yet for ktor until v3.x is released which is still in alpha
@@ -179,7 +179,7 @@ npmPublish {
             authToken.set(System.getenv("NPM_TOKEN") ?: "")
         }
     }
-    packages{
+    packages {
         named("js") {
             packageJson {
                 "name" by "@sphereon/openid-federation-common"
