@@ -1155,12 +1155,13 @@ paths:
             type: integer
           description: The ID of the subordinate.
       requestBody:
-        description: JSON object containing JWK details
+        description: Metadata creation details
         required: true
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/Jwk'
+
       responses:
         '201':
           description: Subordinate JWK created successfully
