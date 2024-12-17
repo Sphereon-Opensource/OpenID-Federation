@@ -35,6 +35,14 @@ class SubordinateController {
         return subordinateService.createSubordinate(username, subordinate)
     }
 
+    @DeleteMapping("/{id}")
+    fun deleteSubordinate(
+        @PathVariable username: String,
+        @PathVariable id: Int
+    ): Subordinate {
+        return subordinateService.deleteSubordinate(username, id)
+    }
+
     @PostMapping("/{id}/jwks")
     fun createSubordinateJwk(
         @PathVariable username: String,

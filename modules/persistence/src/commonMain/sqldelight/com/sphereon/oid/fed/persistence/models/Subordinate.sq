@@ -5,7 +5,7 @@ INSERT INTO Subordinate (
 ) VALUES (?, ?) RETURNING *;
 
 delete:
-UPDATE Subordinate SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL;
+UPDATE Subordinate SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL RETURNING *;
 
 findByAccountId:
 SELECT * FROM Subordinate WHERE account_id = ? AND deleted_at IS NULL;

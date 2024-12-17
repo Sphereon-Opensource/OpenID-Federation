@@ -38,6 +38,20 @@ class SubordinateService {
         return subordinates.map { it.identifier }.toTypedArray()
     }
 
+    fun deleteSubordinate(accountUsername: String, id: Int): Subordinate {
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+
+        val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
+
+        if (subordinate.account_id != account.id) {
+            throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
+        }
+
+        return subordinateQueries.delete(subordinate.id).executeAsOne()
+    }
+
     fun createSubordinate(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
@@ -124,8 +138,9 @@ class SubordinateService {
     }
 
     fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
-        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull() ?: throw NotFoundException(
+            Constants.ACCOUNT_NOT_FOUND
+        )
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
