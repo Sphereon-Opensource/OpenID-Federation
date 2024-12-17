@@ -840,7 +840,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
+  '/accounts/{username}/metadata/{id}':
+    delete:
+      tags:
+        - admin
+      summary: Delete account metadata
+      description: Deletes a specific metadata entry for the specified account.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the metadata entry to be deleted.
+      responses:
+        '200':
+          description: Metadata deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityConfigurationMetadataDTO'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Metadata not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   '/accounts/{username}/authority-hints':
     get:
       tags:
@@ -1095,6 +1138,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/subordinates/{id}':
+    delete:
+      tags:
+        - admin
+      summary: Delete subordinate
+      description: Deletes a specific subordinate for the specified account.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate to be deleted.
+      responses:
+        '200':
+          description: Subordinate deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Subordinate deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subordinate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   '/accounts/{username}/subordinates/{id}/jwks':
     get:
@@ -1161,7 +1252,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Jwk'
-
       responses:
         '201':
           description: Subordinate JWK created successfully
@@ -1351,91 +1441,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-  '/accounts/{username}/subordinates/{id}/statement':
-    get:
-      tags:
-        - admin
-      summary: Get subordinate statement
-      description: Retrieve the subordinate statement for the specified subordinate.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
-      responses:
-        '200':
-          description: Successfully retrieved subordinate statement
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubordinateStatement'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-    post:
-      tags:
-        - admin
-      summary: Publish subordinate statement
-      description: Publish or validate (dry-run) the subordinate statement for the specified subordinate.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
-      requestBody:
-        description: Dry-run flag (optional)
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PublishEntityStatementDTO'
-      responses:
-        '200':
-          description: Subordinate statement published successfully
-          content:
-            application/json:
-              schema:
-                type: string
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  '/accounts/{username}/trust-mark':
+  '/accounts/{username}/trust-marks':
     post:
       tags:
         - admin
@@ -1535,7 +1541,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/trust-mark/{trustMarkId}':
+  '/accounts/{username}/trust-marks/{trustMarkId}':
     delete:
       tags:
         - admin
@@ -1583,6 +1589,90 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/subordinates/{id}/statement':
+    get:
+      tags:
+        - admin
+      summary: Get subordinate statement
+      description: Retrieve the subordinate statement for the specified subordinate.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - admin
+      summary: Publish subordinate statement
+      description: Publish or validate (dry-run) the subordinate statement for the specified subordinate.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Dry-run flag (optional)
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishEntityStatementDTO'
+      responses:
+        '200':
+          description: Subordinate statement published successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
 components:
   schemas:
     BaseEntityStatement:
