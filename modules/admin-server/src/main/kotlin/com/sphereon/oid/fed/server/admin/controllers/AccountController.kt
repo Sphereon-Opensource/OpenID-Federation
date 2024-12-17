@@ -27,8 +27,8 @@ class AccountController {
         return accountService.create(account)
     }
 
-    @DeleteMapping("/{accountUsername}")
-    fun deleteAccount(@PathVariable accountUsername: String): Account {
-        return accountService.deleteAccount(accountUsername)
+    @DeleteMapping("/{username}")
+    fun deleteAccount(@PathVariable username: String): Account {
+        return accountService.deleteAccount(username)
     }
 }
