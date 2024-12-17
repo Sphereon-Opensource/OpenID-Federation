@@ -12,26 +12,26 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/subordinates/{subordinateId}/metadata")
+@RequestMapping("/accounts/{username}/subordinates/{subordinateId}/metadata")
 class SubordinateMetadataController {
     private val subordinateService = SubordinateService()
 
     @GetMapping
     fun get(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable subordinateId: Int
     ): Array<SubordinateMetadataDTO> {
-        return subordinateService.findSubordinateMetadata(accountUsername, subordinateId)
+        return subordinateService.findSubordinateMetadata(username, subordinateId)
     }
 
     @PostMapping
     fun create(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable subordinateId: Int,
         @RequestBody body: CreateMetadataDTO
     ): SubordinateMetadataDTO {
         return subordinateService.createMetadata(
-            accountUsername,
+            username,
             subordinateId,
             body.key,
             body.metadata
@@ -40,10 +40,10 @@ class SubordinateMetadataController {
 
     @DeleteMapping("/{id}")
     fun delete(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable subordinateId: Int,
         @PathVariable id: Int
     ): SubordinateMetadataDTO {
-        return subordinateService.deleteSubordinateMetadata(accountUsername, subordinateId, id)
+        return subordinateService.deleteSubordinateMetadata(username, subordinateId, id)
     }
 }

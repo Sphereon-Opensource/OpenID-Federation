@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataBuilder
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
@@ -21,7 +22,8 @@ class EntityConfigurationStatementService {
 
     fun findByUsername(accountUsername: String): EntityConfigurationStatement {
         val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+
         val identifier = accountService.getAccountIdentifier(account.username)
         val keys = keyService.getKeys(accountUsername)
         val hasSubordinates = subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()

@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
@@ -18,7 +19,7 @@ class KeyService {
 
         keyQueries.create(
             account_id = account.id,
-            kid = jwk.kid!!,
+            kid = jwk.kid,
             key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
         ).executeAsOne()
 
@@ -27,22 +28,23 @@ class KeyService {
 
     fun getKeys(accountUsername: String): Array<JwkAdminDTO> {
         val account =
-            accountQueries.findByUsername(accountUsername).executeAsOne()
+            accountQueries.findByUsername(accountUsername).executeAsOneOrNull() ?: throw NotFoundException(
+                Constants.ACCOUNT_NOT_FOUND
+            )
         return keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
     }
 
     fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {
-        val account =
-            accountQueries.findByUsername(accountUsername).executeAsOne()
+        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
 
         var key = keyQueries.findById(keyId).executeAsOne()
 
         if (key.account_id != account.id) {
-            throw IllegalArgumentException(Constants.KEY_NOT_FOUND)
+            throw NotFoundException(Constants.KEY_NOT_FOUND)
         }
 
         if (key.revoked_at != null) {
-            throw IllegalArgumentException(Constants.KEY_ALREADY_REVOKED)
+            throw IllegalStateException(Constants.KEY_ALREADY_REVOKED)
         }
 
         keyQueries.revoke(reason, keyId)

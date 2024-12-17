@@ -1,5 +1,7 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.extensions.toEntityConfigurationMetadataDTO
@@ -12,13 +14,13 @@ class EntityConfigurationMetadataService {
         metadata: JsonObject
     ): EntityConfigurationMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val metadataAlreadyExists =
             Persistence.entityConfigurationMetadataQueries.findByAccountIdAndKey(account.id, key).executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
-            throw IllegalStateException(Constants.ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS)
+            throw EntityAlreadyExistsException(Constants.ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS)
         }
 
         val createdMetadata =
@@ -31,25 +33,25 @@ class EntityConfigurationMetadataService {
 
     fun findByAccountUsername(accountUsername: String): Array<EntityConfigurationMetadataDTO> {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
         return Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
             .map { it.toEntityConfigurationMetadataDTO() }.toTypedArray()
     }
 
     fun deleteEntityConfigurationMetadata(accountUsername: String, id: Int): EntityConfigurationMetadataDTO {
         val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val metadata =
             Persistence.entityConfigurationMetadataQueries.findById(id).executeAsOneOrNull()
-                ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
+                ?: throw NotFoundException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
 
         if (metadata.account_id != account.id) {
-            throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
+            throw NotFoundException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
         }
 
         val deletedMetadata = Persistence.entityConfigurationMetadataQueries.delete(id).executeAsOneOrNull()
-            ?: throw IllegalArgumentException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
+            ?: throw NotFoundException(Constants.ENTITY_CONFIGURATION_METADATA_NOT_FOUND)
 
         return deletedMetadata.toEntityConfigurationMetadataDTO()
     }

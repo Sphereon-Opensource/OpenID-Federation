@@ -12,28 +12,28 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{accountUsername}/authority-hints")
+@RequestMapping("/accounts/{username}/authority-hints")
 class AuthorityHintController {
     private val authorityHintService = AuthorityHintService()
 
     @GetMapping
-    fun getAuthorityHints(@PathVariable accountUsername: String): Array<AuthorityHint> {
-        return authorityHintService.findByAccountUsername(accountUsername)
+    fun getAuthorityHints(@PathVariable username: String): Array<AuthorityHint> {
+        return authorityHintService.findByAccountUsername(username)
     }
 
     @PostMapping
     fun createAuthorityHint(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @RequestBody body: CreateAuthorityHintDTO
     ): AuthorityHint {
-        return authorityHintService.createAuthorityHint(accountUsername, body.identifier)
+        return authorityHintService.createAuthorityHint(username, body.identifier)
     }
 
     @DeleteMapping("/{id}")
     fun deleteAuthorityHint(
-        @PathVariable accountUsername: String,
+        @PathVariable username: String,
         @PathVariable id: Int
     ): AuthorityHint {
-        return authorityHintService.deleteAuthorityHint(accountUsername, id)
+        return authorityHintService.deleteAuthorityHint(username, id)
     }
 }
