@@ -23,9 +23,14 @@ dependencies {
     implementation(libs.springboot.actuator) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
+
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
     testImplementation(libs.springboot.testcontainer)
@@ -54,9 +59,9 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            
+
             artifact(tasks.named("bootJar"))
-            
+
             pom {
                 name.set("OpenID Federation Admin Server")
                 description.set("Admin Server for OpenID Federation")

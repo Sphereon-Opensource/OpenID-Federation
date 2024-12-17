@@ -42,10 +42,10 @@ jobs:
       - name: Execute Gradle build
         run: |
           ./gradlew build
-          ./gradlew publishAllPublicationsToSphereon-opensourceRepository
           ./gradlew :modules:openapi:jsPublicPackageJson
           ./gradlew :modules:openid-federation-common:jsPublicPackageJson
           ./gradlew publishJsPackageToNpmjsRegistry
+          ./gradlew publishAllPublicationsToSphereon-opensourceRepository
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
           DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
