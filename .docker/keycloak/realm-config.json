@@ -56,7 +56,7 @@
       "fullScopeAllowed": true,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
-      "secret": "client-secret",
+      "secret": "th1s1s4s3cr3tth4tMUSTb3ch4ng3d",
       "protocolMappers": [
         {
           "name": "realm-role-mapper",

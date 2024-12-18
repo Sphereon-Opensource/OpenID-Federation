@@ -110,8 +110,8 @@ straightforward approach.
 
 ### Manage Services:
 
-- `docker compose up` - Initiate the services.
-- `docker compose up -d` - Launch the services in detached mode, allowing them to run in the background.
+- `docker compose up` - Initiate all the services.
+- `docker compose up -d` - Launch all the services in detached mode, allowing them to run in the background.
 - `docker compose down` - Terminate the services.
 - `docker compose down -v` - Terminate the services and remove associated volumes.
 - `docker compose up db -d` - Start only the database container in detached mode for isolated database operations.
@@ -121,3 +121,89 @@ straightforward approach.
 
 * Federation API: Accessible at http://localhost:8080
 * Admin Server API: Accessible at http://localhost:8081
+* Default Keycloak Server: Accessible at http://localhost:8082
+
+## How to Acquire a Bearer Token from the default Keycloak Server
+
+The admin endpoints requires a Bearer token for authentication. To obtain a token, follow these steps:
+
+1. Use a tool like Postman or cURL to send a **POST request** to the Keycloak server.
+
+- **URL**:
+  ```
+  http://localhost:8082/realms/openid-federation/protocol/openid-connect/token
+  ```
+
+- **Headers**:
+  ```
+  Content-Type: application/x-www-form-urlencoded
+  ```
+
+- **Body**:
+  ```
+  grant_type=client_credentials
+  client_id=openid-client
+  client_secret=th1s1s4s3cr3tth4tMUSTb3ch4ng3d
+  ```
+
+2. **Example cURL Command**:
+   ```bash
+   curl -X POST http://localhost:8082/realms/openid-federation/protocol/openid-connect/token \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "grant_type=client_credentials" \
+     -d "client_id=openid-client" \
+     -d "client_secret=th1s1s4s3cr3tth4tMUSTb3ch4ng3d"
+
+3. **Example Response**:
+   ```json
+   {
+     "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+     "expires_in": 300,
+     "token_type": "Bearer",
+     "not-before-policy": 0,
+     "scope": "openid"
+   }
+   ```
+
+4. **Use the Access Token**:  
+   Add the `access_token` in the `Authorization` header as follows:
+   ```
+    Authorization: Bearer <access_token>
+   ```
+
+## Configuring Your Own OpenID Provider Using Environment Variables
+
+To use your own OpenID Connect provider, configure the `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI` environment variable.
+
+### Steps to Configure
+
+#### 1. Set the Environment Variable:
+
+Update the following line on your environment configuration file or export it directly in your shell:
+
+   ```bash
+   export OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI=https://my-new-provider/realms/openid-federation
+   ```
+
+#### 2. Verify the Configuration:
+
+Run the following command to confirm that the environment variable is correctly set:
+
+   ```bash
+   echo $OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI
+   ```
+
+The output should display:
+
+   ```bash
+  https://my-new-provider/realms/openid-federation
+   ```
+
+#### 3. Restart Your Application:
+
+After setting the environment variable, restart your application to apply the changes.
+
+#### 4. Validate Token Issuance:
+
+Ensure the application validates tokens issued by the new provider. The issuer URI should match
+the `iss` claim in the JWT tokens.
