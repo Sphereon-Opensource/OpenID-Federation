@@ -25,5 +25,6 @@ class Constants {
         const val SUBORDINATE_STATEMENT_NOT_FOUND = "Subordinate statement not found"
         const val SUBORDINATE_METADATA_NOT_FOUND = "Subordinate metadata not found"
         const val SUBORDINATE_METADATA_ALREADY_EXISTS = "Subordinate metadata already exists"
+        const val ROOT_IDENTIFIER_NOT_SET = "Root identifier not set"
     }
 }

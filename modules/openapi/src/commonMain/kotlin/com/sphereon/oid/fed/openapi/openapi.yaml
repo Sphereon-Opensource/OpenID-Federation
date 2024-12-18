@@ -3570,6 +3570,11 @@ components:
           type: string
           description: The username of the account.
           example: acmeco
+        identifier:
+          type: string
+          description: The identifier of the tenant account.
+          example: https://www.example.com/oidf
+
       required:
         - username
     CreateSubordinateDTO:
@@ -3578,7 +3583,7 @@ components:
         identifier:
           type: string
           description: The identifier of the subordinate account.
-          example: 'https://www.sphereon.com/subordinate'
+          example: 'https://www.example.com/subordinate'
       required:
         - identifier
     SubordinateAdminDTO:
@@ -3597,7 +3602,7 @@ components:
         identifier:
           type: string
           description: The unique identifier for the subordinate.
-          example: 'https://www.sphereon.com/subordinate'
+          example: 'https://www.example.com/subordinate'
         createdAt:
           type: string
           format: date-time
@@ -3618,13 +3623,19 @@ components:
       type: object
       properties:
         id:
-          type: string
+          type: integer
           description: The unique identifier for the account.
           example: 12345
         username:
           type: string
           description: The username of the account.
           example: acmecorp
+        identifier:
+          type: string
+          description: The identifier of the account.
+          format: uri
+          example: "https://www.example.com/oidf"
+          pattern: "^https?:\\/\\/.*$"
     CreateEntityStatementRequest:
       properties:
         dry_run:

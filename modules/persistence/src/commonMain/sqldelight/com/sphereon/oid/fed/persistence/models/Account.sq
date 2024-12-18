@@ -2,7 +2,7 @@ findAll:
 SELECT * FROM Account WHERE deleted_at IS NULL;
 
 create:
-INSERT INTO Account (username) VALUES (?) RETURNING *;
+INSERT INTO Account (username, identifier) VALUES (?, ?) RETURNING *;
 
 delete:
 UPDATE Account SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *;

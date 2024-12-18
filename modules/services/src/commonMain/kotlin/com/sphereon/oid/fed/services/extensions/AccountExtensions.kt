@@ -5,6 +5,8 @@ import com.sphereon.oid.fed.persistence.models.Account
 
 fun Account.toAccountDTO(): AccountDTO {
     return AccountDTO(
-        username = this.username
+        id = this.id,
+        username = this.username,
+        identifier = this.identifier
     )
 }

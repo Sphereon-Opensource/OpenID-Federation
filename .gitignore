@@ -24,3 +24,4 @@ captures
 /.run/*
 kotlin-js-store/
 .env
+/.docker/keycloak-dev/

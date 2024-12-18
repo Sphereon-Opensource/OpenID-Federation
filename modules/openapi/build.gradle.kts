@@ -198,7 +198,7 @@ npmPublish {
             authToken.set(System.getenv("NPM_TOKEN") ?: "")
         }
     }
-    packages{
+    packages {
         named("js") {
             packageJson {
                 "name" by "@sphereon/openid-federation-open-api"

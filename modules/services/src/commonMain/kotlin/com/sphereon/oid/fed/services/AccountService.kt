@@ -8,7 +8,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.extensions.toAccountDTO
 
-class AccountService {
+class AccountService() {
     private val accountQueries = Persistence.accountQueries
 
     fun create(account: CreateAccountDTO): AccountDTO {
@@ -20,6 +20,7 @@ class AccountService {
 
         return accountQueries.create(
             username = account.username,
+            identifier = account.identifier,
         ).executeAsOne().toAccountDTO()
     }
 
@@ -28,7 +29,17 @@ class AccountService {
     }
 
     fun getAccountIdentifier(accountUsername: String): String {
-        val rootIdentifier = System.getenv("ROOT_IDENTIFIER") ?: "http://localhost:8080"
+        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+
+        val identifier = account.identifier
+
+        if (identifier != null) {
+            return identifier
+        }
+
+        val rootIdentifier =
+            System.getenv("ROOT_IDENTIFIER") ?: throw NotFoundException(Constants.ROOT_IDENTIFIER_NOT_SET)
 
         if (accountUsername == "root") {
             return rootIdentifier
