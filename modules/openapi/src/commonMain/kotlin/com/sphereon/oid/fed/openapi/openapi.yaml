@@ -11,7 +11,7 @@ info:
   version: 1.0.0-d40
 tags:
   - name: federation
-    description: Federation endpoints to verify entities.
+    description: Federation endpoints.
   - name: api
     description: Unprotected API endpoints.
   - name: admin
@@ -998,7 +998,7 @@ paths:
     get:
       tags:
         - admin
-      summary: Get entity configuration statement
+      summary: Get entity configuration statement object
       description: Retrieve the entity configuration statement for the specified account.
       parameters:
         - name: username
@@ -1029,8 +1029,8 @@ paths:
     post:
       tags:
         - admin
-      summary: Publish entity configuration statement
-      description: Publish or validate (dry-run) the entity configuration statement for the specified account.
+      summary: Sign and publish entity configuration statement
+      description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - name: username
           in: path
@@ -1593,7 +1593,7 @@ paths:
     get:
       tags:
         - admin
-      summary: Get subordinate statement
+      summary: Get subordinate statement object
       description: Retrieve the subordinate statement for the specified subordinate.
       parameters:
         - name: username
@@ -1630,8 +1630,8 @@ paths:
     post:
       tags:
         - admin
-      summary: Publish subordinate statement
-      description: Publish or validate (dry-run) the subordinate statement for the specified subordinate.
+      summary: Sign and publish subordinate statement
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - name: username
           in: path
