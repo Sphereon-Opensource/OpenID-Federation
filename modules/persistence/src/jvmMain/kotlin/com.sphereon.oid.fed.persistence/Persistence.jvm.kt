@@ -14,6 +14,7 @@ import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkDefinitionQueries
 
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
@@ -26,6 +27,7 @@ actual object Persistence {
     actual val subordinateStatementQueries: SubordinateStatementQueries
     actual val subordinateJwkQueries: SubordinateJwkQueries
     actual val subordinateMetadataQueries: SubordinateMetadataQueries
+    actual val trustMarkDefinitionQueries: TrustMarkDefinitionQueries
 
     init {
         val driver = getDriver()
@@ -42,6 +44,7 @@ actual object Persistence {
         subordinateStatementQueries = database.subordinateStatementQueries
         subordinateJwkQueries = database.subordinateJwkQueries
         subordinateMetadataQueries = database.subordinateMetadataQueries
+        trustMarkDefinitionQueries = database.trustMarkDefinitionQueries
     }
 
     private fun getDriver(): SqlDriver {

@@ -1,14 +1,25 @@
 findBySubordinateId:
-SELECT * FROM SubordinateJwk WHERE subordinate_id = ? AND deleted_at IS NULL;
+SELECT *
+FROM SubordinateJwk
+WHERE subordinate_id = ?
+AND deleted_at IS NULL;
 
 findById:
-SELECT * FROM SubordinateJwk WHERE id = ? AND deleted_at IS NULL;
+SELECT *
+FROM SubordinateJwk
+WHERE id = ?
+AND deleted_at IS NULL;
 
 create:
 INSERT INTO SubordinateJwk (
     subordinate_id,
     key
-) VALUES (?, ?) RETURNING *;
+) VALUES (?, ?)
+RETURNING *;
 
 delete:
-UPDATE SubordinateJwk SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *;
+UPDATE SubordinateJwk
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;

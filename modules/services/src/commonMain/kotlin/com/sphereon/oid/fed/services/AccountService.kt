@@ -28,8 +28,8 @@ class AccountService() {
         return accountQueries.findAll().executeAsList().map { it.toAccountDTO() }
     }
 
-    fun getAccountIdentifier(accountUsername: String): String {
-        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+    fun getAccountIdentifier(username: String): String {
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         val identifier = account.identifier
@@ -41,22 +41,29 @@ class AccountService() {
         val rootIdentifier =
             System.getenv("ROOT_IDENTIFIER") ?: throw NotFoundException(Constants.ROOT_IDENTIFIER_NOT_SET)
 
-        if (accountUsername == "root") {
+        if (username == "root") {
             return rootIdentifier
         }
 
-        return "$rootIdentifier/$accountUsername"
+        return "$rootIdentifier/$username"
     }
 
-    fun getAccountByUsername(accountUsername: String): Account {
-        return accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+    fun getAccountByUsername(username: String): Account {
+        return accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
     }
 
-    fun deleteAccount(accountUsername: String): Account {
-        val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
+    fun deleteAccount(username: String): Account {
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 
         return accountQueries.delete(account.id).executeAsOne()
+    }
+
+    fun usernameToAccountId(username: String): Int {
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
+
+        return account.id
     }
 }

@@ -1,17 +1,21 @@
 findAll:
-SELECT * FROM Account WHERE deleted_at IS NULL;
+SELECT *
+FROM Account
+WHERE deleted_at IS NULL;
 
 create:
-INSERT INTO Account (username, identifier) VALUES (?, ?) RETURNING *;
+INSERT INTO Account (username, identifier)
+VALUES (?, ?)
+RETURNING *;
 
 delete:
-UPDATE Account SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING *;
+UPDATE Account
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+RETURNING *;
 
 findByUsername:
-SELECT * FROM Account WHERE username = ? AND deleted_at IS NULL;
-
-findById:
-SELECT * FROM Account WHERE id = ? AND deleted_at IS NULL;
-
-update:
-UPDATE Account SET username = ? WHERE id = ? AND deleted_at IS NULL RETURNING *;
+SELECT *
+FROM Account
+WHERE username = ?
+AND deleted_at IS NULL;

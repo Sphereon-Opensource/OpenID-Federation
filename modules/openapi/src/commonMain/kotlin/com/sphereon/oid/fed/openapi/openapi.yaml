@@ -1441,6 +1441,123 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/trust-mark-definitions':
+    get:
+      summary: Get all Trust Mark Definitions
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: List of trust mark definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+
+    post:
+      summary: Create a Trust Mark Definition
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustMarkDefinitionDTO'
+      responses:
+        '201':
+          description: Trust mark definition created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+
+  '/accounts/{username}/trust-mark-definitions/{id}':
+    get:
+      summary: Get a Trust Mark Definition by ID
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trust mark definition details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+    put:
+      summary: Update a Trust Mark Definition
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustMarkDefinitionDTO'
+      responses:
+        '200':
+          description: Trust mark definition updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+
+    delete:
+      summary: Delete a Trust Mark Definition
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Trust mark definition deleted
+
   '/accounts/{username}/trust-marks':
     post:
       tags:
@@ -3713,3 +3830,74 @@ components:
           description: The identifier of the authority hint.
       required:
         - identifier
+    CreateTrustMarkDefinitionDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Definition.
+          example: "example-identifier"
+        name:
+          type: string
+          description: A human-readable name for the Trust Mark Definition.
+          example: "Example Trust Mark"
+        description:
+          type: string
+          description: A detailed description of the Trust Mark Definition.
+          example: "This is a trust mark for demonstrating compliance with XYZ standards."
+      required:
+        - identifier
+        - name
+    UpdateTrustMarkDefinitionDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        name:
+          type: string
+          description: A human-readable name for the Trust Mark Definition.
+          example: "Example Trust Mark"
+        description:
+          type: string
+          description: A detailed description of the Trust Mark Definition.
+          example: "This is a trust mark for demonstrating compliance with XYZ standards."
+    TrustMarkDefinitionDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier of the Trust Mark Definition.
+          example: 123
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Definition.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        name:
+          type: string
+          description: A human-readable name for the Trust Mark Definition.
+          example: "Example Trust Mark"
+        description:
+          type: string
+          description: A detailed description of the Trust Mark Definition.
+          example: "This is a trust mark for demonstrating compliance with XYZ standards."
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Definition was created.
+          example: "2024-12-01T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Definition was last updated.
+          example: "2024-12-15T15:30:00Z"
+          nullable: true
+      required:
+        - id
+        - identifier
+        - name
+        - issuerPolicy
+        - createdAt
