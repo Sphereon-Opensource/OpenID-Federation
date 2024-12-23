@@ -1510,35 +1510,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TrustMarkTypeDTO'
-    put:
-      summary: Update a Trust Mark Type
-      tags:
-        - admin
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateTrustMarkTypeDTO'
-      responses:
-        '200':
-          description: Trust mark definition updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrustMarkTypeDTO'
-
     delete:
       summary: Delete a Trust Mark Type
       tags:
