@@ -1,21 +1,21 @@
 create:
-INSERT INTO TrustMarkDefinition (identifier, name, description, account_id)
+INSERT INTO TrustMarkType (identifier, name, description, account_id)
 VALUES (:identifier, :name, :description, :account_id)
 RETURNING *;
 
 findByAccountId:
-SELECT * FROM TrustMarkDefinition WHERE account_id = :account_id AND deleted_at IS NULL;
+SELECT * FROM TrustMarkType WHERE account_id = :account_id AND deleted_at IS NULL;
 
 findByAccountIdAndId:
-SELECT * FROM TrustMarkDefinition
+SELECT * FROM TrustMarkType
 WHERE account_id = :account_id AND id = :id AND deleted_at IS NULL;
 
 findByAccountIdAndIdentifier:
-SELECT * FROM TrustMarkDefinition
+SELECT * FROM TrustMarkType
 WHERE account_id = :account_id AND identifier = :identifier AND deleted_at IS NULL;
 
 update:
-UPDATE TrustMarkDefinition
+UPDATE TrustMarkType
 SET
     name = COALESCE(:name, name),
     description = COALESCE(:description, description),
@@ -24,7 +24,11 @@ WHERE id = :id AND deleted_at IS NULL
 RETURNING *;
 
 delete:
-UPDATE TrustMarkDefinition
+UPDATE TrustMarkType
 SET deleted_at = CURRENT_TIMESTAMP
 WHERE id = :id AND deleted_at IS NULL
 RETURNING *;
+
+findByIdentifier:
+SELECT * FROM TrustMarkType
+WHERE identifier = :identifier AND deleted_at IS NULL;

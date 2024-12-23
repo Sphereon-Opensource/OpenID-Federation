@@ -1,10 +1,10 @@
 package com.sphereon.oid.fed.services.extensions
 
-import com.sphereon.oid.fed.openapi.models.TrustMarkDefinitionDTO
-import com.sphereon.oid.fed.persistence.models.TrustMarkDefinition
+import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
+import com.sphereon.oid.fed.persistence.models.TrustMarkType
 
-fun TrustMarkDefinition.toTrustMarkDefinitionDTO(): TrustMarkDefinitionDTO {
-    return TrustMarkDefinitionDTO(
+fun TrustMarkType.toTrustMarkTypeDTO(): TrustMarkTypeDTO {
+    return TrustMarkTypeDTO(
         id = this.id,
         identifier = this.identifier,
         name = this.name,

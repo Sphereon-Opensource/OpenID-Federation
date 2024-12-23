@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateTrustMarkDefinitionDTO
-import com.sphereon.oid.fed.openapi.models.TrustMarkDefinitionDTO
-import com.sphereon.oid.fed.openapi.models.UpdateTrustMarkDefinitionDTO
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeDTO
+import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
+import com.sphereon.oid.fed.openapi.models.UpdateTrustMarkTypeDTO
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.TrustMarkService
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -15,46 +15,50 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{username}/trust-mark-definitions")
-class TrustMarkDefinitionController {
+@RequestMapping("/accounts/{username}/trust-mark-types")
+class TrustMarkTypeController {
     private val accountService = AccountService()
     private val trustMarkService = TrustMarkService()
 
     @GetMapping
-    fun getTrustMarkDefinitions(@PathVariable username: String): List<TrustMarkDefinitionDTO> {
+    fun getTrustMarkTypes(@PathVariable username: String): List<TrustMarkTypeDTO> {
         return trustMarkService.findAllByAccount(accountService.usernameToAccountId(username))
     }
 
     @PostMapping
-    fun createTrustMarkDefinition(
+    fun createTrustMarkType(
         @PathVariable username: String,
-        @RequestBody createDto: CreateTrustMarkDefinitionDTO
-    ): TrustMarkDefinitionDTO {
-        return trustMarkService.createTrustMarkDefinition(accountService.usernameToAccountId(username), createDto)
+        @RequestBody createDto: CreateTrustMarkTypeDTO
+    ): TrustMarkTypeDTO {
+        return trustMarkService.createTrustMarkType(
+            username,
+            createDto,
+            accountService
+        )
     }
 
     @GetMapping("/{id}")
-    fun getTrustMarkDefinitionById(
+    fun getTrustMarkTypeById(
         @PathVariable username: String,
         @PathVariable id: Int
-    ): TrustMarkDefinitionDTO {
+    ): TrustMarkTypeDTO {
         return trustMarkService.findById(accountService.usernameToAccountId(username), id)
     }
 
     @PutMapping("/{id}")
-    fun updateTrustMarkDefinition(
+    fun updateTrustMarkType(
         @PathVariable username: String,
         @PathVariable id: Int,
-        @RequestBody updateDto: UpdateTrustMarkDefinitionDTO
-    ): TrustMarkDefinitionDTO {
-        return trustMarkService.updateTrustMarkDefinition(accountService.usernameToAccountId(username), id, updateDto)
+        @RequestBody updateDto: UpdateTrustMarkTypeDTO
+    ): TrustMarkTypeDTO {
+        return trustMarkService.updateTrustMarkType(accountService.usernameToAccountId(username), id, updateDto)
     }
 
     @DeleteMapping("/{id}")
-    fun deleteTrustMarkDefinition(
+    fun deleteTrustMarkType(
         @PathVariable username: String,
         @PathVariable id: Int
-    ): TrustMarkDefinitionDTO {
-        return trustMarkService.deleteTrustMarkDefinition(accountService.usernameToAccountId(username), id)
+    ): TrustMarkTypeDTO {
+        return trustMarkService.deleteTrustMarkType(accountService.usernameToAccountId(username), id)
     }
 }

@@ -3,7 +3,6 @@ package com.sphereon.oid.fed.common.builder
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
-import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationStatementBuilder {
@@ -13,6 +12,7 @@ class EntityConfigurationStatementBuilder {
     private lateinit var jwks: List<Jwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
+    private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
 
     fun iss(iss: String) = apply { this.iss = iss }
@@ -32,7 +32,10 @@ class EntityConfigurationStatementBuilder {
         this.crit.add(claim)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    fun trustMarkIssuer(trustMark: String, issuers: List<String>) = apply {
+        this.trustMarkIssuers[trustMark] = issuers
+    }
+
     private fun createJwks(jwks: List<Jwk>): EntityJwks {
         return EntityJwks(jwks.toTypedArray())
     }
@@ -46,7 +49,8 @@ class EntityConfigurationStatementBuilder {
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
             authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
-            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null
+            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
+            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap()
         )
     }
 }

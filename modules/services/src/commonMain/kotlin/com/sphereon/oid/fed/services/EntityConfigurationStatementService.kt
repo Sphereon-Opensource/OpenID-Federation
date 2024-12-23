@@ -31,6 +31,8 @@ class EntityConfigurationStatementService {
             authorityHintQueries.findByAccountId(account.id).executeAsList().map { it.identifier }.toTypedArray()
         val crits = Persistence.critQueries.findByAccountId(account.id).executeAsList().map { it.claim }.toTypedArray()
         val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
+        val trustMarkTypes =
+            Persistence.trustMarkTypeQueries.findByAccountId(account.id).executeAsList()
 
         val entityConfigurationStatement = EntityConfigurationStatementBuilder()
             .iss(identifier)
@@ -65,8 +67,20 @@ class EntityConfigurationStatementService {
             entityConfigurationStatement.crit(it)
         }
 
+        trustMarkTypes.forEach { trustMarkType ->
+
+            val trustMarkIssuers =
+                Persistence.trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkType.id).executeAsList()
+
+            entityConfigurationStatement.trustMarkIssuer(
+                trustMarkType.identifier,
+                trustMarkIssuers.map { it.issuer_identifier }
+            )
+        }
+
         return entityConfigurationStatement.build()
     }
+
 
     fun publishByUsername(accountUsername: String, dryRun: Boolean? = false): String {
         val account = accountService.getAccountByUsername(accountUsername)

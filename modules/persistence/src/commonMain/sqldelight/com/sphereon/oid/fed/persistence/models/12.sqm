@@ -1,0 +1,16 @@
+CREATE TABLE TrustMarkIssuer (
+    id SERIAL PRIMARY KEY,
+    trust_mark_type_id INT NOT NULL,
+    issuer_identifier TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_TrustMarkType FOREIGN KEY (trust_mark_type_id) REFERENCES TrustMarkType (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX unique_trustmarkissuer_type_identifier_active
+ON TrustMarkIssuer (trust_mark_type_id, issuer_identifier)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_trustmarkissuer_deleted_at ON TrustMarkIssuer (deleted_at);
+CREATE INDEX idx_trustmarkissuer_type ON TrustMarkIssuer (trust_mark_type_id);
+CREATE INDEX idx_trustmarkissuer_identifier ON TrustMarkIssuer (issuer_identifier);

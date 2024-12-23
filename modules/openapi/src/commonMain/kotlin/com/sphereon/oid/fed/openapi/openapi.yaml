@@ -1441,7 +1441,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/trust-mark-definitions':
+  '/accounts/{username}/trust-mark-types':
     get:
       summary: Get all Trust Mark Definitions
       tags:
@@ -1455,13 +1455,13 @@ paths:
           description: The username of the tenant account.
       responses:
         '200':
-          description: List of trust mark definitions
+          description: List of trust mark types
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+                  $ref: '#/components/schemas/TrustMarkTypeDTO'
 
     post:
       summary: Create a Trust Mark Definition
@@ -1478,16 +1478,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTrustMarkDefinitionDTO'
+              $ref: '#/components/schemas/CreateTrustMarkTypeDTO'
       responses:
         '201':
           description: Trust mark definition created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+                $ref: '#/components/schemas/TrustMarkTypeDTO'
 
-  '/accounts/{username}/trust-mark-definitions/{id}':
+  '/accounts/{username}/trust-mark-types/{id}':
     get:
       summary: Get a Trust Mark Definition by ID
       tags:
@@ -1509,7 +1509,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+                $ref: '#/components/schemas/TrustMarkTypeDTO'
     put:
       summary: Update a Trust Mark Definition
       tags:
@@ -1530,14 +1530,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateTrustMarkDefinitionDTO'
+              $ref: '#/components/schemas/CreateTrustMarkTypeDTO'
       responses:
         '200':
           description: Trust mark definition updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrustMarkDefinitionDTO'
+                $ref: '#/components/schemas/TrustMarkTypeDTO'
 
     delete:
       summary: Delete a Trust Mark Definition
@@ -2232,11 +2232,18 @@ components:
       type: object
       x-tags:
         - federation
-      properties:
-        a:
+      description: A mapping of trust mark identifiers to their associated issuers.
+      additionalProperties:
+        type: array
+        description: A list of issuers for the trust mark.
+        items:
           type: string
+          format: uri
+          description: The URI of an issuer for the trust mark.
       example:
-        'https://openid.net/certification/op': [ ]
+        'https://openid.net/certification/op':
+          - 'https://example-issuer1.com'
+          - 'https://example-issuer2.com'
         'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
           - 'https://swamid.se'
     TrustMarkOwners:
@@ -3830,69 +3837,68 @@ components:
           description: The identifier of the authority hint.
       required:
         - identifier
-    CreateTrustMarkDefinitionDTO:
+    CreateTrustMarkTypeDTO:
       type: object
       x-tags:
         - federation
       properties:
         identifier:
           type: string
-          description: The unique identifier for the Trust Mark Definition.
+          description: The unique identifier for the Trust Mark Type.
           example: "example-identifier"
         name:
           type: string
-          description: A human-readable name for the Trust Mark Definition.
+          description: A human-readable name for the Trust Mark Type.
           example: "Example Trust Mark"
         description:
           type: string
-          description: A detailed description of the Trust Mark Definition.
+          description: A detailed description of the Trust Mark Type.
           example: "This is a trust mark for demonstrating compliance with XYZ standards."
       required:
-        - identifier
         - name
-    UpdateTrustMarkDefinitionDTO:
+    UpdateTrustMarkTypeDTO:
       type: object
       x-tags:
         - federation
       properties:
         name:
           type: string
-          description: A human-readable name for the Trust Mark Definition.
+          description: A human-readable name for the Trust Mark Type.
           example: "Example Trust Mark"
         description:
           type: string
-          description: A detailed description of the Trust Mark Definition.
+          description: A detailed description of the Trust Mark Type.
           example: "This is a trust mark for demonstrating compliance with XYZ standards."
-    TrustMarkDefinitionDTO:
+    TrustMarkTypeDTO:
       type: object
       x-tags:
         - federation
       properties:
         id:
           type: integer
-          description: The unique identifier of the Trust Mark Definition.
+          description: The unique identifier of the Trust Mark Type.
           example: 123
         identifier:
           type: string
-          description: The unique identifier for the Trust Mark Definition.
+          description: The unique identifier for the Trust Mark Type.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         name:
           type: string
-          description: A human-readable name for the Trust Mark Definition.
+          description: A human-readable name for the Trust Mark Type.
           example: "Example Trust Mark"
         description:
           type: string
-          description: A detailed description of the Trust Mark Definition.
+          description: A detailed description of the Trust Mark Type.
           example: "This is a trust mark for demonstrating compliance with XYZ standards."
         createdAt:
           type: string
           format: date-time
-          description: The timestamp when the Trust Mark Definition was created.
+          description: The timestamp when the Trust Mark Type was created.
           example: "2024-12-01T12:00:00Z"
         updatedAt:
           type: string
           format: date-time
-          description: The timestamp when the Trust Mark Definition was last updated.
+          description: The timestamp when the Trust Mark Type was last updated.
           example: "2024-12-15T15:30:00Z"
           nullable: true
       required:
@@ -3901,3 +3907,14 @@ components:
         - name
         - issuerPolicy
         - createdAt
+    CreateTrustMarkTypeIssuerDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The entity identifier for the Trust Mark Type Issuer.
+          example: "https://www.example.com/oidf"
+      required:
+        - identifier
