@@ -1443,7 +1443,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/accounts/{username}/trust-mark-types':
     get:
-      summary: Get all Trust Mark Definitions
+      summary: Get all Trust Mark Types
       tags:
         - admin
       parameters:
@@ -1464,7 +1464,7 @@ paths:
                   $ref: '#/components/schemas/TrustMarkTypeDTO'
 
     post:
-      summary: Create a Trust Mark Definition
+      summary: Create a Trust Mark Type
       tags:
         - admin
       parameters:
@@ -1489,7 +1489,7 @@ paths:
 
   '/accounts/{username}/trust-mark-types/{id}':
     get:
-      summary: Get a Trust Mark Definition by ID
+      summary: Get a Trust Mark Type by ID
       tags:
         - admin
       parameters:
@@ -1511,7 +1511,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrustMarkTypeDTO'
     put:
-      summary: Update a Trust Mark Definition
+      summary: Update a Trust Mark Type
       tags:
         - admin
       parameters:
@@ -1540,7 +1540,7 @@ paths:
                 $ref: '#/components/schemas/TrustMarkTypeDTO'
 
     delete:
-      summary: Delete a Trust Mark Definition
+      summary: Delete a Trust Mark Type
       tags:
         - admin
       parameters:
