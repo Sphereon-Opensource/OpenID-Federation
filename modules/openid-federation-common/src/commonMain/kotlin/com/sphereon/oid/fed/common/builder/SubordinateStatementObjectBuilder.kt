@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
 
-class SubordinateStatementBuilder {
+class SubordinateStatementObjectBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var exp: Int? = null

@@ -1528,7 +1528,129 @@ paths:
       responses:
         '204':
           description: Trust mark definition deleted
-
+  /accounts/{username}/trust-mark-types/{id}/issuers:
+    get:
+      summary: Get Issuers for a Trust Mark Type
+      description: Retrieve a list of issuers for the specified Trust Mark Type.
+      operationId: getIssuersForTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      responses:
+        '200':
+          description: A list of issuer identifiers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+    post:
+      summary: Add Issuer to Trust Mark Type
+      description: Add a new issuer to the specified Trust Mark Type.
+      operationId: addIssuerToTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      requestBody:
+        description: Details of the issuer to be added.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+              properties:
+                identifier:
+                  type: string
+                  description: Identifier of the issuer.
+                  example: https://issuer.example.com
+      responses:
+        '201':
+          description: Issuer successfully added to the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+        '400':
+          description: Invalid request body.
+  /accounts/{username}/trust-mark-types/{id}/issuers/{issuerIdentifier}:
+    delete:
+      summary: Remove Issuer from Trust Mark Type
+      description: Remove an issuer from the specified Trust Mark Type.
+      operationId: removeIssuerFromTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+        - name: issuerIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifier of the issuer to be removed.
+      responses:
+        '200':
+          description: Issuer successfully removed from the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the removed Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the removed issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account, Trust Mark Type, or Issuer not found.
   '/accounts/{username}/trust-marks':
     post:
       tags:
@@ -3889,3 +4011,107 @@ components:
           example: "https://www.example.com/oidf"
       required:
         - identifier
+    CreateTrustMarkDTO:
+      type: object
+      description: Data Transfer Object for creating a Trust Mark.
+      required:
+        - sub
+        - trust_mark_type_id
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_type_id:
+          type: string
+          description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
+          example: https://trustframework.example.com/marks/12345
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: Optional expiration time of the Trust Mark in seconds since the epoch.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    TrustMarkDTO:
+      type: object
+      description: Data Transfer Object for retrieving a Trust Mark.
+      properties:
+        id:
+          type: integer
+          description: The Trust Mark object id.
+          example: 1
+        account_id:
+          type: integer
+          description: The account ID of the Trust Mark issuer.
+          example: 123
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        trust_mark_value:
+          type: string
+          description: The Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+        exp:
+          type: integer
+          description: The time the Trust Mark expires.
+          example: 1706031234
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark was created.
+          example: "2024-12-01T12:00:00Z"
+    TrustMarkObject:
+      type: object
+      description: Data Transfer Object for retrieving a Trust Mark.
+      properties:
+        iss:
+          type: string
+          description: The Trust Mark issuer.
+          example: https://www.example.com/oidf
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: The time the Trust Mark expires.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...

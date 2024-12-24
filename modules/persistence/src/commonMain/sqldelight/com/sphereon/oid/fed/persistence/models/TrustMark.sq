@@ -1,0 +1,29 @@
+findByAccountId:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND deleted_at IS NULL;
+
+create:
+INSERT INTO TrustMark (
+    account_id,
+    trust_mark_type_identifier,
+    sub,
+    trust_mark_value,
+    iat,
+    exp
+) VALUES (?, ?, ?, ?, ?, ?) RETURNING *;
+
+delete:
+UPDATE TrustMark
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findByAccountIdAndId:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND id = ?
+AND deleted_at IS NULL;

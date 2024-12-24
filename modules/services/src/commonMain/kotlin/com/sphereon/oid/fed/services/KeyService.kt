@@ -11,9 +11,9 @@ class KeyService {
     private val accountQueries = Persistence.accountQueries
     private val keyQueries = Persistence.keyQueries
 
-    fun create(accountUsername: String): JwkAdminDTO {
+    fun create(accountId: Int): JwkAdminDTO {
         val account =
-            accountQueries.findByUsername(accountUsername).executeAsOne()
+            accountQueries.findById(accountId).executeAsOne()
 
         val jwk = kmsClient.generateKeyPair()
 
@@ -26,16 +26,16 @@ class KeyService {
         return jwk
     }
 
-    fun getKeys(accountUsername: String): Array<JwkAdminDTO> {
+    fun getKeys(accountId: Int): Array<JwkAdminDTO> {
         val account =
-            accountQueries.findByUsername(accountUsername).executeAsOneOrNull() ?: throw NotFoundException(
+            accountQueries.findById(accountId).executeAsOneOrNull() ?: throw NotFoundException(
                 Constants.ACCOUNT_NOT_FOUND
             )
         return keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
     }
 
-    fun revokeKey(accountUsername: String, keyId: Int, reason: String?): JwkAdminDTO {
-        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
+    fun revokeKey(accountId: Int, keyId: Int, reason: String?): JwkAdminDTO {
+        val account = accountQueries.findById(accountId).executeAsOne()
 
         var key = keyQueries.findById(keyId).executeAsOne()
 

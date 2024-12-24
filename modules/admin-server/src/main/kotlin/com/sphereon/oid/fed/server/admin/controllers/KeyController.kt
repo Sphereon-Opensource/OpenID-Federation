@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.KeyService
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -13,17 +14,20 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/accounts/{username}/keys")
 class KeyController {
+    private val accountService = AccountService()
     private val keyService = KeyService()
 
     @PostMapping
     fun create(@PathVariable username: String): JwkAdminDTO {
-        val key = keyService.create(username)
+        val account = accountService.getAccountByUsername(username)
+        val key = keyService.create(account.id)
         return key
     }
 
     @GetMapping
     fun getKeys(@PathVariable username: String): Array<JwkAdminDTO> {
-        val keys = keyService.getKeys(username)
+        val account = accountService.getAccountByUsername(username)
+        val keys = keyService.getKeys(account.id)
         return keys
     }
 
@@ -33,6 +37,7 @@ class KeyController {
         @PathVariable keyId: Int,
         @RequestParam reason: String?
     ): JwkAdminDTO {
-        return keyService.revokeKey(username, keyId, reason)
+        val account = accountService.getAccountByUsername(username)
+        return keyService.revokeKey(account.id, keyId, reason)
     }
 }

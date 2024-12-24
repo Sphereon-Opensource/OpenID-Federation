@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.builder.SubordinateStatementBuilder
+import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
@@ -78,7 +78,7 @@ class SubordinateService {
             Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateId(account.id, subordinate.id)
                 .executeAsList()
 
-        val subordinateStatement = SubordinateStatementBuilder()
+        val subordinateStatement = SubordinateStatementObjectBuilder()
             .iss(accountService.getAccountIdentifier(account.username))
             .sub(subordinate.identifier)
             .iat((System.currentTimeMillis() / 1000).toInt())
@@ -105,7 +105,7 @@ class SubordinateService {
 
         val subordinateStatement = getSubordinateStatement(accountUsername, id)
 
-        val keys = keyService.getKeys(accountUsername)
+        val keys = keyService.getKeys(account.id)
 
         if (keys.isEmpty()) {
             throw IllegalArgumentException(Constants.NO_KEYS_FOUND)

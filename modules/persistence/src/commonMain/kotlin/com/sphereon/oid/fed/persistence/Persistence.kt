@@ -11,6 +11,7 @@ import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 
 expect object Persistence {
@@ -26,4 +27,5 @@ expect object Persistence {
     val subordinateMetadataQueries: SubordinateMetadataQueries
     val trustMarkTypeQueries: TrustMarkTypeQueries
     val trustMarkIssuerQueries: TrustMarkIssuerQueries
+    val trustMarkQueries: TrustMarkQueries
 }

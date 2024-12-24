@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.JsonObject
 
-class EntityConfigurationStatementBuilder {
+class EntityConfigurationStatementObjectBuilder {
     private var iss: String? = null
     private var exp: Int? = null
     private var iat: Int? = null

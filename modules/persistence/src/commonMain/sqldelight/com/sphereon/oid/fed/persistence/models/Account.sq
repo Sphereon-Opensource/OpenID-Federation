@@ -19,3 +19,9 @@ SELECT *
 FROM Account
 WHERE username = ?
 AND deleted_at IS NULL;
+
+findById:
+SELECT *
+FROM Account
+WHERE id = ?
+AND deleted_at IS NULL;

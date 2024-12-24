@@ -1,17 +1,28 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.builder.TrustMarkObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeDTO
+import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
+import com.sphereon.oid.fed.openapi.models.TrustMarkObject
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
 import com.sphereon.oid.fed.openapi.models.UpdateTrustMarkTypeDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
+import com.sphereon.oid.fed.services.extensions.toTrustMarkDTO
 import com.sphereon.oid.fed.services.extensions.toTrustMarkTypeDTO
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 class TrustMarkService {
+    private val trustMarkQueries = Persistence.trustMarkQueries
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
+    private val kmsClient = KmsService.getKmsClient()
+    private val keyService = KeyService()
 
     fun createTrustMarkType(
         username: String,
@@ -167,5 +178,64 @@ class TrustMarkService {
         }
 
         return trustMarkTypeIdentifier
+    }
+
+    fun getTrustMarksForAccount(accountId: Int): List<TrustMarkDTO> {
+        return trustMarkQueries.findByAccountId(accountId).executeAsList().map { it.toTrustMarkDTO() }
+    }
+
+    fun createTrustMark(accountId: Int, body: CreateTrustMarkDTO, accountService: AccountService): TrustMarkDTO {
+        val account = Persistence.accountQueries.findById(accountId).executeAsOneOrNull()
+            ?: throw NotFoundException("Account with ID $accountId not found.")
+
+        val accountIdentifier = accountService.getAccountIdentifier(account.username)
+
+        val keys = keyService.getKeys(accountId)
+
+        val iat = (System.currentTimeMillis() / 1000).toInt()
+
+        if (keys.isEmpty()) {
+            throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
+        }
+
+        val kid = keys[0].kid
+
+        val trustMark = TrustMarkObjectBuilder()
+            .iss(accountIdentifier)
+            .sub(body.sub)
+            .id(body.trustMarkTypeId)
+            .iat(iat)
+            .logoUri(body.logoUri)
+            .ref(body.ref)
+            .delegation(body.delegation)
+
+        if (body.exp != null) {
+            trustMark.exp(body.exp)
+        }
+
+        val jwt = kmsClient.sign(
+            payload = Json.encodeToJsonElement(
+                TrustMarkObject.serializer(),
+                trustMark.build()
+            ).jsonObject,
+            header = JWTHeader(typ = "trust-mark+jwt", kid = kid!!),
+            keyId = kid
+        )
+
+        return trustMarkQueries.create(
+            account_id = accountId,
+            sub = body.sub,
+            trust_mark_type_identifier = body.trustMarkTypeId,
+            exp = body.exp,
+            iat = iat,
+            trust_mark_value = jwt
+        ).executeAsOne().toTrustMarkDTO()
+    }
+
+    fun deleteTrustMark(accountId: Int, id: Int): TrustMarkDTO {
+        trustMarkQueries.findByAccountIdAndId(accountId, id).executeAsOneOrNull()
+            ?: throw NotFoundException("Trust mark with ID $id not found for account $accountId.")
+
+        return trustMarkQueries.delete(id).executeAsOne().toTrustMarkDTO()
     }
 }
