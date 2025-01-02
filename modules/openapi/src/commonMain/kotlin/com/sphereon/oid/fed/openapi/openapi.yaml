@@ -1441,6 +1441,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/subordinates/{id}/statement':
+    get:
+      tags:
+        - admin
+      summary: Get subordinate statement object
+      description: Retrieve the subordinate statement for the specified subordinate.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - admin
+      summary: Sign and publish subordinate statement
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Dry-run flag (optional)
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishEntityStatementDTO'
+      responses:
+        '200':
+          description: Subordinate statement published successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   '/accounts/{username}/trust-mark-types':
     get:
       summary: Get all Trust Mark Types
@@ -1530,6 +1612,8 @@ paths:
           description: Trust mark definition deleted
   /accounts/{username}/trust-mark-types/{id}/issuers:
     get:
+      tags:
+        - admin
       summary: Get Issuers for a Trust Mark Type
       description: Retrieve a list of issuers for the specified Trust Mark Type.
       operationId: getIssuersForTrustMarkType
@@ -1559,6 +1643,8 @@ paths:
         '404':
           description: Account or Trust Mark Type not found.
     post:
+      tags:
+        - admin
       summary: Add Issuer to Trust Mark Type
       description: Add a new issuer to the specified Trust Mark Type.
       operationId: addIssuerToTrustMarkType
@@ -1611,6 +1697,8 @@ paths:
           description: Invalid request body.
   /accounts/{username}/trust-mark-types/{id}/issuers/{issuerIdentifier}:
     delete:
+      tags:
+        - admin
       summary: Remove Issuer from Trust Mark Type
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
@@ -1799,89 +1887,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/subordinates/{id}/statement':
-    get:
-      tags:
-        - admin
-      summary: Get subordinate statement object
-      description: Retrieve the subordinate statement for the specified subordinate.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
-      responses:
-        '200':
-          description: Successfully retrieved subordinate statement
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubordinateStatement'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-    post:
-      tags:
-        - admin
-      summary: Sign and publish subordinate statement
-      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
-      requestBody:
-        description: Dry-run flag (optional)
-        required: false
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PublishEntityStatementDTO'
-      responses:
-        '200':
-          description: Subordinate statement published successfully
-          content:
-            application/json:
-              schema:
-                type: string
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
 
 components:
   schemas:
@@ -4153,6 +4158,7 @@ components:
           example: https://entity.example.com
       required:
         - trust_mark_id
+
     TrustMarkRequest:
       type: object
       properties:
