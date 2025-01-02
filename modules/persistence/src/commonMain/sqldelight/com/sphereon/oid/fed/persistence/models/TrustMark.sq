@@ -27,3 +27,41 @@ FROM TrustMark
 WHERE account_id = ?
 AND id = ?
 AND deleted_at IS NULL;
+
+findByAccountIdAndAndSubAndTrustMarkTypeIdentifier:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND trust_mark_type_identifier = ?
+AND sub = ?
+AND deleted_at IS NULL
+AND (exp IS NULL OR exp > UNIX_TIMESTAMP());
+
+findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub:
+SELECT sub
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND sub = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > UNIX_TIMESTAMP())
+GROUP BY sub;
+
+findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier:
+SELECT sub
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > UNIX_TIMESTAMP());
+
+getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND sub = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > UNIX_TIMESTAMP())
+ORDER BY iat DESC
+LIMIT 1;

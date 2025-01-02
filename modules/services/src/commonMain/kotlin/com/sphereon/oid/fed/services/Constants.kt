@@ -17,7 +17,6 @@ class Constants {
         const val AUTHORITY_HINT_ALREADY_EXISTS = "Authority hint already exists"
         const val CRIT_ALREADY_EXISTS = "Crit already exists"
         const val FAILED_TO_CREATE_CRIT = "Failed to create crit"
-        const val CRIT_NOT_FOUND = "Crit not found"
         const val FAILED_TO_DELETE_CRIT = "Failed to delete crit"
         const val NO_KEYS_FOUND = "No keys found"
         const val SUBORDINATE_NOT_FOUND = "Subordinate not found"
@@ -26,5 +25,6 @@ class Constants {
         const val SUBORDINATE_METADATA_NOT_FOUND = "Subordinate metadata not found"
         const val SUBORDINATE_METADATA_ALREADY_EXISTS = "Subordinate metadata already exists"
         const val ROOT_IDENTIFIER_NOT_SET = "Root identifier not set"
+        const val ROOT_ACCOUNT_CANNOT_BE_DELETED = "Root account cannot be deleted"
     }
 }

@@ -10,7 +10,10 @@ class FederationEntityMetadataObjectBuilder {
     fun build(): FederationEntityMetadata {
         return FederationEntityMetadata(
             federationListEndpoint = "${identifier}/list",
-            federationFetchEndpoint = "${identifier}/fetch"
+            federationFetchEndpoint = "${identifier}/fetch",
+            federationTrustMarkStatusEndpoint = "${identifier}/trust_mark_status",
+            federationTrustMarkListEndpoint = "${identifier}/trust_mark_list",
+            federationTrustMarkEndpoint = "${identifier}/trust_mark"
         )
     }
 }

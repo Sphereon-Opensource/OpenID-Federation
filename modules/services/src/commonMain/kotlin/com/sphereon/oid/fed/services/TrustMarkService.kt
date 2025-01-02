@@ -7,10 +7,14 @@ import com.sphereon.oid.fed.openapi.models.CreateTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeDTO
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
+import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkObject
+import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
 import com.sphereon.oid.fed.openapi.models.UpdateTrustMarkTypeDTO
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.services.extensions.toTrustMarkDTO
 import com.sphereon.oid.fed.services.extensions.toTrustMarkTypeDTO
@@ -237,5 +241,43 @@ class TrustMarkService {
             ?: throw NotFoundException("Trust mark with ID $id not found for account $accountId.")
 
         return trustMarkQueries.delete(id).executeAsOne().toTrustMarkDTO()
+    }
+
+    fun getTrustMarkStatus(account: Account, request: TrustMarkStatusRequest): Boolean {
+        val trustMarks = trustMarkQueries.findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(
+            account.id,
+            request.sub,
+            request.trustMarkId
+        ).executeAsList()
+
+        if (request.iat != null) {
+            val trustMarkWithIat = trustMarks.find { it.iat == request.iat }
+            return trustMarkWithIat != null
+        }
+
+        return trustMarks.isNotEmpty()
+    }
+
+    fun getTrustMarkedSubs(account: Account, request: TrustMarkListRequest): Array<String> {
+        if (request.sub != null) {
+            return trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                account.id, request.trustMarkId,
+                request.sub!!
+            ).executeAsList().toTypedArray()
+        }
+
+        return trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier(
+            account.id, request.trustMarkId
+        ).executeAsList().toTypedArray()
+    }
+
+    fun getTrustMark(account: Account, request: TrustMarkRequest): String {
+        val trustMark = trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(
+            account.id,
+            request.trustMarkId,
+            request.sub,
+        ).executeAsOneOrNull() ?: throw NotFoundException("Trust mark not found.")
+
+        return trustMark.trust_mark_value
     }
 }

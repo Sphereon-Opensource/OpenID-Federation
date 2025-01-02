@@ -54,6 +54,10 @@ class AccountService() {
     }
 
     fun deleteAccount(username: String): Account {
+        if (username == "root") {
+            throw NotFoundException(Constants.ROOT_ACCOUNT_CANNOT_BE_DELETED)
+        }
+
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
 

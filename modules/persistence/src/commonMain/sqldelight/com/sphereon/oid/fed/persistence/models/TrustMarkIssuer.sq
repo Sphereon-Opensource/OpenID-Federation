@@ -12,7 +12,3 @@ RETURNING *;
 findByTrustMarkTypeId:
 SELECT * FROM TrustMarkIssuer
 WHERE trust_mark_type_id = :trust_mark_type_id AND deleted_at IS NULL;
-
-findByIssuerIdentifier:
-SELECT * FROM TrustMarkIssuer
-WHERE issuer_identifier = :issuer_identifier AND deleted_at IS NULL;

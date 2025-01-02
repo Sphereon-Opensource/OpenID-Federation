@@ -342,8 +342,8 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /trust-mark/status:
-    post:
+  /trust-mark-status:
+    get:
       tags:
         - federation
       summary: Check Trust Mark Status
@@ -413,7 +413,7 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /trust-marked-entities:
+  /trust-mark-list:
     get:
       tags:
         - federation
@@ -4115,3 +4115,55 @@ components:
           type: string
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    TrustMarkStatusRequest:
+      type: object
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+      required:
+        - sub
+        - trust_mark_id
+    TrustMarkStatusResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: The status of the Trust Mark.
+          example: true
+    TrustMarkListRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+    TrustMarkRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+        - sub
