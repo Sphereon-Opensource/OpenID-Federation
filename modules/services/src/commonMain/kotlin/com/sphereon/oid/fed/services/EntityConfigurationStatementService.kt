@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.extensions.toJwk
+import com.sphereon.oid.fed.services.extensions.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
@@ -33,6 +34,8 @@ class EntityConfigurationStatementService {
         val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
         val trustMarkTypes =
             Persistence.trustMarkTypeQueries.findByAccountId(account.id).executeAsList()
+        val receivedTrustMarks =
+            Persistence.receivedTrustMarkQueries.findByAccountId(account.id).executeAsList()
 
         val entityConfigurationStatement = EntityConfigurationStatementObjectBuilder()
             .iss(identifier)
@@ -78,9 +81,12 @@ class EntityConfigurationStatementService {
             )
         }
 
+        receivedTrustMarks.forEach { receivedTrustMark ->
+            entityConfigurationStatement.trustMark(receivedTrustMark.toTrustMark())
+        }
+
         return entityConfigurationStatement.build()
     }
-
 
     fun publishByUsername(accountUsername: String, dryRun: Boolean? = false): String {
         val account = accountService.getAccountByUsername(accountUsername)

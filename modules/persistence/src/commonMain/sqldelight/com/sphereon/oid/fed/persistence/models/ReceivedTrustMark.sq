@@ -1,0 +1,26 @@
+create:
+INSERT INTO ReceivedTrustMark (
+    account_id,
+    trust_mark_type_id,
+    jwt
+) VALUES (?, ?, ?) RETURNING *;
+
+findByAccountId:
+SELECT *
+FROM ReceivedTrustMark
+WHERE account_id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndId:
+SELECT *
+FROM ReceivedTrustMark
+WHERE account_id = ?
+AND id = ?
+AND deleted_at IS NULL;
+
+delete:
+UPDATE ReceivedTrustMark
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;

@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.common.builder
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.TrustMark
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationStatementObjectBuilder {
@@ -14,11 +15,13 @@ class EntityConfigurationStatementObjectBuilder {
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
+    private val trustMarks: MutableList<TrustMark> = mutableListOf()
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun exp(exp: Int) = apply { this.exp = exp }
     fun iat(iat: Int) = apply { this.iat = iat }
     fun jwks(jwks: List<Jwk>) = apply { this.jwks = jwks }
+
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
@@ -36,6 +39,10 @@ class EntityConfigurationStatementObjectBuilder {
         this.trustMarkIssuers[trustMark] = issuers
     }
 
+    fun trustMark(trustMark: TrustMark) = apply {
+        this.trustMarks.add(trustMark)
+    }
+
     private fun createJwks(jwks: List<Jwk>): EntityJwks {
         return EntityJwks(jwks.toTypedArray())
     }
@@ -50,7 +57,9 @@ class EntityConfigurationStatementObjectBuilder {
             metadata = JsonObject(metadata),
             authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
             crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
-            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap()
+            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap(),
+            trustMarks = trustMarks.toTypedArray()
+
         )
     }
 }

@@ -10,6 +10,7 @@ import com.sphereon.oid.fed.persistence.models.CritQueries
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQueries
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
 import com.sphereon.oid.fed.persistence.models.KeyQueries
+import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
@@ -32,6 +33,7 @@ actual object Persistence {
     actual val trustMarkTypeQueries: TrustMarkTypeQueries
     actual val trustMarkIssuerQueries: TrustMarkIssuerQueries
     actual val trustMarkQueries: TrustMarkQueries
+    actual val receivedTrustMarkQueries: ReceivedTrustMarkQueries
 
     init {
         val driver = getDriver()
@@ -51,6 +53,7 @@ actual object Persistence {
         trustMarkTypeQueries = database.trustMarkTypeQueries
         trustMarkIssuerQueries = database.trustMarkIssuerQueries
         trustMarkQueries = database.trustMarkQueries
+        receivedTrustMarkQueries = database.receivedTrustMarkQueries
     }
 
     private fun getDriver(): SqlDriver {
