@@ -621,7 +621,7 @@ POST http://localhost:8081/accounts/holder/entity-statement
 
 ```http
 # Verify Trust Mark status
-GET http://localhost:8080/holder/trust_mark_status
+GET http://localhost:8080/trust-mark-issuer/trust-mark-status
 {
     "trust_mark_id": "https://example.com/trust-mark-types/exampleType",
     "sub": "https://example.com/holder"
