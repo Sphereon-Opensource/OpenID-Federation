@@ -3,16 +3,31 @@ INSERT INTO EntityConfigurationMetadata (
     account_id,
     key,
     metadata
-) VALUES (?, ?, ?) RETURNING *;
+) VALUES (?, ?, ?)
+RETURNING *;
 
 delete:
-UPDATE EntityConfigurationMetadata SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL RETURNING *;
+UPDATE EntityConfigurationMetadata
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
 
 findByAccountId:
-SELECT * FROM EntityConfigurationMetadata WHERE account_id = ? AND deleted_at IS NULL;
+SELECT *
+FROM EntityConfigurationMetadata
+WHERE account_id = ?
+AND deleted_at IS NULL;
 
 findByAccountIdAndKey:
-SELECT * FROM EntityConfigurationMetadata WHERE account_id = ? AND key = ? AND deleted_at IS NULL;
+SELECT *
+FROM EntityConfigurationMetadata
+WHERE account_id = ?
+AND key = ?
+AND deleted_at IS NULL;
 
 findById:
-SELECT * FROM EntityConfigurationMetadata WHERE id = ? AND deleted_at IS NULL;
+SELECT *
+FROM EntityConfigurationMetadata
+WHERE id = ?
+AND deleted_at IS NULL;

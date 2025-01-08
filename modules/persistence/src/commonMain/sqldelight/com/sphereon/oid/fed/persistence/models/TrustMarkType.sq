@@ -1,0 +1,25 @@
+create:
+INSERT INTO TrustMarkType (identifier, account_id)
+VALUES (:identifier, :account_id)
+RETURNING *;
+
+findByAccountId:
+SELECT * FROM TrustMarkType WHERE account_id = :account_id AND deleted_at IS NULL;
+
+findByAccountIdAndId:
+SELECT * FROM TrustMarkType
+WHERE account_id = :account_id AND id = :id AND deleted_at IS NULL;
+
+findByAccountIdAndIdentifier:
+SELECT * FROM TrustMarkType
+WHERE account_id = :account_id AND identifier = :identifier AND deleted_at IS NULL;
+
+delete:
+UPDATE TrustMarkType
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = :id AND deleted_at IS NULL
+RETURNING *;
+
+findByIdentifier:
+SELECT * FROM TrustMarkType
+WHERE identifier = :identifier AND deleted_at IS NULL;

@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
 }
 
+group = "com.sphereon.oid.fed.logger"
+
+
 repositories {
     mavenCentral()
 }

@@ -1,1 +1,17 @@
-ALTER TABLE Account ADD COLUMN identifier VARCHAR(255) NULL;
+CREATE TABLE TrustMarkType (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    identifier TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_AccountTrustMarkType FOREIGN KEY (account_id) REFERENCES Account (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX unique_account_identifier_active
+ON TrustMarkType (account_id, identifier)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_trustmarkdefinitions_account_id ON TrustMarkType (account_id);
+
+CREATE INDEX idx_trustmarkdefinitions_deleted_at ON TrustMarkType (deleted_at);

@@ -1,0 +1,10 @@
+CREATE TABLE ReceivedTrustMark (
+    id SERIAL PRIMARY KEY,
+    account_id INTEGER NOT NULL,
+    trust_mark_type_identifier TEXT NOT NULL,
+    jwt TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_received_trust_mark_account_id ON ReceivedTrustMark(account_id);

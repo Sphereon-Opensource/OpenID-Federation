@@ -46,11 +46,11 @@ dependencyResolutionManagement {
 }
 
 include(":modules:openid-federation-common")
+include(":modules:openid-federation-client")
 include(":modules:admin-server")
 include(":modules:federation-server")
 include(":modules:openapi")
 include(":modules:persistence")
 include(":modules:services")
 include(":modules:local-kms")
-include(":modules:openid-federation-client")
 include(":modules:logger")

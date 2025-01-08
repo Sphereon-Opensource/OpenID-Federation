@@ -342,30 +342,40 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /trust-mark/status:
-    post:
+  /trust-mark-status:
+    get:
       tags:
         - federation
       summary: Check Trust Mark Status
       description: Check if a Trust Mark is still active.
-      requestBody:
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                sub:
-                  type: string
-                  description: The Entity Identifier of the Entity to which the Trust Mark was issued.
-                trust_mark_id:
-                  type: string
-                  description: Identifier of the Trust Mark.
-                iat:
-                  type: integer
-                  description: 'Time when the Trust Mark was issued. If iat is not specified and the Trust Mark issuer has issued several Trust Marks with the identifier specified in the request to the Entity identified by sub, the most recent one is assumed.'
-                trust_mark:
-                  type: string
-                  description: The whole Trust Mark.
+      parameters:
+        - name: sub
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The Entity Identifier of the Entity to which the Trust Mark was issued.
+        - name: trust_mark_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Identifier of the Trust Mark.
+        - name: iat
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: |
+            Time when the Trust Mark was issued. 
+            If not specified and the Trust Mark issuer has issued several Trust Marks 
+            with the specified identifier for the Entity identified by `sub`, the most recent one is assumed.
+        - name: trust_mark
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The whole Trust Mark in its JWT form.
       responses:
         '200':
           description: Trust Mark status
@@ -413,7 +423,7 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /trust-marked-entities:
+  /trust-mark-list:
     get:
       tags:
         - federation
@@ -1441,6 +1451,304 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/subordinates/{id}/statement':
+    get:
+      tags:
+        - admin
+      summary: Get subordinate statement object
+      description: Retrieve the subordinate statement for the specified subordinate.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - admin
+      summary: Sign and publish subordinate statement
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Dry-run flag (optional)
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishEntityStatementDTO'
+      responses:
+        '200':
+          description: Subordinate statement published successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/trust-mark-types':
+    get:
+      summary: Get all Trust Mark Types
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the tenant account.
+      responses:
+        '200':
+          description: List of trust mark types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrustMarkTypeDTO'
+
+    post:
+      summary: Create a Trust Mark Type
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustMarkTypeDTO'
+      responses:
+        '201':
+          description: Trust mark definition created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkTypeDTO'
+
+  '/accounts/{username}/trust-mark-types/{id}':
+    get:
+      summary: Get a Trust Mark Type by ID
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trust mark definition details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkTypeDTO'
+    delete:
+      summary: Delete a Trust Mark Type
+      tags:
+        - admin
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Trust mark definition deleted
+  /accounts/{username}/trust-mark-types/{id}/issuers:
+    get:
+      tags:
+        - admin
+      summary: Get Issuers for a Trust Mark Type
+      description: Retrieve a list of issuers for the specified Trust Mark Type.
+      operationId: getIssuersForTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      responses:
+        '200':
+          description: A list of issuer identifiers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+    post:
+      tags:
+        - admin
+      summary: Add Issuer to Trust Mark Type
+      description: Add a new issuer to the specified Trust Mark Type.
+      operationId: addIssuerToTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      requestBody:
+        description: Details of the issuer to be added.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+              properties:
+                identifier:
+                  type: string
+                  description: Identifier of the issuer.
+                  example: https://issuer.example.com
+      responses:
+        '201':
+          description: Issuer successfully added to the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+        '400':
+          description: Invalid request body.
+  /accounts/{username}/trust-mark-types/{id}/issuers/{issuerIdentifier}:
+    delete:
+      tags:
+        - admin
+      summary: Remove Issuer from Trust Mark Type
+      description: Remove an issuer from the specified Trust Mark Type.
+      operationId: removeIssuerFromTrustMarkType
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Username associated with the account.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+        - name: issuerIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifier of the issuer to be removed.
+      responses:
+        '200':
+          description: Issuer successfully removed from the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the removed Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the removed issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account, Trust Mark Type, or Issuer not found.
   '/accounts/{username}/trust-marks':
     post:
       tags:
@@ -1589,84 +1897,151 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/subordinates/{id}/statement':
-    get:
-      tags:
-        - admin
-      summary: Get subordinate statement object
-      description: Retrieve the subordinate statement for the specified subordinate.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
-      responses:
-        '200':
-          description: Successfully retrieved subordinate statement
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SubordinateStatement'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+  '/accounts/{username}/received-trust-marks':
     post:
       tags:
         - admin
-      summary: Sign and publish subordinate statement
-      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      summary: Create a Received Trust Mark
+      description: Create or update a received Trust Mark for the specified account.
       parameters:
         - name: username
           in: path
           required: true
           schema:
             type: string
-          description: The username of the tenant account.
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: The ID of the subordinate.
+          description: The username of the account to which the received Trust Mark belongs.
       requestBody:
-        description: Dry-run flag (optional)
-        required: false
+        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PublishEntityStatementDTO'
+              type: object
+              properties:
+                trustMarkTypeId:
+                  type: string
+                  description: The identifier of the Trust Mark Type.
+                  example: https://example.com/trust-mark-type
+                jwt:
+                  type: string
+                  description: The JWT representing the received Trust Mark.
+              required:
+                - trustMarkTypeId
+                - jwt
       responses:
-        '200':
-          description: Subordinate statement published successfully
+        '201':
+          description: Received Trust Mark created successfully.
           content:
             application/json:
               schema:
-                type: string
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The unique identifier of the created received Trust Mark.
         '400':
-          description: Invalid request
+          description: Invalid request parameters.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
-          description: Server error
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - admin
+      summary: List Received Trust Marks
+      description: Retrieve all received Trust Marks for the specified account.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account to list received Trust Marks for.
+      responses:
+        '200':
+          description: Successful fetch of received Trust Marks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trustMarkId:
+                      type: string
+                      description: The unique identifier of the received Trust Mark.
+                    trustMarkTypeId:
+                      type: string
+                      description: The identifier of the Trust Mark Type.
+                    issuedJwt:
+                      type: string
+                      description: The JWT representing the received Trust Mark.
+                    receivedAt:
+                      type: string
+                      format: date-time
+                      description: The timestamp when the Trust Mark was received.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/accounts/{username}/received-trust-marks/{receivedTrustMarkId}':
+    delete:
+      tags:
+        - admin
+      summary: Delete a Received Trust Mark
+      description: Delete a specific received Trust Mark for the specified account.
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The username of the account owning the received Trust Mark.
+        - name: receivedTrustMarkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the received Trust Mark to be deleted.
+      responses:
+        '200':
+          description: Received Trust Mark deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Received Trust Mark deleted successfully.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Received Trust Mark not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error.
           content:
             application/json:
               schema:
@@ -1757,12 +2132,12 @@ components:
           description: The X coordinate for EC keys (optional).
           example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
           nullable: true
-        'y':
+        y:
           type: string
           description: The Y coordinate for EC keys (optional).
           example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
           nullable: true
-        'n':
+        n:
           type: string
           description: The modulus for RSA keys.
           example: modulus_value
@@ -1883,6 +2258,26 @@ components:
               description: The timestamp when the JWK was created.
               example: '2024-08-06T12:34:56Z'
               nullable: true
+    HistoricalKey:
+      allOf:
+        - $ref: '#/components/schemas/Jwk'
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            iat:
+              type: number
+              format: number
+              description: The time the key was issued.
+              example: 1629936000
+            exp:
+              type: number
+              format: number
+              description: The time the key will expire.
+              example: 1632528000
+            revoked:
+              $ref: '#/components/schemas/EntityJwkRevoked'
+
     JwkWithPrivateKey:
       allOf:
         - $ref: '#/components/schemas/Jwk'
@@ -2115,11 +2510,18 @@ components:
       type: object
       x-tags:
         - federation
-      properties:
-        a:
+      description: A mapping of trust mark identifiers to their associated issuers.
+      additionalProperties:
+        type: array
+        description: A list of issuers for the trust mark.
+        items:
           type: string
+          format: uri
+          description: The URI of an issuer for the trust mark.
       example:
-        'https://openid.net/certification/op': [ ]
+        'https://openid.net/certification/op':
+          - 'https://example-issuer1.com'
+          - 'https://example-issuer2.com'
         'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
           - 'https://swamid.se'
     TrustMarkOwners:
@@ -3502,16 +3904,15 @@ components:
       properties:
         iss:
           type: string
-          format: date-time
+          format: uri
           description: The Entity's Entity Identifier.
         iat:
-          type: string
-          format: date-time
+          type: integer
           description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
         keys:
           type: array
           items:
-            $ref: '#/components/schemas/Jwk'
+            $ref: '#/components/schemas/HistoricalKey'
     ResolveResponse:
       type: object
       x-tags:
@@ -3713,3 +4114,250 @@ components:
           description: The identifier of the authority hint.
       required:
         - identifier
+    CreateTrustMarkTypeDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Type.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+      required:
+        - identifier
+
+    TrustMarkTypeDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier of the Trust Mark Type.
+          example: 123
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Type.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was created.
+          example: "2024-12-01T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was last updated.
+          example: "2024-12-15T15:30:00Z"
+          nullable: true
+      required:
+        - id
+        - identifier
+        - name
+        - issuerPolicy
+        - createdAt
+    CreateTrustMarkTypeIssuerDTO:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The entity identifier for the Trust Mark Type Issuer.
+          example: "https://www.example.com/oidf"
+      required:
+        - identifier
+    CreateTrustMarkDTO:
+      type: object
+      description: Data Transfer Object for creating a Trust Mark.
+      required:
+        - sub
+        - trust_mark_type_identifier
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_type_identifier:
+          type: string
+          description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
+          example: https://trustframework.example.com/marks/12345
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: Optional expiration time of the Trust Mark in seconds since the epoch.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    TrustMarkDTO:
+      type: object
+      description: Data Transfer Object for retrieving a Trust Mark.
+      properties:
+        id:
+          type: integer
+          description: The Trust Mark object id.
+          example: 1
+        account_id:
+          type: integer
+          description: The account ID of the Trust Mark issuer.
+          example: 123
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        trust_mark_value:
+          type: string
+          description: The Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+        exp:
+          type: integer
+          description: The time the Trust Mark expires.
+          example: 1706031234
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark was created.
+          example: "2024-12-01T12:00:00Z"
+    TrustMarkObject:
+      type: object
+      description: Data Transfer Object for retrieving a Trust Mark.
+      properties:
+        iss:
+          type: string
+          description: The Trust Mark issuer.
+          example: https://www.example.com/oidf
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: The time the Trust Mark expires.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    TrustMarkStatusRequest:
+      type: object
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+      required:
+        - sub
+        - trust_mark_id
+    TrustMarkStatusResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: The status of the Trust Mark.
+          example: true
+    TrustMarkListRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+    TrustMarkRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+        - sub
+    CreateReceivedTrustMarkDTO:
+      type: object
+      properties:
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        jwt:
+          type: string
+          description: The received Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      required:
+        - trust_mark_type_identifier
+        - jwt
+    ReceivedTrustMarkDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the received Trust Mark.
+          example: 123
+        account_id:
+          type: integer
+          description: The account ID of the Trust Mark holder.
+          example: 456
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        jwt:
+          type: string
+          description: The received Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark was created.
+          example: "2024-12-01T12:00:00Z"
