@@ -35,7 +35,7 @@ WHERE account_id = ?
 AND trust_mark_type_identifier = ?
 AND sub = ?
 AND deleted_at IS NULL
-AND (exp IS NULL OR exp > UNIX_TIMESTAMP());
+AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
 
 findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub:
 SELECT sub
@@ -44,7 +44,7 @@ WHERE account_id = ?
   AND trust_mark_type_identifier = ?
   AND sub = ?
   AND deleted_at IS NULL
-  AND (exp IS NULL OR exp > UNIX_TIMESTAMP())
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
 GROUP BY sub;
 
 findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier:
@@ -53,7 +53,7 @@ FROM TrustMark
 WHERE account_id = ?
   AND trust_mark_type_identifier = ?
   AND deleted_at IS NULL
-  AND (exp IS NULL OR exp > UNIX_TIMESTAMP());
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
 
 getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub:
 SELECT *
@@ -62,6 +62,6 @@ WHERE account_id = ?
   AND trust_mark_type_identifier = ?
   AND sub = ?
   AND deleted_at IS NULL
-  AND (exp IS NULL OR exp > UNIX_TIMESTAMP())
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
 ORDER BY iat DESC
 LIMIT 1;

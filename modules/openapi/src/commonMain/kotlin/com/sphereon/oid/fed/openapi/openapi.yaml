@@ -2132,12 +2132,12 @@ components:
           description: The X coordinate for EC keys (optional).
           example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
           nullable: true
-        'y':
+        y:
           type: string
           description: The Y coordinate for EC keys (optional).
           example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
           nullable: true
-        'n':
+        n:
           type: string
           description: The modulus for RSA keys.
           example: modulus_value
@@ -2258,6 +2258,26 @@ components:
               description: The timestamp when the JWK was created.
               example: '2024-08-06T12:34:56Z'
               nullable: true
+    HistoricalKey:
+      allOf:
+        - $ref: '#/components/schemas/Jwk'
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            iat:
+              type: number
+              format: number
+              description: The time the key was issued.
+              example: 1629936000
+            exp:
+              type: number
+              format: number
+              description: The time the key will expire.
+              example: 1632528000
+            revoked:
+              $ref: '#/components/schemas/EntityJwkRevoked'
+
     JwkWithPrivateKey:
       allOf:
         - $ref: '#/components/schemas/Jwk'
@@ -3884,16 +3904,15 @@ components:
       properties:
         iss:
           type: string
-          format: date-time
+          format: uri
           description: The Entity's Entity Identifier.
         iat:
-          type: string
-          format: date-time
+          type: integer
           description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
         keys:
           type: array
           items:
-            $ref: '#/components/schemas/Jwk'
+            $ref: '#/components/schemas/HistoricalKey'
     ResolveResponse:
       type: object
       x-tags:
@@ -4103,30 +4122,10 @@ components:
         identifier:
           type: string
           description: The unique identifier for the Trust Mark Type.
-          example: "example-identifier"
-        name:
-          type: string
-          description: A human-readable name for the Trust Mark Type.
-          example: "Example Trust Mark"
-        description:
-          type: string
-          description: A detailed description of the Trust Mark Type.
-          example: "This is a trust mark for demonstrating compliance with XYZ standards."
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
       required:
-        - name
-    UpdateTrustMarkTypeDTO:
-      type: object
-      x-tags:
-        - federation
-      properties:
-        name:
-          type: string
-          description: A human-readable name for the Trust Mark Type.
-          example: "Example Trust Mark"
-        description:
-          type: string
-          description: A detailed description of the Trust Mark Type.
-          example: "This is a trust mark for demonstrating compliance with XYZ standards."
+        - identifier
+
     TrustMarkTypeDTO:
       type: object
       x-tags:
@@ -4140,14 +4139,6 @@ components:
           type: string
           description: The unique identifier for the Trust Mark Type.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
-        name:
-          type: string
-          description: A human-readable name for the Trust Mark Type.
-          example: "Example Trust Mark"
-        description:
-          type: string
-          description: A detailed description of the Trust Mark Type.
-          example: "This is a trust mark for demonstrating compliance with XYZ standards."
         createdAt:
           type: string
           format: date-time
@@ -4181,13 +4172,13 @@ components:
       description: Data Transfer Object for creating a Trust Mark.
       required:
         - sub
-        - trust_mark_type_id
+        - trust_mark_type_identifier
       properties:
         sub:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        trust_mark_type_id:
+        trust_mark_type_identifier:
           type: string
           description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
           example: https://trustframework.example.com/marks/12345
@@ -4335,7 +4326,7 @@ components:
     CreateReceivedTrustMarkDTO:
       type: object
       properties:
-        trust_mark_type_id:
+        trust_mark_type_identifier:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -4344,7 +4335,7 @@ components:
           description: The received Trust Mark JWT.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required:
-        - trust_mark_type_id
+        - trust_mark_type_identifier
         - jwt
     ReceivedTrustMarkDTO:
       type: object

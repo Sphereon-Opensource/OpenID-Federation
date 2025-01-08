@@ -9,8 +9,6 @@ fun TrustMarkType.toTrustMarkTypeDTO(): TrustMarkTypeDTO {
     return TrustMarkTypeDTO(
         id = this.id,
         identifier = this.identifier,
-        name = this.name,
-        description = this.description,
         createdAt = this.created_at.toString(),
         updatedAt = this.updated_at?.toString()
     )
@@ -22,6 +20,7 @@ fun TrustMark.toTrustMarkDTO(): TrustMarkDTO {
         accountId = this.account_id,
         sub = this.sub,
         trustMarkTypeIdentifier = this.trust_mark_type_identifier,
+        trustMarkValue = this.trust_mark_value,
         iat = this.iat,
         exp = this.exp,
         createdAt = this.created_at.toString()

@@ -18,6 +18,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                api(projects.modules.logger)
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)

@@ -11,10 +11,6 @@ OpenID Federation is a framework designed to facilitate the secure and interoper
 federation. This involves the use of JSON Web Tokens (JWTs) to represent and convey necessary information for entities
 to participate in federations, ensuring trust and security across different organizations and systems.
 
-In the context of OpenID Federation, Entity Statements play a crucial role. These are signed JWTs that contain details
-about the entity, such as its public keys and metadata. This framework allows entities to assert their identity and
-capabilities in a standardized manner, enabling seamless integration and interoperability within federations.
-
 # Key Concepts
 
 - **Federation**: A group of organizations that agree to interoperate under a set of common rules defined in a
@@ -37,11 +33,6 @@ capabilities in a standardized manner, enabling seamless integration and interop
 - **JSON Web Tokens (JWT)**: Used for creating verifiable entity statements and security assertions.
 - **JSON Object Signing and Encryption (JOSE)**: Standards for signing and encrypting JSON-based objects to ensure their
   integrity and confidentiality.
-
-# Local Key Management System - Important Notice
-
-Local Key Management Service is designed primarily for testing, development, and local experimentation
-purposes. **It is not intended for use in production environments** due to significant security and compliance risks.
 
 # Servers Deployment Instructions
 
@@ -78,15 +69,29 @@ straightforward approach.
 This guide will help new users configure and deploy the OpenID Federation service, including setting up environment
 variables, the root entity, and necessary dependencies. Follow the steps outlined below.
 
+## Important Notices
+
+### Publishing Updates
+
+Any changes affecting Entity Statements or Subordinate Statements must be explicitly published to take effect. This
+includes:
+
+- Metadata changes
+- Trust Mark modifications
+- Configuration updates
+- Key rotations
+
+### Local Key Management System
+
+The Local Key Management Service is designed primarily for testing, development, and local experimentation
+purposes. **It is not intended for use in production environments** due to significant security and compliance risks.
+
 ## Introduction
 
 The system comes with a preconfigured "root" account entity that responds to the root URL identifier's endpoints (
 e.g., `/.well-known/openid-federation`) and not tenant account endpoints. This account is used for managing
 configurations specific to the root entity.
 
-**Important:** The local Key Management System (KMS) configuration provided in this guide is for development and testing
-purposes only. **It must not be used in production environments.** For production, deploy a secure, production-grade KMS
-provider.
 
 ---
 
@@ -514,3 +519,131 @@ To assign metadata to your entity, follow these steps:
    ```
 
 3. Replace `{username}` with the account username for which you want to publish the entity configuration statement.
+
+# Trust Marks
+
+## Trust Mark Workflow
+
+```mermaid
+sequenceDiagram
+    participant TA as Trust Anchor
+    participant TI as Trust Mark Issuer
+    participant H as Holder
+    
+    TA->>TA: Create Trust Mark Type
+    TA->>TI: Authorize Issuer
+    TI->>H: Issue Trust Mark
+    H->>H: Store Trust Mark
+    Note over H: Publish new Entity Statement
+```
+
+## Example Implementation Steps
+
+### 1. Trust Anchor Setup
+
+```http
+# Create Trust Anchor account
+POST http://localhost:8081/accounts
+{
+    "username": "trust-anchor",
+    "identifier": "https://example.com/trust-anchor"
+}
+
+# Generate Trust Anchor keys
+POST http://localhost:8081/accounts/trust-anchor/keys
+
+# Create Trust Mark type
+POST http://localhost:8081/accounts/trust-anchor/trust-mark-types
+{
+    "identifier": "https://example.com/trust-mark-types/exampleType"
+}
+```
+
+### 2. Trust Mark Issuer Configuration
+
+```http
+# Create Issuer account
+POST http://localhost:8081/accounts
+{
+    "username": "trust-mark-issuer",
+    "identifier": "https://example.com/issuer"
+}
+
+# Generate Issuer keys
+POST http://localhost:8081/accounts/trust-mark-issuer/keys
+
+# Authorize Issuer
+POST http://localhost:8081/accounts/trust-anchor/trust-mark-types/{type-id}/issuers
+{
+    "identifier": "https://example.com/issuer"
+}
+
+# Publish Trust Anchor configuration
+POST http://localhost:8081/accounts/trust-anchor/entity-statement
+```
+
+### 3. Trust Mark Issuance
+
+```http
+# Issue Trust Mark
+POST http://localhost:8081/accounts/trust-mark-issuer/trust-marks
+{
+    "sub": "https://example.com/holder",
+    "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType"
+}
+
+# Publish Issuer configuration
+POST http://localhost:8081/accounts/trust-mark-issuer/entity-statement
+```
+
+### 4. Holder Management
+
+```http
+# Create Holder account
+POST http://localhost:8081/accounts
+{
+    "username": "holder",
+    "identifier": "https://example.com/holder"
+}
+
+# Store Trust Mark
+POST http://localhost:8081/accounts/holder/received-trust-marks
+{
+    "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType",
+    "jwt": "eyJ..."
+}
+
+# Publish Holder configuration
+POST http://localhost:8081/accounts/holder/entity-statement
+```
+
+### 5. Trust Mark Verification
+
+```http
+# Verify Trust Mark status
+GET http://localhost:8080/holder/trust_mark_status
+{
+    "trust_mark_id": "https://example.com/trust-mark-types/exampleType",
+    "sub": "https://example.com/holder"
+}
+```
+
+# API Reference
+
+For the complete API documentation, please
+visit [the API Reference](https://github.com/Sphereon-Opensource/OpenID-Federation/)
+
+# License
+
+```
+Apache License Version 2.0
+```
+
+---
+
+## Maintainers
+
+- John Melati
+- Niels Klomp
+- Zoë Maas
+- Sander Postma

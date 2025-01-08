@@ -6,6 +6,8 @@ import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusResponse
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.AccountService
+import com.sphereon.oid.fed.services.KeyService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import org.springframework.web.bind.annotation.GetMapping
@@ -21,8 +23,10 @@ import org.springframework.web.bind.annotation.RestController
 class FederationController {
     private val accountQueries = Persistence.accountQueries
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
+    private val accountService = AccountService()
     private val subordinateService = SubordinateService()
     private val trustMarkService = TrustMarkService()
+    private val keyService = KeyService()
 
     @GetMapping("/.well-known/openid-federation", produces = ["application/entity-statement+jwt"])
     fun getRootEntityConfigurationStatement(): String {
@@ -68,9 +72,14 @@ class FederationController {
 
     @GetMapping("/trust-mark-status", produces = ["application/json"])
     fun getRootTrustMarkStatusEndpoint(
-        @RequestBody request: TrustMarkStatusRequest
+        @RequestParam("sub") sub: String,
+        @RequestParam("trust_mark_id") trustMarkId: String
     ): TrustMarkStatusResponse {
         val account = accountQueries.findByUsername("root").executeAsOne()
+        val request = TrustMarkStatusRequest(
+            sub = sub,
+            trustMarkId = trustMarkId
+        )
         val status = trustMarkService.getTrustMarkStatus(account, request)
 
         return TrustMarkStatusResponse(
@@ -81,10 +90,15 @@ class FederationController {
     @GetMapping("/{username}/trust-mark-status", produces = ["application/json"])
     fun getTrustMarkStatusEndpoint(
         @PathVariable username: String,
-        @RequestBody request: TrustMarkStatusRequest
+        @RequestParam("sub") sub: String,
+        @RequestParam("trust_mark_id") trustMarkId: String
     ): TrustMarkStatusResponse {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
+        val request = TrustMarkStatusRequest(
+            sub = sub,
+            trustMarkId = trustMarkId
+        )
         val status = trustMarkService.getTrustMarkStatus(account, request)
 
         return TrustMarkStatusResponse(
@@ -94,19 +108,29 @@ class FederationController {
 
     @GetMapping("/trust-mark-list", produces = ["application/json"])
     fun getRootTrustMarkListEndpoint(
-        @RequestBody request: TrustMarkListRequest
+        @RequestParam("sub") sub: String?,
+        @RequestParam("trust_mark_id") trustMarkId: String
     ): Array<String> {
         val account = accountQueries.findByUsername("root").executeAsOne()
+        val request = TrustMarkListRequest(
+            sub = sub,
+            trustMarkId = trustMarkId
+        )
         return trustMarkService.getTrustMarkedSubs(account, request)
     }
 
     @GetMapping("/{username}/trust-mark-list", produces = ["application/json"])
     fun getTrustMarkListEndpoint(
         @PathVariable username: String,
-        @RequestBody request: TrustMarkListRequest
+        @RequestParam("sub") sub: String?,
+        @RequestParam("trust_mark_id") trustMarkId: String
     ): Array<String> {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
+        val request = TrustMarkListRequest(
+            sub = sub,
+            trustMarkId = trustMarkId
+        )
         return trustMarkService.getTrustMarkedSubs(account, request)
     }
 
@@ -127,4 +151,18 @@ class FederationController {
             ?: throw NotFoundException("Account not found")
         return trustMarkService.getTrustMark(account, request)
     }
+
+    @GetMapping("/historical-keys", produces = ["application/jwk-set+jwt"])
+    fun getRootFederationHistoricalKeys(): String {
+        val account = accountQueries.findByUsername("root").executeAsOne()
+        return keyService.getFederationHistoricalKeysJwt(account, accountService)
+    }
+
+    @GetMapping("/{username}/historical-keys", produces = ["application/jwk-set+jwt"])
+    fun getFederationHistoricalKeys(@PathVariable username: String): String {
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
+            ?: throw NotFoundException("Account not found")
+        return keyService.getFederationHistoricalKeysJwt(account, accountService)
+    }
+
 }

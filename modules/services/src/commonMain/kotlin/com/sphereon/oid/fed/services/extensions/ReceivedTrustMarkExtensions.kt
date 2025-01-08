@@ -7,7 +7,7 @@ fun ReceivedTrustMark.toReceivedTrustMarkDTO(): com.sphereon.oid.fed.openapi.mod
     return com.sphereon.oid.fed.openapi.models.ReceivedTrustMarkDTO(
         id = this.id,
         accountId = this.account_id,
-        trustMarkTypeIdentifier = this.trust_mark_type_id,
+        trustMarkTypeIdentifier = this.trust_mark_type_identifier,
         jwt = this.jwt,
         createdAt = this.created_at.toString(),
     )
@@ -15,7 +15,7 @@ fun ReceivedTrustMark.toReceivedTrustMarkDTO(): com.sphereon.oid.fed.openapi.mod
 
 fun ReceivedTrustMark.toTrustMark(): TrustMark {
     return TrustMark(
-        id = this.trust_mark_type_id,
+        id = this.trust_mark_type_identifier,
         trustMark = this.jwt
     )
 }
