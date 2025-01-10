@@ -3,7 +3,7 @@ package com.sphereon.oid.fed.persistence
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
-import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.persistence.config.DatabaseConfig
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
@@ -21,6 +21,10 @@ import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 
+/**
+ * Platform-specific implementation of the persistence layer for JVM.
+ * Handles database connections, migrations, and provides query interfaces for all entities.
+ */
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     actual val accountQueries: AccountQueries
@@ -38,11 +42,14 @@ actual object Persistence {
     actual val receivedTrustMarkQueries: ReceivedTrustMarkQueries
     actual val logQueries: LogQueries
 
-    init {
-        val driver = getDriver()
-        runMigrations(driver)
+    private val driver: SqlDriver
+    private val database: Database
 
-        val database = Database(driver)
+    init {
+        driver = createDriver()
+        runMigrations(driver)
+        database = Database(driver)
+
         accountQueries = database.accountQueries
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
         keyQueries = database.keyQueries
@@ -60,11 +67,12 @@ actual object Persistence {
         logQueries = database.logQueries
     }
 
-    private fun getDriver(): SqlDriver {
+    private fun createDriver(): SqlDriver {
+        val config = DatabaseConfig()
         return PlatformSqlDriver().createPostgresDriver(
-            System.getenv(Constants.DATASOURCE_URL),
-            System.getenv(Constants.DATASOURCE_USER),
-            System.getenv(Constants.DATASOURCE_PASSWORD)
+            config.url,
+            config.username,
+            config.password
         )
     }
 
@@ -83,18 +91,11 @@ actual object Persistence {
         if (currentVersion < newVersion) {
             try {
                 Database.Schema.migrate(driver, currentVersion, newVersion)
-                // Update version
-                val updateQuery = "INSERT INTO schema_version (version) VALUES (?)"
-                driver.execute(null, updateQuery, 1) {
-                    bindLong(0, newVersion)
-                }
+                updateDatabaseVersion(driver, newVersion)
             } catch (e: org.postgresql.util.PSQLException) {
                 // If tables already exist, we can consider the schema as up-to-date
                 if (e.message?.contains("already exists") == true) {
-                    val updateQuery = "INSERT INTO schema_version (version) VALUES (?)"
-                    driver.execute(null, updateQuery, 1) {
-                        bindLong(0, newVersion)
-                    }
+                    updateDatabaseVersion(driver, newVersion)
                 } else {
                     throw e
                 }
