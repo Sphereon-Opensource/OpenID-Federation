@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.server.admin.config
 
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.AuthorityHintService
 import com.sphereon.oid.fed.services.CritService
@@ -17,6 +18,11 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 open class ServiceConfig {
     @Bean
+    open fun accountConfig(): AccountConfig {
+        return AccountConfig()
+    }
+
+    @Bean
     open fun logService(): LogService {
         return LogService(Persistence.logQueries)
     }
@@ -32,8 +38,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun accountService(): AccountService {
-        return AccountService()
+    open fun accountService(accountConfig: AccountConfig): AccountService {
+        return AccountService(accountConfig)
     }
 
     @Bean
@@ -42,8 +48,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun subordinateService(): SubordinateService {
-        return SubordinateService()
+    open fun subordinateService(accountService: AccountService): SubordinateService {
+        return SubordinateService(accountService)
     }
 
     @Bean
@@ -57,8 +63,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun entityConfigurationStatementService(): EntityConfigurationStatementService {
-        return EntityConfigurationStatementService()
+    open fun entityConfigurationStatementService(accountService: AccountService): EntityConfigurationStatementService {
+        return EntityConfigurationStatementService(accountService)
     }
 
     @Bean

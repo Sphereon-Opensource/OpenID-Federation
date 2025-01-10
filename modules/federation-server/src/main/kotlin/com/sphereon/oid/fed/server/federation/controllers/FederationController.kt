@@ -20,14 +20,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping()
-class FederationController {
+class FederationController(
+    private val accountService: AccountService,
+    private val subordinateService: SubordinateService,
+    private val trustMarkService: TrustMarkService,
+    private val keyService: KeyService
+) {
     private val accountQueries = Persistence.accountQueries
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
-    private val accountService = AccountService()
-    private val subordinateService = SubordinateService()
-    private val trustMarkService = TrustMarkService()
-    private val keyService = KeyService()
-
     @GetMapping("/.well-known/openid-federation", produces = ["application/entity-statement+jwt"])
     fun getRootEntityConfigurationStatement(): String {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()

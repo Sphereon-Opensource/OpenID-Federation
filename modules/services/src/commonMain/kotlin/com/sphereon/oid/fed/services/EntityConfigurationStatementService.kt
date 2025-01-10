@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
@@ -12,9 +13,10 @@ import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class EntityConfigurationStatementService {
+class EntityConfigurationStatementService(
+    private val accountService: AccountService
+) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
-    private val accountService = AccountService()
     private val keyService = KeyService()
     private val kmsClient = KmsService.getKmsClient()
 

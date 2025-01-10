@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
@@ -22,9 +23,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
-class SubordinateService {
+class SubordinateService(
+    private val accountService: AccountService
+) {
     private val logger = Logger.tag("SubordinateService")
-    private val accountService = AccountService()
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries

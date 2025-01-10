@@ -8,9 +8,12 @@ import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.services.mappers.toAccountDTO
 
-class AccountService() {
+class AccountService(
+    private val config: AccountConfig
+) {
     private val logger = Logger.tag("AccountService")
     private val accountQueries = Persistence.accountQueries
 
@@ -44,15 +47,13 @@ class AccountService() {
             return identifier
         }
 
-        val rootIdentifier =
-            System.getenv("ROOT_IDENTIFIER") ?: throw NotFoundException(Constants.ROOT_IDENTIFIER_NOT_SET).also {
-                logger.error("ROOT_IDENTIFIER environment variable not set")
-            }
-
         // For root account, return root identifier directly
-        val identifier =
-            if (account.username == Constants.DEFAULT_ROOT_USERNAME) rootIdentifier else "$rootIdentifier/$account.username"
-        logger.debug("Using identifier for username: $account.username as $identifier")
+        val identifier = if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
+            config.rootIdentifier
+        } else {
+            "${config.rootIdentifier}/${account.username}"
+        }
+        logger.debug("Using identifier for username: ${account.username} as $identifier")
         return identifier
     }
 
