@@ -3,12 +3,8 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.mappers.toJwk
@@ -22,7 +18,7 @@ class EntityConfigurationStatementService {
     private val keyService = KeyService()
     private val kmsClient = KmsService.getKmsClient()
 
-    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatement {
+    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementDTO {
         logger.info("Building entity configuration for account: ${account.username}")
 
         val identifier = accountService.getAccountIdentifierByAccount(account)
@@ -136,7 +132,7 @@ class EntityConfigurationStatementService {
             }
     }
 
-    fun findByAccount(account: Account): EntityConfigurationStatement {
+    fun findByAccount(account: Account): EntityConfigurationStatementDTO {
         logger.info("Finding entity configuration for account: ${account.username}")
         return getEntityConfigurationStatement(account)
     }
@@ -157,7 +153,7 @@ class EntityConfigurationStatementService {
 
         val jwt = kmsClient.sign(
             payload = Json.encodeToJsonElement(
-                EntityConfigurationStatement.serializer(),
+                EntityConfigurationStatementDTO.serializer(),
                 entityConfigurationStatement
             ).jsonObject,
             header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),

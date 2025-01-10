@@ -4,7 +4,7 @@ import com.nimbusds.jose.Algorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.EntityJwks
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
@@ -21,7 +21,7 @@ class JoseJwtTest {
     fun signTest() {
         val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
         val jwk = key.toString()
-        val entityStatement = EntityConfigurationStatement(
+        val entityStatement = EntityConfigurationStatementDTO(
             iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = EntityJwks()
         )
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
@@ -37,7 +37,7 @@ class JoseJwtTest {
     fun verifyTest() {
         val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
         val jwk = key.toString()
-        val entityStatement = EntityConfigurationStatement(
+        val entityStatement = EntityConfigurationStatementDTO(
             iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = EntityJwks()
         )
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject

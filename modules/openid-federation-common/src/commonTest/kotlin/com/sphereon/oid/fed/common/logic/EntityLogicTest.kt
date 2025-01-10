@@ -2,7 +2,7 @@ package com.sphereon.oid.fed.common.logic
 
 import EntityLogic
 import EntityType
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.EntityJwks
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -20,7 +20,7 @@ class EntityLogicTest {
     @Test
     fun shouldReturnTrustAnchor() {
         val trustAnchorEntityStatement =
-            json.decodeFromString<EntityConfigurationStatement>(TRUST_ANCHOR_ENTITY_STATEMENT)
+            json.decodeFromString<EntityConfigurationStatementDTO>(TRUST_ANCHOR_ENTITY_STATEMENT)
 
         assertEquals(EntityType.TRUST_ANCHOR, entityLogic.getEntityType(trustAnchorEntityStatement))
     }
@@ -28,14 +28,14 @@ class EntityLogicTest {
     @Test
     fun shouldReturnIntermediate() {
         val intermediateEntityStatement =
-            json.decodeFromString<EntityConfigurationStatement>(INTERMEDIATE_ENTITY_STATEMENT)
+            json.decodeFromString<EntityConfigurationStatementDTO>(INTERMEDIATE_ENTITY_STATEMENT)
 
         assertEquals(EntityType.INTERMEDIATE, entityLogic.getEntityType(intermediateEntityStatement))
     }
 
     @Test
     fun shouldReturnLeafEntity() {
-        val leafEntityStatement = json.decodeFromString<EntityConfigurationStatement>(LEAF_ENTITY_STATEMENT)
+        val leafEntityStatement = json.decodeFromString<EntityConfigurationStatementDTO>(LEAF_ENTITY_STATEMENT)
 
         assertEquals(EntityType.LEAF, entityLogic.getEntityType(leafEntityStatement))
     }
@@ -43,7 +43,7 @@ class EntityLogicTest {
 
     @Test
     fun shouldReturnUndefined() {
-        val entityStatement = EntityConfigurationStatement(
+        val entityStatement = EntityConfigurationStatementDTO(
             metadata = JsonObject(emptyMap()),
             authorityHints = emptyArray(),
             exp = 0,

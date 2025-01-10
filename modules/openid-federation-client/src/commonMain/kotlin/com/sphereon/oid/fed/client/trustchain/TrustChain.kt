@@ -9,7 +9,7 @@ import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.mapper.mapEntityStatement
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -69,8 +69,8 @@ class TrustChain
             return null
         }
 
-        val entityStatement: EntityConfigurationStatement =
-            mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return null
+        val entityStatement: EntityConfigurationStatementDTO =
+            mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatementDTO::class) ?: return null
 
         if (chain.isEmpty()) {
             chain.add(entityConfigurationJwt)
@@ -143,8 +143,8 @@ class TrustChain
                 return null
             }
 
-            val authorityEntityConfiguration: EntityConfigurationStatement =
-                mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatement::class) ?: return null
+            val authorityEntityConfiguration: EntityConfigurationStatementDTO =
+                mapEntityStatement(authorityEntityConfigurationJwt, EntityConfigurationStatementDTO::class) ?: return null
 
             val federationEntityMetadata =
                 authorityEntityConfiguration.metadata?.get("federation_entity") as? JsonObject
