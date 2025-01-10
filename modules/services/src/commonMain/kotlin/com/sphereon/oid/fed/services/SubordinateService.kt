@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
@@ -24,43 +25,44 @@ import kotlinx.serialization.json.jsonObject
 class SubordinateService {
     private val logger = Logger.tag("SubordinateService")
     private val accountService = AccountService()
-    private val accountQueries = Persistence.accountQueries
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
     private val kmsClient = KmsService.getKmsClient()
     private val keyService = KeyService()
 
-    fun findSubordinatesByAccount(accountUsername: String): Array<Subordinate> {
-        logger.debug("Finding subordinates for account: $accountUsername")
-        val account = accountQueries.findByUsername(accountUsername).executeAsOne()
-        logger.debug("Found account with ID: ${account.id}")
-
+    fun findSubordinatesByAccount(account: Account): Array<Subordinate> {
         val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
-        logger.info("Found ${subordinates.size} subordinates for account: $accountUsername")
+        logger.debug("Found ${subordinates.size} subordinates for account: ${account.username}")
         return subordinates
     }
 
-    fun findSubordinatesByAccountAsArray(accountUsername: String): Array<String> {
-        logger.debug("Finding subordinate identifiers for account: $accountUsername")
-        val subordinates = findSubordinatesByAccount(accountUsername)
-        logger.debug("Converting ${subordinates.size} subordinates to identifier array")
+    fun findSubordinatesByAccountUsername(accountUsername: String): Array<Subordinate> {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return findSubordinatesByAccount(account)
+    }
+
+    fun findSubordinatesByAccountAsArray(account: Account): Array<String> {
+        val subordinates = findSubordinatesByAccount(account)
         return subordinates.map { it.identifier }.toTypedArray()
     }
 
-    fun deleteSubordinate(accountUsername: String, id: Int): Subordinate {
-        logger.info("Attempting to delete subordinate ID: $id for account: $accountUsername")
+    fun findSubordinatesByAccountUsernameAsArray(accountUsername: String): Array<String> {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return findSubordinatesByAccountAsArray(account)
+    }
+
+    fun deleteSubordinate(account: Account, id: Int): Subordinate {
+        logger.info("Attempting to delete subordinate ID: $id for account: ${account.username}")
         try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
             if (subordinate.account_id != account.id) {
-                logger.warn("Subordinate ID $id does not belong to account: $accountUsername")
+                logger.warn("Subordinate ID $id does not belong to account: ${account.username}")
                 throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             }
 
@@ -73,12 +75,15 @@ class SubordinateService {
         }
     }
 
-    fun createSubordinate(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
-        logger.info("Creating new subordinate for account: $accountUsername")
+    fun deleteSubordinateByUsername(accountUsername: String, id: Int): Subordinate {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return deleteSubordinate(account, id)
+    }
+
+    fun createSubordinate(account: Account, subordinateDTO: CreateSubordinateDTO): Subordinate {
+        logger.info("Creating new subordinate for account: ${account.username}")
         try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             logger.debug("Checking if subordinate already exists with identifier: ${subordinateDTO.identifier}")
             val subordinateAlreadyExists =
@@ -93,17 +98,20 @@ class SubordinateService {
             logger.info("Successfully created subordinate with ID: ${createdSubordinate.id}")
             return createdSubordinate
         } catch (e: Exception) {
-            logger.error("Failed to create subordinate for account: $accountUsername", e)
+            logger.error("Failed to create subordinate for account: ${account.username}", e)
             throw e
         }
     }
 
-    fun getSubordinateStatement(accountUsername: String, id: Int): SubordinateStatement {
-        logger.info("Generating subordinate statement for ID: $id, account: $accountUsername")
+    fun createSubordinateByUsername(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return createSubordinate(account, subordinateDTO)
+    }
+
+    fun getSubordinateStatement(account: Account, id: Int): SubordinateStatement {
+        logger.info("Generating subordinate statement for ID: $id, account: ${account.username}")
         try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
@@ -126,7 +134,10 @@ class SubordinateService {
         }
     }
 
-    // Continue with similar logging patterns for other methods...
+    fun getSubordinateStatementByUsername(accountUsername: String, id: Int): SubordinateStatement {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return getSubordinateStatement(account, id)
+    }
 
     private fun buildSubordinateStatement(
         account: Account,
@@ -159,20 +170,19 @@ class SubordinateService {
         return statement.build()
     }
 
-    fun publishSubordinateStatement(accountUsername: String, id: Int, dryRun: Boolean? = false): String {
-        logger.info("Publishing subordinate statement for ID: $id, account: $accountUsername (dryRun: $dryRun)")
+    fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false): String {
+        logger.info("Publishing subordinate statement for ID: $id, account: ${account.username} (dryRun: $dryRun)")
         try {
-            val account = accountService.getAccountByUsername(accountUsername)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
-            val subordinateStatement = getSubordinateStatement(accountUsername, id)
+            val subordinateStatement = getSubordinateStatement(account, id)
             logger.debug("Generated subordinate statement with subject: ${subordinateStatement.sub}")
 
-            val keys = keyService.getKeys(account.id)
+            val keys = keyService.getKeys(account)
             logger.debug("Found ${keys.size} keys for account")
 
             if (keys.isEmpty()) {
-                logger.error("No keys found for account: $accountUsername")
+                logger.error("No keys found for account: ${account.username}")
                 throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
             }
 
@@ -210,19 +220,22 @@ class SubordinateService {
         }
     }
 
-    fun createSubordinateJwk(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
-        logger.info("Creating subordinate JWK for subordinate ID: $id, account: $accountUsername")
+    fun publishSubordinateStatementByUsername(accountUsername: String, id: Int, dryRun: Boolean? = false): String {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return publishSubordinateStatement(account, id, dryRun)
+    }
+
+    fun createSubordinateJwk(account: Account, id: Int, jwk: JsonObject): SubordinateJwkDto {
+        logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
         try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
             if (subordinate.account_id != account.id) {
-                logger.warn("Subordinate ID $id does not belong to account: $accountUsername")
+                logger.warn("Subordinate ID $id does not belong to account: ${account.username}")
                 throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             }
 
@@ -237,12 +250,15 @@ class SubordinateService {
         }
     }
 
-    fun getSubordinateJwks(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
-        logger.info("Retrieving JWKs for subordinate ID: $id, account: $accountUsername")
+    fun createSubordinateJwkByUsername(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return createSubordinateJwk(account, id, jwk)
+    }
+
+    fun getSubordinateJwks(account: Account, id: Int): Array<SubordinateJwkDto> {
+        logger.info("Retrieving JWKs for subordinate ID: $id, account: ${account.username}")
         try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
@@ -258,38 +274,46 @@ class SubordinateService {
         }
     }
 
-    fun deleteSubordinateJwk(accountUsername: String, subordinateId: Int, id: Int): SubordinateJwk {
-        logger.info("Deleting subordinate JWK ID: $id for subordinate ID: $subordinateId, account: $accountUsername")
-        try {
-            val account = accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+    fun getSubordinateJwksByUsername(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return getSubordinateJwks(account, id)
+    }
 
-            val subordinate = subordinateQueries.findById(subordinateId).executeAsOneOrNull()
+    fun deleteSubordinateJwk(account: Account, id: Int, jwkId: Int): SubordinateJwk {
+        logger.info("Deleting subordinate JWK ID: $jwkId for subordinate ID: $id, account: ${account.username}")
+        try {
+            logger.debug("Using account with ID: ${account.id}")
+
+            val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
             if (subordinate.account_id != account.id) {
-                logger.warn("Subordinate ID $subordinateId does not belong to account: $accountUsername")
+                logger.warn("Subordinate ID $id does not belong to account: ${account.username}")
                 throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             }
 
-            val subordinateJwk = subordinateJwkQueries.findById(id).executeAsOneOrNull()
+            val subordinateJwk = subordinateJwkQueries.findById(jwkId).executeAsOneOrNull()
                 ?: throw NotFoundException(Constants.SUBORDINATE_JWK_NOT_FOUND)
-            logger.debug("Found JWK with ID: $id")
+            logger.debug("Found JWK with ID: $jwkId")
 
             if (subordinateJwk.subordinate_id != subordinate.id) {
-                logger.warn("JWK ID $id does not belong to subordinate ID: $subordinateId")
+                logger.warn("JWK ID $jwkId does not belong to subordinate ID: $id")
                 throw NotFoundException(Constants.SUBORDINATE_JWK_NOT_FOUND)
             }
 
             val deletedJwk = subordinateJwkQueries.delete(subordinateJwk.id).executeAsOne()
-            logger.info("Successfully deleted subordinate JWK with ID: $id")
+            logger.info("Successfully deleted subordinate JWK with ID: $jwkId")
             return deletedJwk
         } catch (e: Exception) {
-            logger.error("Failed to delete subordinate JWK ID: $id", e)
+            logger.error("Failed to delete subordinate JWK ID: $jwkId", e)
             throw e
         }
+    }
+
+    fun deleteSubordinateJwkByUsername(accountUsername: String, subordinateId: Int, id: Int): SubordinateJwk {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return deleteSubordinateJwk(account, subordinateId, id)
     }
 
     fun fetchSubordinateStatement(iss: String, sub: String): String {
@@ -305,15 +329,10 @@ class SubordinateService {
         }
     }
 
-    fun findSubordinateMetadata(
-        accountUsername: String,
-        subordinateId: Int
-    ): Array<SubordinateMetadataDTO> {
-        logger.info("Finding metadata for subordinate ID: $subordinateId, account: $accountUsername")
+    fun findSubordinateMetadata(account: Account, subordinateId: Int): Array<SubordinateMetadataDTO> {
+        logger.info("Finding metadata for subordinate ID: $subordinateId, account: ${account.username}")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
                 .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
@@ -332,17 +351,20 @@ class SubordinateService {
         }
     }
 
+    fun findSubordinateMetadataByUsername(accountUsername: String, subordinateId: Int): Array<SubordinateMetadataDTO> {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return findSubordinateMetadata(account, subordinateId)
+    }
+
     fun createMetadata(
-        accountUsername: String,
+        account: Account,
         subordinateId: Int,
         key: String,
         metadata: JsonObject
     ): SubordinateMetadataDTO {
-        logger.info("Creating metadata for subordinate ID: $subordinateId, account: $accountUsername, key: $key")
+        logger.info("Creating metadata for subordinate ID: $subordinateId, account: ${account.username}, key: $key")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
                 .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
@@ -375,16 +397,20 @@ class SubordinateService {
         }
     }
 
-    fun deleteSubordinateMetadata(
+    fun createMetadataByUsername(
         accountUsername: String,
         subordinateId: Int,
-        id: Int
+        key: String,
+        metadata: JsonObject
     ): SubordinateMetadataDTO {
-        logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: $accountUsername")
+        val account = accountService.getAccountByUsername(accountUsername)
+        return createMetadata(account, subordinateId, key, metadata)
+    }
+
+    fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadataDTO {
+        logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: ${account.username}")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val subordinate = Persistence.subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
                 .executeAsOneOrNull() ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
@@ -409,10 +435,19 @@ class SubordinateService {
         }
     }
 
-    fun fetchSubordinateStatementByUsernameAndSubject(username: String, sub: String): String {
+    fun deleteSubordinateMetadataByUsername(
+        accountUsername: String,
+        subordinateId: Int,
+        id: Int
+    ): SubordinateMetadataDTO {
+        val account = accountService.getAccountByUsername(accountUsername)
+        return deleteSubordinateMetadata(account, subordinateId, id)
+    }
+
+    fun fetchSubordinateStatementByUsername(username: String, sub: String): String {
         logger.info("Fetching subordinate statement for username: $username, subject: $sub")
         try {
-            val account = accountQueries.findByUsername(username).executeAsOne()
+            val account = accountService.getAccountByUsername(username)
             logger.debug("Found account with ID: ${account.id}")
 
             val accountIss = accountService.getAccountIdentifier(account.username)

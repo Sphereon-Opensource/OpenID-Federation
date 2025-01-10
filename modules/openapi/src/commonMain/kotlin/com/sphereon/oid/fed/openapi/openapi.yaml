@@ -997,7 +997,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/EntityConfigurationStatement'
+                $ref: '#/components/schemas/EntityConfigurationStatementDTO'
         '404':
           description: Account or entity statement not found
           content:
@@ -2156,7 +2156,7 @@ components:
           example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
           nullable: true
       description: ''
-    EntityConfigurationStatement:
+    EntityConfigurationStatementDTO:
       allOf:
         - $ref: '#/components/schemas/BaseEntityStatement'
         - type: object

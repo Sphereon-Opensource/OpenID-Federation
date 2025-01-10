@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
@@ -16,12 +17,10 @@ import kotlinx.serialization.json.jsonObject
 class KeyService {
     private val logger = Logger.tag("KeyService")
     private val kmsClient = KmsService.getKmsClient()
-    private val accountQueries = Persistence.accountQueries
     private val keyQueries = Persistence.keyQueries
 
-    fun create(accountId: Int): JwkAdminDTO {
-        logger.info("Creating new key for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOne()
+    fun create(account: Account): JwkAdminDTO {
+        logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
         val jwk = kmsClient.generateKeyPair()
@@ -37,28 +36,23 @@ class KeyService {
         return jwk
     }
 
-    fun getKeys(accountId: Int): Array<JwkAdminDTO> {
-        logger.debug("Retrieving keys for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found with ID: $accountId")
-            }
+    fun getKeys(account: Account): Array<JwkAdminDTO> {
+        logger.debug("Retrieving keys for account: ${account.username}")
 
         val keys = keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
-        logger.debug("Found ${keys.size} keys for account ID: $accountId")
+        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
 
-    fun revokeKey(accountId: Int, keyId: Int, reason: String?): JwkAdminDTO {
-        logger.info("Attempting to revoke key ID: $keyId for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOne()
+    fun revokeKey(account: Account, keyId: Int, reason: String?): JwkAdminDTO {
+        logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
         var key = keyQueries.findById(keyId).executeAsOne()
         logger.debug("Found key with ID: $keyId")
 
         if (key.account_id != account.id) {
-            logger.error("Key ID: $keyId does not belong to account ID: $accountId")
+            logger.error("Key ID: $keyId does not belong to account: ${account.username}")
             throw NotFoundException(Constants.KEY_NOT_FOUND)
         }
 
@@ -76,10 +70,10 @@ class KeyService {
         return key.toJwkAdminDTO()
     }
 
-    private fun getFederationHistoricalKeys(accountId: Int): Array<HistoricalKey> {
-        logger.debug("Retrieving federation historical keys for account ID: $accountId")
-        val keys = keyQueries.findByAccountId(accountId).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
-        logger.debug("Found ${keys.size} keys for account ID: $accountId")
+    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
+        logger.debug("Retrieving federation historical keys for account: ${account.username}")
+        val keys = keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
 
         return keys.map {
             it.toHistoricalKey()
@@ -92,10 +86,10 @@ class KeyService {
         val historicalKeysJwkObject = FederationHistoricalKeysResponse(
             iss = iss,
             iat = (System.currentTimeMillis() / 1000).toInt(),
-            propertyKeys = getFederationHistoricalKeys(account.id)
+            propertyKeys = getFederationHistoricalKeys(account)
         )
 
-        val keys = getKeys(account.id)
+        val keys = getKeys(account)
 
         if (keys.isEmpty()) {
             logger.error("No keys found for account: ${account.username}")

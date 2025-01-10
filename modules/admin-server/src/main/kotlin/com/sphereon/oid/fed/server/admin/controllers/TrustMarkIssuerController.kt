@@ -25,7 +25,7 @@ class TrustMarkIssuerController(
         @PathVariable id: Int
     ): List<String> {
         return trustMarkService.getIssuersForTrustMarkType(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id,
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
             id
         )
     }
@@ -37,7 +37,7 @@ class TrustMarkIssuerController(
         @RequestBody body: CreateTrustMarkTypeIssuerDTO
     ): TrustMarkIssuer {
         return trustMarkService.addIssuerToTrustMarkType(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id,
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
             id,
             body.identifier
         )
@@ -50,7 +50,7 @@ class TrustMarkIssuerController(
         @PathVariable issuerIdentifier: String
     ): TrustMarkIssuer {
         return trustMarkService.removeIssuerFromTrustMarkType(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id,
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
             id,
             issuerIdentifier
         )

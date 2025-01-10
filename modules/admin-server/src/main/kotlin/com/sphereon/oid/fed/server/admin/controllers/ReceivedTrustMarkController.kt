@@ -4,41 +4,37 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMarkDTO
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/received-trust-marks")
 class ReceivedTrustMarkController(
-    private val receivedTrustMarkService: ReceivedTrustMarkService,
-    private val accountService: AccountService
+    private val receivedTrustMarkService: ReceivedTrustMarkService
 ) {
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     fun create(
         request: HttpServletRequest,
         @RequestBody dto: CreateReceivedTrustMarkDTO
     ): ReceivedTrustMarkDTO {
-        return receivedTrustMarkService.create(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
-            dto,
-            accountService
-        )
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.create(account, dto)
     }
 
     @GetMapping
     fun list(request: HttpServletRequest): Array<ReceivedTrustMarkDTO> {
-        return receivedTrustMarkService.list(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
-            accountService
-        ).toTypedArray()
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.list(account).toTypedArray()
     }
 
     @DeleteMapping("/{receivedTrustMarkId}")
@@ -46,10 +42,7 @@ class ReceivedTrustMarkController(
         request: HttpServletRequest,
         @PathVariable receivedTrustMarkId: Int
     ): ReceivedTrustMarkDTO {
-        return receivedTrustMarkService.delete(
-            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
-            receivedTrustMarkId,
-            accountService
-        )
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.delete(account, receivedTrustMarkId)
     }
 }

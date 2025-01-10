@@ -1,20 +1,19 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Crit
 
 class CritService {
     private val logger = Logger.tag("CritService")
 
-    fun create(accountUsername: String, claim: String): Crit {
-        logger.info("Creating crit for account: $accountUsername, claim: $claim")
+    fun create(account: Account, claim: String): Crit {
+        logger.info("Creating crit for account: ${account.username}, claim: $claim")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             logger.debug("Checking if crit already exists for claim: $claim")
             val critAlreadyExists =
@@ -31,17 +30,15 @@ class CritService {
 
             return createdCrit
         } catch (e: Exception) {
-            logger.error("Failed to create crit for account: $accountUsername, claim: $claim", e)
+            logger.error("Failed to create crit for account: ${account.username}, claim: $claim", e)
             throw e
         }
     }
 
-    fun delete(accountUsername: String, id: Int): Crit {
-        logger.info("Deleting crit ID: $id for account: $accountUsername")
+    fun delete(account: Account, id: Int): Crit {
+        logger.info("Deleting crit ID: $id for account: ${account.username}")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val deletedCrit = Persistence.critQueries.deleteByAccountIdAndId(account.id, id).executeAsOneOrNull()
                 ?: throw IllegalStateException(Constants.FAILED_TO_DELETE_CRIT)
@@ -49,7 +46,7 @@ class CritService {
 
             return deletedCrit
         } catch (e: Exception) {
-            logger.error("Failed to delete crit ID: $id for account: $accountUsername", e)
+            logger.error("Failed to delete crit ID: $id for account: ${account.username}", e)
             throw e
         }
     }
@@ -61,18 +58,16 @@ class CritService {
         return crits
     }
 
-    fun findByAccountUsername(accountUsername: String): Array<Crit> {
-        logger.info("Finding crits for account: $accountUsername")
+    fun findByAccountUsername(account: Account): Array<Crit> {
+        logger.info("Finding crits for account: ${account.username}")
         try {
-            val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-                ?: throw IllegalArgumentException(Constants.ACCOUNT_NOT_FOUND)
-            logger.debug("Found account with ID: ${account.id}")
+            logger.debug("Using account with ID: ${account.id}")
 
             val crits = findByAccountId(account.id)
-            logger.info("Found ${crits.size} crits for account: $accountUsername")
+            logger.info("Found ${crits.size} crits for account: ${account.username}")
             return crits
         } catch (e: Exception) {
-            logger.error("Failed to find crits for account: $accountUsername", e)
+            logger.error("Failed to find crits for account: ${account.username}", e)
             throw e
         }
     }
