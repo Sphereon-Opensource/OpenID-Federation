@@ -1,12 +1,15 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateAdminDTO
 import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.extensions.toSubordinateAdminDTO
+import com.sphereon.oid.fed.services.mappers.toSubordinateAdminDTO
+import jakarta.servlet.http.HttpServletRequest
 import kotlinx.serialization.json.JsonObject
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -17,72 +20,97 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{username}/subordinates")
-class SubordinateController {
-    private val subordinateService = SubordinateService()
-
+@RequestMapping("/subordinates")
+class SubordinateController(
+    private val subordinateService: SubordinateService
+) {
     @GetMapping
-    fun getSubordinates(@PathVariable username: String): Array<SubordinateAdminDTO> {
-        return subordinateService.findSubordinatesByAccount(username).map { it.toSubordinateAdminDTO() }
-            .toTypedArray()
+    fun getSubordinates(request: HttpServletRequest): Array<SubordinateAdminDTO> {
+        return subordinateService.findSubordinatesByAccount(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username
+        ).map { it.toSubordinateAdminDTO() }.toTypedArray()
     }
 
     @PostMapping
     fun createSubordinate(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @RequestBody subordinate: CreateSubordinateDTO
     ): Subordinate {
-        return subordinateService.createSubordinate(username, subordinate)
+        return subordinateService.createSubordinate(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            subordinate
+        )
     }
 
     @DeleteMapping("/{id}")
     fun deleteSubordinate(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
     ): Subordinate {
-        return subordinateService.deleteSubordinate(username, id)
+        return subordinateService.deleteSubordinate(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id
+        )
     }
 
     @PostMapping("/{id}/jwks")
     fun createSubordinateJwk(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int,
         @RequestBody jwk: JsonObject
     ): SubordinateJwkDto {
-        return subordinateService.createSubordinateJwk(username, id, jwk)
+        return subordinateService.createSubordinateJwk(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id,
+            jwk
+        )
     }
 
     @GetMapping("/{id}/jwks")
     fun getSubordinateJwks(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
     ): Array<SubordinateJwkDto> {
-        return subordinateService.getSubordinateJwks(username, id)
+        return subordinateService.getSubordinateJwks(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id
+        )
     }
 
     @DeleteMapping("/{id}/jwks/{jwkId}")
     fun deleteSubordinateJwk(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int,
         @PathVariable jwkId: Int
     ) {
-        subordinateService.deleteSubordinateJwk(username, id, jwkId)
+        subordinateService.deleteSubordinateJwk(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id,
+            jwkId
+        )
     }
 
     @GetMapping("/{id}/statement")
     fun getSubordinateStatement(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
     ): SubordinateStatement {
-        return subordinateService.getSubordinateStatement(username, id)
+        return subordinateService.getSubordinateStatement(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id
+        )
     }
 
     @PostMapping("/{id}/statement")
     fun publishSubordinateStatement(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int,
         @RequestBody dryRun: Boolean?
     ): String {
-        return subordinateService.publishSubordinateStatement(username, id, dryRun)
+        return subordinateService.publishSubordinateStatement(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
+            id,
+            dryRun
+        )
     }
 }

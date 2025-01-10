@@ -25,3 +25,4 @@ captures
 kotlin-js-store/
 .env
 /.docker/keycloak-dev/
+/modules/admin-server/logs/

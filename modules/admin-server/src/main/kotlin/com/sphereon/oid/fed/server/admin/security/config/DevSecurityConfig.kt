@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.admin.config
+package com.sphereon.oid.fed.server.admin.security.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

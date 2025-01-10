@@ -8,8 +8,8 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.extensions.toJwk
-import com.sphereon.oid.fed.services.extensions.toTrustMark
+import com.sphereon.oid.fed.services.mappers.toJwk
+import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 

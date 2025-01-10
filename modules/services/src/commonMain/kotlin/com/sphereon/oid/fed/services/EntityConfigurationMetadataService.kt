@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.extensions.toEntityConfigurationMetadataDTO
+import com.sphereon.oid.fed.services.mappers.toEntityConfigurationMetadataDTO
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationMetadataService {

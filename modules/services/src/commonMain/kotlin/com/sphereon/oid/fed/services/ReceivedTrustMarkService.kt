@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMarkDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.extensions.toReceivedTrustMarkDTO
+import com.sphereon.oid.fed.services.mappers.toReceivedTrustMarkDTO
 
 class ReceivedTrustMarkService {
     private val logger = Logger.tag("ReceivedTrustMarkService")

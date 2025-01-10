@@ -604,19 +604,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}':
     delete:
       tags:
         - admin
-      summary: Delete an account
-      description: Endpoint for an admin to delete an account.
-      parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to be deleted.
+      summary: Delete current account
+      description: Delete the account.
       responses:
         '200':
           description: Account deleted successfully
@@ -624,26 +616,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccountDTO'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Account not found
           content:
             application/json:
               schema:
@@ -4361,3 +4335,19 @@ components:
           format: date-time
           description: The timestamp when the Trust Mark was created.
           example: "2024-12-01T12:00:00Z"
+    AuthorityHintDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        identifier:
+          type: string
+        accountId:
+          type: integer
+          format: int32
+      required:
+        - id
+        - identifier
+        - accountId
+        - admin

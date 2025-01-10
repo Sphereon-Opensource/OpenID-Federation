@@ -35,6 +35,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(projects.modules.openapi)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             }
         }
 
@@ -51,7 +52,7 @@ kotlin {
 publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
-            
+
             pom {
                 name.set("OpenID Federation Persistence")
                 description.set("Persistence module for OpenID Federation")

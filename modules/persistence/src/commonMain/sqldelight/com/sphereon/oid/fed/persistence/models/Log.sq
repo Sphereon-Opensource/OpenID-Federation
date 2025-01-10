@@ -1,0 +1,16 @@
+insertLog:
+INSERT INTO Log(message)
+VALUES (?);
+
+getRecentLogs:
+SELECT *
+FROM Log
+ORDER BY created_at DESC
+LIMIT :limit;
+
+searchLogs:
+SELECT *
+FROM Log
+WHERE message LIKE '%' || :searchTerm || '%'
+ORDER BY created_at DESC
+LIMIT :limit;

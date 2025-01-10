@@ -8,8 +8,8 @@ import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.extensions.toHistoricalKey
-import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
+import com.sphereon.oid.fed.services.mappers.toHistoricalKey
+import com.sphereon.oid.fed.services.mappers.toJwkAdminDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 

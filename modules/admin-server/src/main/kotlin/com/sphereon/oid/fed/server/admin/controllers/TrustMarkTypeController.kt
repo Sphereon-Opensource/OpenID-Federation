@@ -1,9 +1,12 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeDTO
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.TrustMarkService
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -13,23 +16,25 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{username}/trust-mark-types")
-class TrustMarkTypeController {
-    private val accountService = AccountService()
-    private val trustMarkService = TrustMarkService()
-
+@RequestMapping("/trust-mark-types")
+class TrustMarkTypeController(
+    private val trustMarkService: TrustMarkService,
+    private val accountService: AccountService
+) {
     @GetMapping
-    fun getTrustMarkTypes(@PathVariable username: String): List<TrustMarkTypeDTO> {
-        return trustMarkService.findAllByAccount(accountService.usernameToAccountId(username))
+    fun getTrustMarkTypes(request: HttpServletRequest): List<TrustMarkTypeDTO> {
+        return trustMarkService.findAllByAccount(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id
+        )
     }
 
     @PostMapping
     fun createTrustMarkType(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @RequestBody createDto: CreateTrustMarkTypeDTO
     ): TrustMarkTypeDTO {
         return trustMarkService.createTrustMarkType(
-            username,
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).username,
             createDto,
             accountService
         )
@@ -37,17 +42,23 @@ class TrustMarkTypeController {
 
     @GetMapping("/{id}")
     fun getTrustMarkTypeById(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
     ): TrustMarkTypeDTO {
-        return trustMarkService.findById(accountService.usernameToAccountId(username), id)
+        return trustMarkService.findById(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id,
+            id
+        )
     }
 
     @DeleteMapping("/{id}")
     fun deleteTrustMarkType(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
     ): TrustMarkTypeDTO {
-        return trustMarkService.deleteTrustMarkType(accountService.usernameToAccountId(username), id)
+        return trustMarkService.deleteTrustMarkType(
+            (request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account).id,
+            id
+        )
     }
 }

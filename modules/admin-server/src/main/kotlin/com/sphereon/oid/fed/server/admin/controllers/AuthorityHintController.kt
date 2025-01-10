@@ -1,39 +1,53 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.openapi.models.AuthorityHintDTO
 import com.sphereon.oid.fed.openapi.models.CreateAuthorityHintDTO
-import com.sphereon.oid.fed.persistence.models.AuthorityHint
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.AuthorityHintService
+import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{username}/authority-hints")
-class AuthorityHintController {
-    private val authorityHintService = AuthorityHintService()
-
+@RequestMapping("/authority-hints")
+class AuthorityHintController(
+    private val authorityHintService: AuthorityHintService
+) {
     @GetMapping
-    fun getAuthorityHints(@PathVariable username: String): Array<AuthorityHint> {
-        return authorityHintService.findByAccountUsername(username)
+    fun getAuthorityHints(request: HttpServletRequest): List<AuthorityHintDTO> {
+        return authorityHintService.findByAccount(
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        )
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     fun createAuthorityHint(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @RequestBody body: CreateAuthorityHintDTO
-    ): AuthorityHint {
-        return authorityHintService.createAuthorityHint(username, body.identifier)
+    ): AuthorityHintDTO {
+        return authorityHintService.createAuthorityHint(
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
+            body.identifier
+        )
     }
 
     @DeleteMapping("/{id}")
     fun deleteAuthorityHint(
-        @PathVariable username: String,
+        request: HttpServletRequest,
         @PathVariable id: Int
-    ): AuthorityHint {
-        return authorityHintService.deleteAuthorityHint(username, id)
+    ): AuthorityHintDTO {
+        return authorityHintService.deleteAuthorityHint(
+            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
+            id
+        )
     }
 }

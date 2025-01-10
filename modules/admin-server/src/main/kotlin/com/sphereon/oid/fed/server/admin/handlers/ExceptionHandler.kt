@@ -11,7 +11,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @ControllerAdvice
 class ExceptionHandler {
-
     @ExceptionHandler(ApplicationException::class)
     fun handleApplicationExceptions(ex: ApplicationException): ResponseEntity<ErrorResponse> {
         val status = when (ex) {

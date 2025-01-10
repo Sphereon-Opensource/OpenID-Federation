@@ -14,9 +14,9 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import com.sphereon.oid.fed.persistence.models.SubordinateMetadata
-import com.sphereon.oid.fed.services.extensions.toJwk
-import com.sphereon.oid.fed.services.extensions.toSubordinateAdminJwkDTO
-import com.sphereon.oid.fed.services.extensions.toSubordinateMetadataDTO
+import com.sphereon.oid.fed.services.mappers.toJwk
+import com.sphereon.oid.fed.services.mappers.toSubordinateAdminJwkDTO
+import com.sphereon.oid.fed.services.mappers.toSubordinateMetadataDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject

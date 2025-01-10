@@ -16,8 +16,8 @@ import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
-import com.sphereon.oid.fed.services.extensions.toTrustMarkDTO
-import com.sphereon.oid.fed.services.extensions.toTrustMarkTypeDTO
+import com.sphereon.oid.fed.services.mappers.toTrustMarkDTO
+import com.sphereon.oid.fed.services.mappers.toTrustMarkTypeDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 

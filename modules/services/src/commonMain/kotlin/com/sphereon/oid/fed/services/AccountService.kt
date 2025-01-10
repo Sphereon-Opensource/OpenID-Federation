@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
@@ -7,7 +8,7 @@ import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.extensions.toAccountDTO
+import com.sphereon.oid.fed.services.mappers.toAccountDTO
 
 class AccountService() {
     private val logger = Logger.tag("AccountService")
@@ -44,9 +45,7 @@ class AccountService() {
                 logger.error("Account not found for username: $username")
             }
 
-        val identifier = account.identifier
-
-        if (identifier != null) {
+        account.identifier?.let { identifier ->
             logger.debug("Found explicit identifier for username: $username")
             return identifier
         }
@@ -56,13 +55,11 @@ class AccountService() {
                 logger.error("ROOT_IDENTIFIER environment variable not set")
             }
 
-        if (username == "root") {
-            logger.debug("Using root identifier for root account")
-            return rootIdentifier
-        }
-
-        logger.debug("Generated identifier for username: $username")
-        return "$rootIdentifier/$username"
+        // For root account, return root identifier directly
+        val identifier =
+            if (username == Constants.DEFAULT_ROOT_USERNAME) rootIdentifier else "$rootIdentifier/$username"
+        logger.debug("Using identifier for username: $username as $identifier")
+        return identifier
     }
 
     fun getAccountByUsername(username: String): Account {
@@ -73,21 +70,16 @@ class AccountService() {
             }
     }
 
-    fun deleteAccount(username: String): Account {
-        logger.info("Attempting to delete account with username: $username")
-        if (username == "root") {
+    fun deleteAccount(account: Account): AccountDTO {
+        logger.info("Attempting to delete account with username: ${account.username}")
+        if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
             logger.error("Attempted to delete root account")
             throw NotFoundException(Constants.ROOT_ACCOUNT_CANNOT_BE_DELETED)
         }
 
-        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $username")
-            }
-
         val deletedAccount = accountQueries.delete(account.id).executeAsOne()
-        logger.info("Successfully deleted account with username: $username")
-        return deletedAccount
+        logger.info("Successfully deleted account with username: ${account.username}")
+        return deletedAccount.toAccountDTO()
     }
 
     fun usernameToAccountId(username: String): Int {
