@@ -68,7 +68,7 @@ class FederationController {
     fun getRootSubordinateStatement(@RequestParam("sub") sub: String): String {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        val accountIss = accountService.getAccountIdentifier(account.username)
+        val accountIss = accountService.getAccountIdentifierByAccount(account)
         return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
@@ -76,7 +76,7 @@ class FederationController {
     fun getSubordinateStatement(@PathVariable username: String, @RequestParam("sub") sub: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        val accountIss = accountService.getAccountIdentifier(account.username)
+        val accountIss = accountService.getAccountIdentifierByAccount(account)
         return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 

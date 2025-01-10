@@ -501,36 +501,77 @@ paths:
                   value:
                     error: server_error
                     error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /audit:
+  /logs:
     get:
       tags:
         - admin
-      summary: Get audit logs
-      description: Retrieve audit logs with optional filtering by start and end dates.
+      summary: Get recent logs
+      description: Retrieve recent logs with an optional limit.
       parameters:
-        - name: startDate
+        - name: limit
           in: query
-          description: The start date for filtering audit logs.
+          description: The maximum number of logs to retrieve.
           required: false
           schema:
-            type: string
-            format: date-time
-        - name: endDate
-          in: query
-          description: The end date for filtering audit logs.
-          required: false
-          schema:
-            type: string
-            format: date-time
+            type: integer
+            default: 100
       responses:
         '200':
-          description: Successful retrieval of audit logs
+          description: Successful retrieval of logs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AuditLog'
+                  $ref: '#/components/schemas/LogEntry'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logs/search:
+    get:
+      tags:
+        - admin
+      summary: Search logs
+      description: Search logs based on a search term with an optional limit.
+      parameters:
+        - name: searchTerm
+          in: query
+          description: The term to search in logs.
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: The maximum number of logs to retrieve.
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Successful retrieval of logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogEntry'
         '400':
           description: Invalid request
           content:
@@ -4017,38 +4058,22 @@ components:
           type: boolean
           description: 'If true, the entity statement will be generated but not persisted.'
           default: false
-    AuditLog:
+    LogEntry:
       type: object
       properties:
         id:
+          type: integer
+          description: Unique identifier for the log entry.
+        message:
           type: string
-          description: The unique identifier for the audit log entry.
-        accountId:
-          type: string
-          description: The account ID from where the log was generated
-        timestamp:
+          description: The log message content.
+        created_at:
           type: string
           format: date-time
-          description: The timestamp of the audit log entry.
-        errorLevel:
-          $ref: '#/components/schemas/LogLevel'
-        errorCode:
-          type: string
-          description: The error code or type.
-        errorMessage:
-          type: string
-          description: A meaningful explanation of what happened.
-        componentName:
-          type: string
-          description: The name of the component logging the error.
-        operation:
-          type: string
-          description: The operation performed when the error occurred.
-        sourceLineNumber:
-          type: integer
-          description: The source code line number.
-        details:
-          type: object
+          description: The timestamp when the log entry was created.
+      required:
+        - id
+        - message
     LogLevel:
       type: string
       enum:

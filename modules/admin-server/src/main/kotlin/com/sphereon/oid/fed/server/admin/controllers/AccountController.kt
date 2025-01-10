@@ -22,13 +22,13 @@ class AccountController(
 ) {
     @GetMapping
     fun getAccounts(): List<AccountDTO> {
-        return accountService.findAll()
+        return accountService.getAllAccounts()
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createAccount(@RequestBody account: CreateAccountDTO): AccountDTO {
-        return accountService.create(account)
+        return accountService.createAccount(account)
     }
 
     @DeleteMapping

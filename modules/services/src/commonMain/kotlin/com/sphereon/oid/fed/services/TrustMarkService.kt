@@ -32,8 +32,7 @@ class TrustMarkService {
 
     fun createTrustMarkType(
         account: Account,
-        createDto: CreateTrustMarkTypeDTO,
-        accountService: AccountService
+        createDto: CreateTrustMarkTypeDTO
     ): TrustMarkTypeDTO {
         logger.info("Creating trust mark type ${createDto.identifier} for username: ${account.username}")
 
@@ -172,13 +171,6 @@ class TrustMarkService {
 
     fun createTrustMark(account: Account, body: CreateTrustMarkDTO, accountService: AccountService): TrustMarkDTO {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
-        val account = Persistence.accountQueries.findById(account.id).executeAsOneOrNull()
-            ?: throw NotFoundException("Account with ID $account.id not found.").also {
-                logger.error("Account not found with ID: $account.id")
-            }
-
-        val accountIdentifier = accountService.getAccountIdentifier(account.username)
-        logger.debug("Retrieved account identifier: $accountIdentifier")
 
         val keys = keyService.getKeys(account)
         if (keys.isEmpty()) {
@@ -192,7 +184,7 @@ class TrustMarkService {
         val iat = (System.currentTimeMillis() / 1000).toInt()
 
         val trustMark = TrustMarkObjectBuilder()
-            .iss(accountIdentifier)
+            .iss(accountService.getAccountIdentifierByAccount(account))
             .sub(body.sub)
             .id(body.trustMarkTypeIdentifier)
             .iat(iat)

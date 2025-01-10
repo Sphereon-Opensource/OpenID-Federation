@@ -25,7 +25,7 @@ class EntityConfigurationStatementService {
     private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatement {
         logger.info("Building entity configuration for account: ${account.username}")
 
-        val identifier = accountService.getAccountIdentifier(account.username)
+        val identifier = accountService.getAccountIdentifierByAccount(account)
         val keys = keyService.getKeys(account)
 
         val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys)
@@ -141,16 +141,6 @@ class EntityConfigurationStatementService {
         return getEntityConfigurationStatement(account)
     }
 
-    fun findByUsername(accountUsername: String): EntityConfigurationStatement {
-        logger.info("Finding entity configuration for username: $accountUsername")
-        val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $accountUsername")
-            }
-
-        return getEntityConfigurationStatement(account)
-    }
-
     fun publishByAccount(account: Account, dryRun: Boolean? = false): String {
         logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
 
@@ -187,11 +177,5 @@ class EntityConfigurationStatementService {
 
         logger.info("Successfully published entity configuration statement for account: ${account.username}")
         return jwt
-    }
-
-    fun publishByUsername(accountUsername: String, dryRun: Boolean? = false): String {
-        logger.info("Publishing entity configuration for username: $accountUsername (dryRun: $dryRun)")
-        val account = accountService.getAccountByUsername(accountUsername)
-        return publishByAccount(account, dryRun)
     }
 }

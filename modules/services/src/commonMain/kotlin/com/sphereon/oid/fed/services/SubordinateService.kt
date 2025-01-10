@@ -37,19 +37,9 @@ class SubordinateService {
         return subordinates
     }
 
-    fun findSubordinatesByAccountUsername(accountUsername: String): Array<Subordinate> {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return findSubordinatesByAccount(account)
-    }
-
     fun findSubordinatesByAccountAsArray(account: Account): Array<String> {
         val subordinates = findSubordinatesByAccount(account)
         return subordinates.map { it.identifier }.toTypedArray()
-    }
-
-    fun findSubordinatesByAccountUsernameAsArray(accountUsername: String): Array<String> {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return findSubordinatesByAccountAsArray(account)
     }
 
     fun deleteSubordinate(account: Account, id: Int): Subordinate {
@@ -75,11 +65,6 @@ class SubordinateService {
         }
     }
 
-    fun deleteSubordinateByUsername(accountUsername: String, id: Int): Subordinate {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return deleteSubordinate(account, id)
-    }
-
     fun createSubordinate(account: Account, subordinateDTO: CreateSubordinateDTO): Subordinate {
         logger.info("Creating new subordinate for account: ${account.username}")
         try {
@@ -101,11 +86,6 @@ class SubordinateService {
             logger.error("Failed to create subordinate for account: ${account.username}", e)
             throw e
         }
-    }
-
-    fun createSubordinateByUsername(accountUsername: String, subordinateDTO: CreateSubordinateDTO): Subordinate {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return createSubordinate(account, subordinateDTO)
     }
 
     fun getSubordinateStatement(account: Account, id: Int): SubordinateStatement {
@@ -134,11 +114,6 @@ class SubordinateService {
         }
     }
 
-    fun getSubordinateStatementByUsername(accountUsername: String, id: Int): SubordinateStatement {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return getSubordinateStatement(account, id)
-    }
-
     private fun buildSubordinateStatement(
         account: Account,
         subordinate: Subordinate,
@@ -147,12 +122,12 @@ class SubordinateService {
     ): SubordinateStatement {
         logger.debug("Building subordinate statement")
         val statement = SubordinateStatementObjectBuilder()
-            .iss(accountService.getAccountIdentifier(account.username))
+            .iss(accountService.getAccountIdentifierByAccount(account))
             .sub(subordinate.identifier)
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
             .sourceEndpoint(
-                accountService.getAccountIdentifier(account.username) + "/fetch?sub=" + subordinate.identifier
+                accountService.getAccountIdentifierByAccount(account) + "/fetch?sub=" + subordinate.identifier
             )
 
         subordinateJwks.forEach {
@@ -206,7 +181,7 @@ class SubordinateService {
 
             val statement = subordinateStatementQueries.create(
                 subordinate_id = id,
-                iss = accountService.getAccountIdentifier(account.username),
+                iss = accountService.getAccountIdentifierByAccount(account),
                 sub = subordinateStatement.sub,
                 statement = jwt,
                 expires_at = subordinateStatement.exp.toLong(),
@@ -218,11 +193,6 @@ class SubordinateService {
             logger.error("Failed to publish subordinate statement for ID: $id", e)
             throw e
         }
-    }
-
-    fun publishSubordinateStatementByUsername(accountUsername: String, id: Int, dryRun: Boolean? = false): String {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return publishSubordinateStatement(account, id, dryRun)
     }
 
     fun createSubordinateJwk(account: Account, id: Int, jwk: JsonObject): SubordinateJwkDto {
@@ -250,11 +220,6 @@ class SubordinateService {
         }
     }
 
-    fun createSubordinateJwkByUsername(accountUsername: String, id: Int, jwk: JsonObject): SubordinateJwkDto {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return createSubordinateJwk(account, id, jwk)
-    }
-
     fun getSubordinateJwks(account: Account, id: Int): Array<SubordinateJwkDto> {
         logger.info("Retrieving JWKs for subordinate ID: $id, account: ${account.username}")
         try {
@@ -272,11 +237,6 @@ class SubordinateService {
             logger.error("Failed to retrieve subordinate JWKs for subordinate ID: $id", e)
             throw e
         }
-    }
-
-    fun getSubordinateJwksByUsername(accountUsername: String, id: Int): Array<SubordinateJwkDto> {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return getSubordinateJwks(account, id)
     }
 
     fun deleteSubordinateJwk(account: Account, id: Int, jwkId: Int): SubordinateJwk {
@@ -311,10 +271,6 @@ class SubordinateService {
         }
     }
 
-    fun deleteSubordinateJwkByUsername(accountUsername: String, subordinateId: Int, id: Int): SubordinateJwk {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return deleteSubordinateJwk(account, subordinateId, id)
-    }
 
     fun fetchSubordinateStatement(iss: String, sub: String): String {
         logger.info("Fetching subordinate statement for issuer: $iss, subject: $sub")
@@ -351,10 +307,6 @@ class SubordinateService {
         }
     }
 
-    fun findSubordinateMetadataByUsername(accountUsername: String, subordinateId: Int): Array<SubordinateMetadataDTO> {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return findSubordinateMetadata(account, subordinateId)
-    }
 
     fun createMetadata(
         account: Account,
@@ -397,15 +349,6 @@ class SubordinateService {
         }
     }
 
-    fun createMetadataByUsername(
-        accountUsername: String,
-        subordinateId: Int,
-        key: String,
-        metadata: JsonObject
-    ): SubordinateMetadataDTO {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return createMetadata(account, subordinateId, key, metadata)
-    }
 
     fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadataDTO {
         logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: ${account.username}")
@@ -431,36 +374,6 @@ class SubordinateService {
             return deletedMetadata.toSubordinateMetadataDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete metadata ID: $id", e)
-            throw e
-        }
-    }
-
-    fun deleteSubordinateMetadataByUsername(
-        accountUsername: String,
-        subordinateId: Int,
-        id: Int
-    ): SubordinateMetadataDTO {
-        val account = accountService.getAccountByUsername(accountUsername)
-        return deleteSubordinateMetadata(account, subordinateId, id)
-    }
-
-    fun fetchSubordinateStatementByUsername(username: String, sub: String): String {
-        logger.info("Fetching subordinate statement for username: $username, subject: $sub")
-        try {
-            val account = accountService.getAccountByUsername(username)
-            logger.debug("Found account with ID: ${account.id}")
-
-            val accountIss = accountService.getAccountIdentifier(account.username)
-            logger.debug("Generated issuer identifier: $accountIss")
-
-            val subordinateStatement =
-                Persistence.subordinateStatementQueries.findByIssAndSub(accountIss, sub).executeAsOneOrNull()
-                    ?: throw NotFoundException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
-            logger.debug("Found subordinate statement")
-
-            return subordinateStatement.statement
-        } catch (e: Exception) {
-            logger.error("Failed to fetch subordinate statement for username: $username, subject: $sub", e)
             throw e
         }
     }

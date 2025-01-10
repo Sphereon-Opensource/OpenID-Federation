@@ -30,7 +30,7 @@ class AccountMiddleware(
 
                 log.debug("Found account: {}", account)
 
-                val accountIdentifier = accountService.getAccountIdentifier(accountUsername)
+                val accountIdentifier = accountService.getAccountIdentifierByAccount(account)
 
                 log.debug("Found account identifier: {}", accountIdentifier)
 

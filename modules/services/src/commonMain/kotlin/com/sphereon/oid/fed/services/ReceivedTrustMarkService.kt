@@ -12,33 +12,24 @@ class ReceivedTrustMarkService {
     private val logger = Logger.tag("ReceivedTrustMarkService")
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
-    fun create(
+    fun createReceivedTrustMark(
         account: Account,
         dto: CreateReceivedTrustMarkDTO
     ): ReceivedTrustMarkDTO {
         logger.info("Creating trust mark for account: ${account.username}")
-        logger.debug("Found account with ID: ${account.id}")
 
         val receivedTrustMark = receivedTrustMarkQueries.create(
             account_id = account.id,
             trust_mark_type_identifier = dto.trustMarkTypeIdentifier,
             jwt = dto.jwt,
         ).executeAsOne()
+
         logger.info("Successfully created trust mark with ID: ${receivedTrustMark.id}")
 
         return receivedTrustMark.toReceivedTrustMarkDTO()
     }
 
-    fun create(
-        username: String,
-        dto: CreateReceivedTrustMarkDTO,
-        accountService: AccountService
-    ): ReceivedTrustMarkDTO {
-        val account = accountService.getAccountByUsername(username)
-        return create(account, dto)
-    }
-
-    fun list(account: Account): List<ReceivedTrustMarkDTO> {
+    fun listReceivedTrustMarks(account: Account): List<ReceivedTrustMarkDTO> {
         logger.debug("Listing trust marks for account: ${account.username}")
 
         val trustMarks = receivedTrustMarkQueries.findByAccountId(account.id).executeAsList()
@@ -48,15 +39,7 @@ class ReceivedTrustMarkService {
         return trustMarks
     }
 
-    fun list(
-        username: String,
-        accountService: AccountService
-    ): List<ReceivedTrustMarkDTO> {
-        val account = accountService.getAccountByUsername(username)
-        return list(account)
-    }
-
-    fun delete(
+    fun deleteReceivedTrustMark(
         account: Account,
         trustMarkId: Int
     ): ReceivedTrustMarkDTO {
@@ -71,14 +54,5 @@ class ReceivedTrustMarkService {
         logger.info("Successfully deleted trust mark ID: $trustMarkId for account: ${account.username}")
 
         return deletedTrustMark
-    }
-
-    fun delete(
-        username: String,
-        trustMarkId: Int,
-        accountService: AccountService
-    ): ReceivedTrustMarkDTO {
-        val account = accountService.getAccountByUsername(username)
-        return delete(account, trustMarkId)
     }
 }

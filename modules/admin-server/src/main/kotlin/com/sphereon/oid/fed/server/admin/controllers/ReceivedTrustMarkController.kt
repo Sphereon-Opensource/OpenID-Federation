@@ -23,26 +23,27 @@ class ReceivedTrustMarkController(
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(
+    fun createReceivedTrustMark(
         request: HttpServletRequest,
         @RequestBody dto: CreateReceivedTrustMarkDTO
     ): ReceivedTrustMarkDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return receivedTrustMarkService.create(account, dto)
+        return receivedTrustMarkService.createReceivedTrustMark(account, dto)
     }
 
     @GetMapping
-    fun list(request: HttpServletRequest): Array<ReceivedTrustMarkDTO> {
+    fun listReceivedTrustMarks(request: HttpServletRequest): Array<ReceivedTrustMarkDTO> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return receivedTrustMarkService.list(account).toTypedArray()
+        return receivedTrustMarkService.listReceivedTrustMarks(account).toTypedArray()
     }
 
     @DeleteMapping("/{receivedTrustMarkId}")
-    fun delete(
+    fun deleteReceivedTrustMark(
         request: HttpServletRequest,
         @PathVariable receivedTrustMarkId: Int
     ): ReceivedTrustMarkDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return receivedTrustMarkService.delete(account, receivedTrustMarkId)
+        return receivedTrustMarkService.deleteReceivedTrustMark(account, receivedTrustMarkId)
     }
 }
+
