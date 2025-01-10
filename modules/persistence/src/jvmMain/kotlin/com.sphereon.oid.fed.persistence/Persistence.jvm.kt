@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.persistence
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
