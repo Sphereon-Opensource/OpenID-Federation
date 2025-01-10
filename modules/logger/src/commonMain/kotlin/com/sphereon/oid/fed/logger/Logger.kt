@@ -32,26 +32,6 @@ enum class Severity {
     }
 }
 
-data class LoggerEvent(
-    val severity: Severity,
-    val tag: String,
-    val message: String,
-    val throwable: Throwable? = null,
-    val timestamp: Long = Clock.System.now().toEpochMilliseconds()
-) {
-    val formattedMessage: String
-        get() = buildString {
-            append(message)
-            throwable?.let { t ->
-                append("\nException: ${t.message}")
-                append("\nStacktrace: ${t.stackTraceToString()}")
-            }
-        }
-
-    val logPrefix: String
-        get() = "($tag)"
-}
-
 class Logger(private val tag: String = "") {
     private val logger = KermitLogger.withTag(tag)
 
@@ -62,31 +42,31 @@ class Logger(private val tag: String = "") {
     fun verbose(message: String, tag: String = this.tag, throwable: Throwable? = null) {
         val formattedMessage = buildLogMessage(Severity.Verbose, message, tag, throwable)
         logger.v(formattedMessage)
-        dispatchToLogWriters(formattedMessage)
+        dispatchToLogWriters(formattedMessage, Severity.Verbose)
     }
 
     fun debug(message: String, tag: String = this.tag, throwable: Throwable? = null) {
         val formattedMessage = buildLogMessage(Severity.Debug, message, tag, throwable)
         logger.d(formattedMessage)
-        dispatchToLogWriters(formattedMessage)
+        dispatchToLogWriters(formattedMessage, Severity.Debug)
     }
 
     fun info(message: String, tag: String = this.tag, throwable: Throwable? = null) {
         val formattedMessage = buildLogMessage(Severity.Info, message, tag, throwable)
         logger.i(formattedMessage)
-        dispatchToLogWriters(formattedMessage)
+        dispatchToLogWriters(formattedMessage, Severity.Info)
     }
 
     fun warn(message: String, tag: String = this.tag, throwable: Throwable? = null) {
         val formattedMessage = buildLogMessage(Severity.Warn, message, tag, throwable)
         logger.w(formattedMessage)
-        dispatchToLogWriters(formattedMessage)
+        dispatchToLogWriters(formattedMessage, Severity.Warn)
     }
 
     fun error(message: String, throwable: Throwable? = null, tag: String = this.tag) {
         val formattedMessage = buildLogMessage(Severity.Error, message, tag, throwable)
         logger.e(formattedMessage)
-        dispatchToLogWriters(formattedMessage)
+        dispatchToLogWriters(formattedMessage, Severity.Error)
     }
 
     private fun buildLogMessage(
@@ -109,17 +89,20 @@ class Logger(private val tag: String = "") {
         }
     }
 
-    private fun dispatchToLogWriters(message: String) {
-        registeredLogWriters.forEach { writer ->
-            writer.log(message)
+    private fun dispatchToLogWriters(message: String, severity: Severity) {
+        if (severity.ordinal >= currentMinSeverity.ordinal) {
+            registeredLogWriters.forEach { writer ->
+                writer.log(message)
+            }
         }
     }
 
     companion object {
-        private var defaultMinSeverity: Severity = Severity.Info
         private val registeredLogWriters = mutableListOf<LogWriter>()
+        private var currentMinSeverity: Severity = Severity.Info
 
         fun configure(minSeverity: Severity) {
+            currentMinSeverity = minSeverity
             KermitLogger.setMinSeverity(minSeverity.toKermitSeverity())
         }
 
