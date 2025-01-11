@@ -2,6 +2,8 @@ package com.sphereon.oid.fed.server.federation.config
 
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.KeyService
+import com.sphereon.oid.fed.services.KmsClient
+import com.sphereon.oid.fed.services.KmsService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.config.AccountConfig
@@ -21,17 +23,30 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyService(): KeyService {
-        return KeyService()
+    open fun keyService(kmsClient: KmsClient): KeyService {
+        return KeyService(kmsClient)
     }
 
     @Bean
-    open fun subordinateService(accountService: AccountService): SubordinateService {
-        return SubordinateService(accountService)
+    open fun kmsClient(): KmsClient {
+        return KmsService.getKmsClient()
     }
 
     @Bean
-    open fun trustMarkService(): TrustMarkService {
-        return TrustMarkService()
+    open fun subordinateService(
+        accountService: AccountService,
+        keyService: KeyService,
+        kmsClient: KmsClient
+    ): SubordinateService {
+        return SubordinateService(accountService, keyService, kmsClient)
+    }
+
+    @Bean
+    open fun trustMarkService(
+        keyService: KeyService,
+        kmsClient: KmsClient,
+        accountService: AccountService
+    ): TrustMarkService {
+        return TrustMarkService(keyService, kmsClient, accountService)
     }
 }

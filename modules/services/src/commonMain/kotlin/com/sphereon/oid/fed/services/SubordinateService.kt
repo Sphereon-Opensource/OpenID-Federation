@@ -24,14 +24,14 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
 class SubordinateService(
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("SubordinateService")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
-    private val kmsClient = KmsService.getKmsClient()
-    private val keyService = KeyService()
 
     fun findSubordinatesByAccount(account: Account): Array<Subordinate> {
         val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
@@ -350,7 +350,6 @@ class SubordinateService(
             throw e
         }
     }
-
 
     fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadataDTO {
         logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: ${account.username}")

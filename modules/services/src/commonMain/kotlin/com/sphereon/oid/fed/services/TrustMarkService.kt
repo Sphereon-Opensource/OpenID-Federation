@@ -22,13 +22,15 @@ import com.sphereon.oid.fed.services.mappers.toTrustMarkTypeDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class TrustMarkService {
+class TrustMarkService(
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient,
+    private val accountService: AccountService
+) {
     private val logger = Logger.tag("TrustMarkService")
     private val trustMarkQueries = Persistence.trustMarkQueries
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
-    private val kmsClient = KmsService.getKmsClient()
-    private val keyService = KeyService()
 
     fun createTrustMarkType(
         account: Account,
@@ -169,7 +171,7 @@ class TrustMarkService {
         return trustMarks
     }
 
-    fun createTrustMark(account: Account, body: CreateTrustMarkDTO, accountService: AccountService): TrustMarkDTO {
+    fun createTrustMark(account: Account, body: CreateTrustMarkDTO): TrustMarkDTO {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
 
         val keys = keyService.getKeys(account)

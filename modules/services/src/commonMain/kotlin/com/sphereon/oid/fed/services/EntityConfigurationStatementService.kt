@@ -14,11 +14,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 class EntityConfigurationStatementService(
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
-    private val keyService = KeyService()
-    private val kmsClient = KmsService.getKmsClient()
 
     private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementDTO {
         logger.info("Building entity configuration for account: ${account.username}")

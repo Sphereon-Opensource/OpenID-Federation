@@ -8,6 +8,8 @@ import com.sphereon.oid.fed.services.CritService
 import com.sphereon.oid.fed.services.EntityConfigurationMetadataService
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import com.sphereon.oid.fed.services.KeyService
+import com.sphereon.oid.fed.services.KmsClient
+import com.sphereon.oid.fed.services.KmsService
 import com.sphereon.oid.fed.services.LogService
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
 import com.sphereon.oid.fed.services.SubordinateService
@@ -43,18 +45,31 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyService(): KeyService {
-        return KeyService()
+    open fun keyService(kmsClient: KmsClient): KeyService {
+        return KeyService(kmsClient)
     }
 
     @Bean
-    open fun subordinateService(accountService: AccountService): SubordinateService {
-        return SubordinateService(accountService)
+    open fun kmsClient(): KmsClient {
+        return KmsService.getKmsClient()
     }
 
     @Bean
-    open fun trustMarkService(): TrustMarkService {
-        return TrustMarkService()
+    open fun subordinateService(
+        accountService: AccountService,
+        keyService: KeyService,
+        kmsClient: KmsClient
+    ): SubordinateService {
+        return SubordinateService(accountService, keyService, kmsClient)
+    }
+
+    @Bean
+    open fun trustMarkService(
+        keyService: KeyService,
+        kmsClient: KmsClient,
+        accountService: AccountService
+    ): TrustMarkService {
+        return TrustMarkService(keyService, kmsClient, accountService)
     }
 
     @Bean
@@ -63,8 +78,12 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun entityConfigurationStatementService(accountService: AccountService): EntityConfigurationStatementService {
-        return EntityConfigurationStatementService(accountService)
+    open fun entityConfigurationStatementService(
+        accountService: AccountService,
+        keyService: KeyService,
+        kmsClient: KmsClient
+    ): EntityConfigurationStatementService {
+        return EntityConfigurationStatementService(accountService, keyService, kmsClient)
     }
 
     @Bean
