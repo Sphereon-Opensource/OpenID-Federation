@@ -20,7 +20,9 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 open class ServiceConfig {
     @Bean
-    open fun accountConfig(): AccountConfig {
+    open fun accountConfig(environment: org.springframework.core.env.Environment): AccountConfig {
+        System.setProperty("sphereon.federation.root-identifier",
+            environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8081"))
         return AccountConfig()
     }
 
