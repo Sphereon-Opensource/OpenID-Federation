@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.server.admin
 
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.logger.Severity
 import com.sphereon.oid.fed.server.admin.handlers.DatabaseLoggerHandler
 import com.sphereon.oid.fed.server.admin.handlers.FileLoggerHandler
 import com.sphereon.oid.fed.services.LogService
@@ -26,7 +25,7 @@ class Application(private val logService: LogService) {
         Logger.addLogWriter(FileLoggerHandler(logFile))
         Logger.addLogWriter(DatabaseLoggerHandler(logService))
 
-        Logger.configure(Severity.Verbose)
+        Logger.configure(Logger.Severity.Verbose)
     }
 }
 

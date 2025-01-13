@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.server.admin.config
 
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.logger.Severity
+import com.sphereon.oid.fed.logger.Logger.Severity
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.Scheduled
@@ -32,7 +32,8 @@ class MonitoringConfig {
         val usedMemory = (runtime.totalMemory() - runtime.freeMemory())
         val totalMemory = runtime.totalMemory()
         val memoryUsagePercent = (usedMemory.toDouble() / totalMemory.toDouble() * 100).toInt()
-        val severity = if (memoryUsagePercent >= memoryWarningThresholdPercent) Severity.Warn else Severity.Info
+        val severity =
+            if (memoryUsagePercent >= memoryWarningThresholdPercent) Severity.Warn else Severity.Info
 
         logger.info(
             "System Health: " +

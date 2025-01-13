@@ -34,18 +34,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/StatusResponse'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-      operationId: ''
+          $ref: '#/components/responses/ServerError'
+      operationId: status
       x-internal: false
   /.well-known/openid-federation:
     get:
@@ -64,30 +54,13 @@ paths:
               examples:
                 Example 1:
                   value: eyJraWQiIwY0tSTlpnV0FqWjVBcTcyYnpSVFhDOHBCbU1DRG0tNlA0NWFHbURveVU0IiwidHlwIjoiZW50aXR5LXN0YXRlbWVudCtqd3QiLCJhbGciOiJFUzI1NiJ9.eyJzdWIiiJodHRwczovL2FnZW50LmZpbmR5bmV0LmRlbW8uc3BoZXJlb24uY29tL29pZDR2Y2kiLCJtZXRhZGF0YSI6e30sImp3a3MiOnsia2V5cyI6W3sia3R5IjoiRUMiLCJraWQiOiIwY0tSTlpnV0FqWjVBcTyYnpSVFhDOHBCbU1DRG0tNlA0NWFHbURveVU0IiwiY3J2joiUC0yNTYiLCJ4IjoiS1JNMXI5S3d0cXRzWVdiTGJPdmIzQ1ZxWF9iTm9vTlJORkRrRTQzSlpZQSIsInkiOiJZbUVYNWY4VndFOS1KYms3aHhwdnMzdlhUc3hOUVhHR2pZRE11SjhUYmlzIiwiYWxnIjoiRVMyNTYiLCJ1c2UiOiJzaWcifV19LCJpc3MiOiJodHRwczovL2FnZW50LmZpbmR5bmV0LmRlbW8uc3BoZXJlb24uY29tL29pZDR2Y2kiLCJhdXRob3JpdHlfaGludHMiOlsiaHR0cHM6Ly9mZWRlcmF0aW9uLmRlbW8uc3BoZXJlb24uY29tIl0sImV4cCI6MTc2MjI3MjY1MywiaWF0IjoxNzMwNzM2NjUzfQ.Vet8M8FZe3VSn8AsqeJyMvGP_6gC9DAOSxqzOYytzfCQrF2TmSjRb8ICRzFiP3Vt53S-KScJUrF-eDiyDw
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '404':
-          description: Entity Statement not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Entity Statement not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Entity Statement could not be found for the provided issuer and subject.
+          $ref: '#/components/responses/NotFoundError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
+
   /list:
     get:
       tags:
@@ -130,29 +103,9 @@ paths:
                   type: string
                   format: uri
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
+          $ref: '#/components/responses/BadRequestError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
       security: [ ]
   /fetch:
     get:
@@ -176,41 +129,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubordinateStatement'
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
+          $ref: '#/components/responses/BadRequestError'
         '404':
-          description: Subordinate Statement not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Statement not found example
-                  value:
-                    error: statement_not_found
-                    error_description: The specified Subordinate Statement could not be found.
+          $ref: '#/components/responses/NotFoundError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
       security: [ ]
   /resolve:
     get:
@@ -245,41 +168,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResolveResponse'
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
-        '404':
-          description: Entity not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Entity not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Entity could not be found for the provided parameters.
+          $ref: '#/components/responses/BadRequestError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
+
   /trust-mark:
     get:
       tags:
@@ -307,41 +199,12 @@ paths:
               schema:
                 type: string
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
+          $ref: '#/components/responses/BadRequestError'
         '404':
-          description: Trust Mark not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Trust Mark not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Trust Mark could not be found for the provided parameters.
+          $ref: '#/components/responses/NotFoundError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
+
   /trust-mark-status:
     get:
       tags:
@@ -388,41 +251,12 @@ paths:
                     type: boolean
                     description: Whether the Trust Mark is active or not.
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
+          $ref: '#/components/responses/BadRequestError'
         '404':
-          description: Trust Mark not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                notFound:
-                  summary: Trust Mark not found example
-                  value:
-                    error: not_found
-                    error_description: The requested Trust Mark could not be found for the provided parameters.
+          $ref: '#/components/responses/NotFoundError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
+
   /trust-mark-list:
     get:
       tags:
@@ -453,29 +287,10 @@ paths:
                   type: string
                   format: uri
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                invalidRequest:
-                  summary: Invalid request example
-                  value:
-                    error: invalid_request
-                    error_description: The request is incomplete or does not comply with current specifications.
+          $ref: '#/components/responses/BadRequestError'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+          $ref: '#/components/responses/ServerError'
+
   /historical-keys:
     get:
       tags:
@@ -490,71 +305,133 @@ paths:
               schema:
                 $ref: '#/components/schemas/FederationHistoricalKeysResponse'
         '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                serverError:
-                  summary: Server error example
-                  value:
-                    error: server_error
-                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
-  /audit:
+          $ref: '#/components/responses/ServerError'
+  /logs:
     get:
       tags:
         - admin
-      summary: Get audit logs
-      description: Retrieve audit logs with optional filtering by start and end dates.
+      summary: Get recent logs
+      description: Retrieve the most recent logs from the system
       parameters:
-        - name: startDate
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: limit
           in: query
-          description: The start date for filtering audit logs.
+          description: Maximum number of logs to return
           required: false
           schema:
-            type: string
-            format: date-time
-        - name: endDate
-          in: query
-          description: The end date for filtering audit logs.
-          required: false
-          schema:
-            type: string
-            format: date-time
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
       responses:
         '200':
-          description: Successful retrieval of audit logs
+          description: Successful retrieval of logs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AuditLog'
+                  $ref: '#/components/schemas/LogDTO'
         '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '500':
-          description: Server error
+          $ref: '#/components/responses/ServerError'
+
+  /logs/severity/{severity}:
+    get:
+      tags:
+        - admin
+      summary: Get logs by severity
+      description: Retrieve logs filtered by severity level
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: severity
+          in: path
+          description: Severity level to filter by
+          required: true
+          schema:
+            type: string
+            enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by severity
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogDTO'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /logs/tag/{tag}:
+    get:
+      tags:
+        - admin
+      summary: Get logs by tag
+      description: Retrieve logs filtered by tag
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: tag
+          in: path
+          description: Tag to filter by
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by tag
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LogDTO'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /accounts:
     get:
       tags:
         - admin
       summary: List all accounts
       description: Retrieve a list of all accounts.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Accounts retrieved successfully
@@ -579,6 +456,8 @@ paths:
         - admin
       summary: Register a new tenant account
       description: Endpoint for an admin to create a new account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         required: true
         content:
@@ -609,6 +488,8 @@ paths:
         - admin
       summary: Delete current account
       description: Delete the account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Account deleted successfully
@@ -629,19 +510,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/keys':
+  '/keys':
     post:
       tags:
         - admin
       summary: Create a new key
       description: Create a new key for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '201':
           description: Key created successfully
@@ -667,12 +543,7 @@ paths:
       summary: List all keys
       description: Retrieve all keys associated with the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Keys retrieved successfully
@@ -700,19 +571,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/keys/{keyId}':
+  '/keys/{keyId}':
     delete:
       tags:
         - admin
       summary: Revoke a key
       description: Revoke a key by its ID for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: keyId
           in: path
           required: true
@@ -750,21 +616,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
-
-  '/accounts/{username}/metadata':
+  '/metadata':
     get:
       tags:
         - admin
       summary: Get entity configuration metadata
       description: Retrieve metadata entries for a specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to retrieve metadata for.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successfully retrieved metadata
@@ -792,12 +651,7 @@ paths:
       summary: Create entity configuration metadata
       description: Add a new metadata entry for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to create metadata for.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         description: Metadata creation data
         required: true
@@ -824,19 +678,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/metadata/{id}':
+  '/metadata/{id}':
     delete:
       tags:
         - admin
       summary: Delete account metadata
       description: Deletes a specific metadata entry for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -868,19 +717,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/authority-hints':
+  '/authority-hints':
     get:
       tags:
         - admin
       summary: Get authority hints
       description: Retrieve all authority hints for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to retrieve authority hints for.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successfully retrieved authority hints
@@ -908,12 +752,7 @@ paths:
       summary: Create an authority hint
       description: Add a new authority hint for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to create an authority hint for.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         description: Authority hint data
         required: true
@@ -940,19 +779,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/authority-hints/{id}':
+  '/authority-hints/{id}':
     delete:
       tags:
         - admin
       summary: Delete an authority hint
       description: Remove an authority hint by its ID for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to delete the authority hint for.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -978,19 +812,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/entity-statement':
+  '/entity-statement':
     get:
       tags:
         - admin
       summary: Get entity configuration statement object
       description: Retrieve the entity configuration statement for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to retrieve the entity configuration statement for.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successfully retrieved entity configuration statement
@@ -1016,12 +845,7 @@ paths:
       summary: Sign and publish entity configuration statement
       description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to publish the entity configuration statement for.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         description: Optional request body for a dry-run
         required: false
@@ -1050,19 +874,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/subordinates':
+  '/subordinates':
     get:
       tags:
         - admin
       summary: Get subordinates
       description: Retrieve all subordinates associated with the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successfully retrieved subordinates
@@ -1090,12 +909,7 @@ paths:
       summary: Create a subordinate
       description: Create a subordinate for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         description: Subordinate creation details
         required: true
@@ -1122,19 +936,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/subordinates/{id}':
+  '/subordinates/{id}':
     delete:
       tags:
         - admin
       summary: Delete subordinate
       description: Deletes a specific subordinate for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1171,19 +980,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/subordinates/{id}/jwks':
+  '/subordinates/{id}/jwks':
     get:
       tags:
         - admin
       summary: Get subordinate JWKs
       description: Retrieve all JWKs associated with the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1217,12 +1021,7 @@ paths:
       summary: Create a subordinate JWK
       description: Create a JWK for the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1256,19 +1055,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/subordinates/{id}/jwks/{jwkId}':
+  '/subordinates/{id}/jwks/{jwkId}':
     delete:
       tags:
         - admin
       summary: Delete subordinate JWK
       description: Delete a JWK associated with the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1297,19 +1091,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/subordinates/{subordinateId}/metadata':
+  '/subordinates/{subordinateId}/metadata':
     get:
       tags:
         - admin
       summary: Get subordinate metadata
       description: Retrieve metadata associated with the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: subordinateId
           in: path
           required: true
@@ -1343,12 +1132,7 @@ paths:
       summary: Create subordinate metadata
       description: Create metadata for the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: subordinateId
           in: path
           required: true
@@ -1381,19 +1165,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/subordinates/{subordinateId}/metadata/{id}':
+  '/subordinates/{subordinateId}/metadata/{id}':
     delete:
       tags:
         - admin
       summary: Delete subordinate metadata
       description: Delete metadata associated with the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: subordinateId
           in: path
           required: true
@@ -1425,19 +1204,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/subordinates/{id}/statement':
+  '/subordinates/{id}/statement':
     get:
       tags:
         - admin
       summary: Get subordinate statement object
       description: Retrieve the subordinate statement for the specified subordinate.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1469,12 +1243,7 @@ paths:
       summary: Sign and publish subordinate statement
       description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1507,18 +1276,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/trust-mark-types':
+  '/trust-mark-types':
     get:
       summary: Get all Trust Mark Types
       tags:
         - admin
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: List of trust mark types
@@ -1534,11 +1298,7 @@ paths:
       tags:
         - admin
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         required: true
         content:
@@ -1553,17 +1313,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrustMarkTypeDTO'
 
-  '/accounts/{username}/trust-mark-types/{id}':
+  '/trust-mark-types/{id}':
     get:
       summary: Get a Trust Mark Type by ID
       tags:
         - admin
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1581,11 +1337,7 @@ paths:
       tags:
         - admin
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1594,7 +1346,7 @@ paths:
       responses:
         '204':
           description: Trust mark definition deleted
-  /accounts/{username}/trust-mark-types/{id}/issuers:
+  /trust-mark-types/{id}/issuers:
     get:
       tags:
         - admin
@@ -1602,12 +1354,7 @@ paths:
       description: Retrieve a list of issuers for the specified Trust Mark Type.
       operationId: getIssuersForTrustMarkType
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Username associated with the account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1633,12 +1380,7 @@ paths:
       description: Add a new issuer to the specified Trust Mark Type.
       operationId: addIssuerToTrustMarkType
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Username associated with the account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1679,7 +1421,7 @@ paths:
           description: Account or Trust Mark Type not found.
         '400':
           description: Invalid request body.
-  /accounts/{username}/trust-mark-types/{id}/issuers/{issuerIdentifier}:
+  /trust-mark-types/{id}/issuers/{issuerIdentifier}:
     delete:
       tags:
         - admin
@@ -1687,12 +1429,7 @@ paths:
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Username associated with the account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: id
           in: path
           required: true
@@ -1723,19 +1460,14 @@ paths:
                     example: https://issuer.example.com
         '404':
           description: Account, Trust Mark Type, or Issuer not found.
-  '/accounts/{username}/trust-marks':
+  '/trust-marks':
     post:
       tags:
         - admin
       summary: Create or Update a Trust Mark
       description: Create or update a Trust Mark for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         required: true
         content:
@@ -1786,12 +1518,7 @@ paths:
       summary: List Trust Marks
       description: List all Trust Marks for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successful fetch of Trust Marks
@@ -1823,19 +1550,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/trust-marks/{trustMarkId}':
+  '/trust-marks/{trustMarkId}':
     delete:
       tags:
         - admin
       summary: Delete a Trust Mark
       description: Delete an existing Trust Mark for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the tenant account.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: trustMarkId
           in: path
           required: true
@@ -1871,19 +1593,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/accounts/{username}/received-trust-marks':
+  '/received-trust-marks':
     post:
       tags:
         - admin
       summary: Create a Received Trust Mark
       description: Create or update a received Trust Mark for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to which the received Trust Mark belongs.
+        - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         required: true
         content:
@@ -1930,12 +1647,7 @@ paths:
       summary: List Received Trust Marks
       description: Retrieve all received Trust Marks for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account to list received Trust Marks for.
+        - $ref: '#/components/parameters/AccountUsername'
       responses:
         '200':
           description: Successful fetch of received Trust Marks.
@@ -1972,19 +1684,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/accounts/{username}/received-trust-marks/{receivedTrustMarkId}':
+  '/received-trust-marks/{receivedTrustMarkId}':
     delete:
       tags:
         - admin
       summary: Delete a Received Trust Mark
       description: Delete a specific received Trust Mark for the specified account.
       parameters:
-        - name: username
-          in: path
-          required: true
-          schema:
-            type: string
-          description: The username of the account owning the received Trust Mark.
+        - $ref: '#/components/parameters/AccountUsername'
         - name: receivedTrustMarkId
           in: path
           required: true
@@ -2021,13 +1728,49 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-
 components:
+  parameters:
+    AccountUsername:
+      name: X-Account-Username
+      in: header
+      description: Optional account username to operate on behalf of
+      required: false
+      schema:
+        type: string
+  responses:
+    BadRequestError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: The user does not have permission to perform the requested operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     BaseEntityStatement:
       type: object
-      x-tags:
-        - federation
       required:
         - iss
         - sub
@@ -2155,7 +1898,6 @@ components:
           description: The SHA-256 thumbprint of the X.509 certificate.
           example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
           nullable: true
-      description: ''
     EntityConfigurationStatementDTO:
       allOf:
         - $ref: '#/components/schemas/BaseEntityStatement'
@@ -4351,3 +4093,42 @@ components:
         - identifier
         - accountId
         - admin
+    LogDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the log entry
+        severity:
+          type: string
+          enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
+          description: The severity level of the log entry
+        message:
+          type: string
+          description: The log message
+        tag:
+          type: string
+          description: The tag/category of the log entry
+        timestamp:
+          type: integer
+          format: int64
+          description: The timestamp when the event occurred (epoch milliseconds)
+        throwable_message:
+          type: string
+          description: Error message if an exception occurred
+          nullable: true
+        throwable_stacktrace:
+          type: string
+          description: Stack trace if an exception occurred
+          nullable: true
+        metadata:
+          type: object
+          description: Additional contextual information
+          nullable: true
+          additionalProperties: true
+      required:
+        - id
+        - severity
+        - message
+        - tag
+        - timestamp

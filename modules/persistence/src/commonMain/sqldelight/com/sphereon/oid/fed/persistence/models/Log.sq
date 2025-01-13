@@ -1,16 +1,32 @@
 insertLog:
-INSERT INTO Log(message)
-VALUES (?);
+INSERT INTO Log(severity, message, tag, timestamp, throwable_message, throwable_stacktrace, metadata)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 getRecentLogs:
 SELECT *
 FROM Log
-ORDER BY created_at DESC
+ORDER BY timestamp DESC
 LIMIT :limit;
 
 searchLogs:
 SELECT *
 FROM Log
 WHERE message LIKE '%' || :searchTerm || '%'
-ORDER BY created_at DESC
+   OR tag LIKE '%' || :searchTerm || '%'
+   OR severity LIKE '%' || :searchTerm || '%'
+ORDER BY timestamp DESC
+LIMIT :limit;
+
+getLogsBySeverity:
+SELECT *
+FROM Log
+WHERE severity = :severity
+ORDER BY timestamp DESC
+LIMIT :limit;
+
+getLogsByTag:
+SELECT *
+FROM Log
+WHERE tag = :tag
+ORDER BY timestamp DESC
 LIMIT :limit;

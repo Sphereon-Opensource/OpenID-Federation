@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.server.admin.handlers
 
-import com.sphereon.oid.fed.logger.LogWriter
+import com.sphereon.oid.fed.logger.Logger
 import java.io.File
 
-class FileLoggerHandler(private val logFile: File) : LogWriter {
+class FileLoggerHandler(private val logFile: File) : Logger.LogWriter {
     init {
         try {
             logFile.parentFile?.let { parent ->
@@ -24,9 +24,9 @@ class FileLoggerHandler(private val logFile: File) : LogWriter {
         }
     }
 
-    override fun log(message: String) {
+    override fun log(event: Logger.LogEvent) {
         synchronized(this) {
-            logFile.appendText("$message\n")
+            logFile.appendText("${event.formattedMessage}\n")
         }
     }
 }

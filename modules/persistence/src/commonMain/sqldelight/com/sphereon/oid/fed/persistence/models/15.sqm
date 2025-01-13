@@ -1,7 +1,14 @@
 CREATE TABLE IF NOT EXISTS Log (
     id SERIAL PRIMARY KEY,
+    severity TEXT NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    tag TEXT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    throwable_message TEXT,
+    throwable_stacktrace TEXT,
+    metadata TEXT
 );
 
-CREATE INDEX IF NOT EXISTS log_created_at ON Log(created_at);
+CREATE INDEX IF NOT EXISTS log_timestamp ON Log(timestamp);
+CREATE INDEX IF NOT EXISTS log_severity ON Log(severity);
+CREATE INDEX IF NOT EXISTS log_tag ON Log(tag);
