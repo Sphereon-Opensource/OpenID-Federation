@@ -38,9 +38,6 @@ dependencies {
     runtimeOnly(libs.postgres)
     runtimeOnly(libs.springboot.devtools)
     implementation(libs.ktor.serialization.kotlinx.json)
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-    implementation("io.swagger.core.v3:swagger-annotations:2.2.20")
-    implementation("org.openapitools:jackson-databind-nullable:0.2.6")
 }
 
 kotlin {

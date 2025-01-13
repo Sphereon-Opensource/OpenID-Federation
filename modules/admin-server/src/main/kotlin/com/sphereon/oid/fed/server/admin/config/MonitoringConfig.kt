@@ -63,13 +63,4 @@ class MonitoringConfig {
             }
         }
     }
-
-    private fun getGCStats(): String {
-        return buildString {
-            append("Garbage Collection:")
-            gcMBeans.forEach { gc ->
-                append("\n  - ${gc.name}: Count=${gc.collectionCount}, Time=${gc.collectionTime}ms")
-            }
-        }
-    }
 }

@@ -203,16 +203,9 @@ class Logger private constructor(private val tag: String = "") {
 
     private fun buildDebugMessage(event: LogEvent): String = buildString {
         append("Log Dispatch Debug Info:")
-        append("\n  Total writers: ${registeredLogWriters.size}")
         append("\n  Message severity: ${event.severity} (ordinal: ${event.severity.ordinal})")
         if (event.throwable != null) {
             append("\n  Exception: ${event.throwable.message}")
-        }
-        append("\n  Writers handling message:")
-        registeredLogWriters.forEach { writer ->
-            append("\n    - Writer ${writer::class.simpleName}: ")
-            append("minSeverity=${writer.minSeverity} (ordinal: ${writer.minSeverity.ordinal}) - ")
-            append(if (event.severity.ordinal >= writer.minSeverity.ordinal) "WILL HANDLE" else "SKIPPED")
         }
     }
 
