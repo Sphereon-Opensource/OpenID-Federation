@@ -26,7 +26,7 @@ class Application(private val logService: LogService) {
         Logger.addLogWriter(DatabaseLoggerHandler(logService))
 
         val severity = System.getenv("LOGGER_SEVERITY") ?: Logger.Severity.Verbose
-        Logger.configure(Severity.valueOf(severity))
+        Logger.configure(minSeverity = if (severity is Logger.Severity) severity else Logger.Severity.valueOf(severity.toString()))
     }
 }
 
