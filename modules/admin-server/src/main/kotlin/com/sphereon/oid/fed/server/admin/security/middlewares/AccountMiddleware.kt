@@ -14,6 +14,10 @@ class AccountMiddleware(
 ) : OncePerRequestFilter() {
     private val log = LoggerFactory.getLogger(AccountMiddleware::class.java)
 
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        return request.requestURI.endsWith("/status")
+    }
+
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
@@ -30,7 +34,7 @@ class AccountMiddleware(
 
                 log.debug("Found account: {}", account)
 
-                val accountIdentifier = accountService.getAccountIdentifier(accountUsername)
+                val accountIdentifier = accountService.getAccountIdentifierByAccount(account)
 
                 log.debug("Found account identifier: {}", accountIdentifier)
 

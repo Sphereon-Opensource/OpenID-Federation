@@ -7,6 +7,12 @@ object Constants {
     const val ACCOUNT_ATTRIBUTE = "account"
     const val ACCOUNT_IDENTIFIER_ATTRIBUTE = "accountIdentifier"
 
+    // Persistence-related constants
+    const val DATASOURCE_URL = "DATASOURCE_URL"
+    const val DATASOURCE_USER = "DATASOURCE_USER"
+    const val DATASOURCE_PASSWORD = "DATASOURCE_PASSWORD"
+    const val SQLITE_IS_NOT_SUPPORTED_IN_JVM = "SQLite is not supported in JVM"
+
     // Error messages
     const val ACCOUNT_ALREADY_EXISTS = "Account already exists"
     const val ACCOUNT_NOT_FOUND = "Account not found"

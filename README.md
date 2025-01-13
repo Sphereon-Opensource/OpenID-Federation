@@ -238,13 +238,12 @@ The admin endpoints are protected and require a valid JWT access token. To acqui
 
 ## Step 4: Create a New Tenant Account
 
-To create a new tenant account, follow these steps. Any username can be used, and the same process in the following
-steps applies to all accounts, including the root account, which we will use as an example.
+To create a new tenant account, follow these steps:
 
 1. Send a `POST` request to the following endpoint:
 
    ```http
-   POST http://localhost:8081/accounts/{username}
+   POST http://localhost:8081/accounts
    ```
 
 2. Include a JSON body with the desired account details. For example:
@@ -256,55 +255,53 @@ steps applies to all accounts, including the root account, which we will use as 
    }
    ```
 
----
+Note: All subsequent requests will use the `X-Account-Username` header to specify the account context. If not provided, it defaults to the root account.
 
-## Step 5: Delete an Account by Username
+## Step 5: Delete a Tenant Account
 
-To delete an account by its username, follow these steps:
+To delete a tenant account, follow these steps:
 
 1. Send a `DELETE` request to the following endpoint:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}
+   DELETE http://localhost:8081/accounts
+   X-Account-Username: {username} # root account cannot be deleted
    ```
+## Step 6: Create and Manage Keys
 
----
-
-## Step 6: Create and Manage Account Keys
-
-### Create a New Key Pair for the Account
+### Create a New Key Pair
 
 1. Send a `POST` request to create a new key pair:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/keys
+   POST http://localhost:8081/keys
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-### List Keys for an Account
+### List Keys
 
-1. Send a `GET` request to list the keys associated with the account:
+1. Send a `GET` request to list the keys:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/keys
+   GET http://localhost:8081/keys
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ### Revoke a Key
 
-To revoke a key for an account, follow these steps:
-
-1. Send a `DELETE` request to the following endpoint:
+1. Send a `DELETE` request to revoke a key:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}/keys/{keyId}
+   DELETE http://localhost:8081/keys/{keyId}
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally, include a `reason` query parameter to specify the reason for revocation. For example:
+2. Optionally, include a `reason` query parameter to specify the reason for revocation:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}/keys/{keyId}?reason=Key+compromised
+   DELETE http://localhost:8081/keys/{keyId}?reason=Key+compromised
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
-
----
 
 ## Step 7: Define Metadata for an Entity
 
@@ -313,7 +310,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `POST` request to the following endpoint:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/metadata
+   POST http://localhost:8081/metadata
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 2. Include a JSON body with the metadata details. For example:
@@ -333,10 +331,11 @@ To assign metadata to your entity, follow these steps:
 
 ### List Metadata for an Entity
 
-1. Send a `GET` request to list all metadata for the entity:
+1. Send a `GET` request to list all metadata:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/metadata
+   GET http://localhost:8081/metadata
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ### Delete Metadata by ID
@@ -344,9 +343,9 @@ To assign metadata to your entity, follow these steps:
 1. Send a `DELETE` request to delete a metadata entry by its ID:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}/metadata/{id}
+   DELETE http://localhost:8081/metadata/{id}
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
-
 ---
 
 ## Step 8: Create and Manage Subordinates
@@ -356,7 +355,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `POST` request to the following endpoint:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/subordinates
+   POST http://localhost:8081/subordinates
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 2. Include a JSON body with the subordinate details. For example:
@@ -369,10 +369,11 @@ To assign metadata to your entity, follow these steps:
 
 ### List Subordinates
 
-1. Send a `GET` request to list all subordinates for a given account:
+1. Send a `GET` request to list all subordinates:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/subordinates
+   GET http://localhost:8081/subordinates
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ### Delete a Subordinate
@@ -380,9 +381,9 @@ To assign metadata to your entity, follow these steps:
 1. Send a `DELETE` request to delete a subordinate by its ID:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}/subordinates/{id}
+   DELETE http://localhost:8081/subordinates/{id}
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
-
 ---
 
 ## Step 9: Manage Subordinate Metadata
@@ -392,7 +393,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `POST` request to the following endpoint:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/subordinates/{subordinateId}/metadata
+   POST http://localhost:8081/subordinates/{subordinateId}/metadata
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 2. Include a JSON body with the metadata details. For example:
@@ -410,18 +412,18 @@ To assign metadata to your entity, follow these steps:
 
 1. Send a `GET` request to list all metadata for a subordinate:
    ```http
-   GET http://localhost:8081/accounts/{username}/subordinates/{subordinateId}/metadata
+   GET http://localhost:8081/subordinates/{subordinateId}/metadata
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ### Delete Metadata by ID
 
 1. Send a `DELETE` request to delete a metadata entry by its ID:
    ```http
-   DELETE http://localhost:8081/accounts/{username}/subordinates/{subordinateId}/metadata/{id}
+   DELETE http://localhost:8081/subordinates/{subordinateId}/metadata/{id}
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
-
 ---
-
 ## Step 10: Manage Subordinate JWKS
 
 ### Add a JWKS for a Subordinate
@@ -429,7 +431,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `POST` request to the following endpoint:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/subordinates/{id}/jwks
+   POST http://localhost:8081/subordinates/{id}/jwks
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 2. Include a JSON body with the JWKS details. For example:
@@ -447,7 +450,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `GET` request to list all JWKS for a subordinate:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/subordinates/{id}/jwks
+   GET http://localhost:8081/subordinates/{id}/jwks
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ### Delete a JWKS by ID
@@ -455,17 +459,18 @@ To assign metadata to your entity, follow these steps:
 1. Send a `DELETE` request to delete a JWKS entry by its ID:
 
    ```http
-   DELETE http://localhost:8081/accounts/{username}/subordinates/{id}/jwks/{jwkId}
+   DELETE http://localhost:8081/subordinates/{id}/jwks/{jwkId}
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ---
-
 ## Step 11: Get Subordinate Statement Object
 
 1. Send a `GET` request to retrieve the statement for a subordinate:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/subordinates/{id}/statement
+   GET http://localhost:8081/subordinates/{id}/statement
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 ---
@@ -475,7 +480,8 @@ To assign metadata to your entity, follow these steps:
 1. Send a `POST` request to publish a subordinate statement:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/subordinates/{id}/statement
+   POST http://localhost:8081/subordinates/{id}/statement
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
 2. Optionally include a `dryRun` parameter in the request body to test the statement publication without making changes:
@@ -495,31 +501,26 @@ To assign metadata to your entity, follow these steps:
 1. Send a `GET` request to retrieve the entity configuration statement:
 
    ```http
-   GET http://localhost:8081/accounts/{username}/entity-statement
+   GET http://localhost:8081/entity-statement
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
-
-2. Replace `{username}` with the specific account username for which you want to retrieve the entity configuration
-   statement.
 
 ### Publish Entity Configuration Statement Object
 
 1. Send a `POST` request to publish the entity configuration statement:
 
    ```http
-   POST http://localhost:8081/accounts/{username}/entity-statement
+   POST http://localhost:8081/entity-statement
+   X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
-   changes:
+2. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making changes:
 
    ```json
    {
        "dryRun": true
    }
    ```
-
-3. Replace `{username}` with the account username for which you want to publish the entity configuration statement.
-
 # Trust Marks
 
 ## Trust Mark Workflow
@@ -550,18 +551,16 @@ POST http://localhost:8081/accounts
 }
 
 # Generate Trust Anchor keys
-POST http://localhost:8081/accounts/trust-anchor/keys
+POST http://localhost:8081/keys
+X-Account-Username: trust-anchor
 
 # Create Trust Mark type
-POST http://localhost:8081/accounts/trust-anchor/trust-mark-types
+POST http://localhost:8081/trust-mark-types
+X-Account-Username: trust-anchor
 {
     "identifier": "https://example.com/trust-mark-types/exampleType"
 }
-```
 
-### 2. Trust Mark Issuer Configuration
-
-```http
 # Create Issuer account
 POST http://localhost:8081/accounts
 {
@@ -570,35 +569,32 @@ POST http://localhost:8081/accounts
 }
 
 # Generate Issuer keys
-POST http://localhost:8081/accounts/trust-mark-issuer/keys
+POST http://localhost:8081/keys
+X-Account-Username: trust-mark-issuer
 
 # Authorize Issuer
-POST http://localhost:8081/accounts/trust-anchor/trust-mark-types/{type-id}/issuers
+POST http://localhost:8081/trust-mark-types/{type-id}/issuers
+X-Account-Username: trust-anchor
 {
     "identifier": "https://example.com/issuer"
 }
 
 # Publish Trust Anchor configuration
-POST http://localhost:8081/accounts/trust-anchor/entity-statement
-```
+POST http://localhost:8081/entity-statement
+X-Account-Username: trust-anchor
 
-### 3. Trust Mark Issuance
-
-```http
 # Issue Trust Mark
-POST http://localhost:8081/accounts/trust-mark-issuer/trust-marks
+POST http://localhost:8081/trust-marks
+X-Account-Username: trust-mark-issuer
 {
     "sub": "https://example.com/holder",
     "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType"
 }
 
 # Publish Issuer configuration
-POST http://localhost:8081/accounts/trust-mark-issuer/entity-statement
-```
+POST http://localhost:8081/entity-statement
+X-Account-Username: trust-mark-issuer
 
-### 4. Holder Management
-
-```http
 # Create Holder account
 POST http://localhost:8081/accounts
 {
@@ -607,15 +603,16 @@ POST http://localhost:8081/accounts
 }
 
 # Store Trust Mark
-POST http://localhost:8081/accounts/holder/received-trust-marks
+POST http://localhost:8081/received-trust-marks
+X-Account-Username: holder
 {
     "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType",
     "jwt": "eyJ..."
 }
 
 # Publish Holder configuration
-POST http://localhost:8081/accounts/holder/entity-statement
-```
+POST http://localhost:8081/entity-statement
+X-Account-Username: holder
 
 ### 5. Trust Mark Verification
 
@@ -627,7 +624,6 @@ GET http://localhost:8080/trust-mark-issuer/trust-mark-status
     "sub": "https://example.com/holder"
 }
 ```
-
 # API Reference
 
 For the complete API documentation, please

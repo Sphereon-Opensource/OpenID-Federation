@@ -20,8 +20,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/trust-mark-types")
 class TrustMarkTypeController(
-    private val trustMarkService: TrustMarkService,
-    private val accountService: AccountService
+    private val trustMarkService: TrustMarkService
 ) {
     @GetMapping
     fun getTrustMarkTypes(request: HttpServletRequest): List<TrustMarkTypeDTO> {
@@ -36,7 +35,7 @@ class TrustMarkTypeController(
         @RequestBody createDto: CreateTrustMarkTypeDTO
     ): TrustMarkTypeDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return trustMarkService.createTrustMarkType(account, createDto, accountService)
+        return trustMarkService.createTrustMarkType(account, createDto)
     }
 
     @GetMapping("/{id}")

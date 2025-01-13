@@ -1,9 +1,6 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.EntityJwks
-import com.sphereon.oid.fed.openapi.models.Jwk
-import com.sphereon.oid.fed.openapi.models.TrustMark
+import com.sphereon.oid.fed.openapi.models.*
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationStatementObjectBuilder {
@@ -47,8 +44,8 @@ class EntityConfigurationStatementObjectBuilder {
         return EntityJwks(jwks.toTypedArray())
     }
 
-    fun build(): EntityConfigurationStatement {
-        return EntityConfigurationStatement(
+    fun build(): EntityConfigurationStatementDTO {
+        return EntityConfigurationStatementDTO(
             iss = iss ?: throw IllegalArgumentException("iss must be provided"),
             sub = iss!!,
             exp = exp ?: throw IllegalArgumentException("exp must be provided"),

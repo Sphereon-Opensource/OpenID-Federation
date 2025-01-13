@@ -22,18 +22,19 @@ import com.sphereon.oid.fed.services.mappers.toTrustMarkTypeDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class TrustMarkService {
+class TrustMarkService(
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient,
+    private val accountService: AccountService
+) {
     private val logger = Logger.tag("TrustMarkService")
     private val trustMarkQueries = Persistence.trustMarkQueries
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
-    private val kmsClient = KmsService.getKmsClient()
-    private val keyService = KeyService()
 
     fun createTrustMarkType(
         account: Account,
-        createDto: CreateTrustMarkTypeDTO,
-        accountService: AccountService
+        createDto: CreateTrustMarkTypeDTO
     ): TrustMarkTypeDTO {
         logger.info("Creating trust mark type ${createDto.identifier} for username: ${account.username}")
 
@@ -170,15 +171,8 @@ class TrustMarkService {
         return trustMarks
     }
 
-    fun createTrustMark(account: Account, body: CreateTrustMarkDTO, accountService: AccountService): TrustMarkDTO {
+    fun createTrustMark(account: Account, body: CreateTrustMarkDTO): TrustMarkDTO {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
-        val account = Persistence.accountQueries.findById(account.id).executeAsOneOrNull()
-            ?: throw NotFoundException("Account with ID $account.id not found.").also {
-                logger.error("Account not found with ID: $account.id")
-            }
-
-        val accountIdentifier = accountService.getAccountIdentifier(account.username)
-        logger.debug("Retrieved account identifier: $accountIdentifier")
 
         val keys = keyService.getKeys(account)
         if (keys.isEmpty()) {
@@ -192,7 +186,7 @@ class TrustMarkService {
         val iat = (System.currentTimeMillis() / 1000).toInt()
 
         val trustMark = TrustMarkObjectBuilder()
-            .iss(accountIdentifier)
+            .iss(accountService.getAccountIdentifierByAccount(account))
             .sub(body.sub)
             .id(body.trustMarkTypeIdentifier)
             .iat(iat)

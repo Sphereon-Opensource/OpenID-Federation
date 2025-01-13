@@ -1,14 +1,11 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.mappers.toJwk
@@ -16,16 +13,17 @@ import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class EntityConfigurationStatementService {
+class EntityConfigurationStatementService(
+    private val accountService: AccountService,
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient
+) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
-    private val accountService = AccountService()
-    private val keyService = KeyService()
-    private val kmsClient = KmsService.getKmsClient()
 
-    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatement {
+    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementDTO {
         logger.info("Building entity configuration for account: ${account.username}")
 
-        val identifier = accountService.getAccountIdentifier(account.username)
+        val identifier = accountService.getAccountIdentifierByAccount(account)
         val keys = keyService.getKeys(account)
 
         val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys)
@@ -136,18 +134,8 @@ class EntityConfigurationStatementService {
             }
     }
 
-    fun findByAccount(account: Account): EntityConfigurationStatement {
+    fun findByAccount(account: Account): EntityConfigurationStatementDTO {
         logger.info("Finding entity configuration for account: ${account.username}")
-        return getEntityConfigurationStatement(account)
-    }
-
-    fun findByUsername(accountUsername: String): EntityConfigurationStatement {
-        logger.info("Finding entity configuration for username: $accountUsername")
-        val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $accountUsername")
-            }
-
         return getEntityConfigurationStatement(account)
     }
 
@@ -167,7 +155,7 @@ class EntityConfigurationStatementService {
 
         val jwt = kmsClient.sign(
             payload = Json.encodeToJsonElement(
-                EntityConfigurationStatement.serializer(),
+                EntityConfigurationStatementDTO.serializer(),
                 entityConfigurationStatement
             ).jsonObject,
             header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
@@ -187,11 +175,5 @@ class EntityConfigurationStatementService {
 
         logger.info("Successfully published entity configuration statement for account: ${account.username}")
         return jwt
-    }
-
-    fun publishByUsername(accountUsername: String, dryRun: Boolean? = false): String {
-        logger.info("Publishing entity configuration for username: $accountUsername (dryRun: $dryRun)")
-        val account = accountService.getAccountByUsername(accountUsername)
-        return publishByAccount(account, dryRun)
     }
 }

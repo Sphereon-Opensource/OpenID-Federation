@@ -24,7 +24,7 @@ class KeyController(
     @ResponseStatus(HttpStatus.CREATED)
     fun create(request: HttpServletRequest): JwkAdminDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return keyService.create(account)
+        return keyService.createKey(account)
     }
 
     @GetMapping

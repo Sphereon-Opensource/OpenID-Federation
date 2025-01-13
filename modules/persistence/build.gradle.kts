@@ -35,6 +35,7 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(projects.modules.openapi)
+                implementation(projects.modules.openidFederationCommon)
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             }
         }

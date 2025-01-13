@@ -329,51 +329,43 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/LogDTO'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-
-  /logs/severity/{severity}:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                serverError:
+                  summary: Server error example
+                  value:
+                    error: server_error
+                    error_description: The server encountered an unexpected condition that prevented it from fulfilling the request.
+  /audit:
     get:
       tags:
         - admin
-      summary: Get logs by severity
-      description: Retrieve logs filtered by severity level
+      summary: Get audit logs
+      description: Retrieve audit logs with optional filtering by start and end dates.
       parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-        - name: severity
-          in: path
-          description: Severity level to filter by
-          required: true
-          schema:
-            type: string
-            enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
-        - name: limit
+        - name: startDate
           in: query
-          description: Maximum number of logs to return
+          description: The start date for filtering audit logs.
           required: false
           schema:
-            type: integer
-            default: 100
-            minimum: 1
-            maximum: 1000
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          description: The end date for filtering audit logs.
+          required: false
+          schema:
+            type: string
+            format: date-time
       responses:
         '200':
-          description: Successful retrieval of logs by severity
+          description: Successful retrieval of audit logs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LogDTO'
+                  $ref: '#/components/schemas/AuditLog'
         '400':
           $ref: '#/components/responses/BadRequestError'
         '401':

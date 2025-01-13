@@ -14,12 +14,13 @@ import com.sphereon.oid.fed.services.mappers.toJwkAdminDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class KeyService {
+class KeyService(
+    private val kmsClient: KmsClient
+) {
     private val logger = Logger.tag("KeyService")
-    private val kmsClient = KmsService.getKmsClient()
     private val keyQueries = Persistence.keyQueries
 
-    fun create(account: Account): JwkAdminDTO {
+    fun createKey(account: Account): JwkAdminDTO {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
@@ -81,7 +82,7 @@ class KeyService {
     }
 
     fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String {
-        val iss = accountService.getAccountIdentifier(account.username)
+        val iss = accountService.getAccountIdentifierByAccount(account)
 
         val historicalKeysJwkObject = FederationHistoricalKeysResponse(
             iss = iss,

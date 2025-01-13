@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.PublishEntityStatementDTO
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
-import com.sphereon.oid.fed.services.mappers.toEntityConfigurationStatementDTO
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
@@ -23,7 +22,7 @@ class EntityStatementController(
     @GetMapping
     fun getEntityStatement(request: HttpServletRequest): EntityConfigurationStatementDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return entityConfigurationStatementService.findByAccount(account).toEntityConfigurationStatementDTO()
+        return entityConfigurationStatementService.findByAccount(account)
     }
 
     @PostMapping

@@ -4,7 +4,6 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.TrustMarkService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -20,9 +19,9 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 @RequestMapping("/trust-marks")
 class TrustMarkController(
-    private val trustMarkService: TrustMarkService,
-    private val accountService: AccountService
+    private val trustMarkService: TrustMarkService
 ) {
+
     @GetMapping
     fun getTrustMarks(request: HttpServletRequest): List<TrustMarkDTO> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
@@ -36,7 +35,7 @@ class TrustMarkController(
         @RequestBody body: CreateTrustMarkDTO
     ): TrustMarkDTO {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return trustMarkService.createTrustMark(account, body, accountService)
+        return trustMarkService.createTrustMark(account, body)
     }
 
     @DeleteMapping("/{trustMarkId}")

@@ -8,13 +8,16 @@ import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.services.mappers.toAccountDTO
 
-class AccountService() {
+class AccountService(
+    private val config: AccountConfig
+) {
     private val logger = Logger.tag("AccountService")
     private val accountQueries = Persistence.accountQueries
 
-    fun create(account: CreateAccountDTO): AccountDTO {
+    fun createAccount(account: CreateAccountDTO): AccountDTO {
         logger.info("Creating new account with username: ${account.username}")
         val accountAlreadyExists = accountQueries.findByUsername(account.username).executeAsOneOrNull()
 
@@ -31,34 +34,26 @@ class AccountService() {
         return createdAccount
     }
 
-    fun findAll(): List<AccountDTO> {
+    fun getAllAccounts(): List<AccountDTO> {
         logger.debug("Retrieving all accounts")
         val accounts = accountQueries.findAll().executeAsList().map { it.toAccountDTO() }
         logger.debug("Found ${accounts.size} accounts")
         return accounts
     }
 
-    fun getAccountIdentifier(username: String): String {
-        logger.debug("Getting account identifier for username: $username")
-        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $username")
-            }
-
+    fun getAccountIdentifierByAccount(account: Account): String {
         account.identifier?.let { identifier ->
-            logger.debug("Found explicit identifier for username: $username")
+            logger.debug("Found explicit identifier for username: ${account.username}")
             return identifier
         }
 
-        val rootIdentifier =
-            System.getenv("ROOT_IDENTIFIER") ?: throw NotFoundException(Constants.ROOT_IDENTIFIER_NOT_SET).also {
-                logger.error("ROOT_IDENTIFIER environment variable not set")
-            }
-
         // For root account, return root identifier directly
-        val identifier =
-            if (username == Constants.DEFAULT_ROOT_USERNAME) rootIdentifier else "$rootIdentifier/$username"
-        logger.debug("Using identifier for username: $username as $identifier")
+        val identifier = if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
+            config.rootIdentifier
+        } else {
+            "${config.rootIdentifier}/${account.username}"
+        }
+        logger.debug("Using identifier for username: ${account.username} as $identifier")
         return identifier
     }
 
@@ -80,16 +75,5 @@ class AccountService() {
         val deletedAccount = accountQueries.delete(account.id).executeAsOne()
         logger.info("Successfully deleted account with username: ${account.username}")
         return deletedAccount.toAccountDTO()
-    }
-
-    fun usernameToAccountId(username: String): Int {
-        logger.debug("Converting username to account ID: $username")
-        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $username")
-            }
-
-        logger.debug("Found account ID ${account.id} for username: $username")
-        return account.id
     }
 }
