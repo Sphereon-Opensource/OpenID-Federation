@@ -16,8 +16,8 @@ actual class PlatformSqlDriver {
             config.jdbcUrl = url
             config.username = username
             config.password = password
-            config.maximumPoolSize = 20
-            config.minimumIdle = 20
+            config.maximumPoolSize = 10
+            config.minimumIdle = 5
             config.connectionTimeout = 30000
             config.idleTimeout = 600000
             config.maxLifetime = 1800000
@@ -30,6 +30,24 @@ actual class PlatformSqlDriver {
 
             return HikariDataSource(config)
         }
+
+        fun getConnectionMetrics(): Map<String, Any> {
+            val ds = dataSourceRef.get() ?: return emptyMap()
+            return try {
+                mapOf(
+                    "Active Connections" to ds.hikariPoolMXBean.activeConnections,
+                    "Idle Connections" to ds.hikariPoolMXBean.idleConnections,
+                    "Total Connections" to ds.hikariPoolMXBean.totalConnections,
+                    "Threads Awaiting Connection" to ds.hikariPoolMXBean.threadsAwaitingConnection
+                )
+            } catch (e: Exception) {
+                println("Error getting metrics: ${e.message}")
+                e.printStackTrace()
+                emptyMap()
+            }
+        }
+
+
     }
 
     actual fun createPostgresDriver(url: String, username: String, password: String): SqlDriver {
