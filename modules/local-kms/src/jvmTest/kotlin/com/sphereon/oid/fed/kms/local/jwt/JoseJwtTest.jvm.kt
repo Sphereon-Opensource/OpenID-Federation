@@ -4,11 +4,7 @@ import com.nimbusds.jose.Algorithm
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.gen.ECKeyGenerator
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
-import com.sphereon.oid.fed.openapi.models.EntityJwks
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.Jwk
-import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
+import com.sphereon.oid.fed.openapi.models.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
@@ -33,6 +29,10 @@ class JoseJwtTest {
         assertTrue { signature.startsWith("ey") }
     }
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
+
     @Test
     fun verifyTest() {
         val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
@@ -47,9 +47,7 @@ class JoseJwtTest {
             Json.decodeFromString<JwkWithPrivateKey>(jwk)
         )
         assertTrue {
-            verify(signature, Json {
-                ignoreUnknownKeys = true
-            }.decodeFromString<Jwk>(jwk))
+            verify(signature, json.decodeFromString<Jwk>(jwk))
         }
     }
 }

@@ -7,14 +7,7 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.AuthorityHintService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/authority-hints")
@@ -23,9 +16,8 @@ class AuthorityHintController(
 ) {
     @GetMapping
     fun getAuthorityHints(request: HttpServletRequest): List<AuthorityHintDTO> {
-        return authorityHintService.findByAccount(
-            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        )
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return authorityHintService.findByAccount(account)
     }
 
     @PostMapping
@@ -34,10 +26,8 @@ class AuthorityHintController(
         request: HttpServletRequest,
         @RequestBody body: CreateAuthorityHintDTO
     ): AuthorityHintDTO {
-        return authorityHintService.createAuthorityHint(
-            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
-            body.identifier
-        )
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return authorityHintService.createAuthorityHint(account, body.identifier)
     }
 
     @DeleteMapping("/{id}")
@@ -45,9 +35,7 @@ class AuthorityHintController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): AuthorityHintDTO {
-        return authorityHintService.deleteAuthorityHint(
-            request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account,
-            id
-        )
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return authorityHintService.deleteAuthorityHint(account, id)
     }
 }

@@ -30,25 +30,8 @@ class Logger internal constructor(private val tag: String = "") {
     }
 
     interface LogWriter {
-        /**
-         * The minimum severity level this writer will handle.
-         * Defaults to Verbose to handle all log events.
-         */
         val minSeverity: Severity get() = Severity.Verbose
-
-        /**
-         * Log an event to this writer's destination
-         */
         fun log(event: LogEvent)
-
-        /**
-         * Clean up any resources used by this writer.
-         * This should be called when the writer is no longer needed.
-         * Examples of cleanup:
-         * - Closing file handles
-         * - Closing network connections
-         * - Flushing any buffered data
-         */
         fun close() {}
     }
 
@@ -58,7 +41,7 @@ class Logger internal constructor(private val tag: String = "") {
         val tag: String,
         val timestamp: Long,
         val throwable: Throwable? = null,
-        val metadata: Map<String, Any> = emptyMap()
+        val metadata: Map<String, String> = emptyMap()
     ) {
         val formattedMessage: String
             get() = buildString {
@@ -68,10 +51,10 @@ class Logger internal constructor(private val tag: String = "") {
                     append("[$tag] ")
                 }
                 append(message)
-                if (metadata.isNotEmpty()) {
+                if (!metadata.isEmpty()) {
                     append("\nContext: ")
-                    metadata.forEach { (key, value) ->
-                        append("\n  $key: $value")
+                    metadata.entries.forEach { (key, value) ->
+                        append("\n  $key: ${value}")
                     }
                 }
                 throwable?.let { t ->
@@ -95,7 +78,7 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         tag: String,
         throwable: Throwable?,
-        metadata: Map<String, Any>
+        metadata: Map<String, String>
     ): LogEvent = LogEvent(
         severity = severity,
         message = message,
@@ -106,7 +89,6 @@ class Logger internal constructor(private val tag: String = "") {
     )
 
     private fun log(event: LogEvent) {
-        // Log to Kermit with appropriate severity
         when (event.severity) {
             Severity.Verbose -> logger.v(event.formattedMessage)
             Severity.Debug -> logger.d(event.formattedMessage)
@@ -122,7 +104,7 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
-        context: Map<String, Any> = emptyMap()
+        context: Map<String, String> = emptyMap()
     ) {
         if (!shouldLog(Severity.Verbose)) return
         log(createLogEvent(Severity.Verbose, message, tag, throwable, context))
@@ -132,7 +114,7 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
-        context: Map<String, Any> = emptyMap()
+        context: Map<String, String> = emptyMap()
     ) {
         if (!shouldLog(Severity.Debug)) return
         log(createLogEvent(Severity.Debug, message, tag, throwable, context))
@@ -142,7 +124,7 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
-        context: Map<String, Any> = emptyMap()
+        context: Map<String, String> = emptyMap()
     ) {
         if (!shouldLog(Severity.Info)) return
         log(createLogEvent(Severity.Info, message, tag, throwable, context))
@@ -152,7 +134,7 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
-        context: Map<String, Any> = emptyMap()
+        context: Map<String, String> = emptyMap()
     ) {
         if (!shouldLog(Severity.Warn)) return
         log(createLogEvent(Severity.Warn, message, tag, throwable, context))
@@ -162,51 +144,17 @@ class Logger internal constructor(private val tag: String = "") {
         message: String,
         throwable: Throwable? = null,
         tag: String = this.tag,
-        context: Map<String, Any> = emptyMap()
+        context: Map<String, String> = emptyMap()
     ) {
         if (!shouldLog(Severity.Error)) return
         log(createLogEvent(Severity.Error, message, tag, throwable, context))
     }
 
     private fun dispatchToLogWriters(event: LogEvent) {
-        // Dispatch to compatible writers
         registeredLogWriters
             .asSequence()
             .filter { writer -> event.severity.ordinal >= writer.minSeverity.ordinal }
             .forEach { writer -> writer.log(event) }
-
-        // Then log debug information if enabled
-        if (minSeverityLevel <= Severity.Debug) {
-            dispatchDebugInfo(event)
-        }
-    }
-
-    private fun dispatchDebugInfo(originalEvent: LogEvent) {
-        val debugEvent = createDebugEvent(originalEvent)
-        logger.d(debugEvent.formattedMessage)
-
-        // Dispatch debug info to writers that accept debug level
-        registeredLogWriters
-            .asSequence()
-            .filter { writer -> Severity.Debug.ordinal >= writer.minSeverity.ordinal }
-            .forEach { writer -> writer.log(debugEvent) }
-    }
-
-    private fun createDebugEvent(originalEvent: LogEvent): LogEvent {
-        return LogEvent(
-            severity = Severity.Debug,
-            message = buildDebugMessage(originalEvent),
-            tag = originalEvent.tag,
-            timestamp = Clock.System.now().toEpochMilliseconds()
-        )
-    }
-
-    private fun buildDebugMessage(event: LogEvent): String = buildString {
-        append("Log Dispatch Debug Info:")
-        append("\n  Message severity: ${event.severity} (ordinal: ${event.severity.ordinal})")
-        if (event.throwable != null) {
-            append("\n  Exception: ${event.throwable.message}")
-        }
     }
 
     companion object {
@@ -229,7 +177,6 @@ class Logger internal constructor(private val tag: String = "") {
                 try {
                     writer.close()
                 } catch (e: Exception) {
-                    // Log the error but continue closing other writers
                     KermitLogger.e("Error closing log writer: ${e.message}", e)
                 }
             }

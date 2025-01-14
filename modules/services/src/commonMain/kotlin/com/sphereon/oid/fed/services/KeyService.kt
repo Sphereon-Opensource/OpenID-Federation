@@ -18,7 +18,7 @@ class KeyService(
     private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("KeyService")
-    private val keyQueries = Persistence.keyQueries
+    private val jwkQueries = Persistence.jwkQueries
 
     fun createKey(account: Account): JwkAdminDTO {
         logger.info("Creating new key for account: ${account.username}")
@@ -27,7 +27,7 @@ class KeyService(
         val jwk = kmsClient.generateKeyPair()
         logger.debug("Generated key pair with KID: ${jwk.kid}")
 
-        keyQueries.create(
+        jwkQueries.create(
             account_id = account.id,
             kid = jwk.kid,
             key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
@@ -40,7 +40,7 @@ class KeyService(
     fun getKeys(account: Account): Array<JwkAdminDTO> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
-        val keys = keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
@@ -49,7 +49,7 @@ class KeyService(
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        var key = keyQueries.findById(keyId).executeAsOne()
+        var key = jwkQueries.findById(keyId).executeAsOne()
         logger.debug("Found key with ID: $keyId")
 
         if (key.account_id != account.id) {
@@ -62,10 +62,10 @@ class KeyService(
             throw IllegalStateException(Constants.KEY_ALREADY_REVOKED)
         }
 
-        keyQueries.revoke(reason, keyId)
+        jwkQueries.revoke(reason, keyId)
         logger.debug("Revoked key ID: $keyId with reason: ${reason ?: "no reason provided"}")
 
-        key = keyQueries.findById(keyId).executeAsOne()
+        key = jwkQueries.findById(keyId).executeAsOne()
         logger.info("Successfully revoked key ID: $keyId")
 
         return key.toJwkAdminDTO()
@@ -73,7 +73,7 @@ class KeyService(
 
     private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: ${account.username}")
-        val keys = keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
 
         return keys.map {

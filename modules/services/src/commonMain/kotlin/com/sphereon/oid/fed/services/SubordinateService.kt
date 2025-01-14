@@ -1,16 +1,11 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.services.config.AccountConfig
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
-import com.sphereon.oid.fed.openapi.models.SubordinateMetadataDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Subordinate

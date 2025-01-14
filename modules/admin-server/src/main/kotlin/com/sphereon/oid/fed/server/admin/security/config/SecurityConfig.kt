@@ -1,8 +1,5 @@
 package com.sphereon.oid.fed.server.admin.security.config
 
-import com.sphereon.oid.fed.server.admin.security.middlewares.AccountMiddleware
-import com.sphereon.oid.fed.services.AccountService
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -12,15 +9,10 @@ import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
-import org.springframework.security.web.context.SecurityContextHolderFilter
 
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
-    @Autowired
-    private lateinit var accountService: AccountService
-
     @Value("\${app.dev-mode:false}")
     private var devMode: Boolean = false
 
@@ -33,7 +25,6 @@ class SecurityConfig {
                 }
                 .csrf { it.disable() }
                 .oauth2ResourceServer { it.disable() }
-                .addFilterAfter(AccountMiddleware(accountService), SecurityContextHolderFilter::class.java)
                 .build()
         }
 
@@ -47,7 +38,6 @@ class SecurityConfig {
                     jwtAuthenticationConverter = jwtAuthenticationConverter()
                 }
             }
-            addFilterAfter<BasicAuthenticationFilter>(AccountMiddleware(accountService))
             csrf { disable() }
         }
 

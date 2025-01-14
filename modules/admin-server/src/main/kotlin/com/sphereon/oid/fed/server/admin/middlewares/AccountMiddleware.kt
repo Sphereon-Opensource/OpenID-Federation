@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.admin.security.middlewares
+package com.sphereon.oid.fed.server.admin.middlewares
 
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
@@ -26,18 +26,20 @@ class AccountMiddleware(
         try {
             val accountUsername = request.getHeader(Constants.ACCOUNT_HEADER) ?: "root"
 
-            log.debug("Using account username: {}", accountUsername)
-            log.debug("Attempting to get account for username: {}", accountUsername)
+            log.debug(
+                "Processing request with account details - URI: {}, Method: {}, Username: {}, Headers: {}",
+                request.requestURI,
+                request.method,
+                accountUsername,
+                request.headerNames.toList().associateWith { request.getHeader(it) }
+            )
 
             try {
                 val account = accountService.getAccountByUsername(accountUsername)
-
-                log.debug("Found account: {}", account)
+                log.debug("Retrieved account details: {}", account)
 
                 val accountIdentifier = accountService.getAccountIdentifierByAccount(account)
-
-                log.debug("Found account identifier: {}", accountIdentifier)
-
+                log.debug("Retrieved account identifier details: {}", accountIdentifier)
                 request.setAttribute(Constants.ACCOUNT_ATTRIBUTE, account)
                 request.setAttribute(Constants.ACCOUNT_IDENTIFIER_ATTRIBUTE, accountIdentifier)
 

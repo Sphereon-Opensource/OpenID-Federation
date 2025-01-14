@@ -8,17 +8,19 @@ import com.sphereon.oid.fed.openapi.models.AccountDTO
 import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.config.AccountConfig
+import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import com.sphereon.oid.fed.services.mappers.toAccountDTO
 
 class AccountService(
-    private val config: AccountConfig
+    private val config: AccountServiceConfig
 ) {
     private val logger = Logger.tag("AccountService")
     private val accountQueries = Persistence.accountQueries
 
     fun createAccount(account: CreateAccountDTO): AccountDTO {
-        logger.info("Creating new account with username: ${account.username}")
+        logger.info("Starting account creation process for username: ${account.username}")
+        logger.debug("Account creation details - Username: ${account.username}, Identifier: ${account.identifier}")
+
         val accountAlreadyExists = accountQueries.findByUsername(account.username).executeAsOneOrNull()
 
         if (accountAlreadyExists != null) {
@@ -30,7 +32,7 @@ class AccountService(
             username = account.username,
             identifier = account.identifier,
         ).executeAsOne().toAccountDTO()
-        logger.info("Successfully created account with username: ${account.username}")
+        logger.info("Successfully created account - Username: ${account.username}, ID: ${createdAccount.id}, Identifier: ${createdAccount.identifier}")
         return createdAccount
     }
 
@@ -66,14 +68,16 @@ class AccountService(
     }
 
     fun deleteAccount(account: Account): AccountDTO {
-        logger.info("Attempting to delete account with username: ${account.username}")
+        logger.info("Starting account deletion process for username: ${account.username}")
+        logger.debug("Account deletion details - Username: ${account.username}, ID: ${account.id}")
+
         if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
-            logger.error("Attempted to delete root account")
+            logger.error("Account deletion failed: Attempted to delete root account")
             throw NotFoundException(Constants.ROOT_ACCOUNT_CANNOT_BE_DELETED)
         }
 
         val deletedAccount = accountQueries.delete(account.id).executeAsOne()
-        logger.info("Successfully deleted account with username: ${account.username}")
+        logger.info("Successfully deleted account - Username: ${account.username}, ID: ${account.id}")
         return deletedAccount.toAccountDTO()
     }
 }

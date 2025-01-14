@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.server.admin
 
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.server.admin.handlers.DatabaseLoggerHandler
-import com.sphereon.oid.fed.server.admin.handlers.FileLoggerHandler
+import com.sphereon.oid.fed.server.admin.handlers.logger.DatabaseLoggerHandler
+import com.sphereon.oid.fed.server.admin.handlers.logger.FileLoggerHandler
 import com.sphereon.oid.fed.services.LogService
 import jakarta.annotation.PostConstruct
 import org.springframework.boot.autoconfigure.SpringBootApplication

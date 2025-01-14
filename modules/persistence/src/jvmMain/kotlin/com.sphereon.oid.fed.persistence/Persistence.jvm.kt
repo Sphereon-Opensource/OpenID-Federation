@@ -5,21 +5,7 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.config.DatabaseConfig
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
-import com.sphereon.oid.fed.persistence.models.AccountQueries
-import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
-import com.sphereon.oid.fed.persistence.models.CritQueries
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQueries
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
-import com.sphereon.oid.fed.persistence.models.KeyQueries
-import com.sphereon.oid.fed.persistence.models.LogQueries
-import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
-import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
-import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
-import com.sphereon.oid.fed.persistence.models.SubordinateQueries
-import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
-import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
-import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
-import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
+import com.sphereon.oid.fed.persistence.models.*
 
 /**
  * Platform-specific implementation of the persistence layer for JVM.
@@ -28,7 +14,7 @@ import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     actual val accountQueries: AccountQueries
-    actual val keyQueries: KeyQueries
+    actual val jwkQueries: JwkQueries
     actual val subordinateQueries: SubordinateQueries
     actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
     actual val authorityHintQueries: AuthorityHintQueries
@@ -52,7 +38,7 @@ actual object Persistence {
 
         accountQueries = database.accountQueries
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
-        keyQueries = database.keyQueries
+        jwkQueries = database.jwkQueries
         subordinateQueries = database.subordinateQueries
         entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
         authorityHintQueries = database.authorityHintQueries

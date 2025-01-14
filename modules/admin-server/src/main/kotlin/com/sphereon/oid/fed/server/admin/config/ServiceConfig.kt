@@ -1,29 +1,20 @@
 package com.sphereon.oid.fed.server.admin.config
 
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.config.AccountConfig
-import com.sphereon.oid.fed.services.AccountService
-import com.sphereon.oid.fed.services.AuthorityHintService
-import com.sphereon.oid.fed.services.CritService
-import com.sphereon.oid.fed.services.EntityConfigurationMetadataService
-import com.sphereon.oid.fed.services.EntityConfigurationStatementService
-import com.sphereon.oid.fed.services.KeyService
-import com.sphereon.oid.fed.services.KmsClient
-import com.sphereon.oid.fed.services.KmsService
-import com.sphereon.oid.fed.services.LogService
-import com.sphereon.oid.fed.services.ReceivedTrustMarkService
-import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.*
+import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
 open class ServiceConfig {
     @Bean
-    open fun accountConfig(environment: org.springframework.core.env.Environment): AccountConfig {
-        System.setProperty("sphereon.federation.root-identifier",
-            environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8081"))
-        return AccountConfig()
+    open fun accountConfig(environment: org.springframework.core.env.Environment): AccountServiceConfig {
+        System.setProperty(
+            "sphereon.federation.root-identifier",
+            environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8081")
+        )
+        return AccountServiceConfig()
     }
 
     @Bean
@@ -42,8 +33,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun accountService(accountConfig: AccountConfig): AccountService {
-        return AccountService(accountConfig)
+    open fun accountService(accountServiceConfig: AccountServiceConfig): AccountService {
+        return AccountService(accountServiceConfig)
     }
 
     @Bean

@@ -11,7 +11,7 @@ open class LogService(private val logQueries: LogQueries) {
         tag: String,
         timestamp: Long,
         throwable: Throwable?,
-        metadata: Map<String, Any>
+        metadata: Map<String, String>
     ) {
         logQueries.insertLog(
             severity = severity,

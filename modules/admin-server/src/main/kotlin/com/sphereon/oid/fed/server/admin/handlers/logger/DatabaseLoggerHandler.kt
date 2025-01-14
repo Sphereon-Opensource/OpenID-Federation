@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.admin.handlers
+package com.sphereon.oid.fed.server.admin.handlers.logger
 
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.services.LogService

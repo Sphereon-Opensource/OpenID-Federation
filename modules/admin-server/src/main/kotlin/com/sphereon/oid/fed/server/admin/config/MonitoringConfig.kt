@@ -22,7 +22,6 @@ class MonitoringConfig {
     private val runtime = Runtime.getRuntime()
     private val memoryMBean = ManagementFactory.getMemoryMXBean()
     private val threadMBean = ManagementFactory.getThreadMXBean()
-    private val gcMBeans = ManagementFactory.getGarbageCollectorMXBeans()
 
     @Scheduled(fixedRateString = "\${monitoring.health.interval:60000}")
     fun monitorHealth() {
@@ -35,13 +34,29 @@ class MonitoringConfig {
         val severity =
             if (memoryUsagePercent >= memoryWarningThresholdPercent) Severity.Warn else Severity.Info
 
+        val message = buildString {
+            append("System Health: ")
+            append("Uptime=${uptime.toHours()}h${uptime.toMinutesPart()}m, ")
+            append("Memory=${usedMemory / 1024 / 1024}MB/${totalMemory / 1024 / 1024}MB($memoryUsagePercent%), ")
+            append("Processors=${runtime.availableProcessors()}, ")
+            append("Heap=${memoryMBean.heapMemoryUsage.used / 1024 / 1024}MB, ")
+            append("Threads=${threadMBean.threadCount}(Peak:${threadMBean.peakThreadCount}, Daemon:${threadMBean.daemonThreadCount})")
+        }
+
         logger.info(
-            "System Health: " +
-                    "Uptime=${uptime.toHours()}h${uptime.toMinutesPart()}m, " +
-                    "Memory=${usedMemory / 1024 / 1024}MB/${totalMemory / 1024 / 1024}MB($memoryUsagePercent%), " +
-                    "Processors=${runtime.availableProcessors()}, " +
-                    "Heap=${memoryMBean.heapMemoryUsage.used / 1024 / 1024}MB, " +
-                    "Threads=${threadMBean.threadCount}(Peak:${threadMBean.peakThreadCount}, Daemon:${threadMBean.daemonThreadCount})"
+            message = message,
+            context = mapOf(
+                "uptime_hours" to uptime.toHours().toString(),
+                "uptime_minutes" to uptime.toMinutesPart().toString(),
+                "memory_used_mb" to (usedMemory / 1024 / 1024).toString(),
+                "memory_total_mb" to (totalMemory / 1024 / 1024).toString(),
+                "memory_usage_percent" to memoryUsagePercent.toString(),
+                "processors" to runtime.availableProcessors().toString(),
+                "heap_used_mb" to (memoryMBean.heapMemoryUsage.used / 1024 / 1024).toString(),
+                "thread_count" to threadMBean.threadCount.toString(),
+                "thread_peak" to threadMBean.peakThreadCount.toString(),
+                "thread_daemon" to threadMBean.daemonThreadCount.toString()
+            )
         )
 
         if (severity == Severity.Warn) {
