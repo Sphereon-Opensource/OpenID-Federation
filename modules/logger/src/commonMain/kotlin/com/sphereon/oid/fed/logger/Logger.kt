@@ -8,7 +8,7 @@ import kotlinx.datetime.toLocalDateTime
 import co.touchlab.kermit.Logger as KermitLogger
 import co.touchlab.kermit.Severity as KermitSeverity
 
-class Logger private constructor(private val tag: String = "") {
+class Logger internal constructor(private val tag: String = "") {
     enum class Severity {
         Verbose,
         Debug,
