@@ -51,10 +51,10 @@ class Logger internal constructor(private val tag: String = "") {
                     append("[$tag] ")
                 }
                 append(message)
-                if (!metadata.isEmpty()) {
-                    append("\nContext: ")
-                    metadata.entries.forEach { (key, value) ->
-                        append("\n  $key: ${value}")
+                if (metadata.isNotEmpty()) {
+                    append("\nContext:")
+                    metadata.forEach { (key, value) ->
+                        append("\n  $key: $value")
                     }
                 }
                 throwable?.let { t ->
