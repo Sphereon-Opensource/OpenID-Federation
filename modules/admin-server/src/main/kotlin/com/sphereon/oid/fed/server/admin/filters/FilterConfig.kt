@@ -14,18 +14,18 @@ class FilterConfig(
     private val loggerMiddleware: LoggerMiddleware
 ) {
     @Bean
-    fun accountFilterRegistration(): FilterRegistrationBean<AccountMiddleware> {
-        val registration = FilterRegistrationBean<AccountMiddleware>()
-        registration.filter = AccountMiddleware(accountService)
+    fun loggerFilterRegistration(): FilterRegistrationBean<LoggerMiddleware> {
+        val registration = FilterRegistrationBean<LoggerMiddleware>()
+        registration.filter = loggerMiddleware
         registration.setUrlPatterns(listOf("/*"))
         registration.order = Ordered.HIGHEST_PRECEDENCE
         return registration
     }
 
     @Bean
-    fun loggerFilterRegistration(): FilterRegistrationBean<LoggerMiddleware> {
-        val registration = FilterRegistrationBean<LoggerMiddleware>()
-        registration.filter = loggerMiddleware
+    fun accountFilterRegistration(): FilterRegistrationBean<AccountMiddleware> {
+        val registration = FilterRegistrationBean<AccountMiddleware>()
+        registration.filter = AccountMiddleware(accountService)
         registration.setUrlPatterns(listOf("/*"))
         registration.order = Ordered.HIGHEST_PRECEDENCE + 1
         return registration
