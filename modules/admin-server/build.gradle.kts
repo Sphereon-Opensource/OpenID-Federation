@@ -20,6 +20,8 @@ dependencies {
     api(projects.modules.openidFederationCommon)
     api(projects.modules.persistence)
     api(projects.modules.services)
+    api(projects.modules.logger)
+
     implementation(libs.springboot.actuator) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }

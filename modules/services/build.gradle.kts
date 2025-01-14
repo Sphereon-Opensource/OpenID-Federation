@@ -24,12 +24,27 @@ kotlin {
                 api(projects.modules.openidFederationCommon)
                 api(projects.modules.localKms)
                 implementation(libs.ktor.serialization.kotlinx.json)
+                api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(projects.modules.logger)
+                implementation(projects.modules.openapi)
+                implementation(projects.modules.persistence)
+                implementation(projects.modules.openidFederationCommon)
+                implementation(projects.modules.localKms)
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                implementation("io.mockk:mockk:1.13.9")
             }
         }
 
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
+                implementation("io.mockk:mockk:1.13.9")
             }
         }
     }
@@ -38,7 +53,6 @@ kotlin {
 publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
-
             pom {
                 name.set("OpenID Federation Services")
                 description.set("Services module for OpenID Federation")

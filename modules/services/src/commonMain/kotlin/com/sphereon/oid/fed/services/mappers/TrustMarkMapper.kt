@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.extensions
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO

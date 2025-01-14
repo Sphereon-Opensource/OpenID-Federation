@@ -20,14 +20,14 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping()
-class FederationController {
+class FederationController(
+    private val accountService: AccountService,
+    private val subordinateService: SubordinateService,
+    private val trustMarkService: TrustMarkService,
+    private val keyService: KeyService
+) {
     private val accountQueries = Persistence.accountQueries
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
-    private val accountService = AccountService()
-    private val subordinateService = SubordinateService()
-    private val trustMarkService = TrustMarkService()
-    private val keyService = KeyService()
-
     @GetMapping("/.well-known/openid-federation", produces = ["application/entity-statement+jwt"])
     fun getRootEntityConfigurationStatement(): String {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()
@@ -52,22 +52,32 @@ class FederationController {
 
     @GetMapping("/list")
     fun getRootSubordinatesList(): Array<String> {
-        return subordinateService.findSubordinatesByAccountAsArray("root")
+        val account = accountQueries.findByUsername("root").executeAsOneOrNull()
+            ?: throw NotFoundException("Account not found")
+        return subordinateService.findSubordinatesByAccountAsArray(account)
     }
 
     @GetMapping("/{username}/list")
     fun getSubordinatesList(@PathVariable username: String): Array<String> {
-        return subordinateService.findSubordinatesByAccountAsArray(username)
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
+            ?: throw NotFoundException("Account not found")
+        return subordinateService.findSubordinatesByAccountAsArray(account)
     }
 
     @GetMapping("/fetch", produces = ["application/entity-statement+jwt"])
     fun getRootSubordinateStatement(@RequestParam("sub") sub: String): String {
-        return subordinateService.fetchSubordinateStatementByUsernameAndSubject("root", sub)
+        val account = accountQueries.findByUsername("root").executeAsOneOrNull()
+            ?: throw NotFoundException("Account not found")
+        val accountIss = accountService.getAccountIdentifierByAccount(account)
+        return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
     @GetMapping("/{username}/fetch", produces = ["application/entity-statement+jwt"])
     fun getSubordinateStatement(@PathVariable username: String, @RequestParam("sub") sub: String): String {
-        return subordinateService.fetchSubordinateStatementByUsernameAndSubject(username, sub)
+        val account = accountQueries.findByUsername(username).executeAsOneOrNull()
+            ?: throw NotFoundException("Account not found")
+        val accountIss = accountService.getAccountIdentifierByAccount(account)
+        return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
     @GetMapping("/trust-mark-status", produces = ["application/json"])
@@ -164,5 +174,4 @@ class FederationController {
             ?: throw NotFoundException("Account not found")
         return keyService.getFederationHistoricalKeysJwt(account, accountService)
     }
-
 }

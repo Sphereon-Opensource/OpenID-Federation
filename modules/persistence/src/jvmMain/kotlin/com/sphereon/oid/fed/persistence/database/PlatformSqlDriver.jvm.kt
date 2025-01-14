@@ -2,7 +2,7 @@ package com.sphereon.oid.fed.persistence.database
 
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.asJdbcDriver
-import com.sphereon.oid.fed.persistence.Constants
+import com.sphereon.oid.fed.common.Constants
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 

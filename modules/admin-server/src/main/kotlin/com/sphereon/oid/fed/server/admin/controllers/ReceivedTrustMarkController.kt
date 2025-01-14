@@ -1,38 +1,49 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMarkDTO
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMarkDTO
-import com.sphereon.oid.fed.services.AccountService
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
+import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/accounts/{username}/received-trust-marks")
-class ReceivedTrustMarkController {
-    private val accountService = AccountService()
-    private val receivedTrustMarkService = ReceivedTrustMarkService()
-
+@RequestMapping("/received-trust-marks")
+class ReceivedTrustMarkController(
+    private val receivedTrustMarkService: ReceivedTrustMarkService
+) {
     @PostMapping
-    fun create(@PathVariable username: String, @RequestBody dto: CreateReceivedTrustMarkDTO): ReceivedTrustMarkDTO {
-        return receivedTrustMarkService.create(username, dto, accountService)
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createReceivedTrustMark(
+        request: HttpServletRequest,
+        @RequestBody dto: CreateReceivedTrustMarkDTO
+    ): ReceivedTrustMarkDTO {
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.createReceivedTrustMark(account, dto)
     }
 
     @GetMapping
-    fun list(@PathVariable username: String): Array<ReceivedTrustMarkDTO> {
-        return receivedTrustMarkService.list(username, accountService).toTypedArray()
+    fun listReceivedTrustMarks(request: HttpServletRequest): Array<ReceivedTrustMarkDTO> {
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.listReceivedTrustMarks(account).toTypedArray()
     }
 
     @DeleteMapping("/{receivedTrustMarkId}")
-    fun delete(
-        @PathVariable username: String,
+    fun deleteReceivedTrustMark(
+        request: HttpServletRequest,
         @PathVariable receivedTrustMarkId: Int
     ): ReceivedTrustMarkDTO {
-        return receivedTrustMarkService.delete(username, receivedTrustMarkId, accountService)
+        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        return receivedTrustMarkService.deleteReceivedTrustMark(account, receivedTrustMarkId)
     }
 }
+

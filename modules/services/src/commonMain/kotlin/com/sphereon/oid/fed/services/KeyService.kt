@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
@@ -8,26 +9,25 @@ import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.extensions.toHistoricalKey
-import com.sphereon.oid.fed.services.extensions.toJwkAdminDTO
+import com.sphereon.oid.fed.services.mappers.toHistoricalKey
+import com.sphereon.oid.fed.services.mappers.toJwkAdminDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class KeyService {
+class KeyService(
+    private val kmsClient: KmsClient
+) {
     private val logger = Logger.tag("KeyService")
-    private val kmsClient = KmsService.getKmsClient()
-    private val accountQueries = Persistence.accountQueries
-    private val keyQueries = Persistence.keyQueries
+    private val jwkQueries = Persistence.jwkQueries
 
-    fun create(accountId: Int): JwkAdminDTO {
-        logger.info("Creating new key for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOne()
+    fun createKey(account: Account): JwkAdminDTO {
+        logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
         val jwk = kmsClient.generateKeyPair()
         logger.debug("Generated key pair with KID: ${jwk.kid}")
 
-        keyQueries.create(
+        jwkQueries.create(
             account_id = account.id,
             kid = jwk.kid,
             key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
@@ -37,28 +37,23 @@ class KeyService {
         return jwk
     }
 
-    fun getKeys(accountId: Int): Array<JwkAdminDTO> {
-        logger.debug("Retrieving keys for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found with ID: $accountId")
-            }
+    fun getKeys(account: Account): Array<JwkAdminDTO> {
+        logger.debug("Retrieving keys for account: ${account.username}")
 
-        val keys = keyQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
-        logger.debug("Found ${keys.size} keys for account ID: $accountId")
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
 
-    fun revokeKey(accountId: Int, keyId: Int, reason: String?): JwkAdminDTO {
-        logger.info("Attempting to revoke key ID: $keyId for account ID: $accountId")
-        val account = accountQueries.findById(accountId).executeAsOne()
+    fun revokeKey(account: Account, keyId: Int, reason: String?): JwkAdminDTO {
+        logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        var key = keyQueries.findById(keyId).executeAsOne()
+        var key = jwkQueries.findById(keyId).executeAsOne()
         logger.debug("Found key with ID: $keyId")
 
         if (key.account_id != account.id) {
-            logger.error("Key ID: $keyId does not belong to account ID: $accountId")
+            logger.error("Key ID: $keyId does not belong to account: ${account.username}")
             throw NotFoundException(Constants.KEY_NOT_FOUND)
         }
 
@@ -67,19 +62,19 @@ class KeyService {
             throw IllegalStateException(Constants.KEY_ALREADY_REVOKED)
         }
 
-        keyQueries.revoke(reason, keyId)
+        jwkQueries.revoke(reason, keyId)
         logger.debug("Revoked key ID: $keyId with reason: ${reason ?: "no reason provided"}")
 
-        key = keyQueries.findById(keyId).executeAsOne()
+        key = jwkQueries.findById(keyId).executeAsOne()
         logger.info("Successfully revoked key ID: $keyId")
 
         return key.toJwkAdminDTO()
     }
 
-    private fun getFederationHistoricalKeys(accountId: Int): Array<HistoricalKey> {
-        logger.debug("Retrieving federation historical keys for account ID: $accountId")
-        val keys = keyQueries.findByAccountId(accountId).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
-        logger.debug("Found ${keys.size} keys for account ID: $accountId")
+    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
+        logger.debug("Retrieving federation historical keys for account: ${account.username}")
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
 
         return keys.map {
             it.toHistoricalKey()
@@ -87,15 +82,15 @@ class KeyService {
     }
 
     fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String {
-        val iss = accountService.getAccountIdentifier(account.username)
+        val iss = accountService.getAccountIdentifierByAccount(account)
 
         val historicalKeysJwkObject = FederationHistoricalKeysResponse(
             iss = iss,
             iat = (System.currentTimeMillis() / 1000).toInt(),
-            propertyKeys = getFederationHistoricalKeys(account.id)
+            propertyKeys = getFederationHistoricalKeys(account)
         )
 
-        val keys = getKeys(account.id)
+        val keys = getKeys(account)
 
         if (keys.isEmpty()) {
             logger.error("No keys found for account: ${account.username}")

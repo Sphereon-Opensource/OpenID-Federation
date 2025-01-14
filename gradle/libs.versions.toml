@@ -36,14 +36,14 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-material = { group = "com.google.android.material", name = "material", version.ref = "androidx-material" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization"}
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-core-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-js", version.ref = "kotlinxCoroutines" }
 
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test-js", version.ref = "kotlinxCoroutines" }
-kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging"}
+kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-core-jvm = { module = "io.ktor:ktor-client-core-jvm", version.ref = "ktor" }
 ktor-client-core-js = { module = "io.ktor:ktor-client-core-js", version.ref = "ktor" }
@@ -65,9 +65,9 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
 postgres = { module = "org.postgresql:postgresql" }
-springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers"}
-testcontainer-postgres = { group = "org.testcontainers", name = "postgresql"}
-testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter"}
+springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
+testcontainer-postgres = { group = "org.testcontainers", name = "postgresql" }
+testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }

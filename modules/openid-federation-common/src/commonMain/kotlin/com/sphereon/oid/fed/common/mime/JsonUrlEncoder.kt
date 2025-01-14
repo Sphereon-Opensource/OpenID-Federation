@@ -108,6 +108,7 @@ fun urlDecodeValue(input: String): String {
  *
  * @return Decoded String
  */
+@OptIn(ExperimentalJsExport::class)
 fun String.fromUrlEncodedValue(): String {
     return urlDecodeValue(this)
 }

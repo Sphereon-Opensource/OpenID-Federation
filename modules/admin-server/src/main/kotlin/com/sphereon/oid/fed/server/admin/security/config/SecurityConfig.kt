@@ -1,5 +1,6 @@
-package com.sphereon.oid.fed.server.admin.config
+package com.sphereon.oid.fed.server.admin.security.config
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -12,8 +13,21 @@ import org.springframework.security.web.SecurityFilterChain
 @Configuration
 @EnableWebSecurity
 class SecurityConfig {
+    @Value("\${app.dev-mode:false}")
+    private var devMode: Boolean = false
+
     @Bean
-    fun filterChain(http: HttpSecurity, httpSecurity: HttpSecurity): SecurityFilterChain {
+    fun filterChain(http: HttpSecurity): SecurityFilterChain {
+        if (devMode) {
+            return http
+                .authorizeHttpRequests { auth ->
+                    auth.anyRequest().permitAll()
+                }
+                .csrf { it.disable() }
+                .oauth2ResourceServer { it.disable() }
+                .build()
+        }
+
         http {
             authorizeRequests {
                 authorize("/status", permitAll)
@@ -23,7 +37,6 @@ class SecurityConfig {
                 jwt {
                     jwtAuthenticationConverter = jwtAuthenticationConverter()
                 }
-
             }
             csrf { disable() }
         }

@@ -1,109 +1,155 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWTHeader
+import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.extensions.toJwk
-import com.sphereon.oid.fed.services.extensions.toTrustMark
+import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.services.mappers.toJwk
+import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class EntityConfigurationStatementService {
+class EntityConfigurationStatementService(
+    private val accountService: AccountService,
+    private val keyService: KeyService,
+    private val kmsClient: KmsClient
+) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
-    private val accountService = AccountService()
-    private val keyService = KeyService()
-    private val kmsClient = KmsService.getKmsClient()
 
-    fun findByUsername(accountUsername: String): EntityConfigurationStatement {
-        logger.info("Finding entity configuration for username: $accountUsername")
-        val account = Persistence.accountQueries.findByUsername(accountUsername).executeAsOneOrNull()
-            ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
-                logger.error("Account not found for username: $accountUsername")
-            }
+    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementDTO {
+        logger.info("Building entity configuration for account: ${account.username}")
 
-        logger.debug("Found account with ID: ${account.id}")
-        val identifier = accountService.getAccountIdentifier(account.username)
-        val keys = keyService.getKeys(account.id)
-        logger.debug("Retrieved ${keys.size} keys for account")
-        val hasSubordinates = Persistence.subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
-        val issuedTrustMarks = Persistence.trustMarkQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
-        val authorityHints =
-            Persistence.authorityHintQueries.findByAccountId(account.id).executeAsList().map { it.identifier }
-                .toTypedArray()
-        val crits = Persistence.critQueries.findByAccountId(account.id).executeAsList().map { it.claim }.toTypedArray()
-        val metadata = Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id).executeAsList()
-        val trustMarkTypes =
-            Persistence.trustMarkTypeQueries.findByAccountId(account.id).executeAsList()
-        val receivedTrustMarks =
-            Persistence.receivedTrustMarkQueries.findByAccountId(account.id).executeAsList()
+        val identifier = accountService.getAccountIdentifierByAccount(account)
+        val keys = keyService.getKeys(account)
 
-        val entityConfigurationStatement = EntityConfigurationStatementObjectBuilder()
+        val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys)
+
+        addOptionalMetadata(account, entityConfigBuilder, identifier)
+        addAuthorityHints(account, entityConfigBuilder)
+        addCustomMetadata(account, entityConfigBuilder)
+        addCrits(account, entityConfigBuilder)
+        addTrustMarkIssuers(account, entityConfigBuilder)
+        addReceivedTrustMarks(account, entityConfigBuilder)
+
+        logger.info("Successfully built entity configuration statement for account: ${account.username}")
+        return entityConfigBuilder.build()
+    }
+
+    private fun createBaseEntityConfigurationStatement(
+        identifier: String,
+        keys: Array<JwkAdminDTO>
+    ): EntityConfigurationStatementObjectBuilder {
+        return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
             .jwks(keys.map { it.toJwk() }.toMutableList())
+    }
+
+    private fun addOptionalMetadata(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder,
+        identifier: String
+    ) {
+        val hasSubordinates = Persistence.subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
+        val issuedTrustMarks = Persistence.trustMarkQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
 
         if (hasSubordinates || issuedTrustMarks) {
             val federationEntityMetadata = FederationEntityMetadataObjectBuilder()
                 .identifier(identifier)
                 .build()
 
-            entityConfigurationStatement.metadata(
+            builder.metadata(
                 Pair(
                     "federation_entity",
                     Json.encodeToJsonElement(FederationEntityMetadata.serializer(), federationEntityMetadata).jsonObject
                 )
             )
         }
-
-        authorityHints.forEach {
-            entityConfigurationStatement.authorityHint(it)
-        }
-
-        metadata.forEach {
-            entityConfigurationStatement.metadata(
-                Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject)
-            )
-        }
-
-        crits.forEach {
-            entityConfigurationStatement.crit(it)
-        }
-
-        trustMarkTypes.forEach { trustMarkType ->
-
-            val trustMarkIssuers =
-                Persistence.trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkType.id).executeAsList()
-
-            entityConfigurationStatement.trustMarkIssuer(
-                trustMarkType.identifier,
-                trustMarkIssuers.map { it.issuer_identifier }
-            )
-        }
-
-        receivedTrustMarks.forEach { receivedTrustMark ->
-            entityConfigurationStatement.trustMark(receivedTrustMark.toTrustMark())
-        }
-
-        logger.info("Successfully built entity configuration statement for username: $accountUsername")
-        return entityConfigurationStatement.build()
     }
 
-    fun publishByUsername(accountUsername: String, dryRun: Boolean? = false): String {
-        logger.info("Publishing entity configuration for username: $accountUsername (dryRun: $dryRun)")
-        val account = accountService.getAccountByUsername(accountUsername)
+    private fun addAuthorityHints(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder
+    ) {
+        Persistence.authorityHintQueries.findByAccountId(account.id)
+            .executeAsList()
+            .map { it.identifier }
+            .forEach { builder.authorityHint(it) }
+    }
 
-        val entityConfigurationStatement = findByUsername(accountUsername)
+    private fun addCustomMetadata(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder
+    ) {
+        Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id)
+            .executeAsList()
+            .forEach {
+                builder.metadata(
+                    Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject)
+                )
+            }
+    }
 
-        val keys = keyService.getKeys(account.id)
+    private fun addCrits(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder
+    ) {
+        Persistence.critQueries.findByAccountId(account.id)
+            .executeAsList()
+            .map { it.claim }
+            .forEach { builder.crit(it) }
+    }
+
+    private fun addTrustMarkIssuers(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder
+    ) {
+        Persistence.trustMarkTypeQueries.findByAccountId(account.id)
+            .executeAsList()
+            .forEach { trustMarkType ->
+                val trustMarkIssuers = Persistence.trustMarkIssuerQueries
+                    .findByTrustMarkTypeId(trustMarkType.id)
+                    .executeAsList()
+
+                builder.trustMarkIssuer(
+                    trustMarkType.identifier,
+                    trustMarkIssuers.map { it.issuer_identifier }
+                )
+            }
+    }
+
+    private fun addReceivedTrustMarks(
+        account: Account,
+        builder: EntityConfigurationStatementObjectBuilder
+    ) {
+        Persistence.receivedTrustMarkQueries.findByAccountId(account.id)
+            .executeAsList()
+            .forEach { receivedTrustMark ->
+                builder.trustMark(receivedTrustMark.toTrustMark())
+            }
+    }
+
+    fun findByAccount(account: Account): EntityConfigurationStatementDTO {
+        logger.info("Finding entity configuration for account: ${account.username}")
+        return getEntityConfigurationStatement(account)
+    }
+
+    fun publishByAccount(account: Account, dryRun: Boolean? = false): String {
+        logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
+
+        val entityConfigurationStatement = findByAccount(account)
+
+        val keys = keyService.getKeys(account)
 
         if (keys.isEmpty()) {
-            logger.error("No keys found for account: $accountUsername")
+            logger.error("No keys found for account: ${account.username}")
             throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
         }
 
@@ -111,7 +157,7 @@ class EntityConfigurationStatementService {
 
         val jwt = kmsClient.sign(
             payload = Json.encodeToJsonElement(
-                EntityConfigurationStatement.serializer(),
+                EntityConfigurationStatementDTO.serializer(),
                 entityConfigurationStatement
             ).jsonObject,
             header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
@@ -129,7 +175,7 @@ class EntityConfigurationStatementService {
             statement = jwt
         ).executeAsOne()
 
-        logger.info("Successfully published entity configuration statement for username: $accountUsername")
+        logger.info("Successfully published entity configuration statement for account: ${account.username}")
         return jwt
     }
 }

@@ -23,5 +23,6 @@ captures
 /.temp/
 /.run/*
 kotlin-js-store/
-.env
+.env.local
 /.docker/keycloak-dev/
+/modules/admin-server/logs/

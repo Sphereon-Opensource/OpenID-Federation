@@ -1,0 +1,3 @@
+sphereon:
+  federation:
+    root-identifier: http://localhost:8081
