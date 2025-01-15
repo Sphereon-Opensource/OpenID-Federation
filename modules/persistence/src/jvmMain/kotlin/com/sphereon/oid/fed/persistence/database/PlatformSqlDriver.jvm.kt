@@ -16,8 +16,8 @@ actual class PlatformSqlDriver {
             config.jdbcUrl = url
             config.username = username
             config.password = password
-            config.maximumPoolSize = 20
-            config.minimumIdle = 20
+            config.maximumPoolSize = 10
+            config.minimumIdle = 5
             config.connectionTimeout = 30000
             config.idleTimeout = 600000
             config.maxLifetime = 1800000
