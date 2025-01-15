@@ -26,3 +26,7 @@ kotlin-js-store/
 .env.local
 /.docker/keycloak-dev/
 /modules/admin-server/logs/
+/logs/*
+!logs/.gitkeep
+!logs/admin-server/.gitkeep
+!logs/federation-server/.gitkeep

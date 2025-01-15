@@ -1,4 +1,4 @@
-FROM openjdk:21-jdk as builder
+FROM openjdk:21-jdk AS builder
 RUN microdnf install findutils
 
 WORKDIR /app
@@ -9,10 +9,17 @@ RUN chmod +x ./gradlew
 
 RUN ./gradlew :modules:federation-server:bootJar -x test -x allTests -x jsBrowserTest
 
-FROM openjdk:21-jdk as runner
+FROM openjdk:21-jdk AS runner
+RUN microdnf install curl
 
 WORKDIR /app
 
-COPY --from=builder /app/modules/federation-server/build/libs/federation-server-0.1.2-SNAPSHOT.jar ./federation-server-0.1.2.jar
+COPY --from=builder /app/modules/federation-server/build/libs/federation-server-*.jar ./federation-server.jar
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/status || exit 1
 
-ENTRYPOINT ["java", "-jar", "federation-server-0.1.2.jar"]
+# Create non-root user
+RUN useradd -r -u 1001 -g root federation-server
+USER federation-server
+
+ENTRYPOINT ["java"]
+CMD ["-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseG1GC", "-jar", "federation-server.jar"]

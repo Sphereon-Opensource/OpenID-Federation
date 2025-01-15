@@ -58,18 +58,15 @@ kotlin {
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenKotlin") {
-            
-            pom {
-                name.set("OpenID Federation Local KMS")
-                description.set("Local Key Management System for OpenID Federation")
-                url.set("https://github.com/Sphereon-Opensource/openid-federation")
-                licenses {
-                    license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
-                    }
+    publications.withType<MavenPublication>().configureEach {
+        pom {
+            name.set("OpenID Federation Local KMS")
+            description.set("Local Key Management System for OpenID Federation")
+            url.set("https://github.com/Sphereon-Opensource/openid-federation")
+            licenses {
+                license {
+                    name.set("The Apache License, Version 2.0")
+                    url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
                 }
             }
         }
