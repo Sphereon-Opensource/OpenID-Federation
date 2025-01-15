@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.server.admin.config
 
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.logger.Logger.Severity
+import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.Scheduled
@@ -34,29 +35,41 @@ class MonitoringConfig {
         val severity =
             if (memoryUsagePercent >= memoryWarningThresholdPercent) Severity.Warn else Severity.Info
 
+        val dbMetrics = PlatformSqlDriver.Companion.getConnectionMetrics()
+
         val message = buildString {
             append("System Health: ")
             append("Uptime=${uptime.toHours()}h${uptime.toMinutesPart()}m, ")
             append("Memory=${usedMemory / 1024 / 1024}MB/${totalMemory / 1024 / 1024}MB($memoryUsagePercent%), ")
             append("Processors=${runtime.availableProcessors()}, ")
             append("Heap=${memoryMBean.heapMemoryUsage.used / 1024 / 1024}MB, ")
-            append("Threads=${threadMBean.threadCount}(Peak:${threadMBean.peakThreadCount}, Daemon:${threadMBean.daemonThreadCount})")
+            append("Threads=${threadMBean.threadCount}(Peak:${threadMBean.peakThreadCount}, Daemon:${threadMBean.daemonThreadCount}), ")
+            append("DB Connections: Active=${dbMetrics["Active Connections"] ?: "N/A"}, ")
+            append("Idle=${dbMetrics["Idle Connections"] ?: "N/A"}, ")
+            append("Total=${dbMetrics["Total Connections"] ?: "N/A"}")
+        }
+
+        val contextMap = mutableMapOf(
+            "uptime_hours" to uptime.toHours().toString(),
+            "uptime_minutes" to uptime.toMinutesPart().toString(),
+            "memory_used_mb" to (usedMemory / 1024 / 1024).toString(),
+            "memory_total_mb" to (totalMemory / 1024 / 1024).toString(),
+            "memory_usage_percent" to memoryUsagePercent.toString(),
+            "processors" to runtime.availableProcessors().toString(),
+            "heap_used_mb" to (memoryMBean.heapMemoryUsage.used / 1024 / 1024).toString(),
+            "thread_count" to threadMBean.threadCount.toString(),
+            "thread_peak" to threadMBean.peakThreadCount.toString(),
+            "thread_daemon" to threadMBean.daemonThreadCount.toString()
+        )
+
+        // Add DB metrics to context
+        dbMetrics.forEach { (key, value) ->
+            contextMap["db_${key.lowercase().replace(' ', '_')}"] = value.toString()
         }
 
         logger.info(
             message = message,
-            context = mapOf(
-                "uptime_hours" to uptime.toHours().toString(),
-                "uptime_minutes" to uptime.toMinutesPart().toString(),
-                "memory_used_mb" to (usedMemory / 1024 / 1024).toString(),
-                "memory_total_mb" to (totalMemory / 1024 / 1024).toString(),
-                "memory_usage_percent" to memoryUsagePercent.toString(),
-                "processors" to runtime.availableProcessors().toString(),
-                "heap_used_mb" to (memoryMBean.heapMemoryUsage.used / 1024 / 1024).toString(),
-                "thread_count" to threadMBean.threadCount.toString(),
-                "thread_peak" to threadMBean.peakThreadCount.toString(),
-                "thread_daemon" to threadMBean.daemonThreadCount.toString()
-            )
+            context = contextMap
         )
 
         if (severity == Severity.Warn) {
