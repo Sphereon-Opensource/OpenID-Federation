@@ -154,9 +154,11 @@ jobs:
         run: |
           mkdir -p modules/federation-server/build/libs/
           mkdir -p modules/admin-server/build/libs/
-          find . -maxdepth 1 -name "federation-server-*.jar" -exec mv {} modules/federation-server/build/libs/ \;
-          find . -maxdepth 1 -name "admin-server-*.jar" -exec mv {} modules/admin-server/build/libs/ \;
-
+          mv ./federation-server/build/libs/federation-server-*.jar modules/federation-server/build/libs/
+          mv ./admin-server/build/libs/admin-server-*.jar modules/admin-server/build/libs/
+          # Ensure artifacts are accessible
+          chmod 644 modules/federation-server/build/libs/*.jar
+          chmod 644 modules/admin-server/build/libs/*.jar
       - name: List downloaded artifacts
         run: ls -R modules/*/build/libs/
       - name: Log in to Docker Hub
