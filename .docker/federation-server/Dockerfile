@@ -2,14 +2,14 @@ FROM openjdk:21-jdk AS builder
 RUN microdnf install findutils
 
 WORKDIR /app
-
 COPY . /app
-
 RUN chmod +x ./gradlew
 
-RUN ./gradlew :modules:federation-server:bootJar -x test -x allTests -x jsBrowserTest
+RUN if [ ! -f modules/federation-server/build/libs/federation-server-*.jar ]; then \
+    ./gradlew :modules:federation-server:bootJar -x test -x allTests -x jsBrowserTest; \
+    fi
 
-FROM openjdk:21-jdk AS runner
+FROM openjdk:21-jdk
 RUN microdnf install curl
 
 WORKDIR /app
@@ -23,3 +23,5 @@ USER federation-server
 
 ENTRYPOINT ["java"]
 CMD ["-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseG1GC", "-jar", "federation-server.jar"]
+
+WORKDIR /app

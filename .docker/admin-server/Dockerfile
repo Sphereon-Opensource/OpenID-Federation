@@ -2,14 +2,14 @@ FROM openjdk:21-jdk AS builder
 RUN microdnf install findutils
 
 WORKDIR /app
-
 COPY . /app
-
 RUN chmod +x ./gradlew
 
-RUN ./gradlew :modules:admin-server:bootJar -x test -x allTests -x jsBrowserTest
+RUN if [ ! -f modules/admin-server/build/libs/admin-server-*.jar ]; then \
+    ./gradlew :modules:admin-server:bootJar -x test -x allTests -x jsBrowserTest; \
+    fi
 
-FROM openjdk:21-jdk AS runner
+FROM openjdk:21-jdk
 RUN microdnf install curl
 
 WORKDIR /app
