@@ -107,7 +107,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker-publish:
-    needs: [gradle, auto-tag]
+    needs: [ gradle, auto-tag ]
     if: needs.gradle.outputs.success == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -143,10 +143,15 @@ jobs:
         id: meta-federation
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server
+          images: sphereon/openid-federation-server
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ needs.auto-tag.outputs.version }}
+            type=ref,event=branch
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       - name: Build and push federation-server
         uses: docker/build-push-action@v5
@@ -167,10 +172,15 @@ jobs:
         id: meta-admin
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-admin-server
+          images: sphereon/openid-federation-admin-server
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=${{ needs.auto-tag.outputs.version }}
+            type=ref,event=branch
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
       - name: Build and push admin-server
         uses: docker/build-push-action@v5
