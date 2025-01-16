@@ -137,7 +137,9 @@ jobs:
         with:
           images: sphereon/openid-federation-server
           tags: |
-            type=semver,value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{major}},value=${{ steps.get_version_info.outputs.new_version }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push federation-server
@@ -157,9 +159,10 @@ jobs:
         with:
           images: sphereon/openid-federation-admin-server
           tags: |
-            type=semver,value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=semver,pattern={{major}},value=${{ steps.get_version_info.outputs.new_version }}
             type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push admin-server
         uses: docker/build-push-action@v5
         with:
