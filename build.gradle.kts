@@ -1,5 +1,59 @@
 import java.io.ByteArrayOutputStream
 
+tasks.register("installGitHooks", Copy::class) {
+    group = "git hooks"
+    description = "Installs git hooks from .githooks directory"
+
+    val sourceDir = file(".githooks")
+    val targetDir = file(".git/hooks")
+
+    from(sourceDir) {
+        include("**/*")
+    }
+    into(targetDir)
+    fileMode = 0b111101101 // 755 in octal: rwxr-xr-x
+
+    inputs.dir(sourceDir)
+    outputs.dir(targetDir)
+
+    doFirst {
+        sourceDir.mkdirs()
+        targetDir.mkdirs()
+
+        val preCommitFile = sourceDir.resolve("pre-commit")
+        if (!preCommitFile.exists()) {
+            throw GradleException("pre-commit hook file not found in .githooks directory")
+        }
+
+        println("Installing Git hooks...")
+    }
+
+    outputs.upToDateWhen {
+        val preCommitSource = sourceDir.resolve("pre-commit")
+        val preCommitTarget = targetDir.resolve("pre-commit")
+
+        if (!preCommitTarget.exists()) {
+            return@upToDateWhen false
+        }
+
+        val isUpToDate = preCommitSource.lastModified() <= preCommitTarget.lastModified() &&
+                preCommitSource.length() == preCommitTarget.length()
+
+        isUpToDate
+    }
+}
+
+tasks.matching { it.name == "build" }.configureEach {
+    dependsOn("installGitHooks")
+}
+
+gradle.projectsEvaluated {
+    tasks.named("prepareKotlinBuildScriptModel").configure {
+        dependsOn("installGitHooks")
+    }
+}
+
+
 plugins {
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
@@ -39,7 +93,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.3.0-SNAPSHOT"
+    version = "0.3.2-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     // Common repository configuration for all projects

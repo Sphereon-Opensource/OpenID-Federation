@@ -23,5 +23,3 @@ USER federation-server
 
 ENTRYPOINT ["java"]
 CMD ["-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseG1GC", "-jar", "federation-server.jar"]
-
-WORKDIR /app

@@ -143,16 +143,22 @@ jobs:
           name: build-artifacts
           path: ./
 
-      - name: Create directory structure
+      - name: Debug downloaded files
+        run: |
+          echo "Current directory contents:"
+          ls -la
+          echo "Find all jar files:"
+          find . -name "*.jar"
+
+      - name: Create directory structure and move artifacts
         run: |
           mkdir -p modules/federation-server/build/libs/
           mkdir -p modules/admin-server/build/libs/
-          mv federation-server-*.jar modules/federation-server/build/libs/
-          mv admin-server-*.jar modules/admin-server/build/libs/
+          find . -maxdepth 1 -name "federation-server-*.jar" -exec mv {} modules/federation-server/build/libs/ \;
+          find . -maxdepth 1 -name "admin-server-*.jar" -exec mv {} modules/admin-server/build/libs/ \;
 
       - name: List downloaded artifacts
         run: ls -R modules/*/build/libs/
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
