@@ -8,7 +8,6 @@
 
 <div align="center">
 
-[![Snyk Security](https://snyk.io/test/github/Sphereon-Opensource/OpenID-Federation/badge.svg)](https://snyk.io/test/github/Sphereon-Opensource/OpenID-Federation)
 [![Docker Pulls](https://img.shields.io/docker/pulls/sphereon/openid-federation-server.svg)](https://hub.docker.com/r/sphereon/openid-federation-server)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
