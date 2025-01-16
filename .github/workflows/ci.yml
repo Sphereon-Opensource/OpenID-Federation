@@ -137,10 +137,11 @@ jobs:
         with:
           images: sphereon/openid-federation-server
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version_info.outputs.new_version }}
-            type=semver,pattern={{major}},value=${{ steps.get_version_info.outputs.new_version }}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+\.\d+\.\d+)$,group=1,value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+\.\d+)\.\d+,group=1,value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+)\.\d+\.\d+,group=1,value=${{ steps.get_version_info.outputs.new_version }}
 
       - name: Build and push federation-server
         uses: docker/build-push-action@v5
@@ -159,10 +160,11 @@ jobs:
         with:
           images: sphereon/openid-federation-admin-server
           tags: |
-            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version_info.outputs.new_version }}
-            type=semver,pattern={{major}},value=${{ steps.get_version_info.outputs.new_version }}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+\.\d+\.\d+)$,group=1,value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+\.\d+)\.\d+,group=1,value=${{ steps.get_version_info.outputs.new_version }}
+            type=match,pattern=v(\d+)\.\d+\.\d+,group=1,value=${{ steps.get_version_info.outputs.new_version }}
       - name: Build and push admin-server
         uses: docker/build-push-action@v5
         with:
