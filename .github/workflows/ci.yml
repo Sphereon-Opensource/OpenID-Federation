@@ -10,8 +10,6 @@ jobs:
       success: ${{ steps.build.outcome == 'success' }}
     strategy:
       matrix:
-        # Removed windows, because build failing with docker network. "bridge" network driver is not supported for Windows containers
-        # os: [ ubuntu-latest, windows-latest ]
         os: [ ubuntu-latest ]
     runs-on: ${{ matrix.os }}
     steps:
@@ -56,15 +54,15 @@ jobs:
           path: |
             modules/federation-server/build/libs/federation-server-*.jar
             modules/admin-server/build/libs/admin-server-*.jar
-  auto-tag:
+  docker-publish:
     needs: gradle
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version_info.outputs.new_version }}
     if: github.event_name == 'repository_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'push' && needs.gradle.outputs.success == 'true')
+    timeout-minutes: 20
     permissions:
       contents: write
       actions: write
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -84,58 +82,30 @@ jobs:
           else
             BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           fi
-          if [[ $BRANCH_NAME == "develop" ]]; then
-            PREFIX="dev"
-          elif [[ $BRANCH_NAME == "main" ]]; then
-            PREFIX="main"
-          elif [[ $BRANCH_NAME == feature/* ]]; then
-            PREFIX="feat"
-          elif [[ $BRANCH_NAME == hotfix/* ]]; then
-            PREFIX="fix"
-          elif [[ $BRANCH_NAME == release/* ]]; then
-            PREFIX="rel"
-          else
-            PREFIX="build"
-          fi
           GRADLE_VERSION=$(grep 'version = ' build.gradle.kts | sed 's/.*version = "\(.*\)".*/\1/')
           GRADLE_VERSION=${GRADLE_VERSION%-SNAPSHOT}
           COMMIT_SHA=$(git rev-parse --short HEAD)
           PR_NUMBER=${{ github.event.pull_request.number }}
-          if [[ -n $PR_NUMBER ]]; then
-            NEW_VERSION="v${GRADLE_VERSION}-${PREFIX}.pr${PR_NUMBER}.${COMMIT_SHA}"
+          
+          if [[ $BRANCH_NAME == "main" ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}"
+          elif [[ $BRANCH_NAME == "develop" ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}-beta.${COMMIT_SHA}"
+          elif [[ $BRANCH_NAME == release/* ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}-rc.${COMMIT_SHA}"
           else
-            NEW_VERSION="v${GRADLE_VERSION}-${PREFIX}.${COMMIT_SHA}"
+            SAFE_BRANCH=$(echo "${BRANCH_NAME}" | sed 's/[^a-zA-Z0-9]/-/g')
+            if [[ -n $PR_NUMBER ]]; then
+              NEW_VERSION="v${GRADLE_VERSION}-alpha.pr${PR_NUMBER}.${COMMIT_SHA}"
+            else
+              NEW_VERSION="v${GRADLE_VERSION}-alpha.${SAFE_BRANCH}.${COMMIT_SHA}"
+            fi
           fi
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           git tag -a ${NEW_VERSION} -m "Release ${NEW_VERSION}"
           git push origin ${NEW_VERSION}
-
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  docker-publish:
-    needs: [ gradle, auto-tag ]
-    if: needs.gradle.outputs.success == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Debug Event
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Ref type: ${{ github.ref_type }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "Base ref: ${{ github.base_ref }}"
-          echo "Head ref: ${{ github.head_ref }}"
-          echo "Workflow ref: ${{ github.workflow_ref }}"
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -143,24 +113,15 @@ jobs:
           name: build-artifacts
           path: ./
 
-      - name: Debug downloaded files
-        run: |
-          echo "Current directory contents:"
-          ls -la
-          echo "Find all jar files:"
-          find . -name "*.jar"
-
       - name: Create directory structure and move artifacts
         run: |
           mkdir -p modules/federation-server/build/libs/
           mkdir -p modules/admin-server/build/libs/
           mv ./federation-server/build/libs/federation-server-*.jar modules/federation-server/build/libs/
           mv ./admin-server/build/libs/admin-server-*.jar modules/admin-server/build/libs/
-          # Ensure artifacts are accessible
           chmod 644 modules/federation-server/build/libs/*.jar
           chmod 644 modules/admin-server/build/libs/*.jar
-      - name: List downloaded artifacts
-        run: ls -R modules/*/build/libs/
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -169,19 +130,15 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Extract metadata (federation-server)
         id: meta-federation
         uses: docker/metadata-action@v5
         with:
           images: sphereon/openid-federation-server
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ needs.auto-tag.outputs.version }}
-            type=ref,event=branch
-            type=sha,format=short
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=${{ steps.get_version_info.outputs.new_version }}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push federation-server
         uses: docker/build-push-action@v5
@@ -194,23 +151,14 @@ jobs:
           cache-from: |
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server:latest
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest
-          cache-to: |
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server:latest,mode=max
-            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest,mode=max
-
       - name: Extract metadata (admin-server)
         id: meta-admin
         uses: docker/metadata-action@v5
         with:
           images: sphereon/openid-federation-admin-server
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=${{ needs.auto-tag.outputs.version }}
-            type=ref,event=branch
-            type=sha,format=short
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=${{ steps.get_version_info.outputs.new_version }}
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push admin-server
         uses: docker/build-push-action@v5
