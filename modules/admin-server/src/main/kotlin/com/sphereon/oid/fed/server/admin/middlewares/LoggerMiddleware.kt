@@ -44,7 +44,7 @@ class LoggerMiddleware : OncePerRequestFilter() {
     }
 
     private fun getOperationName(request: HttpServletRequest): String {
-        val baseResource = request.requestURI.split("/")[1].capitalize()
+        val baseResource = request.requestURI.split("/")[1]
         return when (request.method.uppercase()) {
             "GET" -> "$baseResource Retrieval"
             "POST" -> "$baseResource Creation"

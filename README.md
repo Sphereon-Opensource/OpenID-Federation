@@ -3,7 +3,15 @@
   <a href="https://www.sphereon.com"><img src="https://sphereon.com/content/themes/sphereon/assets/img/logo.svg" alt="Sphereon" width="400"></a>
   <br>OpenID Federation Monorepo
   <br>
+  <br>
 </h1>
+
+<div align="center">
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/sphereon/openid-federation-server.svg)](https://hub.docker.com/r/sphereon/openid-federation-server)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+</div>
 
 # Background
 
@@ -255,7 +263,8 @@ To create a new tenant account, follow these steps:
    }
    ```
 
-Note: All subsequent requests will use the `X-Account-Username` header to specify the account context. If not provided, it defaults to the root account.
+Note: All subsequent requests will use the `X-Account-Username` header to specify the account context. If not provided,
+it defaults to the root account.
 
 ## Step 5: Delete a Tenant Account
 
@@ -267,6 +276,7 @@ To delete a tenant account, follow these steps:
    DELETE http://localhost:8081/accounts
    X-Account-Username: {username} # root account cannot be deleted
    ```
+
 ## Step 6: Create and Manage Keys
 
 ### Create a New Key Pair
@@ -346,6 +356,7 @@ To assign metadata to your entity, follow these steps:
    DELETE http://localhost:8081/metadata/{id}
    X-Account-Username: {username}  # Optional, defaults to root
    ```
+
 ---
 
 ## Step 8: Create and Manage Subordinates
@@ -384,6 +395,7 @@ To assign metadata to your entity, follow these steps:
    DELETE http://localhost:8081/subordinates/{id}
    X-Account-Username: {username}  # Optional, defaults to root
    ```
+
 ---
 
 ## Step 9: Manage Subordinate Metadata
@@ -423,7 +435,9 @@ To assign metadata to your entity, follow these steps:
    DELETE http://localhost:8081/subordinates/{subordinateId}/metadata/{id}
    X-Account-Username: {username}  # Optional, defaults to root
    ```
+
 ---
+
 ## Step 10: Manage Subordinate JWKS
 
 ### Add a JWKS for a Subordinate
@@ -464,6 +478,7 @@ To assign metadata to your entity, follow these steps:
    ```
 
 ---
+
 ## Step 11: Get Subordinate Statement Object
 
 1. Send a `GET` request to retrieve the statement for a subordinate:
@@ -514,13 +529,15 @@ To assign metadata to your entity, follow these steps:
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making changes:
+2. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
+   changes:
 
    ```json
    {
        "dryRun": true
    }
    ```
+
 # Trust Marks
 
 ## Trust Mark Workflow
@@ -624,10 +641,11 @@ GET http://localhost:8080/trust-mark-issuer/trust-mark-status
     "sub": "https://example.com/holder"
 }
 ```
+
 # API Reference
 
 For the complete API documentation, please
-visit [the API Reference](https://github.com/Sphereon-Opensource/OpenID-Federation/)
+visit [the API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAPI)
 
 # License
 

@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
 class Application(private val logService: LogService) {
     @PostConstruct
     fun configureLogger() {
-        val logDir = File("logs").apply { mkdirs() }
+        val logDir = File("/tmp/logs").apply { mkdirs() }
         val logFile =
             File(logDir, "federation-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))}.log")
 
