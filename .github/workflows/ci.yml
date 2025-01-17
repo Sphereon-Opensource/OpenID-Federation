@@ -1,27 +1,175 @@
 name: Run CI
+
 on:
   push:
   workflow_dispatch:
 
 jobs:
   gradle:
+    outputs:
+      success: ${{ steps.build.outcome == 'success' }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: adopt-hotspot
-          java-version: 17
+          distribution: temurin
+          java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for Gradlew (Linux/Mac)
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
 
-      - name: Execute Gradle build
-        run: ./gradlew build
+      - name: Execute build
+        id: build
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
+          DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
+          DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
+          LOCAL_KMS_DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
+          LOCAL_KMS_DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
+          LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          KMS_PROVIDER: local
+        run: |
+          ./gradlew build
+          ./gradlew :modules:openapi:jsPublicPackageJson
+          ./gradlew :modules:openid-federation-common:jsPublicPackageJson
+          ./gradlew publishJsPackageToNpmjsRegistry
+          ./gradlew publishAllPublicationsToSphereon-opensourceRepository
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            modules/federation-server/build/libs/federation-server-*.jar
+            modules/admin-server/build/libs/admin-server-*.jar
+  docker-publish:
+    needs: gradle
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && (github.event_name == 'repository_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || (github.event_name == 'push' && needs.gradle.outputs.success == 'true'))
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version info
+        id: get_version_info
+        run: |
+          git config --local user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git config --local user.name "${GITHUB_ACTOR}"
+          EVENT_NAME="${{ github.event_name }}"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          fi
+          GRADLE_VERSION=$(grep 'version = ' build.gradle.kts | sed 's/.*version = "\(.*\)".*/\1/')
+          GRADLE_VERSION=${GRADLE_VERSION%-SNAPSHOT}
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          
+          if [[ $BRANCH_NAME == "main" ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}"
+          elif [[ $BRANCH_NAME == "develop" ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}-beta.${COMMIT_SHA}"
+          elif [[ $BRANCH_NAME == release/* ]]; then
+            NEW_VERSION="v${GRADLE_VERSION}-rc.${COMMIT_SHA}"
+          else
+            SAFE_BRANCH=$(echo "${BRANCH_NAME}" | sed 's/[^a-zA-Z0-9]/-/g')
+            if [[ -n $PR_NUMBER ]]; then
+              NEW_VERSION="v${GRADLE_VERSION}-alpha.pr${PR_NUMBER}.${COMMIT_SHA}"
+            else
+              NEW_VERSION="v${GRADLE_VERSION}-alpha.${SAFE_BRANCH}.${COMMIT_SHA}"
+            fi
+          fi
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          git tag -a ${NEW_VERSION} -m "Release ${NEW_VERSION}"
+          git push origin ${NEW_VERSION}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./
+
+      - name: Create directory structure and move artifacts
+        run: |
+          mkdir -p modules/federation-server/build/libs/
+          mkdir -p modules/admin-server/build/libs/
+          mv ./federation-server/build/libs/federation-server-*.jar modules/federation-server/build/libs/
+          mv ./admin-server/build/libs/admin-server-*.jar modules/admin-server/build/libs/
+          chmod 644 modules/federation-server/build/libs/*.jar
+          chmod 644 modules/admin-server/build/libs/*.jar
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (federation-server)
+        id: meta-federation
+        uses: docker/metadata-action@v5
+        with:
+          images: sphereon/openid-federation-server
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+
+      - name: Build and push federation-server
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./.docker/federation-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-federation.outputs.tags }}
+          labels: ${{ steps.meta-federation.outputs.labels }}
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server:latest
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest
+      - name: Extract metadata (admin-server)
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: sphereon/openid-federation-admin-server
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
+      - name: Build and push admin-server
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./.docker/admin-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-admin-server:latest
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest
+          cache-to: |
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-admin-server:latest,mode=max
+            type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest,mode=max

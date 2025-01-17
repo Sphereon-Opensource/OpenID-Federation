@@ -1,0 +1,39 @@
+create:
+INSERT INTO Subordinate (
+    account_id,
+    identifier
+) VALUES (?, ?)
+RETURNING *;
+
+delete:
+UPDATE Subordinate
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findByAccountId:
+SELECT *
+FROM Subordinate
+WHERE account_id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndSubordinateId:
+SELECT *
+FROM Subordinate
+WHERE account_id = ?
+AND id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndIdentifier:
+SELECT *
+FROM Subordinate
+WHERE account_id = ?
+AND identifier = ?
+AND deleted_at IS NULL;
+
+findById:
+SELECT *
+FROM Subordinate
+WHERE id = ?
+AND deleted_at IS NULL;

@@ -1,0 +1,12 @@
+CREATE TABLE Jwk (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    kid VARCHAR(255) UNIQUE,
+    key TEXT NOT NULL,
+    revoked_at TIMESTAMP,
+    revoked_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_AccountJwk FOREIGN KEY (account_id) REFERENCES Account (id)
+);
+
+CREATE INDEX jwk_account_id_index ON Jwk (account_id);

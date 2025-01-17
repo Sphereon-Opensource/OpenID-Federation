@@ -1,0 +1,14 @@
+create:
+INSERT INTO EntityConfigurationStatement (
+    account_id,
+    statement,
+    expires_at
+) VALUES (?, ?, ?)
+RETURNING *;
+
+findLatestByAccountId:
+SELECT *
+FROM EntityConfigurationStatement
+WHERE account_id = ?
+ORDER BY id DESC
+LIMIT 1;

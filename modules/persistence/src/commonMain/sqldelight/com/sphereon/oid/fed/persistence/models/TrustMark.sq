@@ -1,0 +1,67 @@
+findByAccountId:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND deleted_at IS NULL;
+
+create:
+INSERT INTO TrustMark (
+    account_id,
+    trust_mark_type_identifier,
+    sub,
+    trust_mark_value,
+    iat,
+    exp
+) VALUES (?, ?, ?, ?, ?, ?) RETURNING *;
+
+delete:
+UPDATE TrustMark
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findByAccountIdAndId:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndAndSubAndTrustMarkTypeIdentifier:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+AND trust_mark_type_identifier = ?
+AND sub = ?
+AND deleted_at IS NULL
+AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
+
+findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub:
+SELECT sub
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND sub = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
+GROUP BY sub;
+
+findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier:
+SELECT sub
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
+
+getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_type_identifier = ?
+  AND sub = ?
+  AND deleted_at IS NULL
+  AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
+ORDER BY iat DESC
+LIMIT 1;

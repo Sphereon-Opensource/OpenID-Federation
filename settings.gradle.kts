@@ -1,4 +1,4 @@
-rootProject.name = "kotlin-mp-genesis"
+rootProject.name = "openid-federation"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -10,9 +10,19 @@ pluginManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+        }
     }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
 dependencyResolutionManagement {
@@ -24,8 +34,23 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
+        mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+        }
+        maven {
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+        }
     }
 }
 
 include(":modules:openid-federation-common")
+include(":modules:openid-federation-client")
+include(":modules:admin-server")
+include(":modules:federation-server")
+include(":modules:openapi")
+include(":modules:persistence")
+include(":modules:services")
+include(":modules:local-kms")
+include(":modules:logger")

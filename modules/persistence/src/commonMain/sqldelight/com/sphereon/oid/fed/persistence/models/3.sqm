@@ -1,0 +1,18 @@
+CREATE TABLE Subordinate (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    identifier TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_ParentSubordinate FOREIGN KEY (account_id) REFERENCES Account (id)
+);
+
+CREATE INDEX subordinate_account_id_index
+ON Subordinate (account_id);
+
+CREATE UNIQUE INDEX unique_account_id_identifier_active
+ON Subordinate (account_id, identifier)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX subordinate_account_id_deleted_at_index
+ON Subordinate (account_id, deleted_at);

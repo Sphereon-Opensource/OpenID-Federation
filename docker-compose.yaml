@@ -1,0 +1,189 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: openid-federation-datastore
+    user: postgres
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: ${DATASOURCE_USER}
+      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
+      POSTGRES_DB: ${DATASOURCE_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - openid_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d ${DATASOURCE_DB} -U ${DATASOURCE_USER}" ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  local-kms-db:
+    image: postgres:latest
+    container_name: openid-federation-local-kms-datastore
+    user: postgres
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: ${LOCAL_KMS_DATASOURCE_USER}
+      POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
+      POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - local_kms_data:/var/lib/postgresql/data
+    networks:
+      - openid_network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d ${LOCAL_KMS_DATASOURCE_DB} -U ${LOCAL_KMS_DATASOURCE_USER}" ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+  federation-server:
+    image: sphereon/openid-federation-server:latest
+    build:
+      context: .
+      dockerfile: ./.docker/federation-server/Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    ports:
+      - "8080:8080"
+    environment:
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USER: ${DATASOURCE_USER}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      APP_KEY: ${APP_KEY}
+      KMS_PROVIDER: ${KMS_PROVIDER}
+      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
+      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
+      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
+      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
+      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+    depends_on:
+      db:
+        condition: service_healthy
+      local-kms-db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./logs/federation-server:/tmp/logs
+    user: root
+    entrypoint: >
+      /bin/sh -c "java -jar /app/federation-server.jar"
+    networks:
+      - openid_network
+  admin-server:
+    image: sphereon/openid-federation-admin-server:latest
+    build:
+      context: .
+      dockerfile: ./.docker/admin-server/Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    ports:
+      - "8081:8080"
+    environment:
+      DATASOURCE_URL: ${DATASOURCE_URL}
+      DATASOURCE_USER: ${DATASOURCE_USER}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+      APP_KEY: ${APP_KEY}
+      KMS_PROVIDER: ${KMS_PROVIDER}
+      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
+      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
+      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
+      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
+      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+      OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
+    depends_on:
+      db:
+        condition: service_healthy
+      local-kms-db:
+        condition: service_healthy
+    networks:
+      - openid_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - ./logs/admin-server:/tmp/logs
+    user: root
+    entrypoint: >
+      /bin/sh -c "java -jar /app/admin-server.jar"
+  keycloak:
+    image: keycloak/keycloak:26.0
+    user: keycloak
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - start-dev
+      - --import-realm
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    ports:
+      - "8082:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
+      - KC_HEALTH_ENABLED=true
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC
+    volumes:
+      - ./.docker/keycloak:/opt/keycloak/data/import/
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - openid_network
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost:9000\r\nConnection: close\r\n\r\n' >&3;cat <&3 | grep -q '\"status\": \"UP\"' && exit 0 || exit 1" ]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+
+networks:
+  openid_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  local_kms_data:
+  logs:

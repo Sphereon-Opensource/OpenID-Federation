@@ -1,0 +1,19 @@
+CREATE TABLE SubordinateMetadata (
+    id SERIAL PRIMARY KEY,
+    account_id INT NOT NULL,
+    subordinate_id INT NOT NULL,
+    key TEXT NOT NULL,
+    metadata TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_ParentEntityConfigurationMetadata FOREIGN KEY (account_id) REFERENCES Account (id)
+);
+
+CREATE INDEX subordinate_metadata_account_id_index ON SubordinateMetadata (account_id);
+CREATE INDEX subordinate_metadata_subordinate_id_index ON SubordinateMetadata (subordinate_id);
+CREATE INDEX subordinate_metadata_account_id_subordinate_id_deleted_at_index
+ON SubordinateMetadata (account_id, subordinate_id, deleted_at);
+
+CREATE UNIQUE INDEX unique_account_subordinate_key_active
+ON SubordinateMetadata (account_id, subordinate_id, key)
+WHERE deleted_at IS NULL;

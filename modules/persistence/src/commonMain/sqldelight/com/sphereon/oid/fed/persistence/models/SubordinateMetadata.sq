@@ -1,0 +1,38 @@
+create:
+INSERT INTO SubordinateMetadata (
+    account_id,
+    subordinate_id,
+    key,
+    metadata
+) VALUES (?, ?, ?, ?)
+RETURNING *;
+
+delete:
+UPDATE SubordinateMetadata
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findByAccountIdAndSubordinateId:
+SELECT *
+FROM SubordinateMetadata
+WHERE account_id = ?
+AND subordinate_id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndSubordinateIdAndKey:
+SELECT *
+FROM SubordinateMetadata
+WHERE account_id = ?
+AND subordinate_id = ?
+AND key = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndSubordinateIdAndId:
+SELECT *
+FROM SubordinateMetadata
+WHERE account_id = ?
+AND subordinate_id = ?
+AND id = ?
+AND deleted_at IS NULL;
