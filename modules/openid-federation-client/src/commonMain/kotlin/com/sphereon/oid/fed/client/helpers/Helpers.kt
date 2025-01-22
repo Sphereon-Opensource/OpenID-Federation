@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.client.helpers
 
 import com.sphereon.oid.fed.openapi.models.Jwk
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
@@ -29,4 +30,8 @@ fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
         }
     }
     return false
+}
+
+fun getCurrentEpochTimeSeconds(): Long {
+    return Clock.System.now().epochSeconds
 }

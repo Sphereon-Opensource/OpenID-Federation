@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.client.trustchain
+package com.sphereon.oid.fed.client.trustChain
 
 val mockResponses = arrayOf(
     arrayOf(

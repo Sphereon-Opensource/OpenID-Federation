@@ -66,10 +66,6 @@ class Logger internal constructor(private val tag: String = "") {
 
     private val logger = KermitLogger.withTag(tag)
 
-    init {
-        KermitLogger.setLogWriters(platformLogWriter(SimpleFormatter))
-    }
-
     private fun shouldLog(severity: Severity): Boolean =
         severity.ordinal >= minSeverityLevel.ordinal
 
@@ -160,17 +156,33 @@ class Logger internal constructor(private val tag: String = "") {
     companion object {
         private var minSeverityLevel: Severity = Severity.Info
         private val registeredLogWriters = mutableListOf<LogWriter>()
+        private val loggerInstances = mutableMapOf<String, Logger>()
+
+        init {
+            KermitLogger.setLogWriters(platformLogWriter(SimpleFormatter))
+        }
 
         fun configure(minSeverity: Severity) {
+            println("Configuring logger with severity: ${minSeverity.name}")
             minSeverityLevel = minSeverity
             KermitLogger.setMinSeverity(minSeverity.toKermitSeverity())
+            KermitLogger.setLogWriters(platformLogWriter(SimpleFormatter))
+
+            val existingTags = loggerInstances.keys.toList()
+            loggerInstances.clear()
+            existingTags.forEach { tag ->
+                loggerInstances[tag] = Logger(tag)
+            }
+            println("Logger configuration complete. Current severity: ${minSeverityLevel.name}")
         }
 
         fun addLogWriter(logWriter: LogWriter) {
             registeredLogWriters.add(logWriter)
         }
 
-        fun tag(tag: String = "") = Logger(tag)
+        fun tag(tag: String = ""): Logger {
+            return loggerInstances.getOrPut(tag) { Logger(tag) }
+        }
 
         fun close() {
             registeredLogWriters.forEach { writer ->
@@ -181,6 +193,7 @@ class Logger internal constructor(private val tag: String = "") {
                 }
             }
             registeredLogWriters.clear()
+            loggerInstances.clear()
         }
     }
 }

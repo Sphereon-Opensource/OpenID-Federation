@@ -1,10 +1,14 @@
 import com.sphereon.oid.fed.client.crypto.CryptoServiceAdapter
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.crypto.cryptoService
+import com.sphereon.oid.fed.client.entityConfigurationStatement.EntityConfigurationStatement
 import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
 import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
-import com.sphereon.oid.fed.client.trustchain.TrustChain
+import com.sphereon.oid.fed.client.trustChain.TrustChain
+import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
+import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +41,7 @@ class FederationClientJS(
         if (fetchServiceCallback != null) FetchServiceAdapter(fetchServiceCallback) else fetchService()
     private val cryptoService: ICryptoService =
         if (cryptoServiceCallback != null) CryptoServiceAdapter(cryptoServiceCallback) else cryptoService()
+    private val entityService = EntityConfigurationStatement(fetchService, cryptoService)
 
     private val trustChainService: TrustChain = TrustChain(fetchService, cryptoService)
 
@@ -50,6 +55,30 @@ class FederationClientJS(
     ): Promise<TrustChainResolveResponse> {
         return scope.promise {
             trustChainService.resolve(entityIdentifier, trustAnchors, maxDepth)
+        }
+    }
+
+    @JsName("verifyTrustChain")
+    fun verifyTrustChainJS(
+        trustChain: Array<String>,
+        trustAnchor: String?,
+        currentTime: Int? = null
+    ): Promise<VerifyTrustChainResponse> {
+        return scope.promise {
+            trustChainService.verify(
+                trustChain.toList(),
+                trustAnchor,
+                currentTime?.toLong()
+            )
+        }
+    }
+
+    @JsName("entityConfigurationStatementGet")
+    fun entityConfigurationStatementGet(
+        entityIdentifier: String
+    ): Promise<EntityConfigurationStatementDTO> {
+        return scope.promise {
+            entityService.getEntityConfigurationStatement(entityIdentifier)
         }
     }
 }
