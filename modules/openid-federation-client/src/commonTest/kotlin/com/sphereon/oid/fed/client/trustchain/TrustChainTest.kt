@@ -1,10 +1,12 @@
-package com.sphereon.oid.fed.client.trustchain
+package com.sphereon.oid.fed.client.trustChain
 
-import FederationClient
+import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.test.runTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -22,17 +24,21 @@ object CryptoService : ICryptoService {
 }
 
 class TrustChainTest {
+    private val client = FederationClient(FetchService, CryptoService)
+
+    @BeforeTest
+    fun setupTests() = runTest {
+        Logger.configure(Logger.Severity.Debug)
+    }
+
     @Test
     fun buildTrustChain() = runTest {
-        val client = FederationClient(FetchService, CryptoService)
-
-        val response = client.resolveTrustChain(
+        val response = client.trustChainResolve(
             "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
         assertFalse(response.error)
-
         assertEquals(4, response.trustChain?.size)
 
         assertEquals(
@@ -59,7 +65,7 @@ class TrustChainTest {
                 ?.get(1)
         )
 
-        val response2 = client.resolveTrustChain(
+        val response2 = client.trustChainResolve(
             "https://spid.wbss.it/Spid/oidc/sa",
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
@@ -82,5 +88,81 @@ class TrustChainTest {
             mockResponses.find { it[0] == "https://oidc.registry.servizicie.interno.gov.it/.well-known/openid-federation" }
                 ?.get(1)
         )
+    }
+
+    @Test
+    fun verifyTrustChain() = runTest {
+        // First get a valid trust chain
+        val resolveResponse = client.trustChainResolve(
+            "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
+            arrayOf("https://oidc.registry.servizicie.interno.gov.it")
+        )
+
+        assertFalse(resolveResponse.error)
+
+        // Now verify the trust chain
+        val verifyResponse = client.trustChainVerify(
+            resolveResponse.trustChain!!,
+            "https://oidc.registry.servizicie.interno.gov.it",
+            1728346615
+        )
+
+        println(verifyResponse)
+        assertEquals(true, verifyResponse.isValid)
+        assertEquals(null, verifyResponse.error)
+
+        // Test with empty chain
+        val emptyChainResponse = client.trustChainVerify(
+            emptyList(),
+            "https://oidc.registry.servizicie.interno.gov.it",
+            1728346615
+        )
+
+        assertEquals(false, emptyChainResponse.isValid)
+        assertEquals("Trust chain must contain at least 3 elements", emptyChainResponse.error)
+
+        // Test with wrong trust anchor
+        val wrongAnchorResponse = client.trustChainVerify(
+            resolveResponse.trustChain ?: emptyList(),
+            "https://wrong.trust.anchor",
+            1728346615
+        )
+
+        assertEquals(false, wrongAnchorResponse.isValid)
+        assertEquals("Last statement issuer does not match trust anchor", wrongAnchorResponse.error)
+    }
+
+    @Test
+    fun verifyTrustChainExpiration() = runTest {
+        // First get a valid trust chain
+        val resolveResponse = client.trustChainResolve(
+            "https://spid.wbss.it/Spid/oidc/rp/ipasv_lt",
+            arrayOf("https://oidc.registry.servizicie.interno.gov.it")
+        )
+
+        assertFalse(resolveResponse.error)
+        val chain = resolveResponse.trustChain!!
+
+        // Test with current time after expiration
+        val futureTime = 1928346615L // Way in the future, after exp
+        val expiredResponse = client.trustChainVerify(
+            chain,
+            "https://oidc.registry.servizicie.interno.gov.it",
+            futureTime
+        )
+
+        assertEquals(false, expiredResponse.isValid)
+        assertEquals("Statement at position 0 has expired", expiredResponse.error)
+
+        // Test with current time before issuance
+        val pastTime = 1528346615L // Way in the past, before iat
+        val notYetValidResponse = client.trustChainVerify(
+            chain,
+            "https://oidc.registry.servizicie.interno.gov.it",
+            pastTime
+        )
+
+        assertEquals(false, notYetValidResponse.isValid)
+        assertEquals("Statement at position 0 has invalid iat", notYetValidResponse.error)
     }
 }
