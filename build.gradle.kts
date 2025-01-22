@@ -53,7 +53,6 @@ gradle.projectsEvaluated {
     }
 }
 
-
 plugins {
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
@@ -93,7 +92,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.5.0-SNAPSHOT"
+    version = "0.5.1-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     // Common repository configuration for all projects
