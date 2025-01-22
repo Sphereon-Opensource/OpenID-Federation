@@ -14,6 +14,10 @@ fun SubordinateJwk.toJwk(): Jwk {
     return json.decodeFromString<Jwk>(this.key)
 }
 
+fun SubordinateJwk.toSubordinateJwkDto(): SubordinateJwkDto {
+    return json.decodeFromString<SubordinateJwkDto>(this.key)
+}
+
 fun SubordinateJwk.toSubordinateAdminJwkDTO(): SubordinateJwkDto {
     return SubordinateJwkDto(
         id = this.id,
