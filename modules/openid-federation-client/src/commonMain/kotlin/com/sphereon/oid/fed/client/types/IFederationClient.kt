@@ -1,7 +1,5 @@
 package com.sphereon.oid.fed.client.types
 
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.IFetchService
 import kotlin.js.JsExport
 
 /**

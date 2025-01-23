@@ -1,8 +1,9 @@
-package com.sphereon.oid.fed.client.trustChain
+package com.sphereon.oid.fed.client.services.trustChainService
 
 import com.sphereon.oid.fed.client.FederationClient
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.IFetchService
+import com.sphereon.oid.fed.client.mockResponses.mockResponses
+import com.sphereon.oid.fed.client.types.ICryptoService
+import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.test.runTest
@@ -23,7 +24,7 @@ object CryptoService : ICryptoService {
     }
 }
 
-class TrustChainTest {
+class TrustChainServiceTest {
     private val client = FederationClient(FetchService, CryptoService)
 
     @BeforeTest

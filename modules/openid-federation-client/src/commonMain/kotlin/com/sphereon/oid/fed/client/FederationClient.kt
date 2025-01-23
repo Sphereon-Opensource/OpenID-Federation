@@ -1,14 +1,10 @@
 package com.sphereon.oid.fed.client
 
-import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.entityConfigurationStatement.EntityConfigurationStatement
-import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
-import com.sphereon.oid.fed.client.trustChain.TrustChain
-import com.sphereon.oid.fed.client.types.IFederationClient
-import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
-import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
+import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
+import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
+import com.sphereon.oid.fed.client.types.*
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.JWT
 import kotlin.js.JsExport
@@ -25,9 +21,9 @@ class FederationClient(
         fetchServiceCallback ?: fetchService()
     private val cryptoService: ICryptoService = cryptoServiceCallback ?: cryptoService()
 
-    private val trustChainService: TrustChain = TrustChain(fetchService, cryptoService)
-    private val entity: EntityConfigurationStatement =
-        EntityConfigurationStatement(fetchService, cryptoService)
+    private val trustChainService: TrustChainService = TrustChainService(fetchService, cryptoService)
+    private val entity: EntityConfigurationStatementService =
+        EntityConfigurationStatementService(fetchService, cryptoService)
 
     /**
      * Builds a trust chain for the given entity identifier using the provided trust anchors.

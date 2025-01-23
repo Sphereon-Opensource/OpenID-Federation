@@ -1,9 +1,5 @@
 package com.sphereon.oid.fed.client.fetch
 
-interface IFetchService {
-    suspend fun fetchStatement(
-        endpoint: String
-    ): String
-}
+import com.sphereon.oid.fed.client.types.IFetchService
 
 expect fun fetchService(): IFetchService

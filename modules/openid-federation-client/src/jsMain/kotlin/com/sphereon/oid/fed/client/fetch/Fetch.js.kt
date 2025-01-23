@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.client.fetch
 
 import IFetchServiceJS
+import com.sphereon.oid.fed.client.types.IFetchService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.js.*

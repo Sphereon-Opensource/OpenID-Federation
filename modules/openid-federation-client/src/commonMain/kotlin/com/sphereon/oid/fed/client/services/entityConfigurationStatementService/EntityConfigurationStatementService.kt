@@ -1,18 +1,18 @@
-package com.sphereon.oid.fed.client.entityConfigurationStatement
+package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
-import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.helpers.findKeyInJwks
 import com.sphereon.oid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.oid.fed.client.types.ICryptoService
+import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.JWT
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
-class EntityConfigurationStatement(
+class EntityConfigurationStatementService(
     private val fetchService: IFetchService,
     private val cryptoService: ICryptoService = cryptoService()
 ) {
@@ -24,10 +24,10 @@ class EntityConfigurationStatement(
      * @throws IllegalStateException if the JWT is invalid or signature verification fails
      */
     suspend fun getEntityConfigurationStatement(entityIdentifier: String): EntityConfigurationStatementDTO {
-        EntityConfigurationStatementConst.LOG.debug("Resolving entity configuration for: $entityIdentifier")
+        EntityConfigurationStatemenServiceConst.LOG.debug("Resolving entity configuration for: $entityIdentifier")
 
         val endpoint = getEntityConfigurationEndpoint(entityIdentifier)
-        EntityConfigurationStatementConst.LOG.debug("Fetching from endpoint: $endpoint")
+        EntityConfigurationStatemenServiceConst.LOG.debug("Fetching from endpoint: $endpoint")
 
         val jwt = fetchService.fetchStatement(endpoint)
         val decodedJwt = decodeJWTComponents(jwt)

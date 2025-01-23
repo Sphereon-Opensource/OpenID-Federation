@@ -1,8 +1,8 @@
-package com.sphereon.oid.fed.client.entityConfigurationStatement
+package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
-import com.sphereon.oid.fed.client.crypto.ICryptoService
-import com.sphereon.oid.fed.client.fetch.IFetchService
-import com.sphereon.oid.fed.client.trustChain.mockResponses
+import com.sphereon.oid.fed.client.mockResponses.mockResponses
+import com.sphereon.oid.fed.client.types.ICryptoService
+import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.test.runTest
@@ -21,8 +21,9 @@ object TestCryptoService : ICryptoService {
     }
 }
 
-class EntityConfigurationStatementTest {
-    private val entityConfigurationStatement = EntityConfigurationStatement(TestFetchService, TestCryptoService)
+class EntityConfigurationStatementServiceTest {
+    private val entityConfigurationStatementService =
+        EntityConfigurationStatementService(TestFetchService, TestCryptoService)
 
     @BeforeTest
     fun setupTests() = runTest {
@@ -31,7 +32,7 @@ class EntityConfigurationStatementTest {
 
     @Test
     fun testGetEntityConfigurationStatement() = runTest {
-        val result = entityConfigurationStatement.getEntityConfigurationStatement(
+        val result = entityConfigurationStatementService.getEntityConfigurationStatement(
             "https://oidc.registry.servizicie.interno.gov.it"
         )
 
@@ -42,7 +43,7 @@ class EntityConfigurationStatementTest {
 
     @Test
     fun testGetFederationEndpoints() = runTest {
-        val config = entityConfigurationStatement.getEntityConfigurationStatement(
+        val config = entityConfigurationStatementService.getEntityConfigurationStatement(
             "https://oidc.registry.servizicie.interno.gov.it"
         )
 
@@ -60,7 +61,7 @@ class EntityConfigurationStatementTest {
     @Test
     fun testGetEntityConfigurationStatementInvalidUrl() = runTest {
         assertFailsWith<IllegalStateException> {
-            entityConfigurationStatement.getEntityConfigurationStatement("invalid-url")
+            entityConfigurationStatementService.getEntityConfigurationStatement("invalid-url")
         }
     }
 }

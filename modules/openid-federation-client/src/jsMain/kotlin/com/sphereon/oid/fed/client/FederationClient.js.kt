@@ -1,11 +1,11 @@
 import com.sphereon.oid.fed.client.crypto.CryptoServiceAdapter
-import com.sphereon.oid.fed.client.crypto.ICryptoService
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.entityConfigurationStatement.EntityConfigurationStatement
 import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
-import com.sphereon.oid.fed.client.fetch.IFetchService
 import com.sphereon.oid.fed.client.fetch.fetchService
-import com.sphereon.oid.fed.client.trustChain.TrustChain
+import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
+import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
+import com.sphereon.oid.fed.client.types.ICryptoService
+import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
@@ -41,9 +41,9 @@ class FederationClientJS(
         if (fetchServiceCallback != null) FetchServiceAdapter(fetchServiceCallback) else fetchService()
     private val cryptoService: ICryptoService =
         if (cryptoServiceCallback != null) CryptoServiceAdapter(cryptoServiceCallback) else cryptoService()
-    private val entityService = EntityConfigurationStatement(fetchService, cryptoService)
+    private val entityService = EntityConfigurationStatementService(fetchService, cryptoService)
 
-    private val trustChainService: TrustChain = TrustChain(fetchService, cryptoService)
+    private val trustChainService: TrustChainService = TrustChainService(fetchService, cryptoService)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
