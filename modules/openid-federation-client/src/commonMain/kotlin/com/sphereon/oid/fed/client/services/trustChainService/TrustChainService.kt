@@ -16,6 +16,8 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.collections.set
 
+var logger = TrustChainServiceConst.LOG
+
 /*
  * TrustChain is a class that implements the logic to resolve and validate a trust chain.
  */
@@ -42,73 +44,73 @@ class TrustChainService
     ): VerifyTrustChainResponse {
         val timeToUse = currentTime ?: getCurrentEpochTimeSeconds()
         if (chain.size < 3) {
-            TrustChainServiceConst.LOG.error("Trust chain too short: ${chain.size} statements (minimum 3 required)")
+            logger.error("Trust chain too short: ${chain.size} statements (minimum 3 required)")
             return VerifyTrustChainResponse(false, "Trust chain must contain at least 3 elements")
         }
 
         try {
             // Decode all statements in the chain
-            TrustChainServiceConst.LOG.debug("Decoding all statements in the chain")
+            logger.debug("Decoding all statements in the chain")
             val statements = chain.map { decodeJWTComponents(it) }
-            TrustChainServiceConst.LOG.debug("Current time for validation: $currentTime")
+            logger.debug("Current time for validation: $currentTime")
 
             // Verify each statement in the chain
             for (j in statements.indices) {
                 val statement = statements[j]
-                TrustChainServiceConst.LOG.debug("Verifying statement at position $j")
-                TrustChainServiceConst.LOG.debug("Statement $j - Issuer: ${statement.payload["iss"]?.jsonPrimitive?.content}")
-                TrustChainServiceConst.LOG.debug("Statement $j - Subject: ${statement.payload["sub"]?.jsonPrimitive?.content}")
+                logger.debug("Verifying statement at position $j")
+                logger.debug("Statement $j - Issuer: ${statement.payload["iss"]?.jsonPrimitive?.content}")
+                logger.debug("Statement $j - Subject: ${statement.payload["sub"]?.jsonPrimitive?.content}")
 
                 // 1. Verify required claims (sub, iss, exp, iat, jwks)
-                TrustChainServiceConst.LOG.debug("Checking required claims for statement $j")
+                logger.debug("Checking required claims for statement $j")
                 if (!hasRequiredClaims(statement)) {
-                    TrustChainServiceConst.LOG.error("Statement at position $j missing required claims")
+                    logger.error("Statement at position $j missing required claims")
                     return VerifyTrustChainResponse(false, "Statement at position $j missing required claims")
                 }
 
                 // 2. Verify iat is in the past
                 val iat = statement.payload["iat"]?.jsonPrimitive?.content?.toLongOrNull()
-                TrustChainServiceConst.LOG.debug("Statement $j - Issued at (iat): $iat")
+                logger.debug("Statement $j - Issued at (iat): $iat")
                 if (iat == null || iat > timeToUse) {
-                    TrustChainServiceConst.LOG.error("Statement $j has invalid iat: $iat")
+                    logger.error("Statement $j has invalid iat: $iat")
                     return VerifyTrustChainResponse(false, "Statement at position $j has invalid iat")
                 }
 
                 // 3. Verify exp is in the future
                 val exp = statement.payload["exp"]?.jsonPrimitive?.content?.toLongOrNull()
-                TrustChainServiceConst.LOG.debug("Statement $j - Expires at (exp): $exp")
+                logger.debug("Statement $j - Expires at (exp): $exp")
                 if (exp == null || exp <= timeToUse) {
-                    TrustChainServiceConst.LOG.error("Statement $j has expired: $exp")
+                    logger.error("Statement $j has expired: $exp")
                     return VerifyTrustChainResponse(false, "Statement at position $j has expired")
                 }
 
                 // 4. For ES[0], verify iss == sub
                 if (j == 0) {
-                    TrustChainServiceConst.LOG.debug("Verifying first statement (ES[0]) specific rules")
+                    logger.debug("Verifying first statement (ES[0]) specific rules")
                     val iss = statement.payload["iss"]?.jsonPrimitive?.content
                     val sub = statement.payload["sub"]?.jsonPrimitive?.content
-                    TrustChainServiceConst.LOG.debug("ES[0] - Comparing iss ($iss) with sub ($sub)")
+                    logger.debug("ES[0] - Comparing iss ($iss) with sub ($sub)")
                     if (iss != sub) {
-                        TrustChainServiceConst.LOG.error("First statement iss ($iss) does not match sub ($sub)")
+                        logger.error("First statement iss ($iss) does not match sub ($sub)")
                         return VerifyTrustChainResponse(false, "First statement must have iss == sub")
                     }
 
                     // 5. For ES[0], verify signature with its own jwks
-                    TrustChainServiceConst.LOG.debug("Verifying ES[0] signature with its own JWKS")
+                    logger.debug("Verifying ES[0] signature with its own JWKS")
                     if (!verifySignatureWithOwnJwks(chain[j])) {
-                        TrustChainServiceConst.LOG.error("First statement signature verification failed")
+                        logger.error("First statement signature verification failed")
                         return VerifyTrustChainResponse(false, "First statement signature verification failed")
                     }
                 }
 
                 // 6. For each j = 0,...,i-1, verify ES[j]["iss"] == ES[j+1]["sub"]
                 if (j < statements.size - 1) {
-                    TrustChainServiceConst.LOG.debug("Verifying chain continuity between statements $j and ${j + 1}")
+                    logger.debug("Verifying chain continuity between statements $j and ${j + 1}")
                     val currentIss = statement.payload["iss"]?.jsonPrimitive?.content
                     val nextSub = statements[j + 1].payload["sub"]?.jsonPrimitive?.content
-                    TrustChainServiceConst.LOG.debug("Comparing current iss ($currentIss) with next sub ($nextSub)")
+                    logger.debug("Comparing current iss ($currentIss) with next sub ($nextSub)")
                     if (currentIss != nextSub) {
-                        TrustChainServiceConst.LOG.error("Chain broken: statement $j iss ($currentIss) does not match statement ${j + 1} sub ($nextSub)")
+                        logger.error("Chain broken: statement $j iss ($currentIss) does not match statement ${j + 1} sub ($nextSub)")
                         return VerifyTrustChainResponse(
                             false,
                             "Statement chain broken between positions $j and ${j + 1}"
@@ -116,9 +118,9 @@ class TrustChainService
                     }
 
                     // 7. Verify signature with next statement's jwks
-                    TrustChainServiceConst.LOG.debug("Verifying statement $j signature with statement ${j + 1}'s JWKS")
+                    logger.debug("Verifying statement $j signature with statement ${j + 1}'s JWKS")
                     if (!verifySignatureWithNextJwks(chain[j], chain[j + 1])) {
-                        TrustChainServiceConst.LOG.error("Signature verification failed between statements $j and ${j + 1}")
+                        logger.error("Signature verification failed between statements $j and ${j + 1}")
                         return VerifyTrustChainResponse(
                             false,
                             "Signature verification failed for statement $j with next statement's keys"
@@ -128,27 +130,27 @@ class TrustChainService
 
                 // 8. For last statement (Trust Anchor), verify issuer matches trust anchor
                 if (j == statements.size - 1) {
-                    TrustChainServiceConst.LOG.debug("Verifying trust anchor (last statement)")
+                    logger.debug("Verifying trust anchor (last statement)")
                     val lastIss = statement.payload["iss"]?.jsonPrimitive?.content
 
                     if (trustAnchor != null && lastIss != trustAnchor) {
-                        TrustChainServiceConst.LOG.error("Last statement issuer ($lastIss) does not match trust anchor ($trustAnchor)")
+                        logger.error("Last statement issuer ($lastIss) does not match trust anchor ($trustAnchor)")
                         return VerifyTrustChainResponse(false, "Last statement issuer does not match trust anchor")
                     }
 
                     // 9. Verify last statement signature with its own jwks
-                    TrustChainServiceConst.LOG.debug("Verifying trust anchor signature with its own JWKS")
+                    logger.debug("Verifying trust anchor signature with its own JWKS")
                     if (!verifySignatureWithOwnJwks(chain[j])) {
-                        TrustChainServiceConst.LOG.error("Trust anchor signature verification failed")
+                        logger.error("Trust anchor signature verification failed")
                         return VerifyTrustChainResponse(false, "Trust anchor signature verification failed")
                     }
                 }
             }
 
-            TrustChainServiceConst.LOG.debug("Trust chain verification completed successfully")
+            logger.debug("Trust chain verification completed successfully")
             return VerifyTrustChainResponse(true)
         } catch (e: Exception) {
-            TrustChainServiceConst.LOG.error("Chain verification failed with exception", e)
+            logger.error("Chain verification failed with exception", e)
             return VerifyTrustChainResponse(false, "Chain verification failed: ${e.message}")
         }
     }
@@ -169,23 +171,23 @@ class TrustChainService
         trustAnchors: Array<String>,
         maxDepth: Int
     ): TrustChainResolveResponse {
-        TrustChainServiceConst.LOG.info("Resolving trust chain for entity: $entityIdentifier with max depth: $maxDepth")
+        logger.info("Resolving trust chain for entity: $entityIdentifier with max depth: $maxDepth")
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
         return try {
             val trustChain = buildTrustChain(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
             if (trustChain != null) {
-                TrustChainServiceConst.LOG.info(
+                logger.info(
                     "Successfully resolved trust chain for entity: $entityIdentifier",
                     context = mapOf("trustChain" to trustChain.toString())
                 )
                 TrustChainResolveResponse(trustChain, false, null)
             } else {
-                TrustChainServiceConst.LOG.error("Could not establish trust chain for entity: $entityIdentifier")
+                logger.error("Could not establish trust chain for entity: $entityIdentifier")
                 TrustChainResolveResponse(null, true, "A Trust chain could not be established")
             }
         } catch (e: Throwable) {
-            TrustChainServiceConst.LOG.error("Trust chain resolution failed for entity: $entityIdentifier", e)
+            logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
             TrustChainResolveResponse(null, true, e.message)
         }
     }
@@ -198,57 +200,57 @@ class TrustChainService
         depth: Int,
         maxDepth: Int
     ): MutableList<String>? {
-        TrustChainServiceConst.LOG.debug("Building trust chain for entity: $entityIdentifier at depth: $depth")
+        logger.debug("Building trust chain for entity: $entityIdentifier at depth: $depth")
         if (depth == maxDepth) {
-            TrustChainServiceConst.LOG.debug("Maximum depth reached: $maxDepth")
+            logger.debug("Maximum depth reached: $maxDepth")
             return null
         }
 
         val entityConfigurationEndpoint = getEntityConfigurationEndpoint(entityIdentifier)
-        TrustChainServiceConst.LOG.debug("Fetching entity configuration from: $entityConfigurationEndpoint")
+        logger.debug("Fetching entity configuration from: $entityConfigurationEndpoint")
         val entityConfigurationJwt = this.fetchService.fetchStatement(entityConfigurationEndpoint)
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
-        TrustChainServiceConst.LOG.debug("Decoded entity configuration JWT header kid: ${decodedEntityConfiguration.header.kid}")
+        logger.debug("Decoded entity configuration JWT header kid: ${decodedEntityConfiguration.header.kid}")
 
         val key = findKeyInJwks(
             decodedEntityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: run {
-                TrustChainServiceConst.LOG.debug("No JWKS found in entity configuration payload")
+                logger.debug("No JWKS found in entity configuration payload")
                 return null
             },
             decodedEntityConfiguration.header.kid
         ) ?: run {
-            TrustChainServiceConst.LOG.debug("Could not find key with kid: ${decodedEntityConfiguration.header.kid} in JWKS")
+            logger.debug("Could not find key with kid: ${decodedEntityConfiguration.header.kid} in JWKS")
             return null
         }
 
         if (!this.cryptoService.verify(entityConfigurationJwt, key)) {
-            TrustChainServiceConst.LOG.debug("Entity configuration JWT signature verification failed")
+            logger.debug("Entity configuration JWT signature verification failed")
             return null
         }
 
         val entityStatement: EntityConfigurationStatementDTO =
             mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatementDTO::class) ?: run {
-                TrustChainServiceConst.LOG.debug("Could not map JWT to EntityConfigurationStatementDTO")
+                logger.debug("Could not map JWT to EntityConfigurationStatementDTO")
                 return null
             }
 
         if (chain.isEmpty()) {
-            TrustChainServiceConst.LOG.debug("Adding entity configuration JWT to empty chain")
+            logger.debug("Adding entity configuration JWT to empty chain")
             chain.add(entityConfigurationJwt)
         }
 
         val authorityHints = entityStatement.authorityHints ?: run {
-            TrustChainServiceConst.LOG.debug("No authority hints found in entity statement")
+            logger.debug("No authority hints found in entity statement")
             return null
         }
 
-        TrustChainServiceConst.LOG.debug("Processing ${authorityHints.size} authority hints")
+        logger.debug("Processing ${authorityHints.size} authority hints")
         val reorderedAuthorityHints = authorityHints.sortedBy { hint ->
             if (trustAnchors.contains(hint)) 0 else 1
         }
 
         for (authority in reorderedAuthorityHints) {
-            TrustChainServiceConst.LOG.debug("Processing authority: $authority")
+            logger.debug("Processing authority: $authority")
             val result = processAuthority(
                 authority,
                 entityIdentifier,
@@ -261,13 +263,13 @@ class TrustChainService
             )
 
             if (result != null) {
-                TrustChainServiceConst.LOG.debug("Successfully built trust chain through authority: $authority")
+                logger.debug("Successfully built trust chain through authority: $authority")
                 return result
             }
-            TrustChainServiceConst.LOG.debug("Failed to build trust chain through authority: $authority, trying next authority")
+            logger.debug("Failed to build trust chain through authority: $authority, trying next authority")
         }
 
-        TrustChainServiceConst.LOG.debug("Could not build trust chain through any authority")
+        logger.debug("Could not build trust chain through any authority")
         return null
     }
 
@@ -281,21 +283,21 @@ class TrustChainService
         depth: Int,
         maxDepth: Int
     ): MutableList<String>? {
-        TrustChainServiceConst.LOG.debug("Processing authority: $authority for entity: $entityIdentifier at depth: $depth")
+        logger.debug("Processing authority: $authority for entity: $entityIdentifier at depth: $depth")
         try {
             val (authorityEntityConfigurationJwt, authorityEntityConfiguration) = fetchAndVerifyAuthorityConfiguration(
                 authority,
                 cache
             ) ?: run {
-                TrustChainServiceConst.LOG.debug("Failed to fetch and verify authority configuration for: $authority")
+                logger.debug("Failed to fetch and verify authority configuration for: $authority")
                 return null
             }
 
             val authorityEntityFetchEndpoint = getAuthorityFetchEndpoint(authorityEntityConfiguration) ?: run {
-                TrustChainServiceConst.LOG.debug("No federation fetch endpoint found in authority configuration for: $authority")
+                logger.debug("No federation fetch endpoint found in authority configuration for: $authority")
                 return null
             }
-            TrustChainServiceConst.LOG.debug("Found authority fetch endpoint: $authorityEntityFetchEndpoint")
+            logger.debug("Found authority fetch endpoint: $authorityEntityFetchEndpoint")
 
             val (subordinateStatementJwt, subordinateStatement) = fetchAndVerifySubordinateStatement(
                 authorityEntityFetchEndpoint,
@@ -303,18 +305,18 @@ class TrustChainService
                 authorityEntityConfigurationJwt,
                 lastStatementKid
             ) ?: run {
-                TrustChainServiceConst.LOG.debug("Failed to fetch and verify subordinate statement from authority: $authority")
+                logger.debug("Failed to fetch and verify subordinate statement from authority: $authority")
                 return null
             }
 
             // If authority is in trust anchors, return the completed chain
             if (trustAnchors.contains(authority)) {
-                TrustChainServiceConst.LOG.debug("Authority $authority is a trust anchor, completing chain")
+                logger.debug("Authority $authority is a trust anchor, completing chain")
                 return completeChainWithAuthority(chain, subordinateStatementJwt, authorityEntityConfigurationJwt)
             }
 
             // Recursively build trust chain if there are authority hints
-            TrustChainServiceConst.LOG.debug("Authority $authority is not a trust anchor, processing its authority hints")
+            logger.debug("Authority $authority is not a trust anchor, processing its authority hints")
             return processAuthorityHints(
                 authorityEntityConfiguration,
                 authority,
@@ -326,7 +328,7 @@ class TrustChainService
                 maxDepth
             )
         } catch (e: Exception) {
-            TrustChainServiceConst.LOG.error("Failed to process authority: $authority", e)
+            logger.error("Failed to process authority: $authority", e)
             return null
         }
     }
