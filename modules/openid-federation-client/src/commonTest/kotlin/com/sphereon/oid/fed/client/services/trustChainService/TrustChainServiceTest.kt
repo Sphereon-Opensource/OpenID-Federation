@@ -108,7 +108,6 @@ class TrustChainServiceTest {
             1728346615
         )
 
-        println(verifyResponse)
         assertEquals(true, verifyResponse.isValid)
         assertEquals(null, verifyResponse.error)
 
