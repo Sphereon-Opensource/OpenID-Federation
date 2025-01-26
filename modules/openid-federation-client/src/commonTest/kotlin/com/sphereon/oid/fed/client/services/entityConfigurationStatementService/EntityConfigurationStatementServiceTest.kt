@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
+import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.client.types.IFetchService
@@ -22,8 +23,11 @@ object TestCryptoService : ICryptoService {
 }
 
 class EntityConfigurationStatementServiceTest {
-    private val entityConfigurationStatementService =
-        EntityConfigurationStatementService(TestFetchService, TestCryptoService)
+    private val context = FederationContext(
+        fetchService = TestFetchService,
+        cryptoService = TestCryptoService
+    )
+    private val entityConfigurationStatementService = EntityConfigurationStatementService(context)
 
     @BeforeTest
     fun setupTests() = runTest {
@@ -31,8 +35,8 @@ class EntityConfigurationStatementServiceTest {
     }
 
     @Test
-    fun testGetEntityConfigurationStatement() = runTest {
-        val result = entityConfigurationStatementService.getEntityConfigurationStatement(
+    fun testFetchEntityConfigurationStatement() = runTest {
+        val result = entityConfigurationStatementService.fetchEntityConfigurationStatement(
             "https://oidc.registry.servizicie.interno.gov.it"
         )
 
@@ -43,11 +47,11 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun testGetFederationEndpoints() = runTest {
-        val config = entityConfigurationStatementService.getEntityConfigurationStatement(
+        val config = entityConfigurationStatementService.fetchEntityConfigurationStatement(
             "https://oidc.registry.servizicie.interno.gov.it"
         )
 
-        val endpoints = config.getFederationEndpoints()
+        val endpoints = entityConfigurationStatementService.getFederationEndpoints(config)
 
         assertEquals("https://oidc.registry.servizicie.interno.gov.it/fetch", endpoints.federationFetchEndpoint)
         assertEquals("https://oidc.registry.servizicie.interno.gov.it/resolve", endpoints.federationResolveEndpoint)
@@ -59,9 +63,9 @@ class EntityConfigurationStatementServiceTest {
     }
 
     @Test
-    fun testGetEntityConfigurationStatementInvalidUrl() = runTest {
+    fun testFetchEntityConfigurationStatementInvalidUrl() = runTest {
         assertFailsWith<IllegalStateException> {
-            entityConfigurationStatementService.getEntityConfigurationStatement("invalid-url")
+            entityConfigurationStatementService.fetchEntityConfigurationStatement("invalid-url")
         }
     }
 }
