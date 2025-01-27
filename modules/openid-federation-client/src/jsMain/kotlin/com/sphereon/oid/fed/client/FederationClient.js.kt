@@ -1,3 +1,4 @@
+import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.crypto.CryptoServiceAdapter
 import com.sphereon.oid.fed.client.crypto.cryptoService
@@ -9,6 +10,7 @@ import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.*
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.Jwk
+import io.ktor.client.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,9 +43,11 @@ class FederationClientJS(
     private val cryptoService: ICryptoService =
         if (cryptoServiceCallback != null) CryptoServiceAdapter(cryptoServiceCallback) else cryptoService()
 
-    private val context = FederationContext(
+    private val context = FederationContext.create(
         fetchService = fetchService,
-        cryptoService = cryptoService
+        cryptoService = cryptoService,
+        cache = InMemoryCache(),
+        httpClient = HttpClient()
     )
 
     private val entityService = EntityConfigurationStatementService(context)

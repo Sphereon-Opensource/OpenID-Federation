@@ -121,7 +121,7 @@ class TrustMarkService(
         val decodedDelegation = decodeJWTComponents(delegation)
         val delegationKey = findKeyInJwks(
             ownerJwks["keys"]?.jsonArray ?: return TrustMarkValidationResponse(false, "Invalid JWKS format"),
-            decodedDelegation.header.kid
+            decodedDelegation.header.kid, context.json
         ) ?: return TrustMarkValidationResponse(false, "Delegation signing key not found in owner's JWKS")
 
         if (!context.cryptoService.verify(delegation, delegationKey)) {

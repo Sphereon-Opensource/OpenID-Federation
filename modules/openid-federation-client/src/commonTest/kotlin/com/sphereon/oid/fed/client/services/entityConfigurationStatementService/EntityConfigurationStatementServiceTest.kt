@@ -1,13 +1,19 @@
 package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
+import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.*
+import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
+import kotlin.time.Duration.Companion.seconds
 
 object TestFetchService : IFetchService {
     override suspend fun fetchStatement(endpoint: String): String {
@@ -23,9 +29,34 @@ object TestCryptoService : ICryptoService {
 }
 
 class EntityConfigurationStatementServiceTest {
-    private val context = FederationContext(
+    private val mockEngine = MockEngine { request ->
+        val endpoint = request.url.toString()
+        val response = mockResponses.find { it[0] == endpoint }?.get(1)
+        if (response != null) {
+            respond(
+                content = response,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        } else {
+            respond(
+                content = "Not found",
+                status = HttpStatusCode.NotFound
+            )
+        }
+    }
+    private val httpClient = HttpClient(mockEngine) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5.seconds.inWholeMilliseconds
+            connectTimeoutMillis = 5.seconds.inWholeMilliseconds
+            socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+        }
+    }
+    private val context = FederationContext.create(
         fetchService = TestFetchService,
-        cryptoService = TestCryptoService
+        cryptoService = TestCryptoService,
+        cache = InMemoryCache(),
+        httpClient = httpClient
     )
     private val entityConfigurationStatementService = EntityConfigurationStatementService(context)
 

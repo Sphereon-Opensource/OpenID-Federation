@@ -15,12 +15,12 @@ fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String 
     return "${fetchEndpoint}?sub=$sub"
 }
 
-fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
+fun findKeyInJwks(keys: JsonArray, kid: String, json: Json): Jwk? {
     val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
 
     if (key == null) return null
 
-    return Json.decodeFromJsonElement(Jwk.serializer(), key)
+    return json.decodeFromJsonElement(Jwk.serializer(), key)
 }
 
 fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {

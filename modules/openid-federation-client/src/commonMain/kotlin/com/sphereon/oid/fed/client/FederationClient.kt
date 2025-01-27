@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.client
 
+import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.crypto.cryptoService
 import com.sphereon.oid.fed.client.fetch.fetchService
@@ -7,7 +8,10 @@ import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.
 import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
 import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.*
+import com.sphereon.oid.fed.httpResolver.config.DefaultHttpResolverConfig
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
+import io.ktor.client.*
+import kotlinx.serialization.json.Json
 import kotlin.js.JsExport
 
 /**
@@ -18,9 +22,13 @@ class FederationClient(
     override val fetchServiceCallback: IFetchService? = null,
     override val cryptoServiceCallback: ICryptoService? = null
 ) : IFederationClient {
-    private val context = FederationContext(
+    private val context = FederationContext.create(
+        httpClient = HttpClient(),
         fetchService = fetchServiceCallback ?: fetchService(),
-        cryptoService = cryptoServiceCallback ?: cryptoService()
+        cryptoService = cryptoServiceCallback ?: cryptoService(),
+        json = Json { ignoreUnknownKeys = true },
+        cache = InMemoryCache(),
+        httpResolverConfig = DefaultHttpResolverConfig()
     )
     private val trustChainService = TrustChainService(context)
     private val entityConfigurationService = EntityConfigurationStatementService(context)

@@ -26,16 +26,14 @@ class EntityConfigurationStatementService(
         logger.debug("Generated endpoint URL: $endpoint")
 
         // Fetch and verify the JWT is self-signed
-        val jwt = context.fetchAndVerifyJwt(endpoint)
+        val jwt = context.jwtService.fetchAndVerifyJwt(endpoint)
         val decodedJwt = decodeJWTComponents(jwt)
-        context.verifySelfSignedJwt(jwt)
+        context.jwtService.verifySelfSignedJwt(jwt)
 
         return try {
             logger.debug("Decoding JWT payload into EntityConfigurationStatementDTO")
-            val result = context.decodeJsonElement(
-                EntityConfigurationStatementDTO.serializer(),
-                decodedJwt.payload
-            )
+            val result =
+                context.json.decodeFromJsonElement(EntityConfigurationStatementDTO.serializer(), decodedJwt.payload)
             logger.info("Successfully resolved entity configuration for: $entityIdentifier")
             result
         } catch (e: Exception) {
@@ -64,7 +62,7 @@ class EntityConfigurationStatementService(
 
         return try {
             logger.debug("Decoding federation metadata into FederationEntityMetadata")
-            val result = context.decodeJsonElement(
+            val result = context.json.decodeFromJsonElement(
                 FederationEntityMetadata.serializer(),
                 federationMetadata
             )
@@ -99,7 +97,7 @@ class EntityConfigurationStatementService(
 
         logger.debug("Fetching historical keys from endpoint: $historicalKeysEndpoint")
         return try {
-            val jwt = context.fetchAndVerifyJwt(historicalKeysEndpoint)
+            val jwt = context.jwtService.fetchAndVerifyJwt(historicalKeysEndpoint)
             logger.debug("Successfully fetched historical keys JWT")
             jwt
         } catch (e: Exception) {
@@ -121,7 +119,7 @@ class EntityConfigurationStatementService(
                 throw IllegalStateException("No matching key found for kid: ${decodedJwt.header.kid}")
             }
 
-        context.verifyJwt(jwt, signingKey)
+        context.jwtService.verifyJwt(jwt, signingKey)
         return jwt
     }
 
@@ -131,7 +129,7 @@ class EntityConfigurationStatementService(
     private fun decodeHistoricalKeys(jwt: String): Array<HistoricalKey> {
         return try {
             val decodedJwt = decodeJWTComponents(jwt)
-            val historicalKeysResponse = context.decodeJsonElement(
+            val historicalKeysResponse = context.json.decodeFromJsonElement(
                 FederationHistoricalKeysResponse.serializer(),
                 decodedJwt.payload
             )
