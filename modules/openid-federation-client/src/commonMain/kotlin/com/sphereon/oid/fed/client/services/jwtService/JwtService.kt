@@ -14,10 +14,11 @@ class JwtService(private val context: FederationContext) {
     suspend fun fetchAndVerifyJwt(endpoint: String, verifyWithKey: Jwk? = null): String {
         context.logger.debug("Fetching JWT from endpoint: $endpoint")
         val jwt = context.httpResolver.get(endpoint)
-            ?: throw IllegalStateException("Failed to fetch JWT from endpoint: $endpoint")
 
         if (verifyWithKey != null) {
             verifyJwt(jwt, verifyWithKey)
+        } else {
+            verifySelfSignedJwt(jwt)
         }
 
         return jwt

@@ -13,6 +13,8 @@ repositories {
     google()
 }
 
+
+
 kotlin {
     jvm()
 
@@ -58,6 +60,7 @@ kotlin {
     }
 
     sourceSets {
+        val ktor_version: String by project
 
         all {
             languageSettings.optIn("kotlin.js.ExperimentalJsExport")

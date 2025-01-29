@@ -3,20 +3,17 @@ package com.sphereon.oid.fed.client.services.trustChainService
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.*
+import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-
-object FetchService : IFetchService {
-    override suspend fun fetchStatement(endpoint: String): String {
-        return mockResponses.find { it[0] == endpoint }?.get(1) ?: throw Exception("Not found")
-    }
-}
 
 object CryptoService : ICryptoService {
     override suspend fun verify(jwt: String, key: Jwk): Boolean {
@@ -24,8 +21,28 @@ object CryptoService : ICryptoService {
     }
 }
 
+private fun createMockHttpClient(): HttpClient {
+    return HttpClient(MockEngine) {
+        engine {
+            addHandler { request ->
+                val requestUrl = request.url.toString()
+                val mockResponse = mockResponses.find { it[0] == requestUrl }
+                    ?: error("Unhandled request: $requestUrl")
+
+                respond(
+                    content = mockResponse[1],
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json")
+                )
+            }
+        }
+        install(HttpTimeout)
+    }
+}
+
 class TrustChainServiceTest {
-    private val client = FederationClient(FetchService, CryptoService)
+    private val mockHttpClient = createMockHttpClient()
+    private val client = FederationClient(CryptoService, mockHttpClient)
 
     @BeforeTest
     fun setupTests() = runTest {

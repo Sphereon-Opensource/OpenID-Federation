@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
 import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
+import com.sphereon.oid.fed.client.mapper.InvalidJwtException
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.client.types.IFetchService
@@ -53,7 +54,6 @@ class EntityConfigurationStatementServiceTest {
         }
     }
     private val context = FederationContext.create(
-        fetchService = TestFetchService,
         cryptoService = TestCryptoService,
         cache = InMemoryCache(),
         httpClient = httpClient
@@ -95,7 +95,7 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun testFetchEntityConfigurationStatementInvalidUrl() = runTest {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidJwtException> {
             entityConfigurationStatementService.fetchEntityConfigurationStatement("invalid-url")
         }
     }

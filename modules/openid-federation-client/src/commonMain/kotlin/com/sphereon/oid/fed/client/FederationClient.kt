@@ -3,7 +3,6 @@ package com.sphereon.oid.fed.client
 import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
 import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
@@ -11,6 +10,7 @@ import com.sphereon.oid.fed.client.types.*
 import com.sphereon.oid.fed.httpResolver.config.DefaultHttpResolverConfig
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import kotlinx.serialization.json.Json
 import kotlin.js.JsExport
 
@@ -19,12 +19,13 @@ import kotlin.js.JsExport
  */
 @JsExport.Ignore
 class FederationClient(
-    override val fetchServiceCallback: IFetchService? = null,
-    override val cryptoServiceCallback: ICryptoService? = null
+    override val cryptoServiceCallback: ICryptoService? = null,
+    override val httpClient: HttpClient? = null
 ) : IFederationClient {
     private val context = FederationContext.create(
-        httpClient = HttpClient(),
-        fetchService = fetchServiceCallback ?: fetchService(),
+        httpClient = httpClient ?: HttpClient() {
+            install(HttpTimeout)
+        },
         cryptoService = cryptoServiceCallback ?: cryptoService(),
         json = Json { ignoreUnknownKeys = true },
         cache = InMemoryCache(),

@@ -2,10 +2,8 @@ package com.sphereon.oid.fed.client.context
 
 import com.sphereon.oid.fed.cache.Cache
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.services.jwtService.JwtService
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.httpResolver.HttpMetadata
 import com.sphereon.oid.fed.httpResolver.HttpResolver
 import com.sphereon.oid.fed.httpResolver.config.DefaultHttpResolverConfig
@@ -16,7 +14,6 @@ import io.ktor.client.statement.*
 import kotlinx.serialization.json.Json
 
 class FederationContext private constructor(
-    val fetchService: IFetchService,
     val cryptoService: ICryptoService,
     val json: Json,
     val logger: Logger = Logger.tag("sphereon:oidf:client:context"),
@@ -26,7 +23,6 @@ class FederationContext private constructor(
 
     companion object {
         fun create(
-            fetchService: IFetchService = fetchService(),
             cryptoService: ICryptoService = cryptoService(),
             httpClient: HttpClient,
             cache: Cache<String, HttpMetadata<String>>,
@@ -45,7 +41,6 @@ class FederationContext private constructor(
             )
 
             return FederationContext(
-                fetchService = fetchService,
                 cryptoService = cryptoService,
                 json = json,
                 httpResolver = resolver
