@@ -1,12 +1,17 @@
 package com.sphereon.oid.fed.client
 
+import com.sphereon.oid.fed.cache.InMemoryCache
+import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
+import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.*
+import com.sphereon.oid.fed.httpResolver.config.DefaultHttpResolverConfig
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
-import com.sphereon.oid.fed.openapi.models.JWT
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import kotlinx.serialization.json.Json
 import kotlin.js.JsExport
 
 /**
@@ -14,16 +19,21 @@ import kotlin.js.JsExport
  */
 @JsExport.Ignore
 class FederationClient(
-    override val fetchServiceCallback: IFetchService? = null,
-    override val cryptoServiceCallback: ICryptoService? = null
+    override val cryptoServiceCallback: ICryptoService? = null,
+    override val httpClient: HttpClient? = null
 ) : IFederationClient {
-    private val fetchService: IFetchService =
-        fetchServiceCallback ?: fetchService()
-    private val cryptoService: ICryptoService = cryptoServiceCallback ?: cryptoService()
-
-    private val trustChainService: TrustChainService = TrustChainService(fetchService, cryptoService)
-    private val entity: EntityConfigurationStatementService =
-        EntityConfigurationStatementService(fetchService, cryptoService)
+    private val context = FederationContext.create(
+        httpClient = httpClient ?: HttpClient() {
+            install(HttpTimeout)
+        },
+        cryptoService = cryptoServiceCallback ?: cryptoService(),
+        json = Json { ignoreUnknownKeys = true },
+        cache = InMemoryCache(),
+        httpResolverConfig = DefaultHttpResolverConfig()
+    )
+    private val trustChainService = TrustChainService(context)
+    private val entityConfigurationService = EntityConfigurationStatementService(context)
+    private val trustMarkService = TrustMarkService(context)
 
     /**
      * Builds a trust chain for the given entity identifier using the provided trust anchors.
@@ -63,9 +73,25 @@ class FederationClient(
      * Get an Entity Configuration Statement from an entity.
      *
      * @param entityIdentifier The entity identifier for which to get the statement.
-     * @return [JWT] ]A JWT object containing the entity configuration statement.
+     * @return EntityConfigurationStatementDTO containing the entity configuration statement.
      */
     suspend fun entityConfigurationStatementGet(entityIdentifier: String): EntityConfigurationStatementDTO {
-        return entity.getEntityConfigurationStatement(entityIdentifier)
+        return entityConfigurationService.fetchEntityConfigurationStatement(entityIdentifier)
+    }
+
+    /**
+     * Verifies a Trust Mark according to the OpenID Federation specification.
+     *
+     * @param trustMark The Trust Mark JWT string to validate
+     * @param trustAnchorConfig The Trust Anchor's Entity Configuration
+     * @param currentTime Optional timestamp for validation (defaults to current time)
+     * @return TrustMarkValidationResponse containing the validation result and any error message
+     */
+    suspend fun trustMarksVerify(
+        trustMark: String,
+        trustAnchorConfig: EntityConfigurationStatementDTO,
+        currentTime: Long? = null
+    ): TrustMarkValidationResponse {
+        return trustMarkService.validateTrustMark(trustMark, trustAnchorConfig, currentTime)
     }
 }

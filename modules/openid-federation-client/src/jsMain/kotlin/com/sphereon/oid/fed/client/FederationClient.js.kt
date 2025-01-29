@@ -1,15 +1,19 @@
+import com.sphereon.oid.fed.cache.InMemoryCache
+import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.crypto.CryptoServiceAdapter
 import com.sphereon.oid.fed.client.crypto.cryptoService
-import com.sphereon.oid.fed.client.fetch.FetchServiceAdapter
-import com.sphereon.oid.fed.client.fetch.fetchService
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
+import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
+import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.Jwk
+import io.ktor.client.*
+import io.ktor.client.engine.js.*
+import io.ktor.client.plugins.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,17 +38,22 @@ external interface IFetchServiceJS {
 @JsExport
 @JsName("FederationClient")
 class FederationClientJS(
-    fetchServiceCallback: IFetchServiceJS?,
     cryptoServiceCallback: ICryptoServiceJS?,
+    httpClient: HttpClient? = null
 ) {
-    private val fetchService: IFetchService =
-        if (fetchServiceCallback != null) FetchServiceAdapter(fetchServiceCallback) else fetchService()
     private val cryptoService: ICryptoService =
         if (cryptoServiceCallback != null) CryptoServiceAdapter(cryptoServiceCallback) else cryptoService()
-    private val entityService = EntityConfigurationStatementService(fetchService, cryptoService)
 
-    private val trustChainService: TrustChainService = TrustChainService(fetchService, cryptoService)
+    private val context = FederationContext.create(
+        cryptoService = cryptoService,
+        cache = InMemoryCache(),
+        httpClient = httpClient ?: HttpClient(Js) {
+            install(HttpTimeout)
+        })
 
+    private val entityService = EntityConfigurationStatementService(context)
+    private val trustChainService = TrustChainService(context)
+    private val trustMarkService = TrustMarkService(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @JsName("resolveTrustChain")
@@ -78,7 +87,22 @@ class FederationClientJS(
         entityIdentifier: String
     ): Promise<EntityConfigurationStatementDTO> {
         return scope.promise {
-            entityService.getEntityConfigurationStatement(entityIdentifier)
+            entityService.fetchEntityConfigurationStatement(entityIdentifier)
+        }
+    }
+
+    @JsName("verifyTrustMark")
+    fun verifyTrustMarkJS(
+        trustMark: String,
+        trustAnchorConfig: EntityConfigurationStatementDTO,
+        currentTime: Int? = null
+    ): Promise<TrustMarkValidationResponse> {
+        return scope.promise {
+            trustMarkService.validateTrustMark(
+                trustMark,
+                trustAnchorConfig,
+                currentTime?.toLong()
+            )
         }
     }
 }
