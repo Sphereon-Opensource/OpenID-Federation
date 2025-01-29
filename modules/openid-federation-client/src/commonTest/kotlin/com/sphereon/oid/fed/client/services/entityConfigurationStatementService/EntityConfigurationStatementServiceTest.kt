@@ -1,20 +1,19 @@
 package com.sphereon.oid.fed.client.services.entityConfigurationStatementService
 
+import com.sphereon.oid.fed.cache.InMemoryCache
 import com.sphereon.oid.fed.client.context.FederationContext
+import com.sphereon.oid.fed.client.mapper.InvalidJwtException
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.*
+import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
-
-object TestFetchService : IFetchService {
-    override suspend fun fetchStatement(endpoint: String): String {
-        return mockResponses.find { it[0] == endpoint }?.get(1)
-            ?: throw IllegalStateException("Invalid endpoint: $endpoint")
-    }
-}
+import kotlin.time.Duration.Companion.seconds
 
 object TestCryptoService : ICryptoService {
     override suspend fun verify(jwt: String, key: Jwk): Boolean {
@@ -23,9 +22,33 @@ object TestCryptoService : ICryptoService {
 }
 
 class EntityConfigurationStatementServiceTest {
-    private val context = FederationContext(
-        fetchService = TestFetchService,
-        cryptoService = TestCryptoService
+    private val mockEngine = MockEngine { request ->
+        val endpoint = request.url.toString()
+        val response = mockResponses.find { it[0] == endpoint }?.get(1)
+        if (response != null) {
+            respond(
+                content = response,
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        } else {
+            respond(
+                content = "Not found",
+                status = HttpStatusCode.NotFound
+            )
+        }
+    }
+    private val httpClient = HttpClient(mockEngine) {
+        install(HttpTimeout) {
+            requestTimeoutMillis = 5.seconds.inWholeMilliseconds
+            connectTimeoutMillis = 5.seconds.inWholeMilliseconds
+            socketTimeoutMillis = 5.seconds.inWholeMilliseconds
+        }
+    }
+    private val context = FederationContext.create(
+        cryptoService = TestCryptoService,
+        cache = InMemoryCache(),
+        httpClient = httpClient
     )
     private val entityConfigurationStatementService = EntityConfigurationStatementService(context)
 
@@ -64,7 +87,7 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun testFetchEntityConfigurationStatementInvalidUrl() = runTest {
-        assertFailsWith<IllegalStateException> {
+        assertFailsWith<InvalidJwtException> {
             entityConfigurationStatementService.fetchEntityConfigurationStatement("invalid-url")
         }
     }

@@ -144,18 +144,29 @@ class TrustChainService(
                         return VerifyTrustChainResponse(false, "Trust anchor signature verification failed")
                     }
 
-                    // 10. Verify kid is in trust anchor's Historical Keys
+                    // 10. First check if key is in Trust Anchor's Entity Configuration Statement
                     val trustAnchorEntityConfiguration =
                         entityConfigurationStatementService.fetchEntityConfigurationStatement(
                             statement.payload["iss"]?.jsonPrimitive?.content!!
                         )
 
-                    val historicalKeys =
-                        entityConfigurationStatementService.getHistoricalKeys(trustAnchorEntityConfiguration)
-
-                    if (historicalKeys.find { it.kid == statement.header.kid } == null) {
-                        logger.error("Trust anchor kid not found in historical keys")
-                        return VerifyTrustChainResponse(false, "Trust anchor kid not found in historical keys")
+                    // First try to find the key in the current JWKS
+                    val jwks = trustAnchorEntityConfiguration.jwks?.propertyKeys
+                    if (jwks != null && jwks.find { it.kid == statement.header.kid } != null) {
+                        logger.debug("Trust anchor key found in Entity Configuration Statement JWKS")
+                    } else {
+                        // If not found in current JWKS, check historical keys
+                        logger.debug("Key not found in current JWKS, checking historical keys")
+                        val historicalKeys =
+                            entityConfigurationStatementService.getHistoricalKeys(trustAnchorEntityConfiguration)
+                        if (historicalKeys.find { it.kid == statement.header.kid } == null) {
+                            logger.error("Trust anchor kid not found in current JWKS or historical keys")
+                            return VerifyTrustChainResponse(
+                                false,
+                                "Trust anchor kid not found in current JWKS or historical keys"
+                            )
+                        }
+                        logger.debug("Trust anchor key found in historical keys")
                     }
                 }
             }
@@ -187,6 +198,7 @@ class TrustChainService(
         logger.info("Resolving trust chain for entity: $entityIdentifier with max depth: $maxDepth")
         val cache = SimpleCache<String, String>()
         val chain: MutableList<String> = arrayListOf()
+
         return try {
             val trustChain = buildTrustChain(entityIdentifier, trustAnchors, chain, cache, 0, maxDepth)
             if (trustChain != null) {
@@ -194,14 +206,14 @@ class TrustChainService(
                     "Successfully resolved trust chain for entity: $entityIdentifier",
                     context = mapOf("trustChain" to trustChain.toString())
                 )
-                TrustChainResolveResponse(trustChain, false, null)
+                TrustChainResolveResponse(trustChain, error = false, errorMessage = null)
             } else {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")
-                TrustChainResolveResponse(null, true, "A Trust chain could not be established")
+                TrustChainResolveResponse(null, error = true, errorMessage = "A Trust chain could not be established")
             }
         } catch (e: Throwable) {
             logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
-            TrustChainResolveResponse(null, true, e.message)
+            TrustChainResolveResponse(null, error = true, errorMessage = e.message)
         }
     }
 
@@ -221,7 +233,7 @@ class TrustChainService(
 
         val entityConfigurationEndpoint = getEntityConfigurationEndpoint(entityIdentifier)
         logger.debug("Fetching entity configuration from: $entityConfigurationEndpoint")
-        val entityConfigurationJwt = context.fetchAndVerifyJwt(entityConfigurationEndpoint)
+        val entityConfigurationJwt = context.jwtService.fetchAndVerifyJwt(entityConfigurationEndpoint)
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
         logger.debug("Decoded entity configuration JWT header kid: ${decodedEntityConfiguration.header.kid}")
 
@@ -230,13 +242,14 @@ class TrustChainService(
                 logger.debug("No JWKS found in entity configuration payload")
                 return null
             },
-            decodedEntityConfiguration.header.kid
+            decodedEntityConfiguration.header.kid,
+            context.json
         ) ?: run {
             logger.debug("Could not find key with kid: ${decodedEntityConfiguration.header.kid} in JWKS")
             return null
         }
 
-        context.verifyJwt(entityConfigurationJwt, key)
+        context.jwtService.verifyJwt(entityConfigurationJwt, key)
 
         val entityStatement: EntityConfigurationStatementDTO =
             mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatementDTO::class) ?: run {
@@ -352,16 +365,17 @@ class TrustChainService(
         // Avoid processing the same entity twice
         if (cache.get(authorityConfigurationEndpoint) != null) return null
 
-        val authorityEntityConfigurationJwt = context.fetchAndVerifyJwt(authorityConfigurationEndpoint)
+        val authorityEntityConfigurationJwt = context.jwtService.fetchAndVerifyJwt(authorityConfigurationEndpoint)
         cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
         val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
         val key = findKeyInJwks(
             decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
-            decodedJwt.header.kid
+            decodedJwt.header.kid,
+            context.json
         ) ?: return null
 
-        context.verifyJwt(authorityEntityConfigurationJwt, key)
+        context.jwtService.verifyJwt(authorityEntityConfigurationJwt, key)
 
         val authorityEntityConfiguration = mapEntityStatement(
             authorityEntityConfigurationJwt,
@@ -386,19 +400,22 @@ class TrustChainService(
         authorityConfigurationJwt: String,
         lastStatementKid: String
     ): Pair<String, SubordinateStatement>? {
-        val subordinateStatementEndpoint =
-            getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
-        val subordinateStatementJwt = context.fetchAndVerifyJwt(subordinateStatementEndpoint)
-        val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
-
         // Find and verify the key for the subordinate statement
         val decodedAuthorityConfiguration = decodeJWTComponents(authorityConfigurationJwt)
+
+        val subordinateStatementEndpoint =
+            getSubordinateStatementEndpoint(authorityEntityFetchEndpoint, entityIdentifier)
+
+        val subordinateStatementJwt = context.httpResolver.get(subordinateStatementEndpoint)
+        val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
+
         val subordinateStatementKey = findKeyInJwks(
             decodedAuthorityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
-            decodedSubordinateStatement.header.kid
+            decodedSubordinateStatement.header.kid,
+            context.json
         ) ?: return null
 
-        context.verifyJwt(subordinateStatementJwt, subordinateStatementKey)
+        context.jwtService.verifyJwt(subordinateStatementJwt, subordinateStatementKey)
 
         val subordinateStatement = mapEntityStatement(
             subordinateStatementJwt,
@@ -454,7 +471,8 @@ class TrustChainService(
         val decoded = decodeJWTComponents(jwt)
         val key = findKeyInJwks(
             decoded.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return false,
-            decoded.header.kid
+            decoded.header.kid,
+            context.json
         ) ?: return false
         return context.cryptoService.verify(jwt, key)
     }
@@ -464,7 +482,8 @@ class TrustChainService(
         val decodedNext = decodeJWTComponents(nextJwt)
         val key = findKeyInJwks(
             decodedNext.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return false,
-            decoded.header.kid
+            decoded.header.kid,
+            context.json
         ) ?: return false
         return context.cryptoService.verify(jwt, key)
     }
