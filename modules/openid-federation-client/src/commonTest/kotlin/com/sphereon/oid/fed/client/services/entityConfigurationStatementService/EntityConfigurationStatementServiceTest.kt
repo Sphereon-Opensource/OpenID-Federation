@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.mapper.InvalidJwtException
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.IFetchService
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
@@ -15,13 +14,6 @@ import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
-
-object TestFetchService : IFetchService {
-    override suspend fun fetchStatement(endpoint: String): String {
-        return mockResponses.find { it[0] == endpoint }?.get(1)
-            ?: throw IllegalStateException("Invalid endpoint: $endpoint")
-    }
-}
 
 object TestCryptoService : ICryptoService {
     override suspend fun verify(jwt: String, key: Jwk): Boolean {

@@ -60,30 +60,13 @@ class HttpResolver<V : Any>(
     private suspend fun fetchFromRemote(url: String): HttpMetadata<V> {
         logger.debug("Fetching from remote: $url")
         val response = fetchWithRetry(url)
-
-        if (response.status == HttpStatusCode.NotModified) {
-            logger.debug("Resource not modified, using cached version: $url")
-            return cache.getIfAvailable(url, CacheOptions())
-                ?: throw IllegalStateException("Cache miss on 304 response")
-        }
-
-        logger.debug("Mapping response to value type for $url (status: ${response.status.value})")
         val value = responseMapper(response)
 
-        // Create metadata with caching headers if enabled
-        return if (config.enableHttpCaching) {
-            val etag = response.headers[HttpHeaders.ETag]
-            val lastModified = response.headers[HttpHeaders.LastModified]
-            logger.debug("Creating metadata with caching headers for $url (etag: ${etag ?: "none"}, lastModified: ${lastModified ?: "none"})")
-            HttpMetadata(
-                value = value,
-                etag = etag,
-                lastModified = lastModified
-            )
-        } else {
-            logger.debug("Creating metadata without caching headers for $url")
-            HttpMetadata(value = value)
-        }
+        return HttpMetadata(
+            value = value,
+            etag = if (config.enableHttpCaching) response.headers[HttpHeaders.ETag] else null,
+            lastModified = if (config.enableHttpCaching) response.headers[HttpHeaders.LastModified] else null
+        )
     }
 
     suspend fun get(url: String, options: CacheOptions = CacheOptions()): String {
@@ -91,16 +74,20 @@ class HttpResolver<V : Any>(
 
         if (options.strategy == CacheStrategy.CACHE_ONLY) {
             logger.debug("Using cache-only strategy for $url")
-            return cache.getIfAvailable(url, options)?.value.toString()
+            return cache.getIfAvailable(url, options)?.value?.toString()
+                ?: throw IllegalStateException("No cached value available")
         }
 
         if (options.strategy == CacheStrategy.FORCE_REMOTE) {
             logger.debug("Using force-remote strategy for $url")
-            return fetchFromRemote(url).value.toString()
+            val metadata = fetchFromRemote(url)
+            cache.put(url) { metadata }
+            return metadata.value.toString()
         }
 
         // CACHE_FIRST strategy
         logger.debug("Using cache-first strategy for $url")
-        return cache.getOrPut(url, { fetchFromRemote(url) }, options)?.value.toString()
+        return cache.getOrPut(url, { fetchFromRemote(url) }, options)?.value?.toString()
+            ?: throw IllegalStateException("Failed to get or put value in cache")
     }
 }
