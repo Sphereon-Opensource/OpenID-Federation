@@ -19,6 +19,8 @@ tags:
 servers:
   - description: SwaggerHub API Auto Mocking
     url: 'https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d40'
+
+
 paths:
   /status:
     get:
@@ -3672,7 +3674,7 @@ components:
         status:
           type: string
           description: The current status of the node.
-          example: OK
+          example: UP
     SystemStatsResponse:
       type: object
       properties:
