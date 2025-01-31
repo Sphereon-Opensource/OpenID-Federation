@@ -206,6 +206,10 @@ class TrustChainService(
                     "Successfully resolved trust chain for entity: $entityIdentifier",
                     context = mapOf("trustChain" to trustChain.toString())
                 )
+
+                // calculate trust chain exp
+
+
                 TrustChainResolveResponse(trustChain, error = false, errorMessage = null)
             } else {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")

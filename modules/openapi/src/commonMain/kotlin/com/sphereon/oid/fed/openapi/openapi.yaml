@@ -2224,6 +2224,9 @@ components:
           type: string
           description: A signed JSON Web Token that represents a Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+      required:
+        - id
+        - trust_mark
     TrustMarkIssuers:
       type: object
       x-tags:
@@ -3660,6 +3663,9 @@ components:
           description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
         metadata:
           type: object
+          description: Additional contextual information
+          nullable: true
+          additionalProperties: true
         trust_marks:
           type: array
           items:

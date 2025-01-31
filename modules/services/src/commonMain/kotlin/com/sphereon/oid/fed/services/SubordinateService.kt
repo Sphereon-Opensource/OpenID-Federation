@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
@@ -24,6 +25,7 @@ class SubordinateService(
     private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("SubordinateService")
+    private val client = FederationClient()
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries

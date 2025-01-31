@@ -5,11 +5,12 @@ import com.sphereon.oid.fed.services.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.Environment
 
 @Configuration
 open class ServiceConfig {
     @Bean
-    open fun accountConfig(environment: org.springframework.core.env.Environment): AccountServiceConfig {
+    open fun accountConfig(environment: Environment): AccountServiceConfig {
         System.setProperty(
             "sphereon.federation.root-identifier",
             environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8081")
@@ -82,5 +83,14 @@ open class ServiceConfig {
     @Bean
     open fun receivedTrustMarkService(): ReceivedTrustMarkService {
         return ReceivedTrustMarkService()
+    }
+
+    @Bean
+    open fun resolveService(
+        accountService: AccountService,
+    ): ResolveService {
+        return ResolveService(
+            accountService
+        )
     }
 }
