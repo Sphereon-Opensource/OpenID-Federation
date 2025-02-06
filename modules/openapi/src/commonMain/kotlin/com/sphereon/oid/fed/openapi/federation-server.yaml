@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
-  title: OpenID Federation API
-  description: This API allows the interaction with federation endpoints to manage and verify entities within a federation.
+  title: OpenID Federation Server API
+  description: This API exposes standardized OpenID Federation endpoints that enable entity participation within a federation through statement exchange, trust negotiation, and metadata discovery.
   contact:
     name: Sphereon
     email: info@sphereon.com

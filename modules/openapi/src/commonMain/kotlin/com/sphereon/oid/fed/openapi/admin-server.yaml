@@ -1,14 +1,14 @@
 openapi: 3.0.3
 info:
-  title: OpenID Federation API
-  description: This API allows the interaction with federation endpoints to manage and verify entities within a federation.
+  title: OpenID Federation Admin Server API
+  description: This API enables management of federated entity data and metadata within an OpenID Federation environment.
   contact:
     name: Sphereon
     email: info@sphereon.com
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 1.0.0-d40
+  version: 1.0.0-d41
 servers:
   - url: http://localhost:8081
     description: Admin Server
@@ -2181,6 +2181,122 @@ components:
           items:
             type: string
 
+    Subordinate:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The unique identifier of the subordinate.
+          example: 123
+        accountId:
+          type: integer
+          format: int32
+          description: The ID of the account associated with this subordinate.
+          example: 456
+        identifier:
+          type: string
+          description: The unique identifier for the subordinate.
+          example: 'https://www.example.com/subordinate'
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the subordinate was created.
+          example: '2023-08-21T14:52:00Z'
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 'The timestamp when the subordinate was deleted, if applicable.'
+          example: '2024-08-21T14:52:00Z'
+      required:
+        - id
+        - accountId
+        - identifier
+        - createdAt
+
+    SubordinateJwk:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate key record.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinated account associated with this key.
+          example: 1
+        key:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the key  was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+
+    SubordinateMetadata:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate Metadata record.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this Metadata.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinate associated with this Metadata.
+          example: 1
+        key:
+          type: string
+          description: The key of the metadata.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+        deleted_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was deleted.
+          example: '2024-08-06T12:34:56Z'
+          nullable: true
+
+    SubordinateStatement:
+      allOf:
+        - $ref: '#/components/schemas/BaseStatement'
+        - type: object
+          required:
+            - iss
+            - sub
+            - iat
+            - exp
+            - jwks
+          properties:
+            metadata_policy:
+              additionalProperties: true
+            crit:
+              type: array
+              items:
+                type: string
+            metadata_policy_crit:
+              additionalProperties: true
+            source_endpoint:
+              type: string
+              format: uri
+              description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
+
     SubordinateStatementPayload:
       allOf:
         - $ref: '#/components/schemas/BaseStatement'
@@ -2372,123 +2488,6 @@ components:
           type: boolean
           description: The status of the Trust Mark.
           example: true
-
-
-    Subordinate:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int32
-          description: The unique identifier of the subordinate.
-          example: 123
-        accountId:
-          type: integer
-          format: int32
-          description: The ID of the account associated with this subordinate.
-          example: 456
-        identifier:
-          type: string
-          description: The unique identifier for the subordinate.
-          example: 'https://www.example.com/subordinate'
-        createdAt:
-          type: string
-          format: date-time
-          description: The timestamp when the subordinate was created.
-          example: '2023-08-21T14:52:00Z'
-        deletedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: 'The timestamp when the subordinate was deleted, if applicable.'
-          example: '2024-08-21T14:52:00Z'
-      required:
-        - id
-        - accountId
-        - identifier
-        - createdAt
-
-    SubordinateJwk:
-      type: object
-      x-tags:
-        - federation
-      properties:
-        id:
-          type: integer
-          description: The unique identifier for the Subordinate key record.
-          example: 1
-        subordinate_id:
-          type: integer
-          description: The ID of the subordinated account associated with this key.
-          example: 1
-        key:
-          additionalProperties: true
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the key  was created.
-          example: '2024-08-06T12:34:56Z'
-          nullable: false
-
-    SubordinateMetadata:
-      type: object
-      x-tags:
-        - federation
-      properties:
-        id:
-          type: integer
-          description: The unique identifier for the Subordinate Metadata record.
-          example: 1
-        account_id:
-          type: integer
-          description: The ID of the account associated with this Metadata.
-          example: 1
-        subordinate_id:
-          type: integer
-          description: The ID of the subordinate associated with this Metadata.
-          example: 1
-        key:
-          type: string
-          description: The key of the metadata.
-          example: openid_relying_party
-        metadata:
-          additionalProperties: true
-        created_at:
-          type: string
-          format: date-time
-          description: The timestamp when the Metadata was created.
-          example: '2024-08-06T12:34:56Z'
-          nullable: false
-        deleted_at:
-          type: string
-          format: date-time
-          description: The timestamp when the Metadata was deleted.
-          example: '2024-08-06T12:34:56Z'
-          nullable: true
-
-    SubordinateStatement:
-      allOf:
-        - $ref: '#/components/schemas/BaseStatement'
-        - type: object
-          required:
-            - iss
-            - sub
-            - iat
-            - exp
-            - jwks
-          properties:
-            metadata_policy:
-              additionalProperties: true
-            crit:
-              type: array
-              items:
-                type: string
-            metadata_policy_crit:
-              additionalProperties: true
-            source_endpoint:
-              type: string
-              format: uri
-              description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
 
     TrustMarkType:
       type: object
