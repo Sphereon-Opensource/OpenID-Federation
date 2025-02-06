@@ -1,4 +1,20 @@
 openapi: 3.0.3
+tags:
+  - name: accounts
+    description: Account management operations
+  - name: authority-hints
+    description: Authority hint management
+  - name: keys
+    description: Key management and operations
+  - name: metadata
+    description: Entity metadata management
+  - name: subordinates
+    description: Subordinate entity management
+  - name: trust-marks
+    description: Trust Mark management and operations
+  - name: system
+    description: System and operation logs
+
 info:
   title: OpenID Federation Admin Server API
   description: This API enables management of federated entity data and metadata within an OpenID Federation environment.
@@ -10,25 +26,16 @@ info:
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
   version: 0.1.0-d41
 servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAdminServer/0.1.0-d41
   - url: http://localhost:8081
     description: Admin Server
 paths:
-  /status:
-    get:
-      summary: Check node status
-      description: Check the status of the Admin Node.
-      responses:
-        '200':
-          description: Successful status check
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StatusResponse'
-        '500':
-          $ref: '#/components/responses/ServerError'
-      operationId: status
   /accounts:
     get:
+      tags:
+        - accounts
       summary: List all accounts
       security:
         - bearerAuth: [ ]
@@ -57,6 +64,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - accounts
       summary: Register a new tenant account
       security:
         - bearerAuth: [ ]
@@ -89,6 +98,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
+      tags:
+        - accounts
       summary: Delete current account
       security:
         - bearerAuth: [ ]
@@ -116,33 +127,9 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   '/keys':
-    post:
-      summary: Create a new key
-      security:
-        - bearerAuth: [ ]
-      description: Create a new key for the specified account.
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-      responses:
-        '201':
-          description: Key created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Jwk'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
     get:
+      tags:
+        - keys
       summary: List all keys
       security:
         - bearerAuth: [ ]
@@ -176,8 +163,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - keys
+      summary: Create a new key
+      security:
+        - bearerAuth: [ ]
+      description: Create a new key for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '201':
+          description: Key created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   '/keys/{keyId}':
     delete:
+      tags:
+        - keys
       summary: Revoke a key
       security:
         - bearerAuth: [ ]
@@ -223,6 +240,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/metadata':
     get:
+      tags:
+        - metadata
       summary: Get entity configuration metadata
       security:
         - bearerAuth: [ ]
@@ -251,6 +270,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - metadata
       summary: Create entity configuration metadata
       security:
         - bearerAuth: [ ]
@@ -285,6 +306,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/metadata/{id}':
     delete:
+      tags:
+        - metadata
       summary: Delete account metadata
       security:
         - bearerAuth: [ ]
@@ -324,6 +347,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/authority-hints':
     get:
+      tags:
+        - authority-hints
       summary: Get authority hints
       security:
         - bearerAuth: [ ]
@@ -352,6 +377,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - authority-hints
       summary: Create an authority hint
       security:
         - bearerAuth: [ ]
@@ -386,6 +413,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/authority-hints/{id}':
     delete:
+      tags:
+        - authority-hints
       summary: Delete an authority hint
       security:
         - bearerAuth: [ ]
@@ -419,6 +448,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/entity-statement':
     get:
+      tags:
+        - entity-statements
       summary: Get entity configuration statement object
       security:
         - bearerAuth: [ ]
@@ -445,6 +476,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - entity-statements
       summary: Sign and publish entity configuration statement
       security:
         - bearerAuth: [ ]
@@ -481,6 +514,8 @@ paths:
 
   '/subordinates':
     get:
+      tags:
+        - subordinates
       summary: Get subordinates
       security:
         - bearerAuth: [ ]
@@ -509,6 +544,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - subordinates
       summary: Create a subordinate
       security:
         - bearerAuth: [ ]
@@ -543,6 +580,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/subordinates/{id}':
     delete:
+      tags:
+        - subordinates
       summary: Delete subordinate
       security:
         - bearerAuth: [ ]
@@ -588,6 +627,8 @@ paths:
   '/subordinates/{id}/jwks':
     get:
       summary: Get subordinate JWKs
+      tags:
+        - subordinates
       security:
         - bearerAuth: [ ]
       description: Retrieve all JWKs associated with the specified subordinate.
@@ -621,6 +662,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - subordinates
       summary: Create a subordinate JWK
       security:
         - bearerAuth: [ ]
@@ -662,6 +705,8 @@ paths:
 
   '/subordinates/{id}/jwks/{jwkId}':
     delete:
+      tags:
+        - subordinates
       summary: Delete subordinate JWK
       security:
         - bearerAuth: [ ]
@@ -702,6 +747,8 @@ paths:
 
   '/subordinates/{subordinateId}/metadata':
     get:
+      tags:
+        - subordinates
       summary: Get subordinate metadata
       security:
         - bearerAuth: [ ]
@@ -736,6 +783,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - subordinates
       summary: Create subordinate metadata
       security:
         - bearerAuth: [ ]
@@ -776,6 +825,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/subordinates/{subordinateId}/metadata/{id}':
     delete:
+      tags:
+        - subordinates
       summary: Delete subordinate metadata
       security:
         - bearerAuth: [ ]
@@ -815,6 +866,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/subordinates/{id}/statement':
     get:
+      tags:
+        - subordinates
       summary: Get subordinate statement object
       security:
         - bearerAuth: [ ]
@@ -847,6 +900,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
+      tags:
+        - subordinates
       summary: Sign and publish subordinate statement
       security:
         - bearerAuth: [ ]
@@ -887,6 +942,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/trust-mark-types':
     get:
+      tags:
+        - trust-marks
       summary: Get all Trust Mark Types
       security:
         - bearerAuth: [ ]
@@ -903,6 +960,8 @@ paths:
                   $ref: '#/components/schemas/TrustMarkType'
 
     post:
+      tags:
+        - trust-marks
       summary: Create a Trust Mark Type
       security:
         - bearerAuth: [ ]
@@ -924,6 +983,8 @@ paths:
 
   '/trust-mark-types/{id}':
     get:
+      tags:
+        - trust-marks
       summary: Get a Trust Mark Type by ID
       security:
         - bearerAuth: [ ]
@@ -942,6 +1003,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/TrustMarkType'
     delete:
+      tags:
+        - trust-marks
       summary: Delete a Trust Mark Type
       security:
         - bearerAuth: [ ]
@@ -957,6 +1020,8 @@ paths:
           description: Trust mark definition deleted
   /trust-mark-types/{id}/issuers:
     get:
+      tags:
+        - trust-marks
       summary: Get Issuers for a Trust Mark Type
       security:
         - bearerAuth: [ ]
@@ -983,6 +1048,8 @@ paths:
         '404':
           description: Account or Trust Mark Type not found.
     post:
+      tags:
+        - trust-marks
       summary: Add Issuer to Trust Mark Type
       security:
         - bearerAuth: [ ]
@@ -1032,6 +1099,8 @@ paths:
           description: Invalid request body.
   /trust-mark-types/{id}/issuers/{issuerIdentifier}:
     delete:
+      tags:
+        - trust-marks
       summary: Remove Issuer from Trust Mark Type
       security:
         - bearerAuth: [ ]
@@ -1071,6 +1140,8 @@ paths:
           description: Account, Trust Mark Type, or Issuer not found.
   '/trust-marks':
     post:
+      tags:
+        - trust-marks
       summary: Create or Update a Trust Mark
       security:
         - bearerAuth: [ ]
@@ -1122,6 +1193,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
+      tags:
+        - trust-marks
       summary: List Trust Marks
       security:
         - bearerAuth: [ ]
@@ -1161,6 +1234,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/trust-marks/{trustMarkId}':
     delete:
+      tags:
+        - trust-marks
       summary: Delete a Trust Mark
       security:
         - bearerAuth: [ ]
@@ -1204,6 +1279,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   '/received-trust-marks':
     post:
+      tags:
+        - trust-marks
       summary: Create a Received Trust Mark
       security:
         - bearerAuth: [ ]
@@ -1251,6 +1328,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
+      tags:
+        - trust-marks
       summary: List Received Trust Marks
       security:
         - bearerAuth: [ ]
@@ -1295,6 +1374,8 @@ paths:
 
   '/received-trust-marks/{receivedTrustMarkId}':
     delete:
+      tags:
+        - trust-marks
       summary: Delete a Received Trust Mark
       security:
         - bearerAuth: [ ]
@@ -1337,9 +1418,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /status:
+    get:
+      tags:
+        - system
+      summary: Check node status
+      description: Check the status of the Admin Node.
+      responses:
+        '200':
+          description: Successful status check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: status
+
   /logs:
     get:
       summary: Get recent logs
+      tags:
+        - system
       security:
         - bearerAuth: [ ]
       description: Retrieve the most recent logs from the system
@@ -1374,6 +1474,8 @@ paths:
 
   /logs/severity/{severity}:
     get:
+      tags:
+        - system
       summary: Get logs by severity
       security:
         - bearerAuth: [ ]
@@ -1416,6 +1518,8 @@ paths:
 
   /logs/tag/{tag}:
     get:
+      tags:
+        - system
       summary: Get logs by tag
       security:
         - bearerAuth: [ ]
