@@ -19,7 +19,7 @@ class EntityConfigurationStatementService(
      * @return [JWT] A JWT object containing the entity configuration statement.
      * @throws IllegalStateException if the JWT is invalid or signature verification fails
      */
-    suspend fun fetchEntityConfigurationStatement(entityIdentifier: String): EntityConfigurationStatementDTO {
+    suspend fun fetchEntityConfigurationStatement(entityIdentifier: String): EntityConfigurationStatement {
         logger.info("Starting entity configuration resolution for: $entityIdentifier")
 
         val endpoint = getEntityConfigurationEndpoint(entityIdentifier)
@@ -31,9 +31,9 @@ class EntityConfigurationStatementService(
         context.jwtService.verifySelfSignedJwt(jwt)
 
         return try {
-            logger.debug("Decoding JWT payload into EntityConfigurationStatementDTO")
+            logger.debug("Decoding JWT payload into EntityConfigurationStatement")
             val result =
-                context.json.decodeFromJsonElement(EntityConfigurationStatementDTO.serializer(), decodedJwt.payload)
+                context.json.decodeFromJsonElement(EntityConfigurationStatement.serializer(), decodedJwt.payload)
             logger.info("Successfully resolved entity configuration for: $entityIdentifier")
             result
         } catch (e: Exception) {
@@ -43,10 +43,10 @@ class EntityConfigurationStatementService(
     }
 
     /**
-     * Gets federation endpoints from an EntityConfigurationStatementDTO
+     * Gets federation endpoints from an EntityConfigurationStatement
      */
-    fun getFederationEndpoints(dto: EntityConfigurationStatementDTO): FederationEntityMetadata {
-        logger.debug("Extracting federation endpoints from EntityConfigurationStatementDTO")
+    fun getFederationEndpoints(dto: EntityConfigurationStatement): FederationEntityMetadata {
+        logger.debug("Extracting federation endpoints from EntityConfigurationStatement")
 
         val metadata = dto.metadata
             ?: run {
@@ -77,17 +77,17 @@ class EntityConfigurationStatementService(
     /**
      * Retrieves the historical keys from the federation entity's historical keys endpoint.
      */
-    suspend fun getHistoricalKeys(dto: EntityConfigurationStatementDTO): Array<HistoricalKey> {
+    suspend fun getHistoricalKeys(statement: EntityConfigurationStatement): Array<HistoricalKey> {
         logger.debug("Retrieving historical keys")
-        val historicalKeysJwt = fetchHistoricalKeysJwt(dto)
-        val verifiedJwt = verifyHistoricalKeysJwt(dto, historicalKeysJwt)
+        val historicalKeysJwt = fetchHistoricalKeysJwt(statement)
+        val verifiedJwt = verifyHistoricalKeysJwt(statement, historicalKeysJwt)
         return decodeHistoricalKeys(verifiedJwt)
     }
 
     /**
      * Fetches the historical keys JWT from the federation endpoint
      */
-    private suspend fun fetchHistoricalKeysJwt(dto: EntityConfigurationStatementDTO): String {
+    private suspend fun fetchHistoricalKeysJwt(dto: EntityConfigurationStatement): String {
         val federationEndpoints = getFederationEndpoints(dto)
         val historicalKeysEndpoint = federationEndpoints.federationHistoricalKeysEndpoint
             ?: run {
@@ -109,7 +109,7 @@ class EntityConfigurationStatementService(
     /**
      * Verifies the historical keys JWT signature using the entity's current JWKS
      */
-    private suspend fun verifyHistoricalKeysJwt(dto: EntityConfigurationStatementDTO, jwt: String): String {
+    private suspend fun verifyHistoricalKeysJwt(dto: EntityConfigurationStatement, jwt: String): String {
         val decodedJwt = decodeJWTComponents(jwt)
         logger.debug("Successfully decoded historical keys JWT")
 

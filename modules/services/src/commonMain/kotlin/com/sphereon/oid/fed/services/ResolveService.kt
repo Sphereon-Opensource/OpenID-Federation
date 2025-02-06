@@ -2,7 +2,7 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.ResolveResponse
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.persistence.models.Account
@@ -71,7 +71,7 @@ class ResolveService(
     }
 
     private fun getFilteredMetadata(
-        statement: EntityConfigurationStatementDTO,
+        statement: EntityConfigurationStatement,
         entityTypes: Array<String>?
     ): JsonObject {
         try {
@@ -94,7 +94,7 @@ class ResolveService(
         }
     }
 
-    private suspend fun getVerifiedTrustMarks(subEntityConfigurationStatement: EntityConfigurationStatementDTO): Array<TrustMark> {
+    private suspend fun getVerifiedTrustMarks(subEntityConfigurationStatement: EntityConfigurationStatement): Array<TrustMark> {
         try {
             val trustMarks = subEntityConfigurationStatement.trustMarks ?: return arrayOf()
             val verifiedTrustMarks = mutableListOf<TrustMark>()

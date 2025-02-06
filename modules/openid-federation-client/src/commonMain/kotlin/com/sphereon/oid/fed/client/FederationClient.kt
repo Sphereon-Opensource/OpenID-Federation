@@ -8,7 +8,7 @@ import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
 import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.*
 import com.sphereon.oid.fed.httpResolver.config.DefaultHttpResolverConfig
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import kotlinx.serialization.json.Json
@@ -73,9 +73,9 @@ class FederationClient(
      * Get an Entity Configuration Statement from an entity.
      *
      * @param entityIdentifier The entity identifier for which to get the statement.
-     * @return EntityConfigurationStatementDTO containing the entity configuration statement.
+     * @return EntityConfigurationStatement containing the entity configuration statement.
      */
-    suspend fun entityConfigurationStatementGet(entityIdentifier: String): EntityConfigurationStatementDTO {
+    suspend fun entityConfigurationStatementGet(entityIdentifier: String): EntityConfigurationStatement {
         return entityConfigurationService.fetchEntityConfigurationStatement(entityIdentifier)
     }
 
@@ -89,7 +89,7 @@ class FederationClient(
      */
     suspend fun trustMarksVerify(
         trustMark: String,
-        trustAnchorConfig: EntityConfigurationStatementDTO,
+        trustAnchorConfig: EntityConfigurationStatement,
         currentTime: Long? = null
     ): TrustMarkValidationResponse {
         return trustMarkService.validateTrustMark(trustMark, trustAnchorConfig, currentTime)

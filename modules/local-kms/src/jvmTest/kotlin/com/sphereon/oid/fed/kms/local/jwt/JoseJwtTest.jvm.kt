@@ -17,13 +17,13 @@ class JoseJwtTest {
     fun signTest() {
         val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
         val jwk = key.toString()
-        val entityStatement = EntityConfigurationStatementDTO(
-            iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = EntityJwks()
+        val entityStatement = EntityConfigurationStatement(
+            iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = BaseStatementJwks()
         )
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val signature = sign(
             payload,
-            JWTHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
+            JwtHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
             Json.decodeFromString<JwkWithPrivateKey>(jwk)
         )
         assertTrue { signature.startsWith("ey") }
@@ -37,13 +37,13 @@ class JoseJwtTest {
     fun verifyTest() {
         val key = ECKeyGenerator(Curve.P_256).keyID("key1").algorithm(Algorithm("ES256")).generate()
         val jwk = key.toString()
-        val entityStatement = EntityConfigurationStatementDTO(
-            iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = EntityJwks()
+        val entityStatement = EntityConfigurationStatement(
+            iss = "test", sub = "test", exp = 111111, iat = 111111, jwks = BaseStatementJwks()
         )
         val payload: JsonObject = Json.encodeToJsonElement(entityStatement) as JsonObject
         val signature = sign(
             payload,
-            JWTHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
+            JwtHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
             Json.decodeFromString<JwkWithPrivateKey>(jwk)
         )
         assertTrue {

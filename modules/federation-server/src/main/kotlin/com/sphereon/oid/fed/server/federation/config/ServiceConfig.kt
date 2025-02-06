@@ -24,8 +24,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun entityConfigurationMetadataService(): EntityConfigurationMetadataService {
-        return EntityConfigurationMetadataService()
+    open fun entityConfigurationMetadataService(): MetadataService {
+        return MetadataService()
     }
 
     @Bean
@@ -39,8 +39,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyService(kmsClient: KmsClient): KeyService {
-        return KeyService(kmsClient)
+    open fun keyService(kmsClient: KmsClient): JwkService {
+        return JwkService(kmsClient)
     }
 
     @Bean
@@ -51,19 +51,19 @@ open class ServiceConfig {
     @Bean
     open fun subordinateService(
         accountService: AccountService,
-        keyService: KeyService,
+        jwkService: JwkService,
         kmsClient: KmsClient
     ): SubordinateService {
-        return SubordinateService(accountService, keyService, kmsClient)
+        return SubordinateService(accountService, jwkService, kmsClient)
     }
 
     @Bean
     open fun trustMarkService(
-        keyService: KeyService,
+        jwkService: JwkService,
         kmsClient: KmsClient,
         accountService: AccountService
     ): TrustMarkService {
-        return TrustMarkService(keyService, kmsClient, accountService)
+        return TrustMarkService(jwkService, kmsClient, accountService)
     }
 
     @Bean
@@ -74,10 +74,10 @@ open class ServiceConfig {
     @Bean
     open fun entityConfigurationStatementService(
         accountService: AccountService,
-        keyService: KeyService,
+        jwkService: JwkService,
         kmsClient: KmsClient
     ): EntityConfigurationStatementService {
-        return EntityConfigurationStatementService(accountService, keyService, kmsClient)
+        return EntityConfigurationStatementService(accountService, jwkService, kmsClient)
     }
 
     @Bean

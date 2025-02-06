@@ -9,7 +9,7 @@ import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
 import io.ktor.client.engine.js.*
@@ -85,7 +85,7 @@ class FederationClientJS(
     @JsName("entityConfigurationStatementGet")
     fun entityConfigurationStatementGet(
         entityIdentifier: String
-    ): Promise<EntityConfigurationStatementDTO> {
+    ): Promise<EntityConfigurationStatement> {
         return scope.promise {
             entityService.fetchEntityConfigurationStatement(entityIdentifier)
         }
@@ -94,7 +94,7 @@ class FederationClientJS(
     @JsName("verifyTrustMark")
     fun verifyTrustMarkJS(
         trustMark: String,
-        trustAnchorConfig: EntityConfigurationStatementDTO,
+        trustAnchorConfig: EntityConfigurationStatement,
         currentTime: Int? = null
     ): Promise<TrustMarkValidationResponse> {
         return scope.promise {

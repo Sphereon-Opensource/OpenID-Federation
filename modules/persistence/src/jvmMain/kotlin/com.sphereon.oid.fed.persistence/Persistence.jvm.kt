@@ -16,7 +16,7 @@ actual object Persistence {
     actual val accountQueries: AccountQueries
     actual val jwkQueries: JwkQueries
     actual val subordinateQueries: SubordinateQueries
-    actual val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
+    actual val metadataQueries: MetadataQueries
     actual val authorityHintQueries: AuthorityHintQueries
     actual val critQueries: CritQueries
     actual val subordinateStatementQueries: SubordinateStatementQueries
@@ -40,7 +40,7 @@ actual object Persistence {
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
         jwkQueries = database.jwkQueries
         subordinateQueries = database.subordinateQueries
-        entityConfigurationMetadataQueries = database.entityConfigurationMetadataQueries
+        metadataQueries = database.metadataQueries
         authorityHintQueries = database.authorityHintQueries
         critQueries = database.critQueries
         subordinateStatementQueries = database.subordinateStatementQueries

@@ -3,11 +3,12 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
-import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
+import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
@@ -38,7 +39,7 @@ class AccountServiceTest {
 
     @Test
     fun testCreateAccount() {
-        val createAccountDTO = CreateAccountDTO(
+        val createAccountDTO = CreateAccount(
             username = "testUser",
             identifier = "test-identifier"
         )
@@ -69,7 +70,7 @@ class AccountServiceTest {
 
     @Test
     fun testCreateDuplicateAccount() {
-        val createAccountDTO = CreateAccountDTO(
+        val createAccountDTO = CreateAccount(
             username = "testUser",
             identifier = "test-identifier"
         )
@@ -161,7 +162,7 @@ class AccountServiceTest {
 
         every { accountQueries.delete(account.id).executeAsOne() } returns account
 
-        val result = accountService.deleteAccount(account)
+        val result = accountService.deleteAccount(account.toDTO())
         assertNotNull(result)
         verify { accountQueries.delete(account.id) }
     }
@@ -178,7 +179,7 @@ class AccountServiceTest {
         )
 
         assertFailsWith<NotFoundException> {
-            accountService.deleteAccount(rootAccount)
+            accountService.deleteAccount(rootAccount.toDTO())
         }
     }
 }

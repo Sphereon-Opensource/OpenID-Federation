@@ -1,0 +1,357 @@
+openapi: 3.0.3
+info:
+  title: OpenID Federation API
+  description: This API allows the interaction with federation endpoints to manage and verify entities within a federation.
+  contact:
+    name: Sphereon
+    email: info@sphereon.com
+  license:
+    name: Apache 2.0
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+  version: 1.0.0-d40
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d40'
+  - url: http://localhost:8080
+    description: Local Federation Server
+paths:
+  /status:
+    get:
+      tags:
+        - federation
+      summary: Check node status
+      description: Check the status of the Federated Node.
+      responses:
+        '200':
+          description: Successful status check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: status
+      x-internal: false
+  /.well-known/openid-federation:
+    get:
+      tags:
+        - federation
+      summary: Fetch Entity Statement
+      description: Fetch Entity Configuration Statement.
+      responses:
+        '200':
+          description: Successful fetch of Entity Statement
+          content:
+            application/entity-statement+jwt:
+              schema:
+                type: string
+                description: A signed JWT containing the Entity Configuration Statement
+              examples:
+                Example 1:
+                  value: eyJraWQiIwY0tSTlpnV0FqWjVBcTcyYnpSVFhDOHBCbU1DRG0tNlA0NWFHbURveVU0IiwidHlwIjoiZW50aXR5LXN0YXRlbWVudCtqd3QiLCJhbGciOiJFUzI1NiJ9.eyJzdWIiiJodHRwczovL2FnZW50LmZpbmR5bmV0LmRlbW8uc3BoZXJlb24uY29tL29pZDR2Y2kiLCJtZXRhZGF0YSI6e30sImp3a3MiOnsia2V5cyI6W3sia3R5IjoiRUMiLCJraWQiOiIwY0tSTlpnV0FqWjVBcTyYnpSVFhDOHBCbU1DRG0tNlA0NWFHbURveVU0IiwiY3J2joiUC0yNTYiLCJ4IjoiS1JNMXI5S3d0cXRzWVdiTGJPdmIzQ1ZxWF9iTm9vTlJORkRrRTQzSlpZQSIsInkiOiJZbUVYNWY4VndFOS1KYms3aHhwdnMzdlhUc3hOUVhHR2pZRE11SjhUYmlzIiwiYWxnIjoiRVMyNTYiLCJ1c2UiOiJzaWcifV19LCJpc3MiOiJodHRwczovL2FnZW50LmZpbmR5bmV0LmRlbW8uc3BoZXJlb24uY29tL29pZDR2Y2kiLCJhdXRob3JpdHlfaGludHMiOlsiaHR0cHM6Ly9mZWRlcmF0aW9uLmRlbW8uc3BoZXJlb24uY29tIl0sImV4cCI6MTc2MjI3MjY1MywiaWF0IjoxNzMwNzM2NjUzfQ.Vet8M8FZe3VSn8AsqeJyMvGP_6gC9DAOSxqzOYytzfCQrF2TmSjRb8ICRzFiP3Vt53S-KScJUrF-eDiyDw
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /list:
+    get:
+      tags:
+        - federation
+      summary: List Subordinates
+      description: List the entity Subordinates for the specified criteria.
+      parameters:
+        - name: entity_type
+          in: query
+          description: 'The value of this parameter is an Entity Type Identifier. If the responder knows the Entity Types of its Immediate Subordinates, the result MUST be filtered to include only those that include the specified Entity Type.'
+          required: false
+          schema:
+            type: string
+        - name: trust_marked
+          in: query
+          description: 'If the parameter trust_marked is present and set to true, the result contains only the Immediate Subordinates for which at least one Trust Mark have been issued and is still valid.'
+          required: false
+          schema:
+            type: boolean
+        - name: trust_mark_id
+          in: query
+          description: 'The value of this parameter is a Trust Mark identifier. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark identifier has been issued and is still valid.'
+          required: false
+          schema:
+            type: string
+        - name: intermediate
+          in: query
+          description: 'If the parameter intermediate is present and set to true, then if the responder knows whether its Immediate Subordinates are Intermediates or not, the result MUST be filtered accordingly.'
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful fetch of Subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /fetch:
+    get:
+      tags:
+        - federation
+      summary: Fetch Subordinate Statement
+      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub``.
+      parameters:
+        - name: sub
+          in: query
+          description: The subject identifier (URI) of the entity for whom the Subordinate Statement is created.
+          required: true
+          schema:
+            type: string
+            format: uri
+      responses:
+        '200':
+          description: Successful fetch of the Subordinate Statement
+          content:
+            application/resolve-response+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /resolve:
+    get:
+      tags:
+        - federation
+      summary: Resolve Entity Statement
+      description: Resolve metadata and Trust Marks for an Entity.
+      parameters:
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity whose resolved data is requested.
+          required: true
+          schema:
+            type: string
+        - name: anchor
+          in: query
+          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity identifier.
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: 'A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.'
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful resolve of Entity metadata
+          content:
+            application/resolve-response+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /trust-mark:
+    get:
+      tags:
+        - federation
+      summary: Get Trust Mark
+      description: Retrieve a specific Trust Mark.
+      parameters:
+        - name: trust_mark_id
+          in: query
+          description: Trust Mark identifier.
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark is issued.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval of Trust Mark
+          content:
+            application/trust-mark+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /trust-mark-status:
+    get:
+      tags:
+        - federation
+      summary: Check Trust Mark Status
+      description: Check if a Trust Mark is still active.
+      parameters:
+        - name: sub
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The Entity Identifier of the Entity to which the Trust Mark was issued.
+        - name: trust_mark_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Identifier of the Trust Mark.
+        - name: iat
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: |
+            Time when the Trust Mark was issued. 
+            If not specified and the Trust Mark issuer has issued several Trust Marks 
+            with the specified identifier for the Entity identified by `sub`, the most recent one is assumed.
+        - name: trust_mark
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The whole Trust Mark in its JWT form.
+      responses:
+        '200':
+          description: Trust Mark status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                    description: Whether the Trust Mark is active or not.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /trust-mark-list:
+    get:
+      tags:
+        - federation
+      summary: List Trust Marked Entities
+      description: List all Entities for which Trust Marks have been issued and are still valid.
+      parameters:
+        - name: trust_mark_id
+          in: query
+          description: 'Trust Mark identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Entities for which that Trust Mark identifier has been issued and is still valid.'
+          required: true
+          schema:
+            type: string
+        - name: sub
+          in: query
+          description: The Entity Identifier of the Entity to which the Trust Mark was issued. The list obtained in the response MUST be filtered to only the Entity matching this value.
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful fetch of Trust Marked Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /historical-keys:
+    get:
+      tags:
+        - federation
+      summary: Get Historical Keys
+      description: Retrieve previously used keys for non-repudiation of statements.
+      responses:
+        '200':
+          description: Successful retrieval of historical keys
+          content:
+            application/jwk-set+jwt:
+              schema:
+                type: string
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  responses:
+    BadRequestError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - error
+        - message
+      properties:
+        status:
+          type: integer
+          x-stoplight:
+            id: joax1cgth4uzd
+        error:
+          type: string
+        message:
+          type: string
+          description: A human-readable short text describing the error.
+        timestamp:
+          type: integer
+          x-stoplight:
+            id: qtn6mqbzpjctv
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: The current status of the node.
+          example: UP

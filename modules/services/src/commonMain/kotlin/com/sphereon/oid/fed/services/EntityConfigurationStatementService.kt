@@ -4,29 +4,28 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.mappers.toJwk
 import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement as EntityConfigurationStatementEntity
 
 class EntityConfigurationStatementService(
     private val accountService: AccountService,
-    private val keyService: KeyService,
+    private val jwkService: JwkService,
     private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
 
-    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementDTO {
+    private fun getEntityConfigurationStatement(account: Account): EntityConfigurationStatementEntity {
         logger.info("Building entity configuration for account: ${account.username}")
 
         val identifier = accountService.getAccountIdentifierByAccount(account)
-        val keys = keyService.getKeys(account)
+        val keys = jwkService.getKeys(account)
 
         val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys)
 
@@ -43,13 +42,13 @@ class EntityConfigurationStatementService(
 
     private fun createBaseEntityConfigurationStatement(
         identifier: String,
-        keys: Array<JwkAdminDTO>
+        keys: Array<Jwk>
     ): EntityConfigurationStatementObjectBuilder {
         return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)
             .iat((System.currentTimeMillis() / 1000).toInt())
             .exp((System.currentTimeMillis() / 1000 + 3600 * 24 * 365).toInt())
-            .jwks(keys.map { it.toJwk() }.toMutableList())
+            .jwks(keys.map { it }.toMutableList())
     }
 
     private fun addOptionalMetadata(
@@ -88,7 +87,7 @@ class EntityConfigurationStatementService(
         account: Account,
         builder: EntityConfigurationStatementObjectBuilder
     ) {
-        Persistence.entityConfigurationMetadataQueries.findByAccountId(account.id)
+        Persistence.metadataQueries.findByAccountId(account.id)
             .executeAsList()
             .forEach {
                 builder.metadata(
@@ -136,7 +135,7 @@ class EntityConfigurationStatementService(
             }
     }
 
-    fun findByAccount(account: Account): EntityConfigurationStatementDTO {
+    fun findByAccount(account: Account): EntityConfigurationStatementEntity {
         logger.info("Finding entity configuration for account: ${account.username}")
         return getEntityConfigurationStatement(account)
     }
@@ -146,7 +145,7 @@ class EntityConfigurationStatementService(
 
         val entityConfigurationStatement = findByAccount(account)
 
-        val keys = keyService.getKeys(account)
+        val keys = jwkService.getKeys(account)
 
         if (keys.isEmpty()) {
             logger.error("No keys found for account: ${account.username}")
@@ -157,10 +156,10 @@ class EntityConfigurationStatementService(
 
         val jwt = kmsClient.sign(
             payload = Json.encodeToJsonElement(
-                EntityConfigurationStatementDTO.serializer(),
+                EntityConfigurationStatementEntity.serializer(),
                 entityConfigurationStatement
             ).jsonObject,
-            header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
+            header = JwtHeader(typ = "entity-statement+jwt", kid = key!!),
             keyId = key
         )
 

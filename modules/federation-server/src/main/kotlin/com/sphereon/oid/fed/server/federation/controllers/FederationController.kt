@@ -13,7 +13,7 @@ class FederationController(
     private val accountService: AccountService,
     private val subordinateService: SubordinateService,
     private val trustMarkService: TrustMarkService,
-    private val keyService: KeyService,
+    private val jwkService: JwkService,
     private val resolveService: ResolveService
 ) {
     private val accountQueries = Persistence.accountQueries
@@ -156,14 +156,14 @@ class FederationController(
     @GetMapping("/historical-keys", produces = ["application/jwk-set+jwt"])
     fun getRootFederationHistoricalKeys(): String {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        return keyService.getFederationHistoricalKeysJwt(account, accountService)
+        return jwkService.getFederationHistoricalKeysJwt(account, accountService)
     }
 
     @GetMapping("/{username}/historical-keys", produces = ["application/jwk-set+jwt"])
     fun getFederationHistoricalKeys(@PathVariable username: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        return keyService.getFederationHistoricalKeysJwt(account, accountService)
+        return jwkService.getFederationHistoricalKeysJwt(account, accountService)
     }
 
     @GetMapping("/resolve", produces = ["application/resolve-response+jwt"])

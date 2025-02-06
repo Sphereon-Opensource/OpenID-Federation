@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
@@ -12,7 +12,7 @@ import kotlin.test.*
 class EntityConfigurationStatementServiceTest {
     private lateinit var statementService: EntityConfigurationStatementService
     private lateinit var accountService: AccountService
-    private lateinit var keyService: KeyService
+    private lateinit var jwkService: JwkService
     private lateinit var kmsClient: KmsClient
     private lateinit var testAccount: Account
     private lateinit var accountServiceConfig: AccountServiceConfig
@@ -21,7 +21,7 @@ class EntityConfigurationStatementServiceTest {
     private lateinit var subordinateQueries: SubordinateQueries
     private lateinit var trustMarkQueries: TrustMarkQueries
     private lateinit var authorityHintQueries: AuthorityHintQueries
-    private lateinit var entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
+    private lateinit var metadataQueries: MetadataQueries
     private lateinit var critQueries: CritQueries
     private lateinit var trustMarkTypeQueries: TrustMarkTypeQueries
     private lateinit var trustMarkIssuerQueries: TrustMarkIssuerQueries
@@ -38,7 +38,7 @@ class EntityConfigurationStatementServiceTest {
     fun setup() {
         // Initialize mocks for all dependencies
         accountService = mockk()
-        keyService = mockk()
+        jwkService = mockk()
         kmsClient = mockk()
         accountServiceConfig = AccountServiceConfig(Constants.DEFAULT_ROOT_USERNAME)
 
@@ -46,7 +46,7 @@ class EntityConfigurationStatementServiceTest {
         subordinateQueries = mockk(relaxed = true)
         trustMarkQueries = mockk(relaxed = true)
         authorityHintQueries = mockk(relaxed = true)
-        entityConfigurationMetadataQueries = mockk(relaxed = true)
+        metadataQueries = mockk(relaxed = true)
         critQueries = mockk(relaxed = true)
         trustMarkTypeQueries = mockk(relaxed = true)
         trustMarkIssuerQueries = mockk(relaxed = true)
@@ -58,7 +58,7 @@ class EntityConfigurationStatementServiceTest {
         every { Persistence.subordinateQueries } returns subordinateQueries
         every { Persistence.trustMarkQueries } returns trustMarkQueries
         every { Persistence.authorityHintQueries } returns authorityHintQueries
-        every { Persistence.entityConfigurationMetadataQueries } returns entityConfigurationMetadataQueries
+        every { Persistence.metadataQueries } returns metadataQueries
         every { Persistence.critQueries } returns critQueries
         every { Persistence.trustMarkTypeQueries } returns trustMarkTypeQueries
         every { Persistence.trustMarkIssuerQueries } returns trustMarkIssuerQueries
@@ -76,7 +76,7 @@ class EntityConfigurationStatementServiceTest {
         )
 
         // Initialize the service under test
-        statementService = EntityConfigurationStatementService(accountService, keyService, kmsClient)
+        statementService = EntityConfigurationStatementService(accountService, jwkService, kmsClient)
     }
 
     @AfterTest
@@ -91,14 +91,14 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = JwkAdminDTO(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
-        every { keyService.getKeys(testAccount) } returns arrayOf(testKey)
+        val testKey = Jwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        every { jwkService.getKeys(testAccount) } returns arrayOf(testKey)
 
         // Mock empty results for optional components
         every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { entityConfigurationMetadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { critQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
@@ -119,8 +119,8 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = JwkAdminDTO(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
-        every { keyService.getKeys(testAccount) } returns arrayOf(testKey)
+        val testKey = Jwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        every { jwkService.getKeys(testAccount) } returns arrayOf(testKey)
 
         // Mock KMS client response
         val expectedJwt = "test.jwt.token"
@@ -136,7 +136,7 @@ class EntityConfigurationStatementServiceTest {
         every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { entityConfigurationMetadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { critQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
@@ -145,7 +145,7 @@ class EntityConfigurationStatementServiceTest {
 
         assertEquals(expectedJwt, result)
         verify { accountService.getAccountIdentifierByAccount(testAccount) }
-        verify { keyService.getKeys(testAccount) }
+        verify { jwkService.getKeys(testAccount) }
         verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
@@ -156,8 +156,8 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = JwkAdminDTO(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
-        every { keyService.getKeys(testAccount) } returns arrayOf(testKey)
+        val testKey = Jwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        every { jwkService.getKeys(testAccount) } returns arrayOf(testKey)
 
         // Mock KMS client response
         val expectedJwt = "test.jwt.token"
@@ -173,7 +173,7 @@ class EntityConfigurationStatementServiceTest {
 
         assertEquals(expectedJwt, result)
         verify { accountService.getAccountIdentifierByAccount(testAccount) }
-        verify { keyService.getKeys(testAccount) }
+        verify { jwkService.getKeys(testAccount) }
         verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify(exactly = 0) { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
@@ -184,14 +184,14 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount) } returns TEST_IDENTIFIER
 
         // Mock empty key response
-        every { keyService.getKeys(testAccount) } returns emptyArray()
+        every { jwkService.getKeys(testAccount) } returns emptyArray()
 
         assertFailsWith<IllegalArgumentException> {
             statementService.publishByAccount(testAccount)
         }
 
         verify { accountService.getAccountIdentifierByAccount(testAccount) }
-        verify { keyService.getKeys(testAccount) }
+        verify { jwkService.getKeys(testAccount) }
         verify(exactly = 0) { kmsClient.sign(any(), any(), any()) }
     }
 }

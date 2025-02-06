@@ -1,14 +1,13 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
+import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.models.SubordinateJwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.mappers.toSubordinateAdminDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import jakarta.servlet.http.HttpServletRequest
 import kotlinx.serialization.json.JsonObject
 import org.springframework.http.HttpStatus
@@ -20,17 +19,16 @@ class SubordinateController(
     private val subordinateService: SubordinateService
 ) {
     @GetMapping
-    fun getSubordinates(request: HttpServletRequest): Array<SubordinateAdminDTO> {
+    fun getSubordinates(request: HttpServletRequest): Array<Subordinate> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.findSubordinatesByAccount(account)
-            .map { it.toSubordinateAdminDTO() }.toTypedArray()
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinate(
         request: HttpServletRequest,
-        @RequestBody subordinate: CreateSubordinateDTO
+        @RequestBody subordinate: CreateSubordinate
     ): Subordinate {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.createSubordinate(account, subordinate)
@@ -51,18 +49,18 @@ class SubordinateController(
         request: HttpServletRequest,
         @PathVariable id: Int,
         @RequestBody jwk: JsonObject
-    ): SubordinateJwkDto {
+    ): SubordinateJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.createSubordinateJwk(account, id, jwk)
+        return subordinateService.createSubordinateJwk(account, id, jwk).toDTO()
     }
 
     @GetMapping("/{id}/jwks")
     fun getSubordinateJwks(
         request: HttpServletRequest,
         @PathVariable id: Int
-    ): Array<SubordinateJwkDto> {
+    ): Array<SubordinateJwk> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.getSubordinateJwks(account, id)
+        return subordinateService.getSubordinateJwks(account, id).map { it.toDTO() }.toTypedArray()
     }
 
     @DeleteMapping("/{id}/jwks/{jwkId}")

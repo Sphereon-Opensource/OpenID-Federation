@@ -4,17 +4,17 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadata
-import com.sphereon.oid.fed.persistence.models.EntityConfigurationMetadataQueries
+import com.sphereon.oid.fed.persistence.models.Metadata
+import com.sphereon.oid.fed.persistence.models.MetadataQueries
 import io.mockk.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.LocalDateTime
 import kotlin.test.*
 
-class EntityConfigurationMetadataServiceTest {
-    private lateinit var metadataService: EntityConfigurationMetadataService
-    private lateinit var metadataQueries: EntityConfigurationMetadataQueries
+class MetadataServiceTest {
+    private lateinit var metadataService: MetadataService
+    private lateinit var metadataQueries: MetadataQueries
     private lateinit var testAccount: Account
 
     companion object {
@@ -25,10 +25,10 @@ class EntityConfigurationMetadataServiceTest {
 
     @BeforeTest
     fun setup() {
-        metadataQueries = mockk<EntityConfigurationMetadataQueries>(relaxed = true)
+        metadataQueries = mockk<MetadataQueries>(relaxed = true)
         mockkObject(Persistence)
-        every { Persistence.entityConfigurationMetadataQueries } returns metadataQueries
-        metadataService = EntityConfigurationMetadataService()
+        every { Persistence.metadataQueries } returns metadataQueries
+        metadataService = MetadataService()
         testAccount = Account(
             id = 1,
             username = "testUser",
@@ -47,7 +47,7 @@ class EntityConfigurationMetadataServiceTest {
 
     @Test
     fun testCreateEntityConfigurationMetadata() {
-        val metadata = EntityConfigurationMetadata(
+        val metadata = Metadata(
             id = 1,
             account_id = testAccount.id,
             key = TEST_KEY,
@@ -74,7 +74,7 @@ class EntityConfigurationMetadataServiceTest {
 
     @Test
     fun testCreateDuplicateMetadata() {
-        val existingMetadata = EntityConfigurationMetadata(
+        val existingMetadata = Metadata(
             id = 1,
             account_id = testAccount.id,
             key = TEST_KEY,
@@ -96,8 +96,8 @@ class EntityConfigurationMetadataServiceTest {
     @Test
     fun testFindByAccount() {
         val metadataList = listOf(
-            EntityConfigurationMetadata(1, testAccount.id, "key1", """{"test": "value1"}""", FIXED_TIMESTAMP, null),
-            EntityConfigurationMetadata(2, testAccount.id, "key2", """{"test": "value2"}""", FIXED_TIMESTAMP, null)
+            Metadata(1, testAccount.id, "key1", """{"test": "value1"}""", FIXED_TIMESTAMP, null),
+            Metadata(2, testAccount.id, "key2", """{"test": "value2"}""", FIXED_TIMESTAMP, null)
         )
 
         every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns metadataList
@@ -113,7 +113,7 @@ class EntityConfigurationMetadataServiceTest {
 
     @Test
     fun testDeleteMetadata() {
-        val metadata = EntityConfigurationMetadata(
+        val metadata = Metadata(
             id = 1,
             account_id = testAccount.id,
             key = TEST_KEY,
@@ -154,7 +154,7 @@ class EntityConfigurationMetadataServiceTest {
     @Test
     fun testDeleteMetadataFromDifferentAccount() {
         val differentAccountId = 2
-        val metadata = EntityConfigurationMetadata(
+        val metadata = Metadata(
             id = 1,
             account_id = differentAccountId, // Different account ID
             key = TEST_KEY,

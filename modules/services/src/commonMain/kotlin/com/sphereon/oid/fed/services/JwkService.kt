@@ -5,47 +5,47 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.oid.fed.openapi.models.HistoricalKey
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toHistoricalKey
-import com.sphereon.oid.fed.services.mappers.toJwkAdminDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
-class KeyService(
+class JwkService(
     private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("KeyService")
     private val jwkQueries = Persistence.jwkQueries
 
-    fun createKey(account: Account): JwkAdminDTO {
+    fun createKey(account: Account): Jwk {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
         val jwk = kmsClient.generateKeyPair()
         logger.debug("Generated key pair with KID: ${jwk.kid}")
 
-        jwkQueries.create(
+        val createdJwk = jwkQueries.create(
             account_id = account.id,
             kid = jwk.kid,
-            key = Json.encodeToString(JwkAdminDTO.serializer(), jwk),
+            key = Json.encodeToString(Jwk.serializer(), jwk),
         ).executeAsOne()
         logger.info("Successfully created key with KID: ${jwk.kid} for account ID: ${account.id}")
 
-        return jwk
+        return createdJwk.toDTO()
     }
 
-    fun getKeys(account: Account): Array<JwkAdminDTO> {
+    fun getKeys(account: Account): Array<Jwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }.toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
 
-    fun revokeKey(account: Account, keyId: Int, reason: String?): JwkAdminDTO {
+    fun revokeKey(account: Account, keyId: Int, reason: String?): Jwk {
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
@@ -57,23 +57,21 @@ class KeyService(
             throw NotFoundException(Constants.KEY_NOT_FOUND)
         }
 
-        if (key.revoked_at != null) {
-            logger.error("Key ID: $keyId is already revoked")
-            throw IllegalStateException(Constants.KEY_ALREADY_REVOKED)
+        try {
+            key = jwkQueries.revoke(reason, keyId).executeAsOne()
+            logger.debug("Revoked key ID: $keyId with reason: ${reason ?: "no reason provided"}")
+            logger.info("Successfully revoked key ID: $keyId")
+        } catch (e: Exception) {
+            logger.error("Failed to revoke key ID: $keyId due to: ${e.message}")
+            throw e
         }
 
-        jwkQueries.revoke(reason, keyId)
-        logger.debug("Revoked key ID: $keyId with reason: ${reason ?: "no reason provided"}")
-
-        key = jwkQueries.findById(keyId).executeAsOne()
-        logger.info("Successfully revoked key ID: $keyId")
-
-        return key.toJwkAdminDTO()
+        return key.toDTO()
     }
 
     private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: ${account.username}")
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toJwkAdminDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
 
         return keys.map {
@@ -104,7 +102,7 @@ class KeyService(
                 FederationHistoricalKeysResponse.serializer(),
                 historicalKeysJwkObject
             ).jsonObject,
-            header = JWTHeader(typ = "jwk-set+jwt", kid = key!!),
+            header = JwtHeader(typ = "jwk-set+jwt", kid = key!!),
             keyId = key
         )
 

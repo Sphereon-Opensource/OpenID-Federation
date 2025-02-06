@@ -1,12 +1,13 @@
 package com.sphereon.oid.fed.services.mappers
 
-import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
-import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
-import com.sphereon.oid.fed.persistence.models.TrustMark
-import com.sphereon.oid.fed.persistence.models.TrustMarkType
+import com.sphereon.oid.fed.openapi.models.TrustMark
+import com.sphereon.oid.fed.openapi.models.TrustMarkType
+import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
+import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
+import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
 
-fun TrustMarkType.toTrustMarkTypeDTO(): TrustMarkTypeDTO {
-    return TrustMarkTypeDTO(
+fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
+    return TrustMarkType(
         id = this.id,
         identifier = this.identifier,
         createdAt = this.created_at.toString(),
@@ -14,15 +15,16 @@ fun TrustMarkType.toTrustMarkTypeDTO(): TrustMarkTypeDTO {
     )
 }
 
-fun TrustMark.toTrustMarkDTO(): TrustMarkDTO {
-    return TrustMarkDTO(
-        id = this.id,
-        accountId = this.account_id,
-        sub = this.sub,
-        trustMarkTypeIdentifier = this.trust_mark_type_identifier,
-        trustMarkValue = this.trust_mark_value,
-        iat = this.iat,
-        exp = this.exp,
-        createdAt = this.created_at.toString()
+fun TrustMarkEntity.toDTO(): TrustMark {
+    return TrustMark(
+        id = this.trust_mark_type_identifier,
+        trustMark = this.trust_mark_value
+    )
+}
+
+fun ReceivedTrustMark.toTrustMark(): TrustMark {
+    return TrustMark(
+        id = this.trust_mark_type_identifier,
+        trustMark = this.jwt
     )
 }

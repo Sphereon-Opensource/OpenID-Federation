@@ -5,12 +5,12 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.persistence.models.Crit
+import com.sphereon.oid.fed.persistence.models.Crit as CritEntity
 
 class CritService {
     private val logger = Logger.tag("CritService")
 
-    fun create(account: Account, claim: String): Crit {
+    fun create(account: Account, claim: String): CritEntity {
         logger.info("Creating crit for account: ${account.username}, claim: $claim")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -35,7 +35,7 @@ class CritService {
         }
     }
 
-    fun delete(account: Account, id: Int): Crit {
+    fun delete(account: Account, id: Int): CritEntity {
         logger.info("Deleting crit ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -51,14 +51,14 @@ class CritService {
         }
     }
 
-    private fun findByAccountId(accountId: Int): Array<Crit> {
+    private fun findByAccountId(accountId: Int): Array<CritEntity> {
         logger.debug("Finding crits for account ID: $accountId")
         val crits = Persistence.critQueries.findByAccountId(accountId).executeAsList().toTypedArray()
         logger.debug("Found ${crits.size} crits for account ID: $accountId")
         return crits
     }
 
-    fun findByAccountUsername(account: Account): Array<Crit> {
+    fun findByAccountUsername(account: Account): Array<CritEntity> {
         logger.info("Finding crits for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")

@@ -7,7 +7,7 @@ expect object Persistence {
     val accountQueries: AccountQueries
     val jwkQueries: JwkQueries
     val subordinateQueries: SubordinateQueries
-    val entityConfigurationMetadataQueries: EntityConfigurationMetadataQueries
+    val metadataQueries: MetadataQueries
     val authorityHintQueries: AuthorityHintQueries
     val critQueries: CritQueries
     val subordinateStatementQueries: SubordinateStatementQueries

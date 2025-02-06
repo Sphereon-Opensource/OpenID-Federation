@@ -3,6 +3,7 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.persistence.models.LogQueries
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.sphereon.oid.fed.persistence.models.Log as LogEntity
 
 open class LogService(private val logQueries: LogQueries) {
     fun insertLog(
@@ -26,12 +27,12 @@ open class LogService(private val logQueries: LogQueries) {
 
     fun getRecentLogs(limit: Long = 100L) = logQueries.getRecentLogs(limit).executeAsList()
 
-    fun searchLogs(searchTerm: String, limit: Long = 100L) =
+    fun searchLogs(searchTerm: String, limit: Long = 100L): List<LogEntity> =
         logQueries.searchLogs(searchTerm, limit).executeAsList()
 
-    fun getLogsBySeverity(severity: String, limit: Long = 100L) =
+    fun getLogsBySeverity(severity: String, limit: Long = 100L): List<LogEntity> =
         logQueries.getLogsBySeverity(severity, limit).executeAsList()
 
-    fun getLogsByTag(tag: String, limit: Long = 100L) =
+    fun getLogsByTag(tag: String, limit: Long = 100L): List<LogEntity> =
         logQueries.getLogsByTag(tag, limit).executeAsList()
 }

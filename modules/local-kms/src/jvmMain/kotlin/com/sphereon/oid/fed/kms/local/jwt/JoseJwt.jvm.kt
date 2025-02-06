@@ -1,24 +1,20 @@
 package com.sphereon.oid.fed.kms.local.jwt
 
-import com.nimbusds.jose.JOSEObjectType
-import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.JWSHeader
-import com.nimbusds.jose.JWSSigner
-import com.nimbusds.jose.JWSVerifier
+import com.nimbusds.jose.*
 import com.nimbusds.jose.crypto.ECDSASigner
 import com.nimbusds.jose.crypto.ECDSAVerifier
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import com.sphereon.oid.fed.openapi.models.JWTHeader
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
 actual fun sign(
-    payload: JsonObject, header: JWTHeader, key: JwkWithPrivateKey
+    payload: JsonObject, header: JwtHeader, key: JwkWithPrivateKey
 ): String {
     val jwkJsonString = Json.encodeToString(key)
     val ecJWK = ECKey.parse(jwkJsonString)
@@ -48,7 +44,7 @@ actual fun verify(
     }
 }
 
-fun JWTHeader.toJWSHeader(): JWSHeader {
+fun JwtHeader.toJWSHeader(): JWSHeader {
     val type = typ
     return JWSHeader.Builder(JWSAlgorithm.parse(alg)).apply {
         type(JOSEObjectType(type))
