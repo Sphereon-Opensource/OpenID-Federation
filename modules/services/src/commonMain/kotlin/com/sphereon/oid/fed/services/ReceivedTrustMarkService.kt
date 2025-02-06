@@ -2,10 +2,11 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMark
+import com.sphereon.oid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark as ReceivedTrustMarkEntity
+import com.sphereon.oid.fed.services.mappers.toDTO
 
 class ReceivedTrustMarkService {
     private val logger = Logger.tag("ReceivedTrustMarkService")
@@ -14,7 +15,7 @@ class ReceivedTrustMarkService {
     fun createReceivedTrustMark(
         account: Account,
         dto: CreateReceivedTrustMark
-    ): ReceivedTrustMarkEntity {
+    ): ReceivedTrustMark {
         logger.info("Creating trust mark for account: ${account.username}")
 
         val receivedTrustMark = receivedTrustMarkQueries.create(
@@ -25,22 +26,22 @@ class ReceivedTrustMarkService {
 
         logger.info("Successfully created trust mark with ID: ${receivedTrustMark.id}")
 
-        return receivedTrustMark
+        return receivedTrustMark.toDTO()
     }
 
-    fun listReceivedTrustMarks(account: Account): List<ReceivedTrustMarkEntity> {
+    fun listReceivedTrustMarks(account: Account): Array<ReceivedTrustMark> {
         logger.debug("Listing trust marks for account: ${account.username}")
 
         val trustMarks = receivedTrustMarkQueries.findByAccountId(account.id).executeAsList()
         logger.debug("Found ${trustMarks.size} trust marks for account: ${account.username}")
 
-        return trustMarks
+        return trustMarks.map { it.toDTO() }.toTypedArray()
     }
 
     fun deleteReceivedTrustMark(
         account: Account,
         trustMarkId: Int
-    ): ReceivedTrustMarkEntity {
+    ): ReceivedTrustMark {
         logger.info("Attempting to delete trust mark ID: $trustMarkId for account: ${account.username}")
 
         receivedTrustMarkQueries.findByAccountIdAndId(account.id, trustMarkId).executeAsOneOrNull()
@@ -51,6 +52,6 @@ class ReceivedTrustMarkService {
         val deletedTrustMark = receivedTrustMarkQueries.delete(trustMarkId).executeAsOne()
         logger.info("Successfully deleted trust mark ID: $trustMarkId for account: ${account.username}")
 
-        return deletedTrustMark
+        return deletedTrustMark.toDTO()
     }
 }

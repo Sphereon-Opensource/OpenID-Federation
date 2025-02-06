@@ -3,12 +3,8 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
-import com.sphereon.oid.fed.openapi.models.HistoricalKey
-import com.sphereon.oid.fed.openapi.models.Jwk
-import com.sphereon.oid.fed.openapi.models.JwtHeader
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toHistoricalKey
 import kotlinx.serialization.json.Json

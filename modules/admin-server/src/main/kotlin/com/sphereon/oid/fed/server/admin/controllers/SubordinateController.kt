@@ -1,16 +1,13 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.CreateSubordinate
-import com.sphereon.oid.fed.openapi.models.SubordinateJwk
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.mappers.toDTO
 import jakarta.servlet.http.HttpServletRequest
 import kotlinx.serialization.json.JsonObject
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -51,7 +48,7 @@ class SubordinateController(
         @RequestBody jwk: JsonObject
     ): SubordinateJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.createSubordinateJwk(account, id, jwk).toDTO()
+        return subordinateService.createSubordinateJwk(account, id, jwk)
     }
 
     @GetMapping("/{id}/jwks")
@@ -60,7 +57,7 @@ class SubordinateController(
         @PathVariable id: Int
     ): Array<SubordinateJwk> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.getSubordinateJwks(account, id).map { it.toDTO() }.toTypedArray()
+        return subordinateService.getSubordinateJwks(account, id)
     }
 
     @DeleteMapping("/{id}/jwks/{jwkId}")
@@ -83,13 +80,17 @@ class SubordinateController(
     }
 
     @PostMapping("/{id}/statement")
-    @ResponseStatus(HttpStatus.CREATED)
     fun publishSubordinateStatement(
         request: HttpServletRequest,
         @PathVariable id: Int,
-        @RequestBody dryRun: Boolean?
-    ): String {
+        @RequestBody body: PublishStatementRequest?
+    ): ResponseEntity<String> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.publishSubordinateStatement(account, id, dryRun)
+        val result = subordinateService.publishSubordinateStatement(account, id, body?.dryRun)
+        return if (body?.dryRun == true) {
+            ResponseEntity.ok(result)
+        } else {
+            ResponseEntity.status(HttpStatus.CREATED).body(result)
+        }
     }
 }

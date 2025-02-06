@@ -4,10 +4,11 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.services.mappers.toDTO
 import kotlinx.serialization.json.JsonObject
-import com.sphereon.oid.fed.persistence.models.Metadata as MetadataEntity
 
 class MetadataService {
     private val logger = Logger.tag("EntityConfigurationMetadataService")
@@ -16,7 +17,7 @@ class MetadataService {
         account: Account,
         key: String,
         metadata: JsonObject
-    ): MetadataEntity {
+    ): Metadata {
         logger.info("Creating entity configuration metadata for account: ${account.username}, key: $key")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -38,28 +39,28 @@ class MetadataService {
                     }
 
             logger.info("Successfully created metadata with ID: ${createdMetadata.id}")
-            return createdMetadata
+            return createdMetadata.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to create metadata for account: ${account.username}, key: $key", e)
             throw e
         }
     }
 
-    fun findByAccount(account: Account): Array<MetadataEntity> {
+    fun findByAccount(account: Account): Array<Metadata> {
         logger.debug("Finding metadata for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
 
-            val metadata = Persistence.metadataQueries.findByAccountId(account.id).executeAsList().toTypedArray()
-            logger.debug("Found ${metadata.size} metadata entries for account: ${account.username}")
-            return metadata
+            val metadataArray = Persistence.metadataQueries.findByAccountId(account.id).executeAsList()
+            logger.debug("Found ${metadataArray.size} metadata entries for account: ${account.username}")
+            return metadataArray.map { it.toDTO() }.toTypedArray()
         } catch (e: Exception) {
             logger.error("Failed to find metadata for account: ${account.username}", e)
             throw e
         }
     }
 
-    fun deleteEntityConfigurationMetadata(account: Account, id: Int): MetadataEntity {
+    fun deleteEntityConfigurationMetadata(account: Account, id: Int): Metadata {
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -81,7 +82,7 @@ class MetadataService {
                 }
 
             logger.info("Successfully deleted metadata ID: $id")
-            return deletedMetadata
+            return deletedMetadata.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete metadata ID: $id for account: ${account.username}", e)
             throw e

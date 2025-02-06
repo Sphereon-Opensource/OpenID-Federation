@@ -4,11 +4,10 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.mappers.toDTO
-import com.sphereon.oid.fed.persistence.models.AuthorityHint as AuthorityHintEntity
 
 class AuthorityHintService {
     private val logger = Logger.tag("AuthorityHintService")
@@ -16,7 +15,7 @@ class AuthorityHintService {
     fun createAuthorityHint(
         account: Account,
         identifier: String
-    ): AuthorityHintEntity {
+    ): AuthorityHint {
         logger.debug("Attempting to create authority hint for account: ${account.username} with identifier: $identifier")
         val authorityHintAlreadyExists =
             Persistence.authorityHintQueries.findByAccountIdAndIdentifier(account.id, identifier).executeAsOneOrNull()
@@ -32,7 +31,7 @@ class AuthorityHintService {
 
         return try {
             Persistence.authorityHintQueries.create(account.id, identifier)
-                .executeAsOneOrNull()
+                .executeAsOneOrNull()?.toDTO()
                 ?.also { logger.info("Successfully created authority hint for account: ${account.username} with identifier: $identifier") }
                 ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_AUTHORITY_HINT)
         } catch (e: IllegalStateException) {
@@ -44,7 +43,7 @@ class AuthorityHintService {
         }
     }
 
-    fun deleteAuthorityHint(account: Account, id: Int): AuthorityHintEntity {
+    fun deleteAuthorityHint(account: Account, id: Int): AuthorityHint {
         logger.debug("Attempting to delete authority hint with id: $id for account: ${account.username}")
 
         val notFoundException = NotFoundException(Constants.AUTHORITY_HINT_NOT_FOUND)
@@ -58,7 +57,7 @@ class AuthorityHintService {
             }
 
         return try {
-            Persistence.authorityHintQueries.delete(id).executeAsOneOrNull()
+            Persistence.authorityHintQueries.delete(id).executeAsOneOrNull()?.toDTO()
                 ?.also { logger.info("Successfully deleted authority hint with id: $id for account: ${account.username}") }
                 ?: throw IllegalStateException(Constants.FAILED_TO_DELETE_AUTHORITY_HINT)
         } catch (e: IllegalStateException) {

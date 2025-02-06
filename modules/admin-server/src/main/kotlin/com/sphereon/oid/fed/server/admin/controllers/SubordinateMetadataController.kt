@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.SubordinateService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus

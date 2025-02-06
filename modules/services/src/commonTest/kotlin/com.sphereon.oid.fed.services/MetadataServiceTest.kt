@@ -6,6 +6,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Metadata
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -63,7 +64,7 @@ class MetadataServiceTest {
             every { executeAsOneOrNull() } returns metadata
         }
 
-        val result = metadataService.createEntityConfigurationMetadata(testAccount, TEST_KEY, TEST_METADATA)
+        val result = metadataService.createEntityConfigurationMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
 
         assertNotNull(result)
         assertEquals(TEST_KEY, result.key)
@@ -88,7 +89,7 @@ class MetadataServiceTest {
         }
 
         assertFailsWith<EntityAlreadyExistsException> {
-            metadataService.createEntityConfigurationMetadata(testAccount, TEST_KEY, TEST_METADATA)
+            metadataService.createEntityConfigurationMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
         }
         verify { metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY) }
     }
@@ -102,7 +103,7 @@ class MetadataServiceTest {
 
         every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns metadataList
 
-        val result = metadataService.findByAccount(testAccount)
+        val result = metadataService.findByAccount(testAccount.toDTO())
 
         assertNotNull(result)
         assertEquals(2, result.size)
@@ -129,7 +130,7 @@ class MetadataServiceTest {
             every { executeAsOneOrNull() } returns metadata
         }
 
-        val result = metadataService.deleteEntityConfigurationMetadata(testAccount, metadata.id)
+        val result = metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
 
         assertNotNull(result)
         assertEquals(TEST_KEY, result.key)
@@ -146,7 +147,7 @@ class MetadataServiceTest {
         }
 
         assertFailsWith<NotFoundException> {
-            metadataService.deleteEntityConfigurationMetadata(testAccount, nonExistentId)
+            metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), nonExistentId)
         }
         verify { metadataQueries.findById(nonExistentId) }
     }
@@ -168,7 +169,7 @@ class MetadataServiceTest {
         }
 
         assertFailsWith<NotFoundException> {
-            metadataService.deleteEntityConfigurationMetadata(testAccount, metadata.id)
+            metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
         }
         verify { metadataQueries.findById(metadata.id) }
     }

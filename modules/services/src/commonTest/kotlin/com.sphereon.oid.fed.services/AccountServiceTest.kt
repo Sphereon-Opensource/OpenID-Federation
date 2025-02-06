@@ -119,7 +119,7 @@ class AccountServiceTest {
             deleted_at = null
         )
 
-        val identifier = accountService.getAccountIdentifierByAccount(account)
+        val identifier = accountService.getAccountIdentifierByAccount(account.toDTO())
         assertEquals("${config.rootIdentifier}/${account.username}", identifier)
     }
 
@@ -134,7 +134,7 @@ class AccountServiceTest {
             deleted_at = null
         )
 
-        val identifier = accountService.getAccountIdentifierByAccount(rootAccount)
+        val identifier = accountService.getAccountIdentifierByAccount(rootAccount.toDTO())
         assertEquals(config.rootIdentifier, identifier)
     }
 

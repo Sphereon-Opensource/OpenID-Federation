@@ -2,10 +2,10 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.ResolveResponse
 import com.sphereon.oid.fed.openapi.models.TrustMark
-import com.sphereon.oid.fed.persistence.models.Account
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 

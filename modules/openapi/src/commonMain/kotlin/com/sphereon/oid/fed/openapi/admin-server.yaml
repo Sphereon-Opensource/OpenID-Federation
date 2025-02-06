@@ -27,124 +27,6 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: status
-  /logs:
-    get:
-      summary: Get recent logs
-      security:
-        - bearerAuth: [ ]
-      description: Retrieve the most recent logs from the system
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-        - name: limit
-          in: query
-          description: Maximum number of logs to return
-          required: false
-          schema:
-            type: integer
-            default: 100
-            minimum: 1
-            maximum: 1000
-      responses:
-        '200':
-          description: Successful retrieval of logs
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Log'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-
-  /logs/severity/{severity}:
-    get:
-      summary: Get logs by severity
-      security:
-        - bearerAuth: [ ]
-      description: Retrieve logs filtered by severity level
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-        - name: severity
-          in: path
-          description: Severity level to filter by
-          required: true
-          schema:
-            type: string
-            enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
-        - name: limit
-          in: query
-          description: Maximum number of logs to return
-          required: false
-          schema:
-            type: integer
-            default: 100
-            minimum: 1
-            maximum: 1000
-      responses:
-        '200':
-          description: Successful retrieval of logs by severity
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Log'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-
-  /logs/tag/{tag}:
-    get:
-      summary: Get logs by tag
-      security:
-        - bearerAuth: [ ]
-      description: Retrieve logs filtered by tag
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-        - name: tag
-          in: path
-          description: Tag to filter by
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: Maximum number of logs to return
-          required: false
-          schema:
-            type: integer
-            default: 100
-            minimum: 1
-            maximum: 1000
-      responses:
-        '200':
-          description: Successful retrieval of logs by tag
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Log'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-
   /accounts:
     get:
       summary: List all accounts
@@ -575,7 +457,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PublishEntityStatement'
+              $ref: '#/components/schemas/PublishStatementRequest'
       responses:
         '200':
           description: Entity configuration statement published or validated successfully
@@ -983,7 +865,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PublishEntityStatement'
+              $ref: '#/components/schemas/PublishStatementRequest'
       responses:
         '200':
           description: Subordinate statement published successfully
@@ -1454,6 +1336,124 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  /logs:
+    get:
+      summary: Get recent logs
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve the most recent logs from the system
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /logs/severity/{severity}:
+    get:
+      summary: Get logs by severity
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve logs filtered by severity level
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: severity
+          in: path
+          description: Severity level to filter by
+          required: true
+          schema:
+            type: string
+            enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by severity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /logs/tag/{tag}:
+    get:
+      summary: Get logs by tag
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve logs filtered by tag
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: tag
+          in: path
+          description: Tag to filter by
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by tag
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
 
 components:
   securitySchemes:
@@ -2105,7 +2105,7 @@ components:
           example: '2024-08-06T12:34:56Z'
           nullable: true
 
-    PublishEntityStatement:
+    PublishStatementRequest:
       type: object
       x-tags:
         - federation

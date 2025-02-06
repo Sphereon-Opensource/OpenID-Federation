@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.TrustMarkService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus

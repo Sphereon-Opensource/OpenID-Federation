@@ -5,13 +5,9 @@ import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.CreateSubordinate
-import com.sphereon.oid.fed.openapi.models.JwtHeader
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toJwk
 import kotlinx.serialization.json.Json
@@ -96,7 +92,8 @@ class SubordinateService(
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
-            val subordinateJwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList()
+            val subordinateJwks =
+                subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toDTO() }
             logger.debug("Found ${subordinateJwks.size} JWKs for subordinate")
 
             val subordinateMetadataList =
@@ -211,7 +208,7 @@ class SubordinateService(
             val createdJwk = subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id)
                 .executeAsOne()
             logger.info("Successfully created subordinate JWK with ID: ${createdJwk.id}")
-            return createdJwk
+            return createdJwk.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to create subordinate JWK for subordinate ID: $id", e)
             throw e
@@ -227,7 +224,8 @@ class SubordinateService(
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
-            val jwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().toTypedArray()
+            val jwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toDTO() }
+                .toTypedArray()
             logger.info("Found ${jwks.size} JWKs for subordinate ID: $id")
             return jwks
         } catch (e: Exception) {
@@ -261,7 +259,7 @@ class SubordinateService(
 
             val deletedJwk = subordinateJwkQueries.delete(subordinateJwk.id).executeAsOne()
             logger.info("Successfully deleted subordinate JWK with ID: $jwkId")
-            return deletedJwk
+            return deletedJwk.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete subordinate JWK ID: $jwkId", e)
             throw e

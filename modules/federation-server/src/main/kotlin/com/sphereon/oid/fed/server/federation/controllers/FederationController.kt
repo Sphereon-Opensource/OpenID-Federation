@@ -4,6 +4,7 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.*
+import com.sphereon.oid.fed.services.mappers.toDTO
 import org.springframework.web.bind.annotation.*
 
 
@@ -45,21 +46,21 @@ class FederationController(
     fun getRootSubordinatesList(): Array<String> {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        return subordinateService.findSubordinatesByAccountAsArray(account)
+        return subordinateService.findSubordinatesByAccountAsArray(account.toDTO())
     }
 
     @GetMapping("/{username}/list")
     fun getSubordinatesList(@PathVariable username: String): Array<String> {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        return subordinateService.findSubordinatesByAccountAsArray(account)
+        return subordinateService.findSubordinatesByAccountAsArray(account.toDTO())
     }
 
     @GetMapping("/fetch", produces = ["application/entity-statement+jwt"])
     fun getRootSubordinateStatement(@RequestParam("sub") sub: String): String {
         val account = accountQueries.findByUsername("root").executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        val accountIss = accountService.getAccountIdentifierByAccount(account)
+        val accountIss = accountService.getAccountIdentifierByAccount(account.toDTO())
         return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
@@ -67,7 +68,7 @@ class FederationController(
     fun getSubordinateStatement(@PathVariable username: String, @RequestParam("sub") sub: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        val accountIss = accountService.getAccountIdentifierByAccount(account)
+        val accountIss = accountService.getAccountIdentifierByAccount(account.toDTO())
         return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
@@ -81,7 +82,7 @@ class FederationController(
             sub = sub,
             trustMarkId = trustMarkId
         )
-        val status = trustMarkService.getTrustMarkStatus(account, request)
+        val status = trustMarkService.getTrustMarkStatus(account.toDTO(), request)
 
         return TrustMarkStatusResponse(
             active = status,
@@ -100,7 +101,7 @@ class FederationController(
             sub = sub,
             trustMarkId = trustMarkId
         )
-        val status = trustMarkService.getTrustMarkStatus(account, request)
+        val status = trustMarkService.getTrustMarkStatus(account.toDTO(), request)
 
         return TrustMarkStatusResponse(
             active = status,
@@ -117,7 +118,7 @@ class FederationController(
             sub = sub,
             trustMarkId = trustMarkId
         )
-        return trustMarkService.getTrustMarkedSubs(account, request)
+        return trustMarkService.getTrustMarkedSubs(account.toDTO(), request)
     }
 
     @GetMapping("/{username}/trust-mark-list", produces = ["application/json"])
@@ -132,7 +133,7 @@ class FederationController(
             sub = sub,
             trustMarkId = trustMarkId
         )
-        return trustMarkService.getTrustMarkedSubs(account, request)
+        return trustMarkService.getTrustMarkedSubs(account.toDTO(), request)
     }
 
     @GetMapping("/trust-mark", produces = ["application/trust-mark+jwt"])
@@ -140,7 +141,7 @@ class FederationController(
         @RequestBody request: TrustMarkRequest
     ): String {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        return trustMarkService.getTrustMark(account, request)
+        return trustMarkService.getTrustMark(account.toDTO(), request)
     }
 
     @GetMapping("/{username}/trust-mark", produces = ["application/trust-mark+jwt"])
@@ -150,20 +151,20 @@ class FederationController(
     ): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        return trustMarkService.getTrustMark(account, request)
+        return trustMarkService.getTrustMark(account.toDTO(), request)
     }
 
     @GetMapping("/historical-keys", produces = ["application/jwk-set+jwt"])
     fun getRootFederationHistoricalKeys(): String {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        return jwkService.getFederationHistoricalKeysJwt(account, accountService)
+        return jwkService.getFederationHistoricalKeysJwt(account.toDTO(), accountService)
     }
 
     @GetMapping("/{username}/historical-keys", produces = ["application/jwk-set+jwt"])
     fun getFederationHistoricalKeys(@PathVariable username: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        return jwkService.getFederationHistoricalKeysJwt(account, accountService)
+        return jwkService.getFederationHistoricalKeysJwt(account.toDTO(), accountService)
     }
 
     @GetMapping("/resolve", produces = ["application/resolve-response+jwt"])
@@ -173,7 +174,7 @@ class FederationController(
         @RequestParam("entity_type", required = false) entityTypes: Array<String>?
     ): ResolveResponse {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        return resolveService.resolveEntity(account, sub, trustAnchor, entityTypes)
+        return resolveService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
     }
 
     @GetMapping("/{username}/resolve", produces = ["application/resolve-response+jwt"])
@@ -186,6 +187,6 @@ class FederationController(
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
 
-        return resolveService.resolveEntity(account, sub, trustAnchor, entityTypes)
+        return resolveService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
     }
 }

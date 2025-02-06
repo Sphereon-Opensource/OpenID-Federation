@@ -1,11 +1,10 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.Metadata
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.MetadataService
-import com.sphereon.oid.fed.services.mappers.toDTO
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -18,7 +17,7 @@ class EntityConfigurationMetadataController(
     @GetMapping
     fun getEntityConfigurationMetadata(request: HttpServletRequest): List<Metadata> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return metadataService.findByAccount(account).toList().map { it.toDTO() }
+        return metadataService.findByAccount(account).toList()
     }
 
     @PostMapping
@@ -32,7 +31,7 @@ class EntityConfigurationMetadataController(
             account,
             body.key,
             body.metadata
-        ).toDTO()
+        )
     }
 
     @DeleteMapping("/{id}")
@@ -44,6 +43,6 @@ class EntityConfigurationMetadataController(
         return metadataService.deleteEntityConfigurationMetadata(
             account,
             id
-        ).toDTO()
+        )
     }
 }
