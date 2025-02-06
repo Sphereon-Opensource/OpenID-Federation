@@ -6,21 +6,19 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.persistence.models.Subordinate
-import com.sphereon.oid.fed.persistence.models.SubordinateJwk
-import com.sphereon.oid.fed.persistence.models.SubordinateMetadata
+import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toJwk
-import com.sphereon.oid.fed.services.mappers.toSubordinateAdminJwkDTO
-import com.sphereon.oid.fed.services.mappers.toSubordinateMetadataDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import com.sphereon.oid.fed.persistence.models.Subordinate as SubordinateEntity
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadata as SubordinateMetadataEntity
 
 class SubordinateService(
     private val accountService: AccountService,
-    private val keyService: KeyService,
+    private val jwkService: JwkService,
     private val kmsClient: KmsClient
 ) {
     private val logger = Logger.tag("SubordinateService")
@@ -28,7 +26,7 @@ class SubordinateService(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
-    fun findSubordinatesByAccount(account: Account): Array<Subordinate> {
+    fun findSubordinatesByAccount(account: Account): Array<SubordinateEntity> {
         val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
         logger.debug("Found ${subordinates.size} subordinates for account: ${account.username}")
         return subordinates
@@ -39,7 +37,7 @@ class SubordinateService(
         return subordinates.map { it.identifier }.toTypedArray()
     }
 
-    fun deleteSubordinate(account: Account, id: Int): Subordinate {
+    fun deleteSubordinate(account: Account, id: Int): SubordinateEntity {
         logger.info("Attempting to delete subordinate ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -62,7 +60,7 @@ class SubordinateService(
         }
     }
 
-    fun createSubordinate(account: Account, subordinateDTO: CreateSubordinateDTO): Subordinate {
+    fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): SubordinateEntity {
         logger.info("Creating new subordinate for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -94,7 +92,8 @@ class SubordinateService(
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
-            val subordinateJwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList()
+            val subordinateJwks =
+                subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toDTO() }
             logger.debug("Found ${subordinateJwks.size} JWKs for subordinate")
 
             val subordinateMetadataList =
@@ -113,9 +112,9 @@ class SubordinateService(
 
     private fun buildSubordinateStatement(
         account: Account,
-        subordinate: Subordinate,
+        subordinate: SubordinateEntity,
         subordinateJwks: List<SubordinateJwk>,
-        subordinateMetadataList: List<SubordinateMetadata>
+        subordinateMetadataList: List<SubordinateMetadataEntity>
     ): SubordinateStatement {
         logger.debug("Building subordinate statement")
         val statement = SubordinateStatementObjectBuilder()
@@ -150,7 +149,7 @@ class SubordinateService(
             val subordinateStatement = getSubordinateStatement(account, id)
             logger.debug("Generated subordinate statement with subject: ${subordinateStatement.sub}")
 
-            val keys = keyService.getKeys(account)
+            val keys = jwkService.getKeys(account)
             logger.debug("Found ${keys.size} keys for account")
 
             if (keys.isEmpty()) {
@@ -166,7 +165,7 @@ class SubordinateService(
                     SubordinateStatement.serializer(),
                     subordinateStatement
                 ).jsonObject,
-                header = JWTHeader(typ = "entity-statement+jwt", kid = key!!),
+                header = JwtHeader(typ = "entity-statement+jwt", kid = key!!),
                 keyId = key
             )
             logger.debug("Successfully signed subordinate statement")
@@ -192,7 +191,7 @@ class SubordinateService(
         }
     }
 
-    fun createSubordinateJwk(account: Account, id: Int, jwk: JsonObject): SubordinateJwkDto {
+    fun createSubordinateJwk(account: Account, id: Int, jwk: JsonObject): SubordinateJwk {
         logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -208,16 +207,15 @@ class SubordinateService(
 
             val createdJwk = subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id)
                 .executeAsOne()
-                .toSubordinateAdminJwkDTO()
             logger.info("Successfully created subordinate JWK with ID: ${createdJwk.id}")
-            return createdJwk
+            return createdJwk.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to create subordinate JWK for subordinate ID: $id", e)
             throw e
         }
     }
 
-    fun getSubordinateJwks(account: Account, id: Int): Array<SubordinateJwkDto> {
+    fun getSubordinateJwks(account: Account, id: Int): Array<SubordinateJwk> {
         logger.info("Retrieving JWKs for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -226,8 +224,8 @@ class SubordinateService(
                 ?: throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
-            val jwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList()
-                .map { it.toSubordinateAdminJwkDTO() }.toTypedArray()
+            val jwks = subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toDTO() }
+                .toTypedArray()
             logger.info("Found ${jwks.size} JWKs for subordinate ID: $id")
             return jwks
         } catch (e: Exception) {
@@ -261,7 +259,7 @@ class SubordinateService(
 
             val deletedJwk = subordinateJwkQueries.delete(subordinateJwk.id).executeAsOne()
             logger.info("Successfully deleted subordinate JWK with ID: $jwkId")
-            return deletedJwk
+            return deletedJwk.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete subordinate JWK ID: $jwkId", e)
             throw e
@@ -282,7 +280,7 @@ class SubordinateService(
         }
     }
 
-    fun findSubordinateMetadata(account: Account, subordinateId: Int): Array<SubordinateMetadataDTO> {
+    fun findSubordinateMetadata(account: Account, subordinateId: Int): Array<SubordinateMetadata> {
         logger.info("Finding metadata for subordinate ID: $subordinateId, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -294,23 +292,21 @@ class SubordinateService(
             val metadata = Persistence.subordinateMetadataQueries
                 .findByAccountIdAndSubordinateId(account.id, subordinate.id)
                 .executeAsList()
-                .map { it.toSubordinateMetadataDTO() }
                 .toTypedArray()
             logger.info("Found ${metadata.size} metadata entries for subordinate ID: $subordinateId")
-            return metadata
+            return metadata.map { it.toDTO() }.toTypedArray()
         } catch (e: Exception) {
             logger.error("Failed to find subordinate metadata for subordinate ID: $subordinateId", e)
             throw e
         }
     }
 
-
     fun createMetadata(
         account: Account,
         subordinateId: Int,
         key: String,
         metadata: JsonObject
-    ): SubordinateMetadataDTO {
+    ): SubordinateMetadata {
         logger.info("Creating metadata for subordinate ID: $subordinateId, account: ${account.username}, key: $key")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -339,14 +335,14 @@ class SubordinateService(
                     ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_SUBORDINATE_METADATA)
             logger.info("Successfully created metadata with ID: ${createdMetadata.id}")
 
-            return createdMetadata.toSubordinateMetadataDTO()
+            return createdMetadata.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to create metadata for subordinate ID: $subordinateId, key: $key", e)
             throw e
         }
     }
 
-    fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadataDTO {
+    fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadata {
         logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -367,7 +363,7 @@ class SubordinateService(
                 ?: throw NotFoundException(Constants.SUBORDINATE_METADATA_NOT_FOUND)
             logger.info("Successfully deleted metadata with ID: $id")
 
-            return deletedMetadata.toSubordinateMetadataDTO()
+            return deletedMetadata.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete metadata ID: $id", e)
             throw e

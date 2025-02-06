@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.client.helpers
 
 import com.sphereon.oid.fed.openapi.models.Jwk
+import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
@@ -14,12 +15,12 @@ fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String 
     return "${fetchEndpoint}?sub=$sub"
 }
 
-fun findKeyInJwks(keys: JsonArray, kid: String): Jwk? {
+fun findKeyInJwks(keys: JsonArray, kid: String, json: Json): Jwk? {
     val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
 
     if (key == null) return null
 
-    return Json.decodeFromJsonElement(Jwk.serializer(), key)
+    return json.decodeFromJsonElement(Jwk.serializer(), key)
 }
 
 fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
@@ -29,4 +30,8 @@ fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
         }
     }
     return false
+}
+
+fun getCurrentEpochTimeSeconds(): Long {
+    return Clock.System.now().epochSeconds
 }

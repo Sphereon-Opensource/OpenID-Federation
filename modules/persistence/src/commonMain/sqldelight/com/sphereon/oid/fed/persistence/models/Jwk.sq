@@ -8,10 +8,8 @@ RETURNING *;
 
 revoke:
 UPDATE Jwk
-SET revoked_at = CURRENT_TIMESTAMP,
-    revoked_reason = ?
+SET revoked_reason = ?, revoked_at = CURRENT_TIMESTAMP
 WHERE id = ?
-AND revoked_at IS NULL
 RETURNING *;
 
 findByAccountId:

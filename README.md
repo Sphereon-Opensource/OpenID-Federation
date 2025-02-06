@@ -42,6 +42,13 @@ to participate in federations, ensuring trust and security across different orga
 - **JSON Object Signing and Encryption (JOSE)**: Standards for signing and encrypting JSON-based objects to ensure their
   integrity and confidentiality.
 
+# API Reference
+
+For the complete API documentation, please visit:
+
+- [Admin Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAdminServer/1.0.0-d41)
+- [Federation Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationServer/1.0.0-d41)
+
 # Servers Deployment Instructions
 
 ## Docker Setup
@@ -641,11 +648,6 @@ GET http://localhost:8080/trust-mark-issuer/trust-mark-status
     "sub": "https://example.com/holder"
 }
 ```
-
-# API Reference
-
-For the complete API documentation, please
-visit [the API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAPI)
 
 # License
 

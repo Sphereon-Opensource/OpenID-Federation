@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.kms.local.extensions
 
-import com.sphereon.oid.fed.openapi.models.JwkAdminDTO
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 
-fun JwkWithPrivateKey.toJwkAdminDto(): JwkAdminDTO = JwkAdminDTO(
+fun JwkWithPrivateKey.toJwk(): Jwk = Jwk(
     kid = this.kid,
     use = this.use,
     crv = this.crv,
