@@ -46,8 +46,8 @@ to participate in federations, ensuring trust and security across different orga
 
 For the complete API documentation, please visit:
 
-- [Admin Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAdminServer/1.0.0-d41)
-- [Federation Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationServer/1.0.0-d41)
+- [Admin Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAdminServer/0.1.0-d41)
+- [Federation Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationServer/0.1.0-d41)
 
 # Servers Deployment Instructions
 
