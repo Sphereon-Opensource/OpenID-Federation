@@ -18,6 +18,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
+                api(projects.modules.openidFederationClient)
                 api(projects.modules.logger)
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
@@ -25,6 +26,9 @@ kotlin {
                 api(projects.modules.localKms)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+                // Add Ktor client core and engine dependencies
+                implementation("io.ktor:ktor-client-core:2.3.7")
+                implementation("io.ktor:ktor-client-cio:2.3.7")
             }
         }
 

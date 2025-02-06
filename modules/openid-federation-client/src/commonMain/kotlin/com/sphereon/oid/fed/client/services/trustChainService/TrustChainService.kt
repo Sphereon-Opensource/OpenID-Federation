@@ -7,8 +7,8 @@ import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
-import com.sphereon.oid.fed.openapi.models.JWT
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.Jwt
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -206,6 +206,10 @@ class TrustChainService(
                     "Successfully resolved trust chain for entity: $entityIdentifier",
                     context = mapOf("trustChain" to trustChain.toString())
                 )
+
+                // calculate trust chain exp
+
+
                 TrustChainResolveResponse(trustChain, error = false, errorMessage = null)
             } else {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")
@@ -251,9 +255,9 @@ class TrustChainService(
 
         context.jwtService.verifyJwt(entityConfigurationJwt, key)
 
-        val entityStatement: EntityConfigurationStatementDTO =
-            mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatementDTO::class) ?: run {
-                logger.debug("Could not map JWT to EntityConfigurationStatementDTO")
+        val entityStatement: EntityConfigurationStatement =
+            mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: run {
+                logger.debug("Could not map JWT to EntityConfigurationStatement")
                 return null
             }
 
@@ -359,7 +363,7 @@ class TrustChainService(
     private suspend fun fetchAndVerifyAuthorityConfiguration(
         authority: String,
         cache: SimpleCache<String, String>
-    ): Pair<String, EntityConfigurationStatementDTO>? {
+    ): Pair<String, EntityConfigurationStatement>? {
         val authorityConfigurationEndpoint = getEntityConfigurationEndpoint(authority)
 
         // Avoid processing the same entity twice
@@ -379,14 +383,14 @@ class TrustChainService(
 
         val authorityEntityConfiguration = mapEntityStatement(
             authorityEntityConfigurationJwt,
-            EntityConfigurationStatementDTO::class
+            EntityConfigurationStatement::class
         ) ?: return null
 
         return Pair(authorityEntityConfigurationJwt, authorityEntityConfiguration)
     }
 
     private fun getAuthorityFetchEndpoint(
-        authorityEntityConfiguration: EntityConfigurationStatementDTO
+        authorityEntityConfiguration: EntityConfigurationStatement
     ): String? {
         val federationEntityMetadata = authorityEntityConfiguration.metadata?.get("federation_entity") as? JsonObject
         if (federationEntityMetadata == null || !federationEntityMetadata.containsKey("federation_fetch_endpoint")) return null
@@ -441,7 +445,7 @@ class TrustChainService(
     }
 
     private suspend fun processAuthorityHints(
-        authorityEntityConfiguration: EntityConfigurationStatementDTO,
+        authorityEntityConfiguration: EntityConfigurationStatement,
         authority: String,
         trustAnchors: Array<String>,
         chain: MutableList<String>,
@@ -459,7 +463,7 @@ class TrustChainService(
         return null
     }
 
-    private fun hasRequiredClaims(statement: JWT): Boolean {
+    private fun hasRequiredClaims(statement: Jwt): Boolean {
         return statement.payload["sub"] != null &&
                 statement.payload["iss"] != null &&
                 statement.payload["exp"] != null &&

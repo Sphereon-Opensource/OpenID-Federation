@@ -1,25 +1,14 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.CreateSubordinateDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateAdminDTO
-import com.sphereon.oid.fed.openapi.models.SubordinateJwkDto
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
-import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.models.Subordinate
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.mappers.toSubordinateAdminDTO
 import jakarta.servlet.http.HttpServletRequest
 import kotlinx.serialization.json.JsonObject
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/subordinates")
@@ -27,17 +16,16 @@ class SubordinateController(
     private val subordinateService: SubordinateService
 ) {
     @GetMapping
-    fun getSubordinates(request: HttpServletRequest): Array<SubordinateAdminDTO> {
+    fun getSubordinates(request: HttpServletRequest): Array<Subordinate> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.findSubordinatesByAccount(account)
-            .map { it.toSubordinateAdminDTO() }.toTypedArray()
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinate(
         request: HttpServletRequest,
-        @RequestBody subordinate: CreateSubordinateDTO
+        @RequestBody subordinate: CreateSubordinate
     ): Subordinate {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.createSubordinate(account, subordinate)
@@ -58,7 +46,7 @@ class SubordinateController(
         request: HttpServletRequest,
         @PathVariable id: Int,
         @RequestBody jwk: JsonObject
-    ): SubordinateJwkDto {
+    ): SubordinateJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.createSubordinateJwk(account, id, jwk)
     }
@@ -67,7 +55,7 @@ class SubordinateController(
     fun getSubordinateJwks(
         request: HttpServletRequest,
         @PathVariable id: Int
-    ): Array<SubordinateJwkDto> {
+    ): Array<SubordinateJwk> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return subordinateService.getSubordinateJwks(account, id)
     }
@@ -92,13 +80,17 @@ class SubordinateController(
     }
 
     @PostMapping("/{id}/statement")
-    @ResponseStatus(HttpStatus.CREATED)
     fun publishSubordinateStatement(
         request: HttpServletRequest,
         @PathVariable id: Int,
-        @RequestBody dryRun: Boolean?
-    ): String {
+        @RequestBody body: PublishStatementRequest?
+    ): ResponseEntity<String> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return subordinateService.publishSubordinateStatement(account, id, dryRun)
+        val result = subordinateService.publishSubordinateStatement(account, id, body?.dryRun)
+        return if (body?.dryRun == true) {
+            ResponseEntity.ok(result)
+        } else {
+            ResponseEntity.status(HttpStatus.CREATED).body(result)
+        }
     }
 }

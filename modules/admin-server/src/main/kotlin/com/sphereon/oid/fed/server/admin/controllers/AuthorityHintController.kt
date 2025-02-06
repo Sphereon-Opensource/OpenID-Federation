@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.AuthorityHintDTO
-import com.sphereon.oid.fed.openapi.models.CreateAuthorityHintDTO
-import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.AuthorityHint
+import com.sphereon.oid.fed.openapi.models.CreateAuthorityHint
 import com.sphereon.oid.fed.services.AuthorityHintService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -15,7 +15,7 @@ class AuthorityHintController(
     private val authorityHintService: AuthorityHintService
 ) {
     @GetMapping
-    fun getAuthorityHints(request: HttpServletRequest): List<AuthorityHintDTO> {
+    fun getAuthorityHints(request: HttpServletRequest): List<AuthorityHint> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return authorityHintService.findByAccount(account)
     }
@@ -24,8 +24,8 @@ class AuthorityHintController(
     @ResponseStatus(HttpStatus.CREATED)
     fun createAuthorityHint(
         request: HttpServletRequest,
-        @RequestBody body: CreateAuthorityHintDTO
-    ): AuthorityHintDTO {
+        @RequestBody body: CreateAuthorityHint
+    ): AuthorityHint {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return authorityHintService.createAuthorityHint(account, body.identifier)
     }
@@ -34,7 +34,7 @@ class AuthorityHintController(
     fun deleteAuthorityHint(
         request: HttpServletRequest,
         @PathVariable id: Int
-    ): AuthorityHintDTO {
+    ): AuthorityHint {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return authorityHintService.deleteAuthorityHint(account, id)
     }

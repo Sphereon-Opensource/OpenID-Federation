@@ -6,8 +6,8 @@ import com.sphereon.oid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
-import com.sphereon.oid.fed.openapi.models.JWT
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.Jwt
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -34,7 +34,7 @@ class TrustMarkService(
      */
     suspend fun validateTrustMark(
         trustMark: String,
-        trustAnchorConfig: EntityConfigurationStatementDTO,
+        trustAnchorConfig: EntityConfigurationStatement,
         currentTime: Long? = null
     ): TrustMarkValidationResponse {
         logger.debug("Starting Trust Mark validation")
@@ -105,7 +105,7 @@ class TrustMarkService(
     private suspend fun validateWithTrustMarkOwners(
         trustMarkId: String,
         trustMarkOwners: JsonObject,
-        decodedTrustMark: JWT
+        decodedTrustMark: Jwt
     ): TrustMarkValidationResponse {
         val ownerClaims = trustMarkOwners[trustMarkId]?.jsonObject
             ?: return TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_owners")
@@ -142,7 +142,7 @@ class TrustMarkService(
     private suspend fun validateWithTrustMarkIssuers(
         trustMarkId: String,
         trustMarkIssuers: JsonObject,
-        decodedTrustMark: JWT
+        decodedTrustMark: Jwt
     ): TrustMarkValidationResponse {
         val issuerClaims = trustMarkIssuers[trustMarkId]?.jsonObject
             ?: return TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_issuers")

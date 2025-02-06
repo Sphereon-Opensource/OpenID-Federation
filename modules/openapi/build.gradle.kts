@@ -64,7 +64,7 @@ kotlin {
                 packageName.set("com.sphereon.oid.fed.openapi")
                 apiPackage.set("$openApiPackage.api")
                 modelPackage.set("$openApiPackage.models")
-                inputSpec.set("$projectDir/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/openapi.yaml")
+                inputSpec.set("$projectDir/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/admin-server.yaml")
                 library.set("multiplatform")
                 outputDir.set("$projectDir/build/generated")
                 configOptions.set(
