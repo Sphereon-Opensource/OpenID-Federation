@@ -12,12 +12,10 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import kotlinx.serialization.json.Json
-import kotlin.js.JsExport
 
 /**
  * Federation client for reading and validating statements and trust chains.
  */
-@JsExport.Ignore
 class FederationClient(
     override val cryptoServiceCallback: ICryptoService? = null,
     override val httpClient: HttpClient? = null
