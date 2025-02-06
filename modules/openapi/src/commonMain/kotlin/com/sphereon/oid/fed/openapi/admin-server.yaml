@@ -1078,7 +1078,8 @@ paths:
   /trust-mark-types/{id}/issuers:
     get:
       summary: Get Issuers for a Trust Mark Type
-
+      security:
+        - bearerAuth: [ ]
       description: Retrieve a list of issuers for the specified Trust Mark Type.
       operationId: getIssuersForTrustMarkType
       parameters:
@@ -1103,7 +1104,8 @@ paths:
           description: Account or Trust Mark Type not found.
     post:
       summary: Add Issuer to Trust Mark Type
-
+      security:
+        - bearerAuth: [ ]
       description: Add a new issuer to the specified Trust Mark Type.
       operationId: addIssuerToTrustMarkType
       parameters:
@@ -1151,7 +1153,8 @@ paths:
   /trust-mark-types/{id}/issuers/{issuerIdentifier}:
     delete:
       summary: Remove Issuer from Trust Mark Type
-
+      security:
+        - bearerAuth: [ ]
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
@@ -1189,7 +1192,8 @@ paths:
   '/trust-marks':
     post:
       summary: Create or Update a Trust Mark
-
+      security:
+        - bearerAuth: [ ]
       description: Create or update a Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1239,7 +1243,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List Trust Marks
-
+      security:
+        - bearerAuth: [ ]
       description: List all Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1277,7 +1282,8 @@ paths:
   '/trust-marks/{trustMarkId}':
     delete:
       summary: Delete a Trust Mark
-
+      security:
+        - bearerAuth: [ ]
       description: Delete an existing Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1319,7 +1325,8 @@ paths:
   '/received-trust-marks':
     post:
       summary: Create a Received Trust Mark
-
+      security:
+        - bearerAuth: [ ]
       description: Create or update a received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1365,7 +1372,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List Received Trust Marks
-
+      security:
+        - bearerAuth: [ ]
       description: Retrieve all received Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1408,7 +1416,8 @@ paths:
   '/received-trust-marks/{receivedTrustMarkId}':
     delete:
       summary: Delete a Received Trust Mark
-
+      security:
+        - bearerAuth: [ ]
       description: Delete a specific received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
