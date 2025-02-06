@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.TrustMarkObject
+import com.sphereon.oid.fed.openapi.models.TrustMarkPayload
 
 class TrustMarkObjectBuilder {
     private var iss: String? = null
@@ -21,8 +21,8 @@ class TrustMarkObjectBuilder {
     fun ref(ref: String?) = apply { this.ref = ref }
     fun delegation(delegation: String?) = apply { this.delegation = delegation }
 
-    fun build(): TrustMarkObject {
-        return TrustMarkObject(
+    fun build(): TrustMarkPayload {
+        return TrustMarkPayload(
             iss = iss ?: throw IllegalArgumentException("iss must be provided"),
             sub = sub ?: throw IllegalArgumentException("sub must be provided"),
             id = id ?: throw IllegalArgumentException("id must be provided"),

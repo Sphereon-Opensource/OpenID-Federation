@@ -1,12 +1,12 @@
 package com.sphereon.oid.fed.services.mappers
 
-import com.sphereon.oid.fed.openapi.models.SubordinateMetadataDTO
-import com.sphereon.oid.fed.persistence.models.SubordinateMetadata
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadata as SubordinateMetadataEntity
 
-fun SubordinateMetadata.toSubordinateMetadataDTO(): SubordinateMetadataDTO {
-    return SubordinateMetadataDTO(
+fun SubordinateMetadataEntity.toDTO(): SubordinateMetadata {
+    return SubordinateMetadata(
         id = this.id,
         key = this.key,
         subordinateId = this.subordinate_id,

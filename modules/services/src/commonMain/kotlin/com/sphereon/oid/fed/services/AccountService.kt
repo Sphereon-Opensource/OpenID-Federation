@@ -4,12 +4,11 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.AccountDTO
-import com.sphereon.oid.fed.openapi.models.CreateAccountDTO
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
-import com.sphereon.oid.fed.services.mappers.toAccountDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 
 class AccountService(
     private val config: AccountServiceConfig
@@ -17,7 +16,7 @@ class AccountService(
     private val logger = Logger.tag("AccountService")
     private val accountQueries = Persistence.accountQueries
 
-    fun createAccount(account: CreateAccountDTO): AccountDTO {
+    fun createAccount(account: CreateAccount): Account {
         logger.info("Starting account creation process for username: ${account.username}")
         logger.debug("Account creation details - Username: ${account.username}, Identifier: ${account.identifier}")
 
@@ -31,16 +30,16 @@ class AccountService(
         val createdAccount = accountQueries.create(
             username = account.username,
             identifier = account.identifier,
-        ).executeAsOne().toAccountDTO()
+        ).executeAsOne()
         logger.info("Successfully created account - Username: ${account.username}, ID: ${createdAccount.id}, Identifier: ${createdAccount.identifier}")
-        return createdAccount
+        return createdAccount.toDTO()
     }
 
-    fun getAllAccounts(): List<AccountDTO> {
+    fun getAllAccounts(): List<Account> {
         logger.debug("Retrieving all accounts")
-        val accounts = accountQueries.findAll().executeAsList().map { it.toAccountDTO() }
+        val accounts = accountQueries.findAll().executeAsList()
         logger.debug("Found ${accounts.size} accounts")
-        return accounts
+        return accounts.map { it.toDTO() }
     }
 
     fun getAccountIdentifierByAccount(account: Account): String {
@@ -61,13 +60,13 @@ class AccountService(
 
     fun getAccountByUsername(username: String): Account {
         logger.debug("Getting account by username: $username")
-        return accountQueries.findByUsername(username).executeAsOneOrNull()
+        return accountQueries.findByUsername(username).executeAsOneOrNull()?.toDTO()
             ?: throw NotFoundException(Constants.ACCOUNT_NOT_FOUND).also {
                 logger.error("Account not found for username: $username")
             }
     }
 
-    fun deleteAccount(account: Account): AccountDTO {
+    fun deleteAccount(account: Account): Account {
         logger.info("Starting account deletion process for username: ${account.username}")
         logger.debug("Account deletion details - Username: ${account.username}, ID: ${account.id}")
 
@@ -78,6 +77,6 @@ class AccountService(
 
         val deletedAccount = accountQueries.delete(account.id).executeAsOne()
         logger.info("Successfully deleted account - Username: ${account.username}, ID: ${account.id}")
-        return deletedAccount.toAccountDTO()
+        return deletedAccount.toDTO()
     }
 }

@@ -1,11 +1,11 @@
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatementDTO
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 class EntityLogic {
 
-    fun getEntityType(entityStatement: EntityConfigurationStatementDTO): EntityType {
+    fun getEntityType(entityStatement: EntityConfigurationStatement): EntityType {
         val hasFederationListEndpoint = isFederationListEndpointPresent(entityStatement)
         val hasAuthorityHint = isAuthorityHintPresent(entityStatement)
 
@@ -17,10 +17,10 @@ class EntityLogic {
         }
     }
 
-    private fun isAuthorityHintPresent(entityStatement: EntityConfigurationStatementDTO): Boolean =
+    private fun isAuthorityHintPresent(entityStatement: EntityConfigurationStatement): Boolean =
         entityStatement.authorityHints?.isNotEmpty() ?: false
 
-    private fun isFederationListEndpointPresent(entityStatement: EntityConfigurationStatementDTO): Boolean {
+    private fun isFederationListEndpointPresent(entityStatement: EntityConfigurationStatement): Boolean {
         val federationEntity = entityStatement.metadata?.get("federation_entity")?.jsonObject
         val federationListEndpoint = federationEntity?.get("federation_list_endpoint")?.jsonPrimitive?.contentOrNull
         return federationListEndpoint?.isNotEmpty() ?: false
