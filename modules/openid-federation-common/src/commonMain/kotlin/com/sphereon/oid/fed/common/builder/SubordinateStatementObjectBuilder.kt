@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.EntityJwks
+import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
@@ -52,7 +52,7 @@ class SubordinateStatementObjectBuilder {
             sub = sub ?: throw IllegalArgumentException("sub must be provided"),
             exp = exp ?: throw IllegalArgumentException("exp must be provided"),
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
-            jwks = EntityJwks(
+            jwks = BaseStatementJwks(
                 propertyKeys = jwks.toTypedArray()
             ),
             crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,

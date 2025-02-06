@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.client.crypto
 
 import ICryptoServiceJS
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.await
 import kotlinx.serialization.encodeToString

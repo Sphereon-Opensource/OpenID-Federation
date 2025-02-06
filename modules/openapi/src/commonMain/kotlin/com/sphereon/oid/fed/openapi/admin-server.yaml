@@ -1,0 +1,2521 @@
+openapi: 3.0.3
+info:
+  title: OpenID Federation Admin Server API
+  description: This API enables management of federated entity data and metadata within an OpenID Federation environment.
+  contact:
+    name: Sphereon
+    email: info@sphereon.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  version: 0.1.0-d41
+servers:
+  - url: http://localhost:8081
+    description: Admin Server
+paths:
+  /status:
+    get:
+      summary: Check node status
+      description: Check the status of the Admin Node.
+      responses:
+        '200':
+          description: Successful status check
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: status
+  /accounts:
+    get:
+      summary: List all accounts
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve a list of all accounts.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Register a new tenant account
+      security:
+        - bearerAuth: [ ]
+      description: Endpoint for an admin to create a new account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccount'
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Conflict (e.g., account already exists)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Delete current account
+      security:
+        - bearerAuth: [ ]
+      description: Delete the account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/keys':
+    post:
+      summary: Create a new key
+      security:
+        - bearerAuth: [ ]
+      description: Create a new key for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '201':
+          description: Key created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List all keys
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve all keys associated with the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Jwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/keys/{keyId}':
+    delete:
+      summary: Revoke a key
+      security:
+        - bearerAuth: [ ]
+      description: Revoke a key by its ID for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the key to be revoked.
+        - name: reason
+          in: query
+          required: false
+          schema:
+            type: string
+          description: The reason for revoking the key.
+      responses:
+        '200':
+          description: Key revoked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Key or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/metadata':
+    get:
+      summary: Get entity configuration metadata
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve metadata entries for a specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metadata'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create entity configuration metadata
+      security:
+        - bearerAuth: [ ]
+      description: Add a new metadata entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Metadata creation data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetadata'
+      responses:
+        '201':
+          description: Metadata created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metadata'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/metadata/{id}':
+    delete:
+      summary: Delete account metadata
+      security:
+        - bearerAuth: [ ]
+      description: Deletes a specific metadata entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the metadata entry to be deleted.
+      responses:
+        '200':
+          description: Metadata deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metadata'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Metadata not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/authority-hints':
+    get:
+      summary: Get authority hints
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve all authority hints for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved authority hints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthorityHint'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create an authority hint
+      security:
+        - bearerAuth: [ ]
+      description: Add a new authority hint for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Authority hint data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthorityHint'
+      responses:
+        '201':
+          description: Authority hint created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorityHint'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/authority-hints/{id}':
+    delete:
+      summary: Delete an authority hint
+      security:
+        - bearerAuth: [ ]
+      description: Remove an authority hint by its ID for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the authority hint to be deleted.
+      responses:
+        '200':
+          description: Authority hint deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorityHint'
+        '404':
+          description: Authority hint or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/entity-statement':
+    get:
+      summary: Get entity configuration statement object
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve the entity configuration statement for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved entity configuration statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityConfigurationStatement'
+        '404':
+          description: Account or entity statement not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Sign and publish entity configuration statement
+      security:
+        - bearerAuth: [ ]
+      description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Optional request body for a dry-run
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishStatementRequest'
+      responses:
+        '200':
+          description: Entity configuration statement published or validated successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                description: A message indicating the result of the operation.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/subordinates':
+    get:
+      summary: Get subordinates
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve all subordinates associated with the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subordinate'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create a subordinate
+      security:
+        - bearerAuth: [ ]
+      description: Create a subordinate for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Subordinate creation details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubordinate'
+      responses:
+        '201':
+          description: Subordinate created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subordinate'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/subordinates/{id}':
+    delete:
+      summary: Delete subordinate
+      security:
+        - bearerAuth: [ ]
+      description: Deletes a specific subordinate for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate to be deleted.
+      responses:
+        '200':
+          description: Subordinate deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Subordinate deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Subordinate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/subordinates/{id}/jwks':
+    get:
+      summary: Get subordinate JWKs
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve all JWKs associated with the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved JWKs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubordinateJwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create a subordinate JWK
+      security:
+        - bearerAuth: [ ]
+      description: Create a JWK for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Metadata creation details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BaseJwk'
+      responses:
+        '201':
+          description: Subordinate JWK created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateJwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/subordinates/{id}/jwks/{jwkId}':
+    delete:
+      summary: Delete subordinate JWK
+      security:
+        - bearerAuth: [ ]
+      description: Delete a JWK associated with the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+        - name: jwkId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the JWK.
+      responses:
+        '200':
+          description: Subordinate JWK deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateJwk'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/subordinates/{subordinateId}/metadata':
+    get:
+      summary: Get subordinate metadata
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve metadata associated with the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubordinateMetadata'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create subordinate metadata
+      security:
+        - bearerAuth: [ ]
+      description: Create metadata for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Metadata creation details
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetadata'
+      responses:
+        '201':
+          description: Subordinate metadata created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateMetadata'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/subordinates/{subordinateId}/metadata/{id}':
+    delete:
+      summary: Delete subordinate metadata
+      security:
+        - bearerAuth: [ ]
+      description: Delete metadata associated with the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the metadata to be deleted.
+      responses:
+        '200':
+          description: Subordinate metadata deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateMetadata'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/subordinates/{id}/statement':
+    get:
+      summary: Get subordinate statement object
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve the subordinate statement for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate statement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateStatement'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Sign and publish subordinate statement
+      security:
+        - bearerAuth: [ ]
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the subordinate.
+      requestBody:
+        description: Dry-run flag (optional)
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishStatementRequest'
+      responses:
+        '200':
+          description: Subordinate statement published successfully
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/trust-mark-types':
+    get:
+      summary: Get all Trust Mark Types
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: List of trust mark types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrustMarkType'
+
+    post:
+      summary: Create a Trust Mark Type
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustMarkType'
+      responses:
+        '201':
+          description: Trust mark definition created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkType'
+
+  '/trust-mark-types/{id}':
+    get:
+      summary: Get a Trust Mark Type by ID
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trust mark definition details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkType'
+    delete:
+      summary: Delete a Trust Mark Type
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Trust mark definition deleted
+  /trust-mark-types/{id}/issuers:
+    get:
+      summary: Get Issuers for a Trust Mark Type
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve a list of issuers for the specified Trust Mark Type.
+      operationId: getIssuersForTrustMarkType
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      responses:
+        '200':
+          description: A list of issuer identifiers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+    post:
+      summary: Add Issuer to Trust Mark Type
+      security:
+        - bearerAuth: [ ]
+      description: Add a new issuer to the specified Trust Mark Type.
+      operationId: addIssuerToTrustMarkType
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+      requestBody:
+        description: Details of the issuer to be added.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - identifier
+              properties:
+                identifier:
+                  type: string
+                  description: Identifier of the issuer.
+                  example: https://issuer.example.com
+      responses:
+        '201':
+          description: Issuer successfully added to the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account or Trust Mark Type not found.
+        '400':
+          description: Invalid request body.
+  /trust-mark-types/{id}/issuers/{issuerIdentifier}:
+    delete:
+      summary: Remove Issuer from Trust Mark Type
+      security:
+        - bearerAuth: [ ]
+      description: Remove an issuer from the specified Trust Mark Type.
+      operationId: removeIssuerFromTrustMarkType
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Identifier of the Trust Mark Type.
+        - name: issuerIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Identifier of the issuer to be removed.
+      responses:
+        '200':
+          description: Issuer successfully removed from the Trust Mark Type.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Unique ID of the removed Trust Mark Issuer.
+                    example: issuer-123
+                  identifier:
+                    type: string
+                    description: Identifier of the removed issuer.
+                    example: https://issuer.example.com
+        '404':
+          description: Account, Trust Mark Type, or Issuer not found.
+  '/trust-marks':
+    post:
+      summary: Create or Update a Trust Mark
+      security:
+        - bearerAuth: [ ]
+      description: Create or update a Trust Mark for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dry_run: # TO-DO Add correct required attributes
+                  type: boolean
+                  description: 'If true, the entity statement will be generated but not persisted.'
+                  default: false
+      responses:
+        '200':
+          description: Trust Mark dry-run successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The identifier of the created or updated Trust Mark.
+        '201':
+          description: Trust Mark created or updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The identifier of the created or updated Trust Mark.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List Trust Marks
+      security:
+        - bearerAuth: [ ]
+      description: List all Trust Marks for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successful fetch of Trust Marks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trustMarkId:
+                      type: string
+                      description: The identifier of the Trust Mark.
+                    trustMark:
+                      type: string
+                      description: The JWT of the Trust Mark.
+                    entityId:
+                      type: string
+                      description: The Entity Identifier of the entity to which the Trust Mark is issued.
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/trust-marks/{trustMarkId}':
+    delete:
+      summary: Delete a Trust Mark
+      security:
+        - bearerAuth: [ ]
+      description: Delete an existing Trust Mark for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: trustMarkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The identifier of the Trust Mark to be deleted.
+      responses:
+        '200':
+          description: Trust Mark deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Trust Mark deleted successfully
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Trust Mark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/received-trust-marks':
+    post:
+      summary: Create a Received Trust Mark
+      security:
+        - bearerAuth: [ ]
+      description: Create or update a received Trust Mark for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                trustMarkTypeId:
+                  type: string
+                  description: The identifier of the Trust Mark Type.
+                  example: https://example.com/trust-mark-type
+                jwt:
+                  type: string
+                  description: The JWT representing the received Trust Mark.
+              required:
+                - trustMarkTypeId
+                - jwt
+      responses:
+        '201':
+          description: Received Trust Mark created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trustMarkId:
+                    type: string
+                    description: The unique identifier of the created received Trust Mark.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List Received Trust Marks
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve all received Trust Marks for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successful fetch of received Trust Marks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trustMarkId:
+                      type: string
+                      description: The unique identifier of the received Trust Mark.
+                    trustMarkTypeId:
+                      type: string
+                      description: The identifier of the Trust Mark Type.
+                    issuedJwt:
+                      type: string
+                      description: The JWT representing the received Trust Mark.
+                    receivedAt:
+                      type: string
+                      format: date-time
+                      description: The timestamp when the Trust Mark was received.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/received-trust-marks/{receivedTrustMarkId}':
+    delete:
+      summary: Delete a Received Trust Mark
+      security:
+        - bearerAuth: [ ]
+      description: Delete a specific received Trust Mark for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: receivedTrustMarkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique identifier of the received Trust Mark to be deleted.
+      responses:
+        '200':
+          description: Received Trust Mark deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Received Trust Mark deleted successfully.
+        '400':
+          description: Invalid request parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Received Trust Mark not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logs:
+    get:
+      summary: Get recent logs
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve the most recent logs from the system
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /logs/severity/{severity}:
+    get:
+      summary: Get logs by severity
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve logs filtered by severity level
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: severity
+          in: path
+          description: Severity level to filter by
+          required: true
+          schema:
+            type: string
+            enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by severity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /logs/tag/{tag}:
+    get:
+      summary: Get logs by tag
+      security:
+        - bearerAuth: [ ]
+      description: Retrieve logs filtered by tag
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: tag
+          in: path
+          description: Tag to filter by
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum number of logs to return
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: Successful retrieval of logs by tag
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Log'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer token authentication
+      bearerFormat: JWT
+  parameters:
+    AccountUsername:
+      name: X-Account-Username
+      in: header
+      description: Optional account username to operate on behalf of
+      required: false
+      schema:
+        type: string
+        nullable: true
+        default: 'root'
+  responses:
+    BadRequestError:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: The user does not have permission to perform the requested operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the account.
+          example: 12345
+        username:
+          type: string
+          description: The username of the account.
+          example: acmecorp
+        identifier:
+          type: string
+          description: The identifier of the account.
+          format: uri
+          example: "https://www.example.com/oidf"
+          pattern: "^https?:\\/\\/.*$"
+      required:
+        - id
+        - username
+    AuthorityHint:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        identifier:
+          type: string
+        accountId:
+          type: integer
+          format: int32
+      required:
+        - id
+        - identifier
+        - accountId
+        - admin
+
+    BaseJwk:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - kty
+        - kid
+      properties:
+        kty:
+          type: string
+          description: 'The key type (e.g., EC).'
+          example: EC
+        crv:
+          type: string
+          description: The elliptic curve used (only for EC keys).
+          example: P-256
+          nullable: true
+        kid:
+          type: string
+          description: The key ID.
+          example: 12345
+          nullable: true
+        x:
+          type: string
+          description: The X coordinate for EC keys (optional).
+          example: o-7zraXKDaoBte2PsuTXo-MSLzsyWdAElNptGgI4aH8
+          nullable: true
+        y:
+          type: string
+          description: The Y coordinate for EC keys (optional).
+          example: Xr_wCzJ1XnsgAIV5qHruzSwaNnwy87UjmevVklTpIv8
+          nullable: true
+        n:
+          type: string
+          description: The modulus for RSA keys.
+          example: modulus_value
+          nullable: true
+        e:
+          type: string
+          description: The exponent for RSA keys.
+          example: AQAB
+          nullable: true
+        alg:
+          type: string
+          description: The algorithm associated with the key.
+          example: ES256
+          nullable: true
+        use:
+          type: string
+          description: 'The intended use of the key (e.g., sig, enc).'
+          example: sig
+          nullable: true
+        x5u:
+          type: string
+          format: uri
+          description: A URL that points to an X.509 public key certificate or certificate chain.
+          example: 'https://example.com/cert.pem'
+          nullable: true
+        x5c:
+          type: array
+          description: The X.509 certificate chain.
+          nullable: true
+          items:
+            type: string
+            description: A base64-encoded string representing an X.509 certificate.
+            example: MIICoTCCAYkCAQ...
+        x5t:
+          type: string
+          description: The SHA-1 thumbprint of the X.509 certificate.
+          example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
+          nullable: true
+        x5tS256:
+          type: string
+          description: The SHA-256 thumbprint of the X.509 certificate.
+          example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
+          nullable: true
+
+    BaseStatement:
+      type: object
+      required:
+        - iss
+        - sub
+        - iat
+        - exp
+        - jwks
+      properties:
+        iss:
+          type: string
+          description: The Entity Identifier of the issuer of the Entity Statement.
+        sub:
+          type: string
+          description: The Entity Identifier of the subject.
+        exp:
+          type: integer
+          description: Expiration time after which the statement MUST NOT be accepted for processing.
+        iat:
+          type: integer
+          format: date-time
+          description: The time the statement was issued.
+        jwks:
+          type: object
+          x-tags:
+            - federation
+          properties:
+            keys:
+              type: array
+              items:
+                $ref: '#/components/schemas/Jwk'
+        metadata:
+          additionalProperties: true
+        crit:
+          type: array
+          items:
+            type: string
+    CreateAccount:
+      type: object
+      properties:
+        username:
+          type: string
+          description: The username of the account.
+          example: acmeco
+        identifier:
+          type: string
+          description: The identifier of the tenant account.
+          example: https://www.example.com/oidf
+      required:
+        - username
+
+    CreateAuthorityHint:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: The identifier of the authority hint.
+      required:
+        - identifier
+
+    CreateCrit:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        claim:
+          type: string
+          description: A critical claims that must be understood and processed.
+      required:
+        - claim
+
+    CreateMetadata:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The metadata key.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+          description: The metadata object.
+      required:
+        - key
+        - metadata
+
+    CreateReceivedTrustMark:
+      type: object
+      properties:
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        jwt:
+          type: string
+          description: The received Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      required:
+        - trust_mark_type_identifier
+        - jwt
+
+    CreateSubordinate:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: The identifier of the subordinate account.
+          example: 'https://www.example.com/subordinate'
+      required:
+        - identifier
+
+    CreateTrustMark:
+      type: object
+      description: Data Transfer Object for creating a Trust Mark.
+      required:
+        - sub
+        - trust_mark_type_identifier
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_type_identifier:
+          type: string
+          description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
+          example: https://trustframework.example.com/marks/12345
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: Optional expiration time of the Trust Mark in seconds since the epoch.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+
+    CreateTrustMarkType:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Type.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+      required:
+        - identifier
+
+    CreateTrustMarkTypeIssuer:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        identifier:
+          type: string
+          description: The entity identifier for the Trust Mark Type Issuer.
+          example: "https://www.example.com/oidf"
+      required:
+        - identifier
+
+
+    EntityConfigurationStatement:
+      allOf:
+        - $ref: '#/components/schemas/BaseStatement'
+        - type: object
+          properties:
+            authority_hints:
+              type: array
+              items:
+                type: string
+            trust_marks:
+              type: array
+              description: 'An array of JSON objects, each representing a Trust Mark.'
+              items:
+                $ref: '#/components/schemas/TrustMark'
+            trust_mark_issuers:
+              $ref: '#/components/schemas/TrustMarkIssuers'
+            trust_mark_owners:
+              $ref: '#/components/schemas/TrustMarkOwners'
+
+
+    ErrorResponse:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - error
+        - message
+      properties:
+        status:
+          type: integer
+          x-stoplight:
+            id: joax1cgth4uzd
+        error:
+          type: string
+        message:
+          type: string
+          description: A human-readable short text describing the error.
+        timestamp:
+          type: integer
+          x-stoplight:
+            id: qtn6mqbzpjctv
+
+    FederationEntityMetadata:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        federation_fetch_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation fetch endpoint.
+        federation_list_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation list endpoint.
+        federation_resolve_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation resolve endpoint.
+        federation_trust_mark_status_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation trust mark status endpoint.
+        federation_trust_mark_list_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation trust mark list endpoint.
+        federation_trust_mark_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation trust mark endpoint.
+        federation_historical_keys_endpoint:
+          type: string
+          format: uri
+          description: URL for the federation historical keys endpoint.
+        organization_name:
+          type: string
+          description: Organization name.
+        homepage_uri:
+          type: string
+          format: uri
+          description: URL for the homepage of the organization.
+
+    FederationHistoricalKeysResponse:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - iss
+        - iat
+        - keys
+      properties:
+        iss:
+          type: string
+          format: uri
+          description: The Entity's Entity Identifier.
+        iat:
+          type: integer
+          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricalKey'
+
+    HistoricalKey:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            iat:
+              type: number
+              format: number
+              description: The time the key was issued.
+              example: 1629936000
+            exp:
+              type: number
+              format: number
+              description: The time the key will expire.
+              example: 1632528000
+            revoked:
+              $ref: '#/components/schemas/JwkRevoked'
+
+    Jwk:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
+        - type: object
+          x-tags:
+            - federation
+          properties:
+            id:
+              type: integer
+              description: The unique identifier for the JWK record.
+              example: 1
+            uuid:
+              type: string
+              format: uuid
+              description: The universally unique identifier for the JWK record.
+              example: 123e4567-e89b-12d3-a456-426614174000
+            account_id:
+              type: integer
+              description: The ID of the account associated with this JWK.
+              example: 100
+            revoked_at:
+              type: string
+              format: date-time
+              description: 'The timestamp when the JWK was revoked, if applicable.'
+              example: '2024-09-01T12:34:56Z'
+              nullable: true
+            revoked_reason:
+              type: string
+              description: 'The reason for revoking the JWK, if applicable.'
+              example: Key compromise
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+              description: The timestamp when the JWK was created.
+              example: '2024-08-06T12:34:56Z'
+              nullable: true
+
+    JwkRevoked:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - revoked_at
+      properties:
+        revoked_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    JwkWithPrivateKey:
+      allOf:
+        - $ref: '#/components/schemas/BaseJwk'
+        - type: object
+          properties:
+            d:
+              type: string
+              description: The private key value (for RSA and EC keys).
+              nullable: true
+            p:
+              type: string
+              description: The first prime factor (for RSA private key).
+              nullable: true
+            q:
+              type: string
+              description: The second prime factor (for RSA private key).
+              nullable: true
+            dp:
+              type: string
+              description: The first factor CRT exponent (for RSA private key).
+              nullable: true
+            dq:
+              type: string
+              description: The second factor CRT exponent (for RSA private key).
+              nullable: true
+            qi:
+              type: string
+              description: The first CRT coefficient (for RSA private key).
+              example: base64url_encoded_qi
+              nullable: true
+
+
+    Jwt:
+      type: object
+      description: 'A JWT (JSON Web Token) object, composed of a header, payload, and signature.'
+      required:
+        - header
+        - payload
+        - signature
+      properties:
+        header:
+          $ref: '#/components/schemas/JwtHeader'
+        payload:
+          type: object
+          description: 'The payload of the JWT, typically containing claims (as JSON key-value pairs).'
+          additionalProperties: true
+        signature:
+          type: string
+          description: The cryptographic signature of the JWT.
+
+
+    JwtHeader:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - kid
+      properties:
+        alg:
+          type: string
+          description: 'The algorithm used to sign the JWT (e.g., RS256)'
+        kid:
+          type: string
+          description: The unique identifier for the key used to sign the JWT
+        typ:
+          type: string
+          description: 'The type of token (optional, e.g., "entity-statement+jwt")'
+          nullable: true
+        trust_chain:
+          type: array
+          description: An optional list of trust chain certificates or keys
+          items:
+            type: string
+          nullable: true
+    Log:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the log entry
+        severity:
+          type: string
+          enum: [ Verbose, Debug, Info, Warn, Error, Assert ]
+          description: The severity level of the log entry
+        message:
+          type: string
+          description: The log message
+        tag:
+          type: string
+          description: The tag/category of the log entry
+        timestamp:
+          type: integer
+          format: int64
+          description: The timestamp when the event occurred (epoch milliseconds)
+        throwable_message:
+          type: string
+          description: Error message if an exception occurred
+          nullable: true
+        throwable_stacktrace:
+          type: string
+          description: Stack trace if an exception occurred
+          nullable: true
+        metadata:
+          type: object
+          description: Additional contextual information
+          nullable: true
+          additionalProperties: true
+      required:
+        - id
+        - severity
+        - message
+        - tag
+        - timestamp
+
+    Metadata:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Metadata record.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this Metadata.
+          example: 1
+        key:
+          type: string
+          description: The key of the metadata.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+        deleted_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was deleted.
+          example: '2024-08-06T12:34:56Z'
+          nullable: true
+
+    PublishStatementRequest:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        dry-run:
+          type: boolean
+          description: 'If true, the request will be validated but not persisted.'
+          example: false
+
+    ReceivedTrustMark:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the received Trust Mark.
+          example: 123
+        account_id:
+          type: integer
+          description: The account ID of the Trust Mark holder.
+          example: 456
+        trust_mark_type_identifier:
+          type: string
+          description: The Trust Mark type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        jwt:
+          type: string
+          description: The received Trust Mark JWT.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark was created.
+          example: "2024-12-01T12:00:00Z"
+
+    ResolveResponse:
+      type: object
+      x-tags:
+        - federation
+      required:
+        - iss
+        - sub
+        - iat
+        - exp
+        - metadata
+      properties:
+        iss:
+          type: string
+          format: date-time
+          description: Entity Identifier of the issuer of the resolve response.
+        sub:
+          type: string
+          format: date-time
+          description: Entity Identifier of the subject of the resolve response.
+        iat:
+          type: string
+          format: date-time
+          description: Time when this resolution was issued. This is expressed as Seconds Since the Epoch.
+        exp:
+          type: string
+          format: date-time
+          description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+        metadata:
+          type: object
+          description: Additional contextual information
+          nullable: true
+          additionalProperties: true
+        trust_marks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustMark'
+        trust_chain:
+          type: array
+          items:
+            type: string
+
+    Subordinate:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The unique identifier of the subordinate.
+          example: 123
+        accountId:
+          type: integer
+          format: int32
+          description: The ID of the account associated with this subordinate.
+          example: 456
+        identifier:
+          type: string
+          description: The unique identifier for the subordinate.
+          example: 'https://www.example.com/subordinate'
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the subordinate was created.
+          example: '2023-08-21T14:52:00Z'
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 'The timestamp when the subordinate was deleted, if applicable.'
+          example: '2024-08-21T14:52:00Z'
+      required:
+        - id
+        - accountId
+        - identifier
+        - createdAt
+
+    SubordinateJwk:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate key record.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinated account associated with this key.
+          example: 1
+        key:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the key  was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+
+    SubordinateMetadata:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the Subordinate Metadata record.
+          example: 1
+        account_id:
+          type: integer
+          description: The ID of the account associated with this Metadata.
+          example: 1
+        subordinate_id:
+          type: integer
+          description: The ID of the subordinate associated with this Metadata.
+          example: 1
+        key:
+          type: string
+          description: The key of the metadata.
+          example: openid_relying_party
+        metadata:
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+        deleted_at:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata was deleted.
+          example: '2024-08-06T12:34:56Z'
+          nullable: true
+
+    SubordinateStatement:
+      allOf:
+        - $ref: '#/components/schemas/BaseStatement'
+        - type: object
+          required:
+            - iss
+            - sub
+            - iat
+            - exp
+            - jwks
+          properties:
+            metadata_policy:
+              additionalProperties: true
+            crit:
+              type: array
+              items:
+                type: string
+            metadata_policy_crit:
+              additionalProperties: true
+            source_endpoint:
+              type: string
+              format: uri
+              description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
+
+    SubordinateStatementPayload:
+      allOf:
+        - $ref: '#/components/schemas/BaseStatement'
+        - type: object
+          required:
+            - iss
+            - sub
+            - iat
+            - exp
+            - jwks
+          properties:
+            metadata_policy:
+              additionalProperties: true
+            crit:
+              type: array
+              items:
+                type: string
+            metadata_policy_crit:
+              additionalProperties: true
+            source_endpoint:
+              type: string
+              format: uri
+              description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          description: The current status of the node.
+          example: UP
+    TrustMark:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: string
+          description: The Trust Mark identifier. It MUST be the same value as the id claim contained in the Trust Mark JWT.
+          example: example-trust-mark-id
+        trust_mark:
+          type: string
+          description: A signed JSON Web Token that represents a Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+      required:
+        - id
+        - trust_mark
+    TrustMarkIssuers:
+      type: object
+      x-tags:
+        - federation
+      description: A mapping of trust mark identifiers to their associated issuers.
+      additionalProperties:
+        type: array
+        description: A list of issuers for the trust mark.
+        items:
+          type: string
+          format: uri
+          description: The URI of an issuer for the trust mark.
+      example:
+        'https://openid.net/certification/op':
+          - 'https://example-issuer1.com'
+          - 'https://example-issuer2.com'
+        'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
+          - 'https://swamid.se'
+
+
+    TrustMarkOwners:
+      type: object
+      x-tags:
+        - federation
+      additionalProperties:
+        $ref: '#/components/schemas/TrustMarkOwner'
+      example:
+        'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
+          sub: 'https://refeds.org/sirtfi'
+          jwks:
+            keys:
+              - alg: RS256
+                e: AQAB
+                kid: key1
+                kty: RSA
+                'n': pnXBOusEANuug6ewezb9J_...
+                use: sig
+    TrustMarkOwner:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        sub:
+          type: string
+          description: Identifier of the Trust Mark owner
+        jwks:
+          type: array
+          items:
+            $ref: '#/components/schemas/BaseJwk'
+        additionalProperties:
+          type: string
+
+    TrustMarkPayload:
+      type: object
+      description: Data Transfer Object for retrieving a Trust Mark.
+      properties:
+        iss:
+          type: string
+          description: The Trust Mark issuer.
+          example: https://www.example.com/oidf
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+        logo_uri:
+          type: string
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo.png
+        exp:
+          type: integer
+          description: The time the Trust Mark expires.
+          example: 1706031234
+        ref:
+          type: string
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+          example: https://trustmark-issuer.example.com/info
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    TrustMarkListRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+
+    TrustMarkRequest:
+      type: object
+      properties:
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+      required:
+        - trust_mark_id
+        - sub
+
+    TrustMarkStatusRequest:
+      type: object
+      properties:
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_id:
+          type: string
+          description: The Trust Mark Type identifier.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        iat:
+          type: integer
+          description: The time the Trust Mark was issued.
+          example: 1706031234
+      required:
+        - sub
+        - trust_mark_id
+
+    TrustMarkStatusResponse:
+      type: object
+      properties:
+        active:
+          type: boolean
+          description: The status of the Trust Mark.
+          example: true
+
+    TrustMarkType:
+      type: object
+      x-tags:
+        - federation
+      properties:
+        id:
+          type: integer
+          description: The unique identifier of the Trust Mark Type.
+          example: 123
+        identifier:
+          type: string
+          description: The unique identifier for the Trust Mark Type.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was created.
+          example: "2024-12-01T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was last updated.
+          example: "2024-12-15T15:30:00Z"
+          nullable: true
+      required:
+        - id
+        - identifier
+        - name
+        - issuerPolicy
+        - createdAt

@@ -8,6 +8,7 @@ import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyType
 import com.nimbusds.jwt.SignedJWT
+import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

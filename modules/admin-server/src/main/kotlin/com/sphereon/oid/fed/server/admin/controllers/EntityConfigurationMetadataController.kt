@@ -1,10 +1,10 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.CreateMetadataDTO
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationMetadataDTO
-import com.sphereon.oid.fed.persistence.models.Account
-import com.sphereon.oid.fed.services.EntityConfigurationMetadataService
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.models.Metadata
+import com.sphereon.oid.fed.services.MetadataService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -12,22 +12,22 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/metadata")
 class EntityConfigurationMetadataController(
-    private val entityConfigurationMetadataService: EntityConfigurationMetadataService
+    private val metadataService: MetadataService
 ) {
     @GetMapping
-    fun getEntityConfigurationMetadata(request: HttpServletRequest): List<EntityConfigurationMetadataDTO> {
+    fun getEntityConfigurationMetadata(request: HttpServletRequest): List<Metadata> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return entityConfigurationMetadataService.findByAccount(account).toList()
+        return metadataService.findByAccount(account).toList()
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createEntityConfigurationMetadata(
         request: HttpServletRequest,
-        @RequestBody body: CreateMetadataDTO
-    ): EntityConfigurationMetadataDTO {
+        @RequestBody body: CreateMetadata
+    ): Metadata {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return entityConfigurationMetadataService.createEntityConfigurationMetadata(
+        return metadataService.createEntityConfigurationMetadata(
             account,
             body.key,
             body.metadata
@@ -38,9 +38,9 @@ class EntityConfigurationMetadataController(
     fun deleteEntityConfigurationMetadata(
         request: HttpServletRequest,
         @PathVariable id: Int
-    ): EntityConfigurationMetadataDTO {
+    ): Metadata {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return entityConfigurationMetadataService.deleteEntityConfigurationMetadata(
+        return metadataService.deleteEntityConfigurationMetadata(
             account,
             id
         )

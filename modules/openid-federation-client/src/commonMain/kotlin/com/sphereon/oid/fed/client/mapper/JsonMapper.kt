@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.client.mapper
 
-import com.sphereon.oid.fed.openapi.models.JWT
+import com.sphereon.oid.fed.openapi.models.Jwt
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -28,7 +28,7 @@ fun <T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
  * Used for decoding JWT to an object of JWT with Header, Payload and Signature
  */
 @OptIn(ExperimentalEncodingApi::class)
-fun decodeJWTComponents(jwtToken: String): JWT {
+fun decodeJWTComponents(jwtToken: String): Jwt {
     val parts = jwtToken.split(".")
     if (parts.size != 3) {
         throw InvalidJwtException("Invalid JWT format: Expected 3 parts, found ${parts.size}")
@@ -38,7 +38,7 @@ fun decodeJWTComponents(jwtToken: String): JWT {
     val payloadJson = Base64.UrlSafe.decode(parts[1]).decodeToString()
 
     return try {
-        JWT(
+        Jwt(
             Json.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
         )
     } catch (e: Exception) {

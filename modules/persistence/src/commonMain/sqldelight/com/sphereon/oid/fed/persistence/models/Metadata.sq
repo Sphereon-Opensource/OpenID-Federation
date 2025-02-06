@@ -1,0 +1,33 @@
+create:
+INSERT INTO Metadata (
+    account_id,
+    key,
+    metadata
+) VALUES (?, ?, ?)
+RETURNING *;
+
+delete:
+UPDATE Metadata
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findByAccountId:
+SELECT *
+FROM Metadata
+WHERE account_id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndKey:
+SELECT *
+FROM Metadata
+WHERE account_id = ?
+AND key = ?
+AND deleted_at IS NULL;
+
+findById:
+SELECT *
+FROM Metadata
+WHERE id = ?
+AND deleted_at IS NULL;

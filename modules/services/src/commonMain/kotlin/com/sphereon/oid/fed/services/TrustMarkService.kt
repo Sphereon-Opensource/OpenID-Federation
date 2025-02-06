@@ -5,25 +5,15 @@ import com.sphereon.oid.fed.common.builder.TrustMarkObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.CreateTrustMarkDTO
-import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeDTO
-import com.sphereon.oid.fed.openapi.models.JWTHeader
-import com.sphereon.oid.fed.openapi.models.TrustMarkDTO
-import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
-import com.sphereon.oid.fed.openapi.models.TrustMarkObject
-import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
-import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
-import com.sphereon.oid.fed.openapi.models.TrustMarkTypeDTO
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
-import com.sphereon.oid.fed.services.mappers.toTrustMarkDTO
-import com.sphereon.oid.fed.services.mappers.toTrustMarkTypeDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 
 class TrustMarkService(
-    private val keyService: KeyService,
+    private val jwkService: JwkService,
     private val kmsClient: KmsClient,
     private val accountService: AccountService
 ) {
@@ -34,8 +24,8 @@ class TrustMarkService(
 
     fun createTrustMarkType(
         account: Account,
-        createDto: CreateTrustMarkTypeDTO
-    ): TrustMarkTypeDTO {
+        createDto: CreateTrustMarkType
+    ): TrustMarkType {
         logger.info("Creating trust mark type ${createDto.identifier} for username: ${account.username}")
 
         this.validateTrustMarkTypeIdentifierDoesNotExist(account, createDto.identifier)
@@ -46,7 +36,7 @@ class TrustMarkService(
         ).executeAsOne()
         logger.info("Successfully created trust mark type with ID: ${createdType.id}")
 
-        return createdType.toTrustMarkTypeDTO()
+        return createdType.toDTO()
     }
 
     private fun validateTrustMarkTypeIdentifierDoesNotExist(account: Account, identifier: String?) {
@@ -62,24 +52,24 @@ class TrustMarkService(
         }
     }
 
-    fun findAllByAccount(account: Account): List<TrustMarkTypeDTO> {
+    fun findAllByAccount(account: Account): List<TrustMarkType> {
         logger.debug("Finding all trust mark types for account ID: $account.id")
         val types = trustMarkTypeQueries.findByAccountId(account.id).executeAsList()
-            .map { it.toTrustMarkTypeDTO() }
+            .map { it.toDTO() }
         logger.debug("Found ${types.size} trust mark types")
         return types
     }
 
-    fun findById(account: Account, id: Int): TrustMarkTypeDTO {
+    fun findById(account: Account, id: Int): TrustMarkType {
         logger.debug("Finding trust mark type ID: $id for account ID: $account.id")
         val definition = trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: throw NotFoundException("Trust mark definition with ID $id not found for account $account.id.").also {
                 logger.error("Trust mark type not found with ID: $id")
             }
-        return definition.toTrustMarkTypeDTO()
+        return definition.toDTO()
     }
 
-    fun deleteTrustMarkType(account: Account, id: Int): TrustMarkTypeDTO {
+    fun deleteTrustMarkType(account: Account, id: Int): TrustMarkType {
         logger.info("Deleting trust mark type ID: $id for account ID: ${account.id}")
         trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: throw NotFoundException("Trust mark definition with ID $id not found for account ${account.id}.").also {
@@ -88,7 +78,7 @@ class TrustMarkService(
 
         val deletedType = trustMarkTypeQueries.delete(id).executeAsOne()
         logger.info("Successfully deleted trust mark type ID: $id")
-        return deletedType.toTrustMarkTypeDTO()
+        return deletedType.toDTO()
     }
 
     fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: Int): List<String> {
@@ -164,17 +154,17 @@ class TrustMarkService(
         return removed
     }
 
-    fun getTrustMarksForAccount(account: Account): List<TrustMarkDTO> {
+    fun getTrustMarksForAccount(account: Account): List<TrustMark> {
         logger.debug("Getting trust marks for account ID: $account.id")
-        val trustMarks = trustMarkQueries.findByAccountId(account.id).executeAsList().map { it.toTrustMarkDTO() }
+        val trustMarks = trustMarkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }
         logger.debug("Found ${trustMarks.size} trust marks")
         return trustMarks
     }
 
-    fun createTrustMark(account: Account, body: CreateTrustMarkDTO): TrustMarkDTO {
+    fun createTrustMark(account: Account, body: CreateTrustMark): TrustMark {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
 
-        val keys = keyService.getKeys(account)
+        val keys = jwkService.getKeys(account)
         if (keys.isEmpty()) {
             logger.error("No keys found for account ID: $account.id")
             throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
@@ -201,10 +191,10 @@ class TrustMarkService(
 
         val jwt = kmsClient.sign(
             payload = Json.encodeToJsonElement(
-                TrustMarkObject.serializer(),
+                TrustMarkPayload.serializer(),
                 trustMark.build()
             ).jsonObject,
-            header = JWTHeader(typ = "trust-mark+jwt", kid = kid!!),
+            header = JwtHeader(typ = "trust-mark+jwt", kid = kid!!),
             keyId = kid
         )
         logger.debug("Successfully signed trust mark")
@@ -219,17 +209,17 @@ class TrustMarkService(
         ).executeAsOne()
         logger.info("Successfully created trust mark with ID: ${created.id}")
 
-        return created.toTrustMarkDTO()
+        return created.toDTO()
     }
 
-    fun deleteTrustMark(account: Account, id: Int): TrustMarkDTO {
+    fun deleteTrustMark(account: Account, id: Int): TrustMark {
         logger.info("Deleting trust mark ID: $id for account ID: $account.id")
         trustMarkQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: throw NotFoundException("Trust mark with ID $id not found for account $account.id.").also {
                 logger.error("Trust mark not found with ID: $id")
             }
 
-        val deleted = trustMarkQueries.delete(id).executeAsOne().toTrustMarkDTO()
+        val deleted = trustMarkQueries.delete(id).executeAsOne().toDTO()
         logger.info("Successfully deleted trust mark ID: $id")
         return deleted
     }

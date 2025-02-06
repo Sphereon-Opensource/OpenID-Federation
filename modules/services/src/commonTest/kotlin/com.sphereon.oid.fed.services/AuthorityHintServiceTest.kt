@@ -6,6 +6,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
@@ -59,7 +60,7 @@ class AuthorityHintServiceTest {
             every { executeAsOneOrNull() } returns authorityHint
         }
 
-        val result = authorityHintService.createAuthorityHint(testAccount, TEST_IDENTIFIER)
+        val result = authorityHintService.createAuthorityHint(testAccount.toDTO(), TEST_IDENTIFIER)
 
         assertNotNull(result)
         assertEquals(TEST_IDENTIFIER, result.identifier)
@@ -82,7 +83,7 @@ class AuthorityHintServiceTest {
         }
 
         assertFailsWith<EntityAlreadyExistsException> {
-            authorityHintService.createAuthorityHint(testAccount, TEST_IDENTIFIER)
+            authorityHintService.createAuthorityHint(testAccount.toDTO(), TEST_IDENTIFIER)
         }
         verify { authorityHintQueries.findByAccountIdAndIdentifier(testAccount.id, TEST_IDENTIFIER) }
     }
@@ -104,7 +105,7 @@ class AuthorityHintServiceTest {
             every { executeAsOneOrNull() } returns authorityHint
         }
 
-        val result = authorityHintService.deleteAuthorityHint(testAccount, authorityHint.id)
+        val result = authorityHintService.deleteAuthorityHint(testAccount.toDTO(), authorityHint.id)
 
         assertNotNull(result)
         assertEquals(TEST_IDENTIFIER, result.identifier)
@@ -121,7 +122,7 @@ class AuthorityHintServiceTest {
         }
 
         assertFailsWith<NotFoundException> {
-            authorityHintService.deleteAuthorityHint(testAccount, nonExistentId)
+            authorityHintService.deleteAuthorityHint(testAccount.toDTO(), nonExistentId)
         }
         verify { authorityHintQueries.findByAccountIdAndId(testAccount.id, nonExistentId) }
     }
@@ -135,7 +136,7 @@ class AuthorityHintServiceTest {
 
         every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns authorityHints
 
-        val result = authorityHintService.findByAccount(testAccount)
+        val result = authorityHintService.findByAccount(testAccount.toDTO())
 
         assertNotNull(result)
         assertEquals(2, result.size)
