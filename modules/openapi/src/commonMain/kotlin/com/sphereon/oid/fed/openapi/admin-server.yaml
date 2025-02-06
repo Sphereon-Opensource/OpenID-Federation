@@ -10,8 +10,6 @@ info:
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
   version: 1.0.0-d40
 servers:
-  - description: SwaggerHub API Auto Mocking
-    url: 'https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAPI/1.0.0-d40'
   - url: http://localhost:8081
     description: Admin Server
 paths:
@@ -1473,7 +1471,7 @@ components:
       schema:
         type: string
         nullable: true
-        default: null
+        default: 'root'
   responses:
     BadRequestError:
       description: Invalid request parameters
