@@ -32,6 +32,8 @@ paths:
   /logs:
     get:
       summary: Get recent logs
+      security:
+        - bearerAuth: [ ]
       description: Retrieve the most recent logs from the system
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -65,6 +67,8 @@ paths:
   /logs/severity/{severity}:
     get:
       summary: Get logs by severity
+      security:
+        - bearerAuth: [ ]
       description: Retrieve logs filtered by severity level
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -105,6 +109,8 @@ paths:
   /logs/tag/{tag}:
     get:
       summary: Get logs by tag
+      security:
+        - bearerAuth: [ ]
       description: Retrieve logs filtered by tag
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -144,6 +150,8 @@ paths:
   /accounts:
     get:
       summary: List all accounts
+      security:
+        - bearerAuth: [ ]
       description: Retrieve a list of all accounts.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -170,6 +178,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Register a new tenant account
+      security:
+        - bearerAuth: [ ]
       description: Endpoint for an admin to create a new account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -200,6 +210,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     delete:
       summary: Delete current account
+      security:
+        - bearerAuth: [ ]
       description: Delete the account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -226,6 +238,8 @@ paths:
   '/keys':
     post:
       summary: Create a new key
+      security:
+        - bearerAuth: [ ]
       description: Create a new key for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -250,6 +264,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List all keys
+      security:
+        - bearerAuth: [ ]
       description: Retrieve all keys associated with the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -283,6 +299,8 @@ paths:
   '/keys/{keyId}':
     delete:
       summary: Revoke a key
+      security:
+        - bearerAuth: [ ]
       description: Revoke a key by its ID for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -326,6 +344,8 @@ paths:
   '/metadata':
     get:
       summary: Get entity configuration metadata
+      security:
+        - bearerAuth: [ ]
       description: Retrieve metadata entries for a specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -352,6 +372,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Create entity configuration metadata
+      security:
+        - bearerAuth: [ ]
       description: Add a new metadata entry for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -384,6 +406,8 @@ paths:
   '/metadata/{id}':
     delete:
       summary: Delete account metadata
+      security:
+        - bearerAuth: [ ]
       description: Deletes a specific metadata entry for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -421,6 +445,8 @@ paths:
   '/authority-hints':
     get:
       summary: Get authority hints
+      security:
+        - bearerAuth: [ ]
       description: Retrieve all authority hints for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -447,6 +473,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Create an authority hint
+      security:
+        - bearerAuth: [ ]
       description: Add a new authority hint for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -479,6 +507,8 @@ paths:
   '/authority-hints/{id}':
     delete:
       summary: Delete an authority hint
+      security:
+        - bearerAuth: [ ]
       description: Remove an authority hint by its ID for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -510,6 +540,8 @@ paths:
   '/entity-statement':
     get:
       summary: Get entity configuration statement object
+      security:
+        - bearerAuth: [ ]
       description: Retrieve the entity configuration statement for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -534,6 +566,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Sign and publish entity configuration statement
+      security:
+        - bearerAuth: [ ]
       description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -568,6 +602,8 @@ paths:
   '/subordinates':
     get:
       summary: Get subordinates
+      security:
+        - bearerAuth: [ ]
       description: Retrieve all subordinates associated with the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -594,6 +630,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Create a subordinate
+      security:
+        - bearerAuth: [ ]
       description: Create a subordinate for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -626,6 +664,8 @@ paths:
   '/subordinates/{id}':
     delete:
       summary: Delete subordinate
+      security:
+        - bearerAuth: [ ]
       description: Deletes a specific subordinate for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -668,6 +708,8 @@ paths:
   '/subordinates/{id}/jwks':
     get:
       summary: Get subordinate JWKs
+      security:
+        - bearerAuth: [ ]
       description: Retrieve all JWKs associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -700,6 +742,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Create a subordinate JWK
+      security:
+        - bearerAuth: [ ]
       description: Create a JWK for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -739,6 +783,8 @@ paths:
   '/subordinates/{id}/jwks/{jwkId}':
     delete:
       summary: Delete subordinate JWK
+      security:
+        - bearerAuth: [ ]
       description: Delete a JWK associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -777,6 +823,8 @@ paths:
   '/subordinates/{subordinateId}/metadata':
     get:
       summary: Get subordinate metadata
+      security:
+        - bearerAuth: [ ]
       description: Retrieve metadata associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -809,6 +857,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Create subordinate metadata
+      security:
+        - bearerAuth: [ ]
       description: Create metadata for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -847,6 +897,8 @@ paths:
   '/subordinates/{subordinateId}/metadata/{id}':
     delete:
       summary: Delete subordinate metadata
+      security:
+        - bearerAuth: [ ]
       description: Delete metadata associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -884,6 +936,8 @@ paths:
   '/subordinates/{id}/statement':
     get:
       summary: Get subordinate statement object
+      security:
+        - bearerAuth: [ ]
       description: Retrieve the subordinate statement for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -914,6 +968,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       summary: Sign and publish subordinate statement
+      security:
+        - bearerAuth: [ ]
       description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -952,6 +1008,8 @@ paths:
   '/trust-mark-types':
     get:
       summary: Get all Trust Mark Types
+      security:
+        - bearerAuth: [ ]
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -966,6 +1024,8 @@ paths:
 
     post:
       summary: Create a Trust Mark Type
+      security:
+        - bearerAuth: [ ]
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
@@ -985,6 +1045,8 @@ paths:
   '/trust-mark-types/{id}':
     get:
       summary: Get a Trust Mark Type by ID
+      security:
+        - bearerAuth: [ ]
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -1001,6 +1063,8 @@ paths:
                 $ref: '#/components/schemas/TrustMarkType'
     delete:
       summary: Delete a Trust Mark Type
+      security:
+        - bearerAuth: [ ]
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -1014,6 +1078,7 @@ paths:
   /trust-mark-types/{id}/issuers:
     get:
       summary: Get Issuers for a Trust Mark Type
+
       description: Retrieve a list of issuers for the specified Trust Mark Type.
       operationId: getIssuersForTrustMarkType
       parameters:
@@ -1038,6 +1103,7 @@ paths:
           description: Account or Trust Mark Type not found.
     post:
       summary: Add Issuer to Trust Mark Type
+
       description: Add a new issuer to the specified Trust Mark Type.
       operationId: addIssuerToTrustMarkType
       parameters:
@@ -1085,6 +1151,7 @@ paths:
   /trust-mark-types/{id}/issuers/{issuerIdentifier}:
     delete:
       summary: Remove Issuer from Trust Mark Type
+
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
@@ -1122,6 +1189,7 @@ paths:
   '/trust-marks':
     post:
       summary: Create or Update a Trust Mark
+
       description: Create or update a Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1171,6 +1239,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List Trust Marks
+
       description: List all Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1208,6 +1277,7 @@ paths:
   '/trust-marks/{trustMarkId}':
     delete:
       summary: Delete a Trust Mark
+
       description: Delete an existing Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1249,6 +1319,7 @@ paths:
   '/received-trust-marks':
     post:
       summary: Create a Received Trust Mark
+
       description: Create or update a received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1294,6 +1365,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List Received Trust Marks
+
       description: Retrieve all received Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1336,6 +1408,7 @@ paths:
   '/received-trust-marks/{receivedTrustMarkId}':
     delete:
       summary: Delete a Received Trust Mark
+
       description: Delete a specific received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1376,6 +1449,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Bearer token authentication
+      bearerFormat: JWT
   parameters:
     AccountUsername:
       name: X-Account-Username
@@ -1384,6 +1463,8 @@ components:
       required: false
       schema:
         type: string
+        nullable: true
+        default: null
   responses:
     BadRequestError:
       description: Invalid request parameters
