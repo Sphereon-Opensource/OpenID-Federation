@@ -23,6 +23,8 @@ dependencies {
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
