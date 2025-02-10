@@ -60,7 +60,7 @@ class FederationClient(
      * @return A [VerifyTrustChainResponse] object containing the verification result.
      */
     suspend fun trustChainVerify(
-        trustChain: List<String>,
+        trustChain: Array<String>,
         trustAnchor: String?,
         currentTime: Long?
     ): VerifyTrustChainResponse {
