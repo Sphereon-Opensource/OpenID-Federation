@@ -75,7 +75,7 @@ class FederationClientJS(
     ): Promise<VerifyTrustChainResponse> {
         return scope.promise {
             trustChainService.verify(
-                trustChain.toList(),
+                trustChain,
                 trustAnchor,
                 currentTime?.toLong()
             )
