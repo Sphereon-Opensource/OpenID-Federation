@@ -60,7 +60,7 @@ class ResolveService(
                 exp = (currentTime + 3600 * 24).toString(), // 24 hours expiration
                 metadata = filteredMetadata,
                 trustMarks = trustMarks,
-                trustChain = trustChainResolution.trustChain!!.toTypedArray()
+                trustChain = trustChainResolution.trustChain
             )
             logger.debug("Successfully built resolve response")
             return response

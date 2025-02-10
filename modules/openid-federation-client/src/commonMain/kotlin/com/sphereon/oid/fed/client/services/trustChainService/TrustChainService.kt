@@ -37,7 +37,7 @@ class TrustChainService(
      * @see <a href="https://openid.net/specs/openid-federation-1_0.html#section-10.2">OpenID Federation 1.0 - 10.2. Validating a Trust Chain</a>
      */
     suspend fun verify(
-        chain: List<String>,
+        chain: Array<String>,
         trustAnchor: String?,
         currentTime: Long? = null
     ): VerifyTrustChainResponse {
@@ -70,6 +70,7 @@ class TrustChainService(
                 // 2. Verify iat is in the past
                 val iat = statement.payload["iat"]?.jsonPrimitive?.content?.toLongOrNull()
                 logger.debug("Statement $j - Issued at (iat): $iat")
+                logger.debug("Time considered: $timeToUse")
                 if (iat == null || iat > timeToUse) {
                     logger.error("Statement $j has invalid iat: $iat")
                     return VerifyTrustChainResponse(false, "Statement at position $j has invalid iat")
@@ -207,8 +208,7 @@ class TrustChainService(
                     context = mapOf("trustChain" to trustChain.toString())
                 )
 
-                // calculate trust chain exp
-
+                // @TODO calculate trust chain exp
 
                 TrustChainResolveResponse(trustChain, error = false, errorMessage = null)
             } else {
@@ -228,7 +228,7 @@ class TrustChainService(
         cache: SimpleCache<String, String>,
         depth: Int,
         maxDepth: Int
-    ): MutableList<String>? {
+    ): Array<String>? {
         logger.debug("Building trust chain for entity: $entityIdentifier at depth: $depth")
         if (depth == maxDepth) {
             logger.debug("Maximum depth reached: $maxDepth")
@@ -291,7 +291,7 @@ class TrustChainService(
 
             if (result != null) {
                 logger.debug("Successfully built trust chain through authority: $authority")
-                return result
+                return result.toTypedArray()
             }
             logger.debug("Failed to build trust chain through authority: $authority, trying next authority")
         }
@@ -457,7 +457,7 @@ class TrustChainService(
         if (authorityEntityConfiguration.authorityHints?.isNotEmpty() == true) {
             chain.add(subordinateStatementJwt)
             val result = buildTrustChain(authority, trustAnchors, chain, cache, depth, maxDepth)
-            if (result != null) return result
+            if (result != null) return result.toMutableList()
             chain.removeLast()
         }
         return null
