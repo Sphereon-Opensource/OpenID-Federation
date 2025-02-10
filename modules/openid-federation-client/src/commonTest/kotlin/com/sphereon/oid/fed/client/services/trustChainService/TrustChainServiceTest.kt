@@ -130,7 +130,7 @@ class TrustChainServiceTest {
 
         // Test with empty chain
         val emptyChainResponse = client.trustChainVerify(
-            emptyList(),
+            emptyArray(),
             "https://oidc.registry.servizicie.interno.gov.it",
             1728346615
         )
@@ -140,7 +140,7 @@ class TrustChainServiceTest {
 
         // Test with wrong trust anchor
         val wrongAnchorResponse = client.trustChainVerify(
-            resolveResponse.trustChain ?: emptyList(),
+            resolveResponse.trustChain ?: emptyArray(),
             "https://wrong.trust.anchor",
             1728346615
         )
