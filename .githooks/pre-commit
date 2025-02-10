@@ -4,8 +4,8 @@
 export MSYS=winsymlinks:nativestrict
 export MSYS2=winsymlinks:nativestrict
 
-# Get the commit message from the staged commit
-COMMIT_MSG=$(git log -1 --pretty=%B)
+# Get the commit message from the commit being created
+COMMIT_MSG=$(cat "$1")
 
 # Get the current version from build.gradle.kts
 CURRENT_VERSION=$(grep 'version = ' build.gradle.kts | sed 's/.*version = "\(.*\)".*/\1/')
