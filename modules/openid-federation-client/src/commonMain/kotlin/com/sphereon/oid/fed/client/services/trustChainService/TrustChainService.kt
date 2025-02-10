@@ -68,10 +68,11 @@ class TrustChainService(
                 }
 
                 // 2. Verify iat is in the past
+                val iatTolerance = 5L  // 5 seconds tolerance
                 val iat = statement.payload["iat"]?.jsonPrimitive?.content?.toLongOrNull()
                 logger.debug("Statement $j - Issued at (iat): $iat")
                 logger.debug("Time considered: $timeToUse")
-                if (iat == null || iat > timeToUse) {
+                if (iat == null || iat > timeToUse + iatTolerance) {
                     logger.error("Statement $j has invalid iat: $iat")
                     return VerifyTrustChainResponse(false, "Statement at position $j has invalid iat")
                 }
