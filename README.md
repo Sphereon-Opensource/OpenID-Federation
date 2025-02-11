@@ -366,7 +366,46 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 8: Create and Manage Subordinates
+## Step 8: Manage Authority Hints
+
+Authority Hints are used to indicate which authorities an entity recognizes in the federation. These authorities can
+validate trust chains and issue trust marks.
+
+### List Authority Hints
+
+Send a GET request to retrieve all authority hints for an account:
+
+```http
+GET http://localhost:8081/authority-hints
+X-Account-Username: {username}  # Optional, defaults to root
+```
+
+### Add an Authority Hint
+
+Send a POST request to add a new authority hint:
+
+```http
+POST http://localhost:8081/authority-hints
+X-Account-Username: {username}  # Optional, defaults to root
+{
+    "identifier": "https://example.com/authority"
+}
+```
+
+### Remove an Authority Hint
+
+Send a DELETE request to remove an authority hint by its ID:
+
+```http
+DELETE http://localhost:8081/authority-hints/{id}
+X-Account-Username: {username}  # Optional, defaults to root
+```
+
+Remember to publish your entity configuration after making changes to authority hints for them to take effect.
+
+---
+
+## Step 9: Create and Manage Subordinates
 
 ### Create a New Subordinate
 
@@ -405,7 +444,7 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 9: Manage Subordinate Metadata
+## Step 10: Manage Subordinate Metadata
 
 ### Add Metadata to a Subordinate
 
@@ -445,7 +484,7 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 10: Manage Subordinate JWKS
+## Step 11: Manage Subordinate JWKS
 
 ### Add a JWKS for a Subordinate
 
@@ -486,7 +525,7 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 11: Get Subordinate Statement Object
+## Step 12: Get Subordinate Statement Object
 
 1. Send a `GET` request to retrieve the statement for a subordinate:
 
@@ -497,7 +536,7 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 12: Publish Subordinate Statement
+## Step 13: Publish Subordinate Statement
 
 1. Send a `POST` request to publish a subordinate statement:
 
@@ -516,7 +555,7 @@ To assign metadata to your entity, follow these steps:
 
 ---
 
-## Step 13: Get and Publish Entity Configuration Statement
+## Step 14: Get and Publish Entity Configuration Statement
 
 ### Get Entity Configuration Statement Object
 
