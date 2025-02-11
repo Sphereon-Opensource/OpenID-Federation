@@ -5,8 +5,8 @@ import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBui
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.toTrustMark
@@ -42,7 +42,7 @@ class EntityConfigurationStatementService(
 
     private fun createBaseEntityConfigurationStatement(
         identifier: String,
-        keys: Array<Jwk>
+        keys: Array<BaseJwk>
     ): EntityConfigurationStatementObjectBuilder {
         return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)

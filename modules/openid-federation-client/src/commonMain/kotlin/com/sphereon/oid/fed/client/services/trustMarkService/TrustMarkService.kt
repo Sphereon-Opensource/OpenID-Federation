@@ -8,9 +8,7 @@ import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.
 import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwt
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
+import com.sphereon.oid.fed.openapi.models.TrustMarkOwner
 import kotlinx.serialization.json.jsonPrimitive
 
 private val logger = TrustMarkServiceConst.LOG
@@ -72,14 +70,14 @@ class TrustMarkService(
             logger.debug("Trust Mark signature verified successfully")
 
             // 6. Check if Trust Mark is recognized in Trust Anchor's configuration
-            val trustMarkOwners = trustAnchorConfig.metadata?.get("trust_mark_owners")?.jsonObject
+            val trustMarkOwners = trustAnchorConfig.trustMarkOwners?.filterKeys { it == trustMarkId }
             if (trustMarkOwners != null) {
                 logger.debug("Validating Trust Mark using trust_mark_owners claim")
                 return validateWithTrustMarkOwners(trustMarkId, trustMarkOwners, decodedTrustMark)
             }
 
             // 7. Check if Trust Mark issuer is in Trust Anchor's trust_mark_issuers
-            val trustMarkIssuers = trustAnchorConfig.metadata?.get("trust_mark_issuers")?.jsonObject
+            val trustMarkIssuers = trustAnchorConfig.trustMarkIssuers
             if (trustMarkIssuers != null) {
                 logger.debug("Validating Trust Mark using trust_mark_issuers claim")
                 return validateWithTrustMarkIssuers(
@@ -104,10 +102,10 @@ class TrustMarkService(
 
     private suspend fun validateWithTrustMarkOwners(
         trustMarkId: String,
-        trustMarkOwners: JsonObject,
+        trustMarkOwners: Map<String, TrustMarkOwner>,
         decodedTrustMark: Jwt
     ): TrustMarkValidationResponse {
-        val ownerClaims = trustMarkOwners[trustMarkId]?.jsonObject
+        val ownerClaims = trustMarkOwners[trustMarkId]
             ?: return TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_owners")
 
         // Verify delegation claim exists
@@ -115,12 +113,14 @@ class TrustMarkService(
             ?: return TrustMarkValidationResponse(false, "Trust Mark missing required delegation claim")
 
         // Verify delegation JWT signature with owner's JWKS
-        val ownerJwks = ownerClaims["jwks"]?.jsonObject
+        val ownerJwks = ownerClaims.jwks
             ?: return TrustMarkValidationResponse(false, "No JWKS found for Trust Mark owner")
 
+
         val decodedDelegation = decodeJWTComponents(delegation)
+
         val delegationKey = findKeyInJwks(
-            ownerJwks["keys"]?.jsonArray ?: return TrustMarkValidationResponse(false, "Invalid JWKS format"),
+            ownerJwks,
             decodedDelegation.header.kid, context.json
         ) ?: return TrustMarkValidationResponse(false, "Delegation signing key not found in owner's JWKS")
 
@@ -129,7 +129,7 @@ class TrustMarkService(
         }
 
         // Verify delegation issuer matches owner's sub
-        val ownerSub = ownerClaims["sub"]?.jsonPrimitive?.content
+        val ownerSub = ownerClaims.sub
             ?: return TrustMarkValidationResponse(false, "Trust Mark owner missing sub claim")
 
         if (decodedDelegation.payload["iss"]?.jsonPrimitive?.content != ownerSub) {
@@ -139,21 +139,21 @@ class TrustMarkService(
         return TrustMarkValidationResponse(true)
     }
 
-    private suspend fun validateWithTrustMarkIssuers(
+    private fun validateWithTrustMarkIssuers(
         trustMarkId: String,
-        trustMarkIssuers: JsonObject,
+        trustMarkIssuers: Map<String, Array<String>>,
         decodedTrustMark: Jwt
     ): TrustMarkValidationResponse {
-        val issuerClaims = trustMarkIssuers[trustMarkId]?.jsonObject
+        val issuerClaims = trustMarkIssuers[trustMarkId]
             ?: return TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_issuers")
 
         // Verify Trust Mark issuer is authorized
         val trustMarkIssuer = decodedTrustMark.payload["iss"]?.jsonPrimitive?.content
             ?: return TrustMarkValidationResponse(false, "Trust Mark missing required issuer claim")
 
-        val isAuthorizedIssuer = issuerClaims["issuers"]?.jsonArray?.any {
-            it.jsonPrimitive.content == trustMarkIssuer
-        } ?: false
+        val isAuthorizedIssuer = issuerClaims.any { issuer ->
+            issuer == trustMarkIssuer
+        }
 
         if (!isAuthorizedIssuer) {
             return TrustMarkValidationResponse(false, "Trust Mark issuer not authorized")

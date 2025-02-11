@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.common.builder
 
+import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import kotlinx.serialization.json.JsonObject
 
@@ -10,7 +10,7 @@ class EntityConfigurationStatementObjectBuilder {
     private var iss: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private lateinit var jwks: List<Jwk>
+    private lateinit var jwks: List<BaseJwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
@@ -20,7 +20,7 @@ class EntityConfigurationStatementObjectBuilder {
     fun iss(iss: String) = apply { this.iss = iss }
     fun exp(exp: Int) = apply { this.exp = exp }
     fun iat(iat: Int) = apply { this.iat = iat }
-    fun jwks(jwks: List<Jwk>) = apply { this.jwks = jwks }
+    fun jwks(jwks: List<BaseJwk>) = apply { this.jwks = jwks }
 
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
@@ -43,7 +43,7 @@ class EntityConfigurationStatementObjectBuilder {
         this.trustMarks.add(trustMark)
     }
 
-    private fun createJwks(jwks: List<Jwk>): BaseStatementJwks {
+    private fun createJwks(jwks: List<BaseJwk>): BaseStatementJwks {
         return BaseStatementJwks(jwks.toTypedArray())
     }
 

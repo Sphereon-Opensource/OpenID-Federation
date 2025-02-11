@@ -1752,7 +1752,7 @@ components:
             keys:
               type: array
               items:
-                $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/BaseJwk'
         metadata:
           additionalProperties: true
         crit:

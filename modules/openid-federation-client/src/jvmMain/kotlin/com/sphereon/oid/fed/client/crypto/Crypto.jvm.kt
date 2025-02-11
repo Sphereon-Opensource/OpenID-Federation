@@ -9,14 +9,14 @@ import com.nimbusds.jose.jwk.JWK
 import com.nimbusds.jose.jwk.KeyType
 import com.nimbusds.jwt.SignedJWT
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.BaseJwk
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.text.ParseException
 
 actual fun cryptoService(): ICryptoService {
     return object : ICryptoService {
-        override suspend fun verify(jwt: String, key: Jwk): Boolean {
+        override suspend fun verify(jwt: String, key: BaseJwk): Boolean {
             return try {
                 val signedJWT = SignedJWT.parse(jwt)
 

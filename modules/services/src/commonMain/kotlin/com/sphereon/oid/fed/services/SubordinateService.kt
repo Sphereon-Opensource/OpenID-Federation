@@ -8,8 +8,8 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.mappers.toBaseJwk
 import com.sphereon.oid.fed.services.mappers.toDTO
-import com.sphereon.oid.fed.services.mappers.toJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -93,7 +93,7 @@ class SubordinateService(
             logger.debug("Found subordinate with identifier: ${subordinate.identifier}")
 
             val subordinateJwks =
-                subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toDTO() }
+                subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList().map { it.toBaseJwk() }
             logger.debug("Found ${subordinateJwks.size} JWKs for subordinate")
 
             val subordinateMetadataList =
@@ -113,7 +113,7 @@ class SubordinateService(
     private fun buildSubordinateStatement(
         account: Account,
         subordinate: SubordinateEntity,
-        subordinateJwks: List<SubordinateJwk>,
+        subordinateJwks: List<BaseJwk>,
         subordinateMetadataList: List<SubordinateMetadataEntity>
     ): SubordinateStatement {
         logger.debug("Building subordinate statement")
@@ -128,7 +128,7 @@ class SubordinateService(
 
         subordinateJwks.forEach {
             logger.debug("Adding JWK to statement")
-            statement.jwks(it.toJwk())
+            statement.jwks(it)
         }
 
         subordinateMetadataList.forEach {

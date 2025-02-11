@@ -47,3 +47,23 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
         revoked = key.revokedAt?.let { JwkRevoked(it, key.revokedReason) }
     )
 }
+
+fun JwkEntity.toBaseJwk(): BaseJwk {
+    val key = Json.decodeFromString<BaseJwk>(this.key)
+
+    return BaseJwk(
+        e = key.e,
+        x = key.x,
+        y = key.y,
+        n = key.n,
+        alg = key.alg,
+        crv = key.crv,
+        kid = key.kid,
+        kty = key.kty,
+        use = key.use,
+        x5c = key.x5c,
+        x5t = key.x5t,
+        x5u = key.x5u,
+        x5tS256 = key.x5tS256,
+    )
+}

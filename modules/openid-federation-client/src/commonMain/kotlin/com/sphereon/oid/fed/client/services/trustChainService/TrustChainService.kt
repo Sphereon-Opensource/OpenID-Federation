@@ -7,9 +7,11 @@ import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
+import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwt
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import kotlinx.serialization.builtins.ArraySerializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -241,15 +243,16 @@ class TrustChainService(
         val entityConfigurationJwt = context.jwtService.fetchAndVerifyJwt(entityConfigurationEndpoint)
         val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
         logger.debug("Decoded entity configuration JWT header kid: ${decodedEntityConfiguration.header.kid}")
-
-        val key = findKeyInJwks(
-            decodedEntityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: run {
-                logger.debug("No JWKS found in entity configuration payload")
-                return null
-            },
-            decodedEntityConfiguration.header.kid,
-            context.json
-        ) ?: run {
+        val key = decodedEntityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+            findKeyInJwks(
+                decodeJwksArray(array),
+                decodedEntityConfiguration.header.kid,
+                context.json
+            )
+        } ?: run {
+            logger.debug("No JWKS found in entity configuration payload")
+            return null
+        } ?: run {
             logger.debug("Could not find key with kid: ${decodedEntityConfiguration.header.kid} in JWKS")
             return null
         }
@@ -374,11 +377,13 @@ class TrustChainService(
         cache.put(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
         val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
-        val key = findKeyInJwks(
-            decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
-            decodedJwt.header.kid,
-            context.json
-        ) ?: return null
+        val key = decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+            findKeyInJwks(
+                decodeJwksArray(array),
+                decodedJwt.header.kid,
+                context.json
+            )
+        } ?: return null
 
         context.jwtService.verifyJwt(authorityEntityConfigurationJwt, key)
 
@@ -414,11 +419,14 @@ class TrustChainService(
         val subordinateStatementJwt = context.httpResolver.get(subordinateStatementEndpoint)
         val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
 
-        val subordinateStatementKey = findKeyInJwks(
-            decodedAuthorityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return null,
-            decodedSubordinateStatement.header.kid,
-            context.json
-        ) ?: return null
+        val subordinateStatementKey =
+            decodedAuthorityConfiguration.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+                findKeyInJwks(
+                    decodeJwksArray(array),
+                    decodedSubordinateStatement.header.kid,
+                    context.json
+                )
+            } ?: return null
 
         context.jwtService.verifyJwt(subordinateStatementJwt, subordinateStatementKey)
 
@@ -431,7 +439,6 @@ class TrustChainService(
         val jwks = subordinateStatement.jwks
         val keys = jwks.propertyKeys ?: return null
         if (!checkKidInJwks(keys, lastStatementKid)) return null
-
         return Pair(subordinateStatementJwt, subordinateStatement)
     }
 
@@ -474,23 +481,32 @@ class TrustChainService(
 
     private suspend fun verifySignatureWithOwnJwks(jwt: String): Boolean {
         val decoded = decodeJWTComponents(jwt)
-        val key = findKeyInJwks(
-            decoded.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return false,
-            decoded.header.kid,
-            context.json
-        ) ?: return false
+        val key = decoded.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+            findKeyInJwks(
+                decodeJwksArray(array),
+                decoded.header.kid,
+                context.json
+            )
+        } ?: return false
         return context.cryptoService.verify(jwt, key)
+
     }
 
     private suspend fun verifySignatureWithNextJwks(jwt: String, nextJwt: String): Boolean {
         val decoded = decodeJWTComponents(jwt)
         val decodedNext = decodeJWTComponents(nextJwt)
-        val key = findKeyInJwks(
-            decodedNext.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray ?: return false,
-            decoded.header.kid,
-            context.json
-        ) ?: return false
+        val key = decodedNext.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+            findKeyInJwks(
+                decodeJwksArray(array),
+                decoded.header.kid,
+                context.json
+            )
+        } ?: return false
         return context.cryptoService.verify(jwt, key)
+    }
+
+    private fun decodeJwksArray(jsonArray: kotlinx.serialization.json.JsonArray): Array<BaseJwk> {
+        return context.json.decodeFromJsonElement(ArraySerializer(BaseJwk.serializer()), jsonArray)
     }
 }
 

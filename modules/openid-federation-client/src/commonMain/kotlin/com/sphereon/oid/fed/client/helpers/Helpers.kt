@@ -1,11 +1,8 @@
 package com.sphereon.oid.fed.client.helpers
 
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.BaseJwk
 import kotlinx.datetime.Clock
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 fun getEntityConfigurationEndpoint(iss: String): String {
     return "${if (iss.endsWith("/")) iss.dropLast(1) else iss}/.well-known/openid-federation"
@@ -15,15 +12,13 @@ fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String 
     return "${fetchEndpoint}?sub=$sub"
 }
 
-fun findKeyInJwks(keys: JsonArray, kid: String, json: Json): Jwk? {
-    val key = keys.firstOrNull { it.jsonObject["kid"]?.jsonPrimitive?.content?.trim() == kid.trim() }
+fun findKeyInJwks(keys: Array<BaseJwk>, kid: String, json: Json): BaseJwk? {
+    val key = keys.firstOrNull { it.kid?.trim() == kid.trim() }
 
-    if (key == null) return null
-
-    return json.decodeFromJsonElement(Jwk.serializer(), key)
+    return key
 }
 
-fun checkKidInJwks(keys: Array<Jwk>, kid: String): Boolean {
+fun checkKidInJwks(keys: Array<BaseJwk>, kid: String): Boolean {
     for (key in keys) {
         if (key.kid == kid) {
             return true

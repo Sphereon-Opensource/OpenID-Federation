@@ -5,6 +5,7 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.mappers.toBaseJwk
 import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toHistoricalKey
 import kotlinx.serialization.json.Json
@@ -33,10 +34,10 @@ class JwkService(
         return createdJwk.toDTO()
     }
 
-    fun getKeys(account: Account): Array<Jwk> {
+    fun getKeys(account: Account): Array<BaseJwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toBaseJwk() }.toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }

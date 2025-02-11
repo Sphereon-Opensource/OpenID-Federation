@@ -1,17 +1,14 @@
 package com.sphereon.oid.fed.client.services.jwtService
 
 import com.sphereon.oid.fed.client.context.FederationContext
-import com.sphereon.oid.fed.client.helpers.findKeyInJwks
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.BaseJwk
+import kotlinx.serialization.builtins.ArraySerializer
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
 class JwtService(private val context: FederationContext) {
-    /**
-     * Fetches and verifies a JWT from a given endpoint
-     */
-    suspend fun fetchAndVerifyJwt(endpoint: String, verifyWithKey: Jwk? = null): String {
+    suspend fun fetchAndVerifyJwt(endpoint: String, verifyWithKey: BaseJwk? = null): String {
         context.logger.debug("Fetching JWT from endpoint: $endpoint")
         val jwt = context.httpResolver.get(endpoint)
 
@@ -24,10 +21,7 @@ class JwtService(private val context: FederationContext) {
         return jwt
     }
 
-    /**
-     * Verifies a JWT signature with a given key
-     */
-    suspend fun verifyJwt(jwt: String, key: Jwk) {
+    suspend fun verifyJwt(jwt: String, key: BaseJwk) {
         context.logger.debug("Verifying JWT signature with key: ${key.kid}")
         if (!context.cryptoService.verify(jwt, key)) {
             throw IllegalStateException("JWT signature verification failed")
@@ -35,20 +29,17 @@ class JwtService(private val context: FederationContext) {
         context.logger.debug("JWT signature verified successfully")
     }
 
-    /**
-     * Verifies a JWT is self-signed using its own JWKS
-     */
-    suspend fun verifySelfSignedJwt(jwt: String): Jwk {
+    suspend fun verifySelfSignedJwt(jwt: String) {
         val decodedJwt = decodeJWTComponents(jwt)
         context.logger.debug("Verifying self-signed JWT with kid: ${decodedJwt.header.kid}")
 
-        val jwks = decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray
-            ?: throw IllegalStateException("No JWKS found in JWT payload")
+        val jwks = decodedJwt.payload["jwks"]?.jsonObject?.get("keys")?.jsonArray?.let { array ->
+            context.json.decodeFromJsonElement(ArraySerializer(BaseJwk.serializer()), array)
+        } ?: throw IllegalStateException("No JWKS found in JWT payload")
 
-        val key = findKeyInJwks(jwks, decodedJwt.header.kid, context.json)
+        val key = jwks.find { it.kid == decodedJwt.header.kid }
             ?: throw IllegalStateException("No matching key found for kid: ${decodedJwt.header.kid}")
 
         verifyJwt(jwt, key)
-        return key
     }
 }
