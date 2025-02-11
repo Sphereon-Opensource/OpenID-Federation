@@ -4,11 +4,23 @@
 export MSYS=winsymlinks:nativestrict
 export MSYS2=winsymlinks:nativestrict
 
-# Get the commit message from the commit being created
-COMMIT_MSG=$(cat "$1")
-
+# Get the commit message from the temporary file
+if [ ! -f .git/COMMIT_EDITMSG ]; then
+    echo "Error: Commit message file not found"
+    exit 1
+fi
+COMMIT_MSG=$(cat .git/COMMIT_EDITMSG)
 # Get the current version from build.gradle.kts
+if [ ! -f build.gradle.kts ]; then
+    echo "Error: build.gradle.kts not found"
+    exit 1
+fi
 CURRENT_VERSION=$(grep 'version = ' build.gradle.kts | sed 's/.*version = "\(.*\)".*/\1/')
+
+if [ -z "$CURRENT_VERSION" ]; then
+    echo "Error: Could not find version in build.gradle.kts"
+    exit 1
+fi
 
 # Remove -SNAPSHOT if present
 VERSION_BASE=${CURRENT_VERSION%-SNAPSHOT}
