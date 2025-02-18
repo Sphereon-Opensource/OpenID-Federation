@@ -4,8 +4,12 @@ import com.sphereon.oid.fed.openapi.models.*
 import kotlinx.serialization.json.Json
 import com.sphereon.oid.fed.persistence.models.Jwk as JwkEntity
 
+private val json = Json {
+    ignoreUnknownKeys = true
+}
+
 fun JwkEntity.toDTO(): AccountJwk {
-    val key = Json.decodeFromString<Jwk>(this.key)
+    val key = json.decodeFromString<Jwk>(this.key)
 
     return AccountJwk(
         id = this.id,
@@ -27,28 +31,8 @@ fun JwkEntity.toDTO(): AccountJwk {
     )
 }
 
-fun JwkEntity.toJwk(): Jwk {
-    val key = Json.decodeFromString<Jwk>(this.key)
-
-    return Jwk(
-        e = key.e,
-        x = key.x,
-        y = key.y,
-        n = key.n,
-        alg = key.alg,
-        crv = key.crv,
-        kid = key.kid,
-        kty = key.kty,
-        use = key.use,
-        x5c = key.x5c,
-        x5t = key.x5t,
-        x5u = key.x5u,
-        x5tS256 = key.x5tS256
-    )
-}
-
 fun JwkEntity.toHistoricalKey(): HistoricalKey {
-    val key = Json.decodeFromString<Jwk>(this.key)
+    val key = json.decodeFromString<Jwk>(this.key)
 
     return HistoricalKey(
         e = key.e,
