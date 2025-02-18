@@ -266,7 +266,7 @@ To create a new tenant account, follow these steps:
    ```json
    {
        "username": "{username}",
-       "identifier": "https://example.com/{username}"
+       "identifier": "http://localhost:8081/{username}"
    }
    ```
 
@@ -337,7 +337,7 @@ To assign metadata to your entity, follow these steps:
    {
        "key": "basic_metadata",
        "metadata": {
-           "client_uri": "https://example.com",
+           "client_uri": "http://localhost:8081",
            "contacts": [
                "admin@example.com",
                "support@example.com"
@@ -388,7 +388,7 @@ Send a POST request to add a new authority hint:
 POST http://localhost:8081/authority-hints
 X-Account-Username: {username}  # Optional, defaults to root
 {
-    "identifier": "https://example.com/authority"
+    "identifier": "http://localhost:8081/authority-hints"
 }
 ```
 
@@ -420,7 +420,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```json
    {
-       "identifier": "https://example.com/subordinate1"
+       "identifier": "http://localhost:8081/subordinate1"
    }
    ```
 
@@ -611,7 +611,7 @@ sequenceDiagram
 POST http://localhost:8081/accounts
 {
     "username": "trust-anchor",
-    "identifier": "https://example.com/trust-anchor"
+    "identifier": "http://localhost:8080/trust-anchor"
 }
 
 # Generate Trust Anchor keys
@@ -622,25 +622,25 @@ X-Account-Username: trust-anchor
 POST http://localhost:8081/trust-mark-types
 X-Account-Username: trust-anchor
 {
-    "identifier": "https://example.com/trust-mark-types/exampleType"
+    "identifier": "http://localhost:8080/trust-anchor/trust-mark-types/exampleType"
 }
 
 # Create Issuer account
 POST http://localhost:8081/accounts
 {
     "username": "trust-mark-issuer",
-    "identifier": "https://example.com/issuer"
+    "identifier": "http://localhost:8080/trust-mark-issuer"
 }
 
-# Generate Issuer keys
+# Generate keys for the Issuer
 POST http://localhost:8081/keys
 X-Account-Username: trust-mark-issuer
 
-# Authorize Issuer
+# Authorize Issuer using Trust Anchor account
 POST http://localhost:8081/trust-mark-types/{type-id}/issuers
 X-Account-Username: trust-anchor
 {
-    "identifier": "https://example.com/issuer"
+    "identifier": "http://localhost:8080/trust-mark-issuer"
 }
 
 # Publish Trust Anchor configuration
@@ -651,8 +651,8 @@ X-Account-Username: trust-anchor
 POST http://localhost:8081/trust-marks
 X-Account-Username: trust-mark-issuer
 {
-    "sub": "https://example.com/holder",
-    "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType"
+    "sub": "http://localhost:8080/trust-mark-holder",
+    "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType"
 }
 
 # Publish Issuer configuration
@@ -662,30 +662,33 @@ X-Account-Username: trust-mark-issuer
 # Create Holder account
 POST http://localhost:8081/accounts
 {
-    "username": "holder",
-    "identifier": "https://example.com/holder"
+    "username": "trust-mark-holder",
+    "identifier": "http://localhost:8080/trust-mark-holder"
 }
+
+# Generate keys for the Holder
+POST http://localhost:8081/keys
+X-Account-Username: trust-mark-holder
 
 # Store Trust Mark
 POST http://localhost:8081/received-trust-marks
-X-Account-Username: holder
+X-Account-Username: trust-mark-holder
 {
-    "trust_mark_type_identifier": "https://example.com/trust-mark-types/exampleType",
+    "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType",
     "jwt": "eyJ..."
 }
 
 # Publish Holder configuration
 POST http://localhost:8081/entity-statement
-X-Account-Username: holder
+X-Account-Username: trust-mark-holder
 
 ### 5. Trust Mark Verification
 
-```http
 # Verify Trust Mark status
-GET http://localhost:8080/trust-mark-issuer/trust-mark-status
+POST http://localhost:8080/trust-mark-issuer/trust-mark-status
 {
-    "trust_mark_id": "https://example.com/trust-mark-types/exampleType",
-    "sub": "https://example.com/holder"
+    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType",
+    "sub": "http://localhost:8080/trust-mark-holder"
 }
 ```
 
