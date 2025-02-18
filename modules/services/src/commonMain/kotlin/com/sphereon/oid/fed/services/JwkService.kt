@@ -34,7 +34,7 @@ class JwkService(
         return createdJwk.toDTO()
     }
 
-    fun getKeys(account: Account): Array<BaseJwk> {
+    fun getKeys(account: Account): Array<Jwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
         val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toBaseJwk() }.toTypedArray()

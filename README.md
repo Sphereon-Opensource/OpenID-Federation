@@ -545,11 +545,12 @@ Remember to publish your entity configuration after making changes to authority 
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally include a `dryRun` parameter in the request body to test the statement publication without making changes:
+2. Optionally include a `dry-run` parameter in the request body to test the statement publication without making
+   changes:
 
    ```json
    {
-       "dryRun": true
+       "dry-run": true
    }
    ```
 
@@ -575,12 +576,12 @@ Remember to publish your entity configuration after making changes to authority 
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
+2. Optionally, include a `dry-run` parameter in the request body to test the statement publication without making
    changes:
 
    ```json
    {
-       "dryRun": true
+       "dry-run": true
    }
    ```
 

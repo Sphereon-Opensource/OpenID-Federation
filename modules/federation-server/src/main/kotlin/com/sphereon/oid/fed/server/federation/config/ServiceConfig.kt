@@ -11,11 +11,9 @@ import org.springframework.core.env.Environment
 open class ServiceConfig {
     @Bean
     open fun accountConfig(environment: Environment): AccountServiceConfig {
-        System.setProperty(
-            "sphereon.federation.root-identifier",
+        return AccountServiceConfig(
             environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8080")
         )
-        return AccountServiceConfig()
     }
 
     @Bean

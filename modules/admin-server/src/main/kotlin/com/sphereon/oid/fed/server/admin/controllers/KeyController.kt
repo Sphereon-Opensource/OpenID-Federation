@@ -2,7 +2,6 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.Account
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.services.JwkService
 import jakarta.servlet.http.HttpServletRequest
@@ -22,7 +21,7 @@ class KeyController(
     }
 
     @GetMapping
-    fun getKeys(request: HttpServletRequest): Array<BaseJwk> {
+    fun getKeys(request: HttpServletRequest): Array<Jwk> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return jwkService.getKeys(account)
     }
