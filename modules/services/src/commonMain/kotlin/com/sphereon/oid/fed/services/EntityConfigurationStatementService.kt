@@ -5,10 +5,11 @@ import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBui
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.mappers.toJwk
 import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -27,7 +28,7 @@ class EntityConfigurationStatementService(
         val identifier = accountService.getAccountIdentifierByAccount(account)
         val keys = jwkService.getKeys(account)
 
-        val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys)
+        val entityConfigBuilder = createBaseEntityConfigurationStatement(identifier, keys.map { it.toJwk() }.toTypedArray())
 
         addOptionalMetadata(account, entityConfigBuilder, identifier)
         addAuthorityHints(account, entityConfigBuilder)
@@ -42,7 +43,7 @@ class EntityConfigurationStatementService(
 
     private fun createBaseEntityConfigurationStatement(
         identifier: String,
-        keys: Array<BaseJwk>
+        keys: Array<Jwk>
     ): EntityConfigurationStatementObjectBuilder {
         return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)

@@ -3,7 +3,6 @@ package com.sphereon.oid.fed.client.crypto
 import ICryptoServiceJS
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.coroutines.await
 import kotlinx.serialization.encodeToString
@@ -18,13 +17,13 @@ external object Jose {
 }
 
 class CryptoServiceAdapter(private val jsCryptoService: ICryptoServiceJS) : ICryptoService {
-    override suspend fun verify(jwt: String, key: BaseJwk): Boolean {
+    override suspend fun verify(jwt: String, key: Jwk): Boolean {
         return jsCryptoService.verify(jwt, key).await()
     }
 }
 
 object CryptoServiceJS : ICryptoServiceJS {
-    override fun verify(jwt: String, key: BaseJwk): Promise<Boolean> {
+    override fun verify(jwt: String, key: Jwk): Promise<Boolean> {
         return Promise { resolve, reject ->
             try {
                 val decodedJwt = decodeJWTComponents(jwt)
@@ -51,7 +50,7 @@ object CryptoServiceJS : ICryptoServiceJS {
 @JsExport.Ignore
 actual fun cryptoService(): ICryptoService {
     return object : ICryptoService {
-        override suspend fun verify(jwt: String, key: BaseJwk): Boolean {
+        override suspend fun verify(jwt: String, key: Jwk): Boolean {
             return CryptoServiceJS.verify(jwt, key).await()
         }
     }

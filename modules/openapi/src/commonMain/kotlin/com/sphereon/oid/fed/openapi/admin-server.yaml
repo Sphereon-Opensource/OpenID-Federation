@@ -682,7 +682,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/BaseJwk'
+              $ref: '#/components/schemas/Jwk'
       responses:
         '201':
           description: Subordinate JWK created successfully
@@ -1645,7 +1645,7 @@ components:
         - accountId
         - admin
 
-    BaseJwk:
+    Jwk:
       type: object
       x-tags:
         - federation
@@ -1752,7 +1752,7 @@ components:
             keys:
               type: array
               items:
-                $ref: '#/components/schemas/BaseJwk'
+                $ref: '#/components/schemas/Jwk'
         metadata:
           additionalProperties: true
         crit:
@@ -1996,7 +1996,7 @@ components:
 
     HistoricalKey:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
@@ -2014,9 +2014,9 @@ components:
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
 
-    Jwk:
+    EntityJwk:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
@@ -2067,7 +2067,7 @@ components:
 
     JwkWithPrivateKey:
       allOf:
-        - $ref: '#/components/schemas/BaseJwk'
+        - $ref: '#/components/schemas/Jwk'
         - type: object
           properties:
             d:
@@ -2496,7 +2496,7 @@ components:
         jwks:
           type: array
           items:
-            $ref: '#/components/schemas/BaseJwk'
+            $ref: '#/components/schemas/Jwk'
         additionalProperties:
           type: string
 

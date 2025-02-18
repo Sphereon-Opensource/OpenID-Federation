@@ -7,10 +7,7 @@ import com.sphereon.oid.fed.client.mapper.mapEntityStatement
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
-import com.sphereon.oid.fed.openapi.models.BaseJwk
-import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.Jwt
-import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import com.sphereon.oid.fed.openapi.models.*
 import kotlinx.serialization.builtins.ArraySerializer
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -251,9 +248,6 @@ class TrustChainService(
             )
         } ?: run {
             logger.debug("No JWKS found in entity configuration payload")
-            return null
-        } ?: run {
-            logger.debug("Could not find key with kid: ${decodedEntityConfiguration.header.kid} in JWKS")
             return null
         }
 
@@ -505,8 +499,8 @@ class TrustChainService(
         return context.cryptoService.verify(jwt, key)
     }
 
-    private fun decodeJwksArray(jsonArray: kotlinx.serialization.json.JsonArray): Array<BaseJwk> {
-        return context.json.decodeFromJsonElement(ArraySerializer(BaseJwk.serializer()), jsonArray)
+    private fun decodeJwksArray(jsonArray: kotlinx.serialization.json.JsonArray): Array<Jwk> {
+        return context.json.decodeFromJsonElement(ArraySerializer(Jwk.serializer()), jsonArray)
     }
 }
 
