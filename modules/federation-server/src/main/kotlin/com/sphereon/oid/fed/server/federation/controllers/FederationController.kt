@@ -72,16 +72,11 @@ class FederationController(
         return subordinateService.fetchSubordinateStatement(accountIss, sub)
     }
 
-    @GetMapping("/trust-mark-status", produces = ["application/json"])
+    @PostMapping("/trust-mark-status", produces = ["application/json"])
     fun getRootTrustMarkStatusEndpoint(
-        @RequestParam("sub") sub: String,
-        @RequestParam("trust_mark_id") trustMarkId: String
+        @RequestBody request: TrustMarkStatusRequest
     ): TrustMarkStatusResponse {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        val request = TrustMarkStatusRequest(
-            sub = sub,
-            trustMarkId = trustMarkId
-        )
         val status = trustMarkService.getTrustMarkStatus(account.toDTO(), request)
 
         return TrustMarkStatusResponse(
@@ -89,18 +84,13 @@ class FederationController(
         )
     }
 
-    @GetMapping("/{username}/trust-mark-status", produces = ["application/json"])
+    @PostMapping("/{username}/trust-mark-status", produces = ["application/json"])
     fun getTrustMarkStatusEndpoint(
         @PathVariable username: String,
-        @RequestParam("sub") sub: String,
-        @RequestParam("trust_mark_id") trustMarkId: String
+        @RequestBody request: TrustMarkStatusRequest
     ): TrustMarkStatusResponse {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
-        val request = TrustMarkStatusRequest(
-            sub = sub,
-            trustMarkId = trustMarkId
-        )
         val status = trustMarkService.getTrustMarkStatus(account.toDTO(), request)
 
         return TrustMarkStatusResponse(

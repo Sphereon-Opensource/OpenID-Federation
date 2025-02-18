@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.client.mapper.InvalidJwtException
 import com.sphereon.oid.fed.client.mockResponses.mockResponses
 import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.BaseJwk
+import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.*
@@ -16,7 +16,7 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 object TestCryptoService : ICryptoService {
-    override suspend fun verify(jwt: String, key: BaseJwk): Boolean {
+    override suspend fun verify(jwt: String, key: Jwk): Boolean {
         return true
     }
 }

@@ -24,7 +24,9 @@ class AccountServiceTest {
 
     @BeforeTest
     fun setup() {
-        config = AccountServiceConfig(Constants.DEFAULT_ROOT_USERNAME)
+        config = AccountServiceConfig(
+            rootIdentifier = "http://localhost:8080",
+        )
         accountQueries = mockk<AccountQueries>(relaxed = true)
         mockkObject(Persistence)
         every { Persistence.accountQueries } returns accountQueries

@@ -12,6 +12,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 class JoseJwtTest {
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     @Test
     fun signTest() {
@@ -24,13 +27,9 @@ class JoseJwtTest {
         val signature = sign(
             payload,
             JwtHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
-            Json.decodeFromString<JwkWithPrivateKey>(jwk)
+            json.decodeFromString<JwkWithPrivateKey>(jwk)
         )
         assertTrue { signature.startsWith("ey") }
-    }
-
-    private val json = Json {
-        ignoreUnknownKeys = true
     }
 
     @Test
@@ -44,7 +43,7 @@ class JoseJwtTest {
         val signature = sign(
             payload,
             JwtHeader(alg = JWSAlgorithm.ES256.toString(), typ = "JWT", kid = key.keyID),
-            Json.decodeFromString<JwkWithPrivateKey>(jwk)
+            json.decodeFromString<JwkWithPrivateKey>(jwk)
         )
         assertTrue {
             verify(signature, json.decodeFromString<Jwk>(jwk))
