@@ -5,9 +5,7 @@ WORKDIR /app
 COPY . /app
 RUN chmod +x ./gradlew
 
-RUN if [ ! -f modules/admin-server/build/libs/admin-server-*.jar ]; then \
-    ./gradlew :modules:admin-server:bootJar -x test -x allTests -x jsBrowserTest; \
-    fi
+RUN ./gradlew :modules:admin-server:bootJar -x test -x allTests -x jsBrowserTest
 
 FROM openjdk:21-jdk
 RUN microdnf install curl
