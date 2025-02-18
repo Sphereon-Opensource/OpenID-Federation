@@ -604,11 +604,13 @@ sequenceDiagram
 
 ## Example Implementation Steps
 
-### 1. Trust Anchor Setup
+### Step 1: Set up Trust Anchor
 
 ```http
 # Create Trust Anchor account
 POST http://localhost:8081/accounts
+Content-Type: application/json
+
 {
     "username": "trust-anchor",
     "identifier": "http://localhost:8080/trust-anchor"
@@ -621,12 +623,20 @@ X-Account-Username: trust-anchor
 # Create Trust Mark type
 POST http://localhost:8081/trust-mark-types
 X-Account-Username: trust-anchor
+Content-Type: application/json
+
 {
     "identifier": "http://localhost:8080/trust-anchor/trust-mark-types/exampleType"
 }
+```
 
+### Step 2: Set up Trust Mark Issuer
+
+```http
 # Create Issuer account
 POST http://localhost:8081/accounts
+Content-Type: application/json
+
 {
     "username": "trust-mark-issuer",
     "identifier": "http://localhost:8080/trust-mark-issuer"
@@ -636,9 +646,19 @@ POST http://localhost:8081/accounts
 POST http://localhost:8081/keys
 X-Account-Username: trust-mark-issuer
 
+# Publish Issuer configuration
+POST http://localhost:8081/entity-statement
+X-Account-Username: trust-mark-issuer
+```
+
+### Step 3: Authorize Trust Mark Issuer
+
+```http
 # Authorize Issuer using Trust Anchor account
-POST http://localhost:8081/trust-mark-types/{type-id}/issuers
+POST http://localhost:8081/trust-mark-types/{trust-mark-type-id}/issuers
 X-Account-Username: trust-anchor
+Content-Type: application/json
+
 {
     "identifier": "http://localhost:8080/trust-mark-issuer"
 }
@@ -646,21 +666,29 @@ X-Account-Username: trust-anchor
 # Publish Trust Anchor configuration
 POST http://localhost:8081/entity-statement
 X-Account-Username: trust-anchor
+```
 
-# Issue Trust Mark
+### Step 4: Issue Trust Mark
+
+```http
+# Issue Trust Mark to holder
 POST http://localhost:8081/trust-marks
 X-Account-Username: trust-mark-issuer
+Content-Type: application/json
+
 {
     "sub": "http://localhost:8080/trust-mark-holder",
     "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType"
 }
+```
 
-# Publish Issuer configuration
-POST http://localhost:8081/entity-statement
-X-Account-Username: trust-mark-issuer
+### Step 5: Set up Trust Mark Holder
 
+```http
 # Create Holder account
 POST http://localhost:8081/accounts
+Content-Type: application/json
+
 {
     "username": "trust-mark-holder",
     "identifier": "http://localhost:8080/trust-mark-holder"
@@ -670,22 +698,28 @@ POST http://localhost:8081/accounts
 POST http://localhost:8081/keys
 X-Account-Username: trust-mark-holder
 
-# Store Trust Mark
+# Store received Trust Mark
 POST http://localhost:8081/received-trust-marks
+Content-Type: application/json
 X-Account-Username: trust-mark-holder
+
 {
     "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType",
-    "jwt": "eyJ..."
+    "jwt": "eyJ..." # Replace with JWT token issued in step 4
 }
 
 # Publish Holder configuration
 POST http://localhost:8081/entity-statement
 X-Account-Username: trust-mark-holder
+```
 
-### 5. Trust Mark Verification
+### Step 6: Verify Trust Mark Status
 
-# Verify Trust Mark status
+```http
+# Check Trust Mark status
 POST http://localhost:8080/trust-mark-issuer/trust-mark-status
+Content-Type: application/json
+
 {
     "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType",
     "sub": "http://localhost:8080/trust-mark-holder"
@@ -694,7 +728,7 @@ POST http://localhost:8080/trust-mark-issuer/trust-mark-status
 
 # License
 
-```
+```text
 Apache License Version 2.0
 ```
 
