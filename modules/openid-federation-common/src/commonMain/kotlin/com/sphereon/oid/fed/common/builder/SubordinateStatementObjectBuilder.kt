@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
 
@@ -10,7 +10,7 @@ class SubordinateStatementObjectBuilder {
     private var sub: String? = null
     private var exp: Int? = null
     private var iat: Int? = null
-    private var jwks: MutableList<BaseJwk> = mutableListOf()
+    private var jwks: MutableList<Jwk> = mutableListOf()
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
@@ -38,7 +38,7 @@ class SubordinateStatementObjectBuilder {
         this.crit.add(claim)
     }
 
-    fun jwks(jwk: BaseJwk) = apply {
+    fun jwks(jwk: Jwk) = apply {
         this.jwks.add(jwk)
     }
 

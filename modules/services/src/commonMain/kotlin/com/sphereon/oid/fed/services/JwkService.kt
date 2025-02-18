@@ -5,7 +5,6 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.toBaseJwk
 import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toHistoricalKey
 import kotlinx.serialization.json.Json
@@ -17,7 +16,7 @@ class JwkService(
     private val logger = Logger.tag("KeyService")
     private val jwkQueries = Persistence.jwkQueries
 
-    fun createKey(account: Account): Jwk {
+    fun createKey(account: Account): AccountJwk {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
@@ -27,22 +26,22 @@ class JwkService(
         val createdJwk = jwkQueries.create(
             account_id = account.id,
             kid = jwk.kid,
-            key = Json.encodeToString(Jwk.serializer(), jwk),
+            key = Json.encodeToString(JwkWithPrivateKey.serializer(), jwk),
         ).executeAsOne()
         logger.info("Successfully created key with KID: ${jwk.kid} for account ID: ${account.id}")
 
         return createdJwk.toDTO()
     }
 
-    fun getKeys(account: Account): Array<BaseJwk> {
+    fun getKeys(account: Account): Array<AccountJwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toBaseJwk() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }.toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
 
-    fun revokeKey(account: Account, keyId: Int, reason: String?): Jwk {
+    fun revokeKey(account: Account, keyId: Int, reason: String?): AccountJwk {
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 

@@ -39,7 +39,7 @@ fun decodeJWTComponents(jwtToken: String): Jwt {
 
     return try {
         Jwt(
-            Json.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
+            json.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
         )
     } catch (e: Exception) {
         throw JwtDecodingException("Error decoding JWT components", e)
