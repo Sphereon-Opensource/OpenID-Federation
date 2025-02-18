@@ -602,7 +602,7 @@ sequenceDiagram
     Note over H: Publish new Entity Statement
 ```
 
-## Example Implementation Steps
+## Example: Trust Mark Issuance and Verification Steps
 
 ### Step 1: Set up Trust Anchor
 
