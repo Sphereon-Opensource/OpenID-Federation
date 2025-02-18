@@ -21,11 +21,6 @@ fun SubordinateJwkEntity.toDTO(): SubordinateJwk {
     )
 }
 
-fun SubordinateJwk.toJwk(): Jwk {
-    val jsonKey = key ?: throw IllegalArgumentException("SubordinateJwk.key cannot be null")
-    return json.decodeFromJsonElement<Jwk>(jsonKey)
-}
-
-fun SubordinateJwkEntity.toBaseJwk(): BaseJwk {
-    return json.decodeFromString<BaseJwk>(this.key)
+fun SubordinateJwkEntity.toJwk(): Jwk {
+    return json.decodeFromString<Jwk>(this.key)
 }

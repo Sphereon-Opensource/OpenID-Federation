@@ -2,7 +2,6 @@ package com.sphereon.oid.fed.kms.local
 
 import com.sphereon.oid.fed.kms.local.database.LocalKmsDatabase
 import com.sphereon.oid.fed.kms.local.encryption.AesEncryption
-import com.sphereon.oid.fed.kms.local.extensions.toJwk
 import com.sphereon.oid.fed.kms.local.jwk.generateKeyPair
 import com.sphereon.oid.fed.kms.local.jwt.sign
 import com.sphereon.oid.fed.kms.local.jwt.verify
@@ -17,7 +16,7 @@ class LocalKms {
     private val database: LocalKmsDatabase = LocalKmsDatabase()
     private val aesEncryption: AesEncryption = AesEncryption()
 
-    fun generateKey(): Jwk {
+    fun generateKey(): JwkWithPrivateKey {
         val jwk = generateKeyPair()
 
         database.insertKey(
@@ -25,7 +24,7 @@ class LocalKms {
             key = aesEncryption.encrypt(Json.encodeToString(JwkWithPrivateKey.serializer(), jwk))
         )
 
-        return jwk.toJwk()
+        return jwk
     }
 
     fun sign(header: JwtHeader, payload: JsonObject, keyId: String): String {

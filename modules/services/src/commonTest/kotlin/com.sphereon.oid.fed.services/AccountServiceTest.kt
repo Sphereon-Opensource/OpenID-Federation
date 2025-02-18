@@ -24,7 +24,7 @@ class AccountServiceTest {
 
     @BeforeTest
     fun setup() {
-        config = AccountServiceConfig(Constants.DEFAULT_ROOT_USERNAME)
+        config = AccountServiceConfig()
         accountQueries = mockk<AccountQueries>(relaxed = true)
         mockkObject(Persistence)
         every { Persistence.accountQueries } returns accountQueries
