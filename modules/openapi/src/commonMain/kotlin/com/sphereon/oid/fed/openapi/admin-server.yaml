@@ -2014,7 +2014,7 @@ components:
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
 
-    EntityJwk:
+    AccountJwk:
       allOf:
         - $ref: '#/components/schemas/Jwk'
         - type: object

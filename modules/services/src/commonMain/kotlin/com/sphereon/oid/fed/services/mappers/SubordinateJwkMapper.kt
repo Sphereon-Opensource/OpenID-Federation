@@ -1,11 +1,9 @@
 package com.sphereon.oid.fed.services.mappers
 
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.decodeFromJsonElement
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk as SubordinateJwkEntity
 
 private val json = Json {

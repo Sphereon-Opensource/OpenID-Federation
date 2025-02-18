@@ -2,9 +2,7 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.Account
-import com.sphereon.oid.fed.openapi.models.BaseJwk
-import com.sphereon.oid.fed.openapi.models.EntityJwk
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.services.JwkService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -17,13 +15,13 @@ class KeyController(
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(request: HttpServletRequest): EntityJwk {
+    fun create(request: HttpServletRequest): AccountJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return jwkService.createKey(account)
     }
 
     @GetMapping
-    fun getKeys(request: HttpServletRequest): Array<EntityJwk> {
+    fun getKeys(request: HttpServletRequest): Array<AccountJwk> {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return jwkService.getKeys(account)
     }
@@ -33,7 +31,7 @@ class KeyController(
         request: HttpServletRequest,
         @PathVariable keyId: Int,
         @RequestParam reason: String?
-    ): EntityJwk {
+    ): AccountJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
         return jwkService.revokeKey(account, keyId, reason)
     }

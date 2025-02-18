@@ -2,7 +2,6 @@ package com.sphereon.oid.fed.client.services.jwtService
 
 import com.sphereon.oid.fed.client.context.FederationContext
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.Jwk
 import kotlinx.serialization.builtins.ArraySerializer
 import kotlinx.serialization.json.jsonArray

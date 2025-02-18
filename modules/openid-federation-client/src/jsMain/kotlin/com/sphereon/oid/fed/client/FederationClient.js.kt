@@ -9,7 +9,6 @@ import com.sphereon.oid.fed.client.types.ICryptoService
 import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
 import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
 import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
 import io.ktor.client.*

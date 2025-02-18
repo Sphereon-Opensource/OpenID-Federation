@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.EntityJwk
+import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.*
@@ -93,7 +93,7 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = EntityJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         // Mock empty results for optional components
@@ -121,7 +121,7 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = EntityJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         // Mock KMS client response
@@ -158,7 +158,7 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = EntityJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         // Mock KMS client response

@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.BaseJwk
 import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement

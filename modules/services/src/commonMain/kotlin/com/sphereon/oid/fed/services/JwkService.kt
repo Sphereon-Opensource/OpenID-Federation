@@ -3,7 +3,6 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.toDTO
@@ -17,7 +16,7 @@ class JwkService(
     private val logger = Logger.tag("KeyService")
     private val jwkQueries = Persistence.jwkQueries
 
-    fun createKey(account: Account): EntityJwk {
+    fun createKey(account: Account): AccountJwk {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
@@ -34,7 +33,7 @@ class JwkService(
         return createdJwk.toDTO()
     }
 
-    fun getKeys(account: Account): Array<EntityJwk> {
+    fun getKeys(account: Account): Array<AccountJwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
 
         val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }.toTypedArray()
@@ -42,7 +41,7 @@ class JwkService(
         return keys
     }
 
-    fun revokeKey(account: Account, keyId: Int, reason: String?): EntityJwk {
+    fun revokeKey(account: Account, keyId: Int, reason: String?): AccountJwk {
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
