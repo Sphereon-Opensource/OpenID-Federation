@@ -4,7 +4,11 @@ import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.AccountJwk
+import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.jwk.toJwk
 import com.sphereon.oid.fed.services.mappers.trustMark.toTrustMark

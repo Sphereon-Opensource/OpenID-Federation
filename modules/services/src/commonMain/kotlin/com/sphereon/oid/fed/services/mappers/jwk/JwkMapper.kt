@@ -1,6 +1,9 @@
 package com.sphereon.oid.fed.services.mappers.jwk
 
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.AccountJwk
+import com.sphereon.oid.fed.openapi.models.HistoricalKey
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.JwkRevoked
 import kotlinx.serialization.json.Json
 import com.sphereon.oid.fed.persistence.models.Jwk as JwkEntity
 

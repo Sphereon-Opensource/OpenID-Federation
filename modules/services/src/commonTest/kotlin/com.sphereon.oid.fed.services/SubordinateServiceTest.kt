@@ -5,13 +5,32 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateSubordinate
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.*
+import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.persistence.models.Subordinate
+import com.sphereon.oid.fed.persistence.models.SubordinateJwk
+import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadata
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateStatement
+import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class SubordinateServiceTest {
     private lateinit var subordinateService: SubordinateService

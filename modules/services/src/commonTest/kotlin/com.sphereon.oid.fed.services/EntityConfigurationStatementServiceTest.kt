@@ -3,12 +3,32 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.*
+import com.sphereon.oid.fed.persistence.models.Account
+import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.persistence.models.CritQueries
+import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.oid.fed.persistence.models.MetadataQueries
+import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class EntityConfigurationStatementServiceTest {
     private lateinit var statementService: EntityConfigurationStatementService

@@ -5,7 +5,16 @@ import com.sphereon.oid.fed.common.builder.TrustMarkObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.CreateTrustMark
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
+import com.sphereon.oid.fed.openapi.models.JwtHeader
+import com.sphereon.oid.fed.openapi.models.TrustMark
+import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkPayload
+import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkType
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.services.mappers.trustMark.toDTO

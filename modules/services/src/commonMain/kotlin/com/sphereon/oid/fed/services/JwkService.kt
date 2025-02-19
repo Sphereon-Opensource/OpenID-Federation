@@ -3,7 +3,12 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.AccountJwk
+import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
+import com.sphereon.oid.fed.openapi.models.HistoricalKey
+import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.jwk.toDTO
 import com.sphereon.oid.fed.services.mappers.jwk.toHistoricalKey

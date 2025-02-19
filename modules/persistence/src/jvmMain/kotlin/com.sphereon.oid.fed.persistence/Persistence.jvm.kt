@@ -5,7 +5,21 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.config.DatabaseConfig
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
-import com.sphereon.oid.fed.persistence.models.*
+import com.sphereon.oid.fed.persistence.models.AccountQueries
+import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.persistence.models.CritQueries
+import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.oid.fed.persistence.models.JwkQueries
+import com.sphereon.oid.fed.persistence.models.LogQueries
+import com.sphereon.oid.fed.persistence.models.MetadataQueries
+import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 
 /**
  * Platform-specific implementation of the persistence layer for JVM.
