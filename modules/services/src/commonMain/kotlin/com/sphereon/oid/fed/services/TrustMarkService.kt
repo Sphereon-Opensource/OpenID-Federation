@@ -8,9 +8,10 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.trustMark.toDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 
 class TrustMarkService(
     private val jwkService: JwkService,
@@ -161,7 +162,11 @@ class TrustMarkService(
         return trustMarks
     }
 
-    fun createTrustMark(account: Account, body: CreateTrustMark): TrustMark {
+    fun createTrustMark(
+        account: Account,
+        body: CreateTrustMark,
+        currentTimeMillis: Long = System.currentTimeMillis()
+    ): TrustMark {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
 
         val keys = jwkService.getKeys(account)
@@ -173,7 +178,7 @@ class TrustMarkService(
         val kid = keys[0].kid
         logger.debug("Using key with KID: $kid")
 
-        val iat = (System.currentTimeMillis() / 1000).toInt()
+        val iat = (currentTimeMillis / 1000).toInt()
 
         val trustMark = TrustMarkObjectBuilder()
             .iss(accountService.getAccountIdentifierByAccount(account))
@@ -199,7 +204,7 @@ class TrustMarkService(
         )
         logger.debug("Successfully signed trust mark")
 
-        val created = trustMarkQueries.create(
+        val trustMarkEntity: TrustMarkEntity = trustMarkQueries.create(
             account_id = account.id,
             sub = body.sub,
             trust_mark_type_identifier = body.trustMarkTypeIdentifier,
@@ -207,9 +212,8 @@ class TrustMarkService(
             iat = iat,
             trust_mark_value = jwt
         ).executeAsOne()
-        logger.info("Successfully created trust mark with ID: ${created.id}")
-
-        return created.toDTO()
+        logger.info("Successfully created trust mark with ID: ${trustMarkEntity.id}")
+        return trustMarkEntity.toDTO()
     }
 
     fun deleteTrustMark(account: Account, id: Int): TrustMark {

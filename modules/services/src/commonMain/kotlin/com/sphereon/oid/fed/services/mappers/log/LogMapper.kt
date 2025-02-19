@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.log
 
 import com.sphereon.oid.fed.openapi.models.Log
 import com.sphereon.oid.fed.persistence.models.Log as LogEntity

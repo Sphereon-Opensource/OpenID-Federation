@@ -2,11 +2,10 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.AccountJwk
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.account.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*

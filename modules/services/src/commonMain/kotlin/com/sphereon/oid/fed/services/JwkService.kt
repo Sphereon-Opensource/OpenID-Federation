@@ -5,8 +5,8 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.toDTO
-import com.sphereon.oid.fed.services.mappers.toHistoricalKey
+import com.sphereon.oid.fed.services.mappers.jwk.toDTO
+import com.sphereon.oid.fed.services.mappers.jwk.toHistoricalKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 

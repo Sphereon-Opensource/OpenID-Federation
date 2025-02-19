@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.account
 
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.persistence.models.Account as AccountEntity

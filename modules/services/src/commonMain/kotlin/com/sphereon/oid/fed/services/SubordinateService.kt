@@ -6,10 +6,10 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
-import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.toDTO
-import com.sphereon.oid.fed.services.mappers.toJwk
+import com.sphereon.oid.fed.services.mappers.subordinateJwk.toDTO
+import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJwk
+import com.sphereon.oid.fed.services.mappers.subordinateMetadata.toDTO
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
