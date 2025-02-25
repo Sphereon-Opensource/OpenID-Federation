@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.subordinateJwk
 
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateJwk

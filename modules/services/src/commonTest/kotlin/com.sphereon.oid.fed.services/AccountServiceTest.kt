@@ -8,7 +8,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.account.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
@@ -24,10 +24,10 @@ class AccountServiceTest {
 
     @BeforeTest
     fun setup() {
-        config = AccountServiceConfig(
-            rootIdentifier = "http://localhost:8080",
-        )
-        accountQueries = mockk<AccountQueries>(relaxed = true)
+        config = mockk {
+            every { rootIdentifier } returns "http://localhost:8080"
+        }
+        accountQueries = mockk(relaxed = true)
         mockkObject(Persistence)
         every { Persistence.accountQueries } returns accountQueries
         accountService = AccountService(config)
@@ -40,7 +40,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testCreateAccount() {
+    fun `create account succeeds when username is unique`() {
         val createAccountDTO = CreateAccount(
             username = "testUser",
             identifier = "test-identifier"
@@ -71,7 +71,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testCreateDuplicateAccount() {
+    fun `create account fails when username already exists`() {
         val createAccountDTO = CreateAccount(
             username = "testUser",
             identifier = "test-identifier"
@@ -96,7 +96,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testGetAllAccounts() {
+    fun `get all accounts returns list of accounts`() {
         val accounts = listOf(
             Account(1, "user1", "id1", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null),
             Account(2, "user2", "id2", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null)
@@ -111,7 +111,23 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testGetAccountIdentifierByAccount() {
+    fun `get account identifier returns explicit identifier when present`() {
+        val explicitIdentifier = "https://explicit-identifier.com"
+        val account = Account(
+            id = 1,
+            username = "testUser",
+            identifier = explicitIdentifier,
+            created_at = FIXED_TIMESTAMP,
+            updated_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val identifier = accountService.getAccountIdentifierByAccount(account.toDTO())
+        assertEquals(explicitIdentifier, identifier)
+    }
+
+    @Test
+    fun `get account identifier returns correct path for regular account`() {
         val account = Account(
             id = 1,
             username = "testUser",
@@ -126,7 +142,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testGetAccountIdentifierByRootAccount() {
+    fun `get account identifier returns root identifier for root account`() {
         val rootAccount = Account(
             id = 1,
             username = Constants.DEFAULT_ROOT_USERNAME,
@@ -141,7 +157,29 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testGetAccountByUsername() {
+    fun `get account by username returns account when exists`() {
+        val username = "existingUser"
+        val account = Account(
+            id = 1,
+            username = username,
+            identifier = "test-identifier",
+            created_at = FIXED_TIMESTAMP,
+            updated_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every { accountQueries.findByUsername(username).executeAsOneOrNull() } returns account
+
+        val result = accountService.getAccountByUsername(username)
+
+        assertNotNull(result)
+        assertEquals(username, result.username)
+        assertEquals(account.identifier, result.identifier)
+        verify { accountQueries.findByUsername(username) }
+    }
+
+    @Test
+    fun `get account by username throws NotFoundException when account does not exist`() {
         val username = "thisShouldNotExist"
         every { accountQueries.findByUsername(username).executeAsOneOrNull() } returns null
 
@@ -152,7 +190,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testDeleteAccount() {
+    fun `delete account succeeds for non-root account`() {
         val account = Account(
             id = 1,
             username = "testUser",
@@ -170,7 +208,7 @@ class AccountServiceTest {
     }
 
     @Test
-    fun testDeleteRootAccount() {
+    fun `delete account fails for root account`() {
         val rootAccount = Account(
             id = 1,
             username = Constants.DEFAULT_ROOT_USERNAME,

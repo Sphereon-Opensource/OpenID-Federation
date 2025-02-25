@@ -2,7 +2,7 @@ package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.openapi.models.Log
 import com.sphereon.oid.fed.persistence.models.LogQueries
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.log.toDTO
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 

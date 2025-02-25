@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.metadata.toDTO
 import kotlinx.serialization.json.JsonObject
 
 class MetadataService {
@@ -46,14 +46,14 @@ class MetadataService {
         }
     }
 
-    fun findByAccount(account: Account): Array<Metadata> {
+    fun findByAccount(account: Account): List<Metadata> {
         logger.debug("Finding metadata for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
 
-            val metadataArray = Persistence.metadataQueries.findByAccountId(account.id).executeAsList()
-            logger.debug("Found ${metadataArray.size} metadata entries for account: ${account.username}")
-            return metadataArray.map { it.toDTO() }.toTypedArray()
+            val metadataList = Persistence.metadataQueries.findByAccountId(account.id).executeAsList()
+            logger.debug("Found ${metadataList.size} metadata entries for account: ${account.username}")
+            return metadataList.map { it.toDTO() }
         } catch (e: Exception) {
             logger.error("Failed to find metadata for account: ${account.username}", e)
             throw e

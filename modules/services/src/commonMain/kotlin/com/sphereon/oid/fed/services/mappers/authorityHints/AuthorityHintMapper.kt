@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.authorityHints
 
 import com.sphereon.oid.fed.openapi.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.models.AuthorityHint as AuthorityHintEntity
