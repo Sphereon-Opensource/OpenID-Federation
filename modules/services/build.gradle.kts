@@ -10,6 +10,16 @@ repositories {
     mavenCentral()
     mavenLocal()
     google()
+
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+    }
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+    }
 }
 
 kotlin {
@@ -27,8 +37,10 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
                 // Add Ktor client core and engine dependencies
-                implementation("io.ktor:ktor-client-core:2.3.7")
-                implementation("io.ktor:ktor-client-cio:2.3.7")
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.sphereon.kmp.crypto.kms)
+                implementation(libs.sphereon.kmp.crypto.kms.azure)
             }
         }
 

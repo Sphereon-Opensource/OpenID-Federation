@@ -7,6 +7,20 @@ plugins {
     application
 }
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+    }
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+    }
+}
+
 group = "com.sphereon.oid.fed.server.admin"
 
 java {
@@ -27,7 +41,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-
+    implementation("com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform:0.2.0-SNAPSHOT.25")
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)

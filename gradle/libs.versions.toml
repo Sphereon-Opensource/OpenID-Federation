@@ -16,6 +16,7 @@ kotlin = "2.0.0"
 ktor = "2.3.12"
 kotlinxSerialization = "1.7.1"
 kotlinxCoroutines = "1.8.0"
+sphereonKmp = "0.2.0-SNAPSHOT.25"
 springboot = "3.3.1"
 springDependencyManagement = "1.1.5"
 kermitLogging = "2.0.4"
@@ -59,6 +60,10 @@ ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
+
+sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
+
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
 springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc" }

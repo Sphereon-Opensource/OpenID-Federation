@@ -10,10 +10,17 @@ object KmsService {
 
     private val kmsClient: KmsClient = when (provider) {
         "local" -> LocalKmsClient()
+//        "azureKeyVault" -> LocalKmsClient()
         else -> throw IllegalArgumentException("Unsupported KMS provider: $provider")
     }
 
     fun getKmsClient(): KmsClient = kmsClient
+
+//    private val kmsProvider: KmsClient = when (provider) {
+//        "local" -> LocalKmsClient()
+//        "azureKeyVault" -> LocalKmsClient()
+//        else -> throw IllegalArgumentException("Unsupported KMS provider: $provider")
+//    }
 }
 
 interface KmsClient {

@@ -9,6 +9,21 @@ plugins {
 
 group = "com.sphereon.oid.fed.server.federation"
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+    }
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+    }
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
