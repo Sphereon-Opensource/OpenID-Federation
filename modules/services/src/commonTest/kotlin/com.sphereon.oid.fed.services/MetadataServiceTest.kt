@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Metadata
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.account.toDTO
 import io.mockk.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

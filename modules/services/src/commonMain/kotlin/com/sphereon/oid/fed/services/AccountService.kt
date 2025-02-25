@@ -8,7 +8,7 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.account.toDTO
 
 class AccountService(
     private val config: AccountServiceConfig

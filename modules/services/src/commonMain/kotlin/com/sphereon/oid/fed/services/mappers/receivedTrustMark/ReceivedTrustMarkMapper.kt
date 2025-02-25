@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.receivedTrustMark
 
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark as ReceivedTrustMarkEntity

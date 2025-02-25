@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.subordinate
 
 import com.sphereon.oid.fed.openapi.models.Subordinate
 import com.sphereon.oid.fed.persistence.models.Subordinate as SubordinateEntity

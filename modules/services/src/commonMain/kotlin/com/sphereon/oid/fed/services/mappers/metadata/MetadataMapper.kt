@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers
+package com.sphereon.oid.fed.services.mappers.metadata
 
 import com.sphereon.oid.fed.openapi.models.Metadata
 import kotlinx.serialization.json.Json
