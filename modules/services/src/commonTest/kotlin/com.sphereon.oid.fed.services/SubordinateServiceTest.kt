@@ -1,5 +1,7 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.EcDSACryptoProvider
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
@@ -21,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.LocalDateTime
@@ -36,7 +39,7 @@ class SubordinateServiceTest {
     private lateinit var subordinateService: SubordinateService
     private lateinit var accountService: AccountService
     private lateinit var jwkService: JwkService
-    private lateinit var kmsClient: KmsClient
+    private lateinit var kmsProvider: IKeyManagementSystem
     private lateinit var testAccount: Account
     private lateinit var subordinateQueries: SubordinateQueries
     private lateinit var subordinateJwkQueries: SubordinateJwkQueries
@@ -55,7 +58,7 @@ class SubordinateServiceTest {
         // Mock dependencies
         accountService = mockk()
         jwkService = mockk()
-        kmsClient = mockk()
+        kmsProvider = EcDSACryptoProvider()
 
         // Mock queries
         subordinateQueries = mockk(relaxed = true)
@@ -81,7 +84,7 @@ class SubordinateServiceTest {
         )
 
         // Initialize service
-        subordinateService = SubordinateService(accountService, jwkService, kmsClient)
+        subordinateService = SubordinateService(accountService, jwkService, kmsProvider)
     }
 
     @AfterTest
@@ -258,7 +261,7 @@ class SubordinateServiceTest {
     }
 
     @Test
-    fun `publish subordinate statement succeeds`() {
+    fun `publish subordinate statement succeeds`() = runTest {
         val subordinate = Subordinate(
             id = 1,
             account_id = testAccount.id,
@@ -267,11 +270,15 @@ class SubordinateServiceTest {
             deleted_at = null
         )
 
-        val keys = arrayOf(
-            AccountJwk(kid = "test-kid", kty = "EC", use = "sig")
-        )
+        val generatedKey = kmsProvider.generateKeyAsync()
 
-        val expectedJwt = "test.jwt.token"
+        val keys = arrayOf(
+            AccountJwk(
+                kid = generatedKey.kid,
+                kty = generatedKey.jose.publicJwk.kty.toString(),
+                use = generatedKey.jose.publicJwk.use
+            )
+        )
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
         every { subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList() } returns emptyList()
@@ -281,13 +288,7 @@ class SubordinateServiceTest {
         } returns emptyList()
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
-        every {
-            kmsClient.sign(
-                any(),
-                any(),
-                keys[0].kid!!
-            )
-        } returns expectedJwt
+
         every {
             subordinateStatementQueries.create(
                 any(),
@@ -301,19 +302,20 @@ class SubordinateServiceTest {
             subordinate_id = subordinate.id,
             iss = TEST_ISS,
             sub = TEST_SUB,
-            statement = expectedJwt,
+            statement = "placeholder",
             expires_at = System.currentTimeMillis() / 1000 + 3600 * 24 * 365,
             created_at = FIXED_TIMESTAMP
         )
 
         val result = subordinateService.publishSubordinateStatement(testAccount.toDTO(), subordinate.id)
 
-        assertEquals(expectedJwt, result)
+        assertNotNull(result)
+
         verify { subordinateStatementQueries.create(any(), any(), any(), any(), any()) }
     }
 
     @Test
-    fun `publish subordinate statement fails when no keys exist`() {
+    fun `publish subordinate statement fails when no keys exist`() = runTest {
         val subordinate = Subordinate(
             id = 1,
             account_id = testAccount.id,

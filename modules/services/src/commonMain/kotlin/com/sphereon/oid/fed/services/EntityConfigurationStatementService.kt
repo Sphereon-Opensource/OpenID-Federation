@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
@@ -19,7 +20,7 @@ import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement as Entit
 class EntityConfigurationStatementService(
     private val accountService: AccountService,
     private val jwkService: JwkService,
-    private val kmsClient: KmsClient
+    private val kmsProvider: IKeyManagementSystem
 ) {
     private val logger = Logger.tag("EntityConfigurationStatementService")
     private val queries = Persistence
@@ -33,7 +34,7 @@ class EntityConfigurationStatementService(
         return getEntityConfigurationStatement(account)
     }
 
-    fun publishByAccount(account: Account, dryRun: Boolean? = false): String {
+    suspend fun publishByAccount(account: Account, dryRun: Boolean? = false): String {
         logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
 
         val entityConfigurationStatement = findByAccount(account)
@@ -167,14 +168,14 @@ class EntityConfigurationStatementService(
         }
     }
 
-    private fun createSignedJwt(statement: EntityConfigurationStatementEntity, keyId: String): String {
-        return kmsClient.sign(
-            payload = Json.encodeToJsonElement(
-                EntityConfigurationStatementEntity.serializer(),
-                statement
-            ).jsonObject,
-            header = JwtHeader(typ = "entity-statement+jwt", kid = keyId),
-            keyId = keyId
+    private suspend fun createSignedJwt(statement: EntityConfigurationStatementEntity, keyId: String): String {
+        val jwtService = JwtService(kmsProvider)
+        val header = JwtHeader(typ = "entity-statement+jwt", kid = keyId)
+
+        return jwtService.signSerializable(
+            statement,
+            header,
+            keyId
         )
     }
 

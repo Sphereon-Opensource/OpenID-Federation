@@ -27,30 +27,6 @@ services:
       timeout: 5s
       retries: 20
 
-  local-kms-db:
-    image: postgres:latest
-    container_name: openid-federation-local-kms-datastore
-    user: postgres
-    security_opt:
-      - no-new-privileges:true
-    environment:
-      POSTGRES_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
-    ports:
-      - "5433:5432"
-    volumes:
-      - local_kms_data:/var/lib/postgresql/data
-    networks:
-      - openid_network
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d ${LOCAL_KMS_DATASOURCE_DB} -U ${LOCAL_KMS_DATASOURCE_USER}" ]
-      interval: 3s
-      timeout: 5s
-      retries: 20
   federation-server:
     image: sphereon/openid-federation-server:latest
     build:
@@ -72,17 +48,11 @@ services:
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
       KMS_PROVIDER: ${KMS_PROVIDER}
-      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
-      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
       DEV_MODE: ${DEV_MODE}
       LOGGER_SEVERITY: ${LOGGER_SEVERITY}
     depends_on:
       db:
-        condition: service_healthy
-      local-kms-db:
         condition: service_healthy
     restart: unless-stopped
     logging:
@@ -118,18 +88,12 @@ services:
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
       KMS_PROVIDER: ${KMS_PROVIDER}
-      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
-      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
       OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
       DEV_MODE: ${DEV_MODE}
       LOGGER_SEVERITY: ${LOGGER_SEVERITY}
     depends_on:
       db:
-        condition: service_healthy
-      local-kms-db:
         condition: service_healthy
     networks:
       - openid_network

@@ -12,10 +12,11 @@ androidx-material = "1.12.0"
 androidx-test-junit = "1.1.5"
 compose-plugin = "1.6.10"
 junit = "4.13.2"
-kotlin = "2.0.0"
+kotlin = "2.1.0"
 ktor = "2.3.12"
-kotlinxSerialization = "1.7.1"
-kotlinxCoroutines = "1.8.0"
+kotlinxSerialization = "1.7.3"
+kotlinxCoroutines = "1.9.0"
+mockk = "1.13.9"
 sphereonKmp = "0.2.0-SNAPSHOT.25"
 springboot = "3.3.1"
 springDependencyManagement = "1.1.5"
@@ -25,8 +26,10 @@ sqldelight = "2.0.2"
 hikari = "5.1.0"
 postgresql = "42.7.3"
 nimbusJoseJwt = "9.40"
+whyoleg-cryptography = "0.4.0"
 
 [libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -61,8 +64,14 @@ ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+
+sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto = { module = "com.sphereon.kmp:sphereon-kmp-crypto-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
+
+whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
 springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
@@ -78,7 +87,6 @@ hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

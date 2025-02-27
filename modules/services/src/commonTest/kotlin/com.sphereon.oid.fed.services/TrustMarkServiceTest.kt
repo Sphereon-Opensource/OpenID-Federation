@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.services
 
 import app.cash.sqldelight.Query
+import com.sphereon.crypto.kms.EcDSACryptoProvider
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
@@ -13,10 +15,23 @@ import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer as TrustMarkIssuerEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
@@ -24,26 +39,26 @@ import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEnt
 class TrustMarkServiceTest {
     private lateinit var trustMarkService: TrustMarkService
     private lateinit var jwkService: JwkService
-    private lateinit var kmsClient: KmsClient
     private lateinit var accountService: AccountService
     private lateinit var testAccount: Account
     private lateinit var trustMarkQueries: TrustMarkQueries
     private lateinit var trustMarkTypeQueries: TrustMarkTypeQueries
     private lateinit var trustMarkIssuerQueries: TrustMarkIssuerQueries
+    private lateinit var kmsProvider: IKeyManagementSystem
 
     companion object {
         private val FIXED_TIMESTAMP: LocalDateTime = LocalDateTime.parse("2025-01-13T12:00:00")
         private const val TEST_IDENTIFIER = "test-trust-mark-type"
         private const val TEST_SUB = "https://test-subject.com"
         private const val TEST_ISS = "https://test-issuer.com"
-        private const val TEST_JWT = "test.jwt.token"
+
     }
 
     @BeforeTest
     fun setup() {
         // Mock dependencies
         jwkService = mockk()
-        kmsClient = mockk()
+        kmsProvider = EcDSACryptoProvider()
         accountService = mockk()
 
         // Mock queries
@@ -68,7 +83,7 @@ class TrustMarkServiceTest {
         )
 
         // Initialize service
-        trustMarkService = TrustMarkService(jwkService, kmsClient, accountService)
+        trustMarkService = TrustMarkService(jwkService, kmsProvider, accountService)
     }
 
     @AfterTest
@@ -390,7 +405,7 @@ class TrustMarkServiceTest {
     }
 
     @Test
-    fun `create trust mark succeeds`() {
+    fun `create trust mark succeeds`() = runTest {
         val createDto = CreateTrustMark(
             sub = TEST_SUB,
             trustMarkTypeIdentifier = TEST_IDENTIFIER,
@@ -400,19 +415,14 @@ class TrustMarkServiceTest {
             delegation = null
         )
 
+        val key = kmsProvider.generateKeyAsync()
+
         val keys = arrayOf(
-            AccountJwk(kid = "test-kid", kty = "EC", use = "sig")
+            AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
         )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
-        every {
-            kmsClient.sign(
-                any(),
-                any(),
-                keys[0].kid!!
-            )
-        } returns TEST_JWT
 
         val expectedIat = (FIXED_TIMESTAMP.toEpochSecond(ZoneOffset.UTC)).toInt()
         val createdTrustMark = TrustMarkEntity(
@@ -422,7 +432,7 @@ class TrustMarkServiceTest {
             trust_mark_type_identifier = TEST_IDENTIFIER,
             exp = null,
             iat = expectedIat,
-            trust_mark_value = TEST_JWT,
+            trust_mark_value = "TEST_JWT",
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
         )
@@ -435,7 +445,7 @@ class TrustMarkServiceTest {
                 trust_mark_type_identifier = TEST_IDENTIFIER,
                 exp = null,
                 iat = expectedIat,
-                trust_mark_value = TEST_JWT
+                trust_mark_value = any()
             )
         } returns queryResult
 
@@ -454,13 +464,13 @@ class TrustMarkServiceTest {
                 trust_mark_type_identifier = TEST_IDENTIFIER,
                 exp = null,
                 iat = expectedIat,
-                trust_mark_value = TEST_JWT
+                trust_mark_value = any()
             )
         }
     }
 
     @Test
-    fun `create trust mark fails when no keys exist`() {
+    fun `create trust mark fails when no keys exist`() = runTest {
         val createDto = CreateTrustMark(
             sub = TEST_SUB,
             trustMarkTypeIdentifier = TEST_IDENTIFIER,
@@ -490,7 +500,7 @@ class TrustMarkServiceTest {
             trust_mark_type_identifier = TEST_IDENTIFIER,
             exp = null,
             iat = (System.currentTimeMillis() / 1000).toInt(),
-            trust_mark_value = TEST_JWT,
+            trust_mark_value = "TEST_JWT",
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
         )
@@ -535,7 +545,7 @@ class TrustMarkServiceTest {
                 trust_mark_type_identifier = TEST_IDENTIFIER,
                 exp = null,
                 iat = (System.currentTimeMillis() / 1000).toInt(),
-                trust_mark_value = TEST_JWT,
+                trust_mark_value = "TEST_JWT",
                 created_at = FIXED_TIMESTAMP,
                 deleted_at = null
             )

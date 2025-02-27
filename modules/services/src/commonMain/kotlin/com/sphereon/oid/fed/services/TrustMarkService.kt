@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.TrustMarkObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
@@ -11,20 +12,17 @@ import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
-import com.sphereon.oid.fed.openapi.models.TrustMarkPayload
 import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.services.mappers.trustMark.toDTO
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 
 class TrustMarkService(
     private val jwkService: JwkService,
-    private val kmsClient: KmsClient,
+    private val kmsProvider: IKeyManagementSystem,
     private val accountService: AccountService
 ) {
     private val logger = Logger.tag("TrustMarkService")
@@ -171,7 +169,7 @@ class TrustMarkService(
         return trustMarks
     }
 
-    fun createTrustMark(
+    suspend fun createTrustMark(
         account: Account,
         body: CreateTrustMark,
         currentTimeMillis: Long = System.currentTimeMillis()
@@ -203,13 +201,11 @@ class TrustMarkService(
             logger.debug("Setting expiration to: ${body.exp}")
         }
 
-        val jwt = kmsClient.sign(
-            payload = Json.encodeToJsonElement(
-                TrustMarkPayload.serializer(),
-                trustMark.build()
-            ).jsonObject,
-            header = JwtHeader(typ = "trust-mark+jwt", kid = kid!!),
-            keyId = kid
+        val jwtService = JwtService(kmsProvider)
+        val jwt = jwtService.signSerializable(
+            trustMark.build(),
+            JwtHeader(typ = "trust-mark+jwt", kid = kid!!),
+            kid
         )
         logger.debug("Successfully signed trust mark")
 

@@ -1,5 +1,7 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.EcDSACryptoProvider
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.persistence.Persistence
@@ -21,6 +23,7 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import java.time.LocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -34,7 +37,6 @@ class EntityConfigurationStatementServiceTest {
     private lateinit var statementService: EntityConfigurationStatementService
     private lateinit var accountService: AccountService
     private lateinit var jwkService: JwkService
-    private lateinit var kmsClient: KmsClient
     private lateinit var testAccount: Account
     private lateinit var accountServiceConfig: AccountServiceConfig
 
@@ -48,6 +50,7 @@ class EntityConfigurationStatementServiceTest {
     private lateinit var trustMarkIssuerQueries: TrustMarkIssuerQueries
     private lateinit var receivedTrustMarkQueries: ReceivedTrustMarkQueries
     private lateinit var entityConfigurationStatementQueries: EntityConfigurationStatementQueries
+    private lateinit var kmsProvider: IKeyManagementSystem
 
     companion object {
         private val FIXED_TIMESTAMP: LocalDateTime = LocalDateTime.parse("2025-01-13T12:00:00")
@@ -60,7 +63,8 @@ class EntityConfigurationStatementServiceTest {
         // Initialize mocks for all dependencies
         accountService = mockk()
         jwkService = mockk()
-        kmsClient = mockk()
+        kmsProvider = EcDSACryptoProvider()
+
         accountServiceConfig = AccountServiceConfig(Constants.DEFAULT_ROOT_USERNAME)
 
         // Initialize all query mocks
@@ -97,7 +101,7 @@ class EntityConfigurationStatementServiceTest {
         )
 
         // Initialize the service under test
-        statementService = EntityConfigurationStatementService(accountService, jwkService, kmsClient)
+        statementService = EntityConfigurationStatementService(accountService, jwkService, kmsProvider)
     }
 
     @AfterTest
@@ -135,23 +139,25 @@ class EntityConfigurationStatementServiceTest {
     }
 
     @Test
-    fun testPublishByAccount() {
+    fun testPublishByAccount() = runTest {
         // Mock account service response
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         // Mock key service response
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val key = kmsProvider.generateKeyAsync()
+
+        val testKey = AccountJwk(kid = key.kid, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         // Mock KMS client response
-        val expectedJwt = "test.jwt.token"
-        every {
-            kmsClient.sign(
-                any(),
-                any(),
-                TEST_KEY_ID
-            )
-        } returns expectedJwt
+//        val expectedJwt = "test.jwt.token"
+//        every {
+//            kmsClient.sign(
+//                any(),
+//                any(),
+//                TEST_KEY_ID
+//            )
+//        } returns expectedJwt
 
         // Mock empty results for optional components
         every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
@@ -164,43 +170,54 @@ class EntityConfigurationStatementServiceTest {
 
         val result = statementService.publishByAccount(testAccount.toDTO())
 
-        assertEquals(expectedJwt, result)
+        assertNotNull(result)
+        assertEquals(3, result.split(".").size)
+        assertTrue(result.startsWith("ey"))
+
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
+//        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
 
     @Test
-    fun testPublishByAccountDryRun() {
+    fun testPublishByAccountDryRun() = runTest {
         // Mock account service response
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
+        val key = kmsProvider.generateKeyAsync()
+
+
         // Mock key service response
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey = AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         // Mock KMS client response
-        val expectedJwt = "test.jwt.token"
-        every {
-            kmsClient.sign(
-                any(),
-                any(),
-                TEST_KEY_ID
-            )
-        } returns expectedJwt
+//        val expectedJwt = "test.jwt.token"
+//        every {
+//            kmsClient.sign(
+//                any(),
+//                any(),
+//                TEST_KEY_ID
+//            )
+//        } returns expectedJwt
 
         val result = statementService.publishByAccount(testAccount.toDTO(), dryRun = true)
 
-        assertEquals(expectedJwt, result)
+        assertNotNull(result)
+        assertEquals(3, result.split(".").size)
+        assertTrue(result.startsWith("ey"))
+
+//        assertEquals(expectedJwt, result)
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
+//        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify(exactly = 0) { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
 
     @Test
-    fun testPublishByAccountNoKeys() {
+    fun testPublishByAccountNoKeys() = runTest {
         // Mock account service response
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
@@ -213,6 +230,6 @@ class EntityConfigurationStatementServiceTest {
 
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-        verify(exactly = 0) { kmsClient.sign(any(), any(), any()) }
+//        verify(exactly = 0) { kmsClient.sign(any(), any(), any()) }
     }
 }

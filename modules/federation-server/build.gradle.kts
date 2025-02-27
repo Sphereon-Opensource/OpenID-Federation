@@ -35,6 +35,12 @@ dependencies {
     api(projects.modules.openidFederationCommon)
     api(projects.modules.persistence)
     api(projects.modules.services)
+    implementation(libs.sphereon.kmp.cbor)
+    implementation(libs.sphereon.kmp.crypto)
+    implementation(libs.sphereon.kmp.crypto.kms)
+    implementation(libs.whyoleg.cryptography.core)
+    implementation(libs.kotlin.stdlib)
+
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)

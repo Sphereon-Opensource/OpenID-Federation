@@ -33,14 +33,16 @@ kotlin {
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
-                api(projects.modules.localKms)
+                implementation(libs.kotlin.stdlib)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.ktor.serialization.kotlinx.json)
-                api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                // Add Ktor client core and engine dependencies
-                implementation(libs.ktor.client.core)
+                implementation(libs.kotlinx.datetime)
                 implementation(libs.ktor.client.cio)
+                implementation(libs.sphereon.kmp.cbor)
+                implementation(libs.sphereon.kmp.crypto)
                 implementation(libs.sphereon.kmp.crypto.kms)
                 implementation(libs.sphereon.kmp.crypto.kms.azure)
+                implementation(libs.whyoleg.cryptography.core)
             }
         }
 
@@ -51,9 +53,8 @@ kotlin {
                 implementation(projects.modules.openapi)
                 implementation(projects.modules.persistence)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(projects.modules.localKms)
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation("io.mockk:mockk:1.13.9")
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.mockk)
             }
         }
 

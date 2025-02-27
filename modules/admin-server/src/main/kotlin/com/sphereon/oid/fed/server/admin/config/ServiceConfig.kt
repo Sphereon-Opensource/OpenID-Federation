@@ -1,12 +1,12 @@
 package com.sphereon.oid.fed.server.admin.config
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.AuthorityHintService
 import com.sphereon.oid.fed.services.CritService
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.KmsClient
 import com.sphereon.oid.fed.services.KmsService
 import com.sphereon.oid.fed.services.LogService
 import com.sphereon.oid.fed.services.MetadataService
@@ -49,31 +49,31 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyService(kmsClient: KmsClient): JwkService {
-        return JwkService(kmsClient)
+    open fun keyService(kmsProvider: IKeyManagementSystem): JwkService {
+        return JwkService(kmsProvider)
     }
 
     @Bean
-    open fun kmsClient(): KmsClient {
-        return KmsService.getKmsClient()
+    open fun kmsProvider(): IKeyManagementSystem {
+        return KmsService.getKmsProvider()
     }
 
     @Bean
     open fun subordinateService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsClient: KmsClient
+        kmsProvider: IKeyManagementSystem
     ): SubordinateService {
-        return SubordinateService(accountService, jwkService, kmsClient)
+        return SubordinateService(accountService, jwkService, kmsProvider)
     }
 
     @Bean
     open fun trustMarkService(
         jwkService: JwkService,
-        kmsClient: KmsClient,
+        kmsProvider: IKeyManagementSystem,
         accountService: AccountService
     ): TrustMarkService {
-        return TrustMarkService(jwkService, kmsClient, accountService)
+        return TrustMarkService(jwkService, kmsProvider, accountService)
     }
 
     @Bean
@@ -85,9 +85,9 @@ open class ServiceConfig {
     open fun entityConfigurationStatementService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsClient: KmsClient
+        kmsProvider: IKeyManagementSystem
     ): EntityConfigurationStatementService {
-        return EntityConfigurationStatementService(accountService, jwkService, kmsClient)
+        return EntityConfigurationStatementService(accountService, jwkService, kmsProvider)
     }
 
     @Bean

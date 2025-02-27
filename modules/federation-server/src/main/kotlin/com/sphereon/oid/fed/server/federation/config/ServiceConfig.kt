@@ -1,7 +1,20 @@
 package com.sphereon.oid.fed.server.federation.config
 
+import com.sphereon.crypto.kms.EcDSACryptoProvider
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.*
+import com.sphereon.oid.fed.services.AccountService
+import com.sphereon.oid.fed.services.AuthorityHintService
+import com.sphereon.oid.fed.services.CritService
+import com.sphereon.oid.fed.services.EntityConfigurationStatementService
+import com.sphereon.oid.fed.services.JwkService
+import com.sphereon.oid.fed.services.JwtService
+import com.sphereon.oid.fed.services.LogService
+import com.sphereon.oid.fed.services.MetadataService
+import com.sphereon.oid.fed.services.ReceivedTrustMarkService
+import com.sphereon.oid.fed.services.ResolveService
+import com.sphereon.oid.fed.services.SubordinateService
+import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -37,31 +50,36 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyService(kmsClient: KmsClient): JwkService {
-        return JwkService(kmsClient)
+    open fun keyManagementSystem(): IKeyManagementSystem {
+        return EcDSACryptoProvider()
     }
 
     @Bean
-    open fun kmsClient(): KmsClient {
-        return KmsService.getKmsClient()
+    open fun keyService(keyManagementSystem: IKeyManagementSystem): JwkService {
+        return JwkService(keyManagementSystem)
+    }
+
+    @Bean
+    open fun jwtService(keyManagementSystem: IKeyManagementSystem): JwtService {
+        return JwtService(keyManagementSystem)
     }
 
     @Bean
     open fun subordinateService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsClient: KmsClient
+        keyManagementSystem: IKeyManagementSystem
     ): SubordinateService {
-        return SubordinateService(accountService, jwkService, kmsClient)
+        return SubordinateService(accountService, jwkService, keyManagementSystem)
     }
 
     @Bean
     open fun trustMarkService(
         jwkService: JwkService,
-        kmsClient: KmsClient,
+        keyManagementSystem: IKeyManagementSystem,
         accountService: AccountService
     ): TrustMarkService {
-        return TrustMarkService(jwkService, kmsClient, accountService)
+        return TrustMarkService(jwkService, keyManagementSystem, accountService)
     }
 
     @Bean
@@ -73,9 +91,9 @@ open class ServiceConfig {
     open fun entityConfigurationStatementService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsClient: KmsClient
+        keyManagementSystem: IKeyManagementSystem
     ): EntityConfigurationStatementService {
-        return EntityConfigurationStatementService(accountService, jwkService, kmsClient)
+        return EntityConfigurationStatementService(accountService, jwkService, keyManagementSystem)
     }
 
     @Bean
