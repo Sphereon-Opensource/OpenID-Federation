@@ -70,8 +70,8 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                implementation("com.mayakapps.kache:kache:2.1.0")
-                implementation("com.mayakapps.kache:file-kache:2.1.0")
+                implementation(libs.kache)
+                implementation(libs.kache.file)
                 api(projects.modules.cache)
                 api(projects.modules.httpResolver)
                 api(projects.modules.openapi)

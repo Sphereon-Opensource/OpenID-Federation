@@ -16,6 +16,7 @@ kotlin = "2.1.0"
 ktor = "2.3.12"
 kotlinxSerialization = "1.7.3"
 kotlinxCoroutines = "1.9.0"
+kache = "2.1.0"
 mockk = "1.13.9"
 sphereonKmp = "0.2.0-SNAPSHOT.25"
 springboot = "3.3.1"
@@ -64,6 +65,9 @@ ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
 
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 
+kache = { module = "com.mayakapps.kache:kache", version.ref = "kache" }
+kache-file = { module = "com.mayakapps.kache:file-kache", version.ref = "kache" }
+
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
@@ -74,6 +78,8 @@ sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto
 whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
+springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security" }
+springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server" }
 springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
 springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc" }
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
