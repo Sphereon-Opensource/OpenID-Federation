@@ -50,11 +50,14 @@ class Application(
 
         println("Final configured severity: ${severity.name}, output format: ${outputFormat.name}")
 
-        // Create logger config with the specified output format
-        val loggerConfig = LoggerConfig(output = outputFormat)
+        // Create logger config with the specified severity and output format
+        val loggerConfig = LoggerConfig(
+            severity = severity,
+            output = outputFormat
+        )
 
-        // Configure the logger
-        Logger.configure(minSeverity = severity, config = loggerConfig)
+        // Configure the logger with the single config object
+        Logger.configure(loggerConfig)
 
         // Add log writers with the same configuration
         Logger.addLogWriter(FileLoggerHandler(logFile, loggerConfig))

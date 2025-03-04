@@ -45,9 +45,10 @@ class LoggerHelper {
                 }
             }
 
+
             logger.debug(
                 message = "Received $operation request",
-                context = metadata
+                metadata = metadata
             )
         }
 
@@ -61,7 +62,7 @@ class LoggerHelper {
 
             logger.info(
                 message = "Received $operation request",
-                context = metadata
+                metadata = metadata
             )
         }
     }
