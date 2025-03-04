@@ -12,7 +12,7 @@ import com.sphereon.crypto.kms.azure.SecretCredentialOpts
 object KmsService {
     private val provider: String = System.getenv("KMS_PROVIDER") ?: "memory"
 
-    private val azureConfig =
+    private val azureConfig by lazy {
         AzureKeyVaultClientConfig(
             applicationId = System.getenv("AZURE_KEYVAULT_APPLICATION_ID"),
             keyvaultUrl = System.getenv("AZURE_KEYVAULT_URL"),
@@ -30,6 +30,7 @@ object KmsService {
                 maxDelayInMS = System.getenv("AZURE_KEYVAULT_MAX_DELAY")?.toLong() ?: 15000L
             )
         )
+    }
 
     private val kmsProvider: IKeyManagementSystem = when (provider) {
         "memory" -> EcDSACryptoProvider()
