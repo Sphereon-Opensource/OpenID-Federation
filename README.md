@@ -140,20 +140,17 @@ DATASOURCE_DB=openid-federation-db
 ### Key Management System (KMS)
 
 ```env
-KMS_PROVIDER=local
-# Defaults to the local KMS provider that runs on Docker. **Do not use in production.**
+KMS_PROVIDER=memory # memory, azure
 
-LOCAL_KMS_DATASOURCE_URL=jdbc:postgresql://local-kms-db:5432/openid-federation-local-kms-db
-# The database instance URL for the local KMS.
+AZURE_KEYVAULT_APPLICATION_ID=
+AZURE_KEYVAULT_URL=
+AZURE_KEYVAULT_TENANT_ID=
+AZURE_KEYVAULT_CLIENT_ID=
+AZURE_KEYVAULT_CLIENT_SECRET=
+AZURE_KEYVAULT_MAX_RETRIES=
+AZURE_KEYVAULT_BASE_DELAY=
+AZURE_KEYVAULT_MAX_DELAY=
 
-LOCAL_KMS_DATASOURCE_USER=openid-federation-local-kms-db-user
-# The username for the local KMS database.
-
-LOCAL_KMS_DATASOURCE_PASSWORD=openid-federation-local-kms-db-password
-# The password for the local KMS database.
-
-LOCAL_KMS_DATASOURCE_DB=openid-federation-local-kms-db
-# The database name for the local KMS.
 ```
 
 ### Keycloak OAuth2 Provider
@@ -175,7 +172,6 @@ OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/openid-federat
 
 1. Replace default values (e.g., `admin`, `localhost`, `password`) with secure values for production environments.
 2. Ensure the `ROOT_IDENTIFIER` is a publicly accessible URL if deploying in a live environment.
-3. Use a production-grade KMS provider in production environments instead of the local Docker-based KMS.
 
 ## Step 2: Start the Service Stack
 
@@ -185,7 +181,7 @@ Once the environment variables are configured, you can start the OpenID Federati
 docker compose up
 ```
 
-This command will initialize all necessary services, including the database, KMS provider, and Keycloak, as defined in
+This command will initialize all necessary services, including the database and Keycloak, as defined in
 the Docker Compose configuration file.
 
 ---
