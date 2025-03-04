@@ -63,7 +63,7 @@ class FileLoggerHandler(private val logFile: File) : Logger.LogWriter {
     override fun log(event: Logger.LogEvent) {
         synchronized(this) {
             try {
-                logFile.appendText("${event.formattedMessage}\n")
+                logFile.appendText("${event.toJson()}\n")
             } catch (e: Exception) {
                 println("Failed to write to log file: ${logFile.absolutePath}. Error: ${e.message}")
                 // Consider implementing a fallback logging mechanism here
