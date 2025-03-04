@@ -69,7 +69,7 @@ class MonitoringConfig {
 
         logger.info(
             message = message,
-            context = contextMap
+            metadata = contextMap
         )
 
         if (severity == Severity.Warn) {
