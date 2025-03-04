@@ -92,6 +92,7 @@ services:
       OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
       DEV_MODE: ${DEV_MODE}
       LOGGER_SEVERITY: ${LOGGER_SEVERITY}
+      LOGGER_OUTPUT: ${LOGGER_OUTPUT}
     depends_on:
       db:
         condition: service_healthy
