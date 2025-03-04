@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
+    kotlin("plugin.serialization") version libs.versions.kotlin.get()
 }
 
 group = "com.sphereon.oid.fed.logger"
@@ -21,6 +22,7 @@ kotlin {
             dependencies {
                 implementation(libs.kermit.logging)
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.serialization.json)
             }
         }
 

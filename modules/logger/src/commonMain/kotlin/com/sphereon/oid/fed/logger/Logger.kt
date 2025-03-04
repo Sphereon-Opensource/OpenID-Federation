@@ -5,6 +5,8 @@ import co.touchlab.kermit.platformLogWriter
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import co.touchlab.kermit.Logger as KermitLogger
 import co.touchlab.kermit.Severity as KermitSeverity
 
@@ -35,6 +37,22 @@ class Logger internal constructor(private val tag: String = "") {
         fun close() {}
     }
 
+    @Serializable
+    data class LogEventJson(
+        val severity: String,
+        val message: String,
+        val tag: String,
+        val timestamp: Long,
+        val exception: ExceptionInfo? = null,
+        val metadata: Map<String, String> = emptyMap()
+    )
+
+    @Serializable
+    data class ExceptionInfo(
+        val message: String,
+        val stacktrace: String
+    )
+
     data class LogEvent(
         val severity: Severity,
         val message: String,
@@ -62,6 +80,23 @@ class Logger internal constructor(private val tag: String = "") {
                     append("\nStacktrace: ${t.stackTraceToString()}")
                 }
             }
+
+        /**
+         * Converts the LogEvent to a JSON string representation.
+         * @return A JSON string containing all LogEvent fields
+         */
+        fun toJson(): String {
+            val exceptionInfo = throwable?.let { ExceptionInfo(it.message ?: "", it.stackTraceToString()) }
+            val logEventJson = LogEventJson(
+                severity = severity.name,
+                message = message,
+                tag = tag,
+                timestamp = timestamp,
+                exception = exceptionInfo,
+                metadata = metadata
+            )
+            return Json.encodeToString(LogEventJson.serializer(), logEventJson)
+        }
     }
 
     private val logger = KermitLogger.withTag(tag)
