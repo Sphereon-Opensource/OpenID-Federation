@@ -22,9 +22,11 @@ enum class LoggerOutputFormatEnum {
  * Configuration options for the Logger.
  *
  * @property output The format in which logs should be output (TEXT or JSON).
+ * @property severity The minimum severity level for logging.
  */
 data class LoggerConfig(
-    val output: LoggerOutputFormatEnum = LoggerOutputFormatEnum.TEXT
+    val output: LoggerOutputFormatEnum = LoggerOutputFormatEnum.TEXT,
+    val severity: Logger.Severity = Logger.Severity.Info
 )
 
 class Logger internal constructor(private val tag: String = "", private val config: LoggerConfig = LoggerConfig()) {
@@ -119,7 +121,7 @@ class Logger internal constructor(private val tag: String = "", private val conf
     private val logger = KermitLogger.withTag(tag)
 
     private fun shouldLog(severity: Severity): Boolean =
-        severity.ordinal >= minSeverityLevel.ordinal
+        severity.ordinal >= config.severity.ordinal
 
     private fun createLogEvent(
         severity: Severity,
@@ -211,7 +213,6 @@ class Logger internal constructor(private val tag: String = "", private val conf
     }
 
     companion object {
-        private var minSeverityLevel: Severity = Severity.Info
         private val registeredLogWriters = mutableListOf<LogWriter>()
         private val loggerInstances = mutableMapOf<String, Logger>()
         private var defaultConfig: LoggerConfig = LoggerConfig()
@@ -220,11 +221,10 @@ class Logger internal constructor(private val tag: String = "", private val conf
             KermitLogger.setLogWriters(platformLogWriter(SimpleFormatter))
         }
 
-        fun configure(minSeverity: Severity, config: LoggerConfig = defaultConfig) {
-            println("Configuring logger with severity: ${minSeverity.name} and output format: ${config.output}")
-            minSeverityLevel = minSeverity
+        fun configure(config: LoggerConfig) {
+            println("Configuring logger with severity: ${config.severity.name} and output format: ${config.output}")
             defaultConfig = config
-            KermitLogger.setMinSeverity(minSeverity.toKermitSeverity())
+            KermitLogger.setMinSeverity(config.severity.toKermitSeverity())
             KermitLogger.setLogWriters(platformLogWriter(SimpleFormatter))
 
             val existingTags = loggerInstances.keys.toList()
@@ -232,7 +232,16 @@ class Logger internal constructor(private val tag: String = "", private val conf
             existingTags.forEach { tag ->
                 loggerInstances[tag] = Logger(tag, config)
             }
-            println("Logger configuration complete. Current severity: ${minSeverityLevel.name}, output format: ${config.output}")
+            println("Logger configuration complete. Current severity: ${config.severity.name}, output format: ${config.output}")
+        }
+
+        // For backward compatibility
+        @Deprecated(
+            "Use configure(LoggerConfig) instead",
+            ReplaceWith("configure(LoggerConfig(severity = minSeverity, output = config.output))")
+        )
+        fun configure(minSeverity: Severity, config: LoggerConfig = defaultConfig) {
+            configure(config.copy(severity = minSeverity))
         }
 
         fun addLogWriter(logWriter: LogWriter) {
