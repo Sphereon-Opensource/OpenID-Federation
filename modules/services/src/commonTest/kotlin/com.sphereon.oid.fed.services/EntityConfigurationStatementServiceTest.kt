@@ -24,6 +24,7 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.jsonObject
 import java.time.LocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -64,7 +65,6 @@ class EntityConfigurationStatementServiceTest {
         accountService = mockk()
         jwkService = mockk()
         kmsProvider = EcDSACryptoProvider()
-
         accountServiceConfig = AccountServiceConfig(Constants.DEFAULT_ROOT_USERNAME)
 
         // Initialize all query mocks
@@ -102,6 +102,16 @@ class EntityConfigurationStatementServiceTest {
 
         // Initialize the service under test
         statementService = EntityConfigurationStatementService(accountService, jwkService, kmsProvider)
+
+        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
+
+        every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { critQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+        every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
     }
 
     @AfterTest
@@ -111,22 +121,9 @@ class EntityConfigurationStatementServiceTest {
     }
 
     @Test
-    fun testFindByAccount() {
-        // Mock account service response
-        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
-
-        // Mock key service response
+    fun `test find by account`() {
         val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
-
-        // Mock empty results for optional components
-        every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { critQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
 
         val result = statementService.findByAccount(testAccount.toDTO())
 
@@ -139,34 +136,11 @@ class EntityConfigurationStatementServiceTest {
     }
 
     @Test
-    fun testPublishByAccount() = runTest {
-        // Mock account service response
-        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
-
-        // Mock key service response
+    fun `test publish by account`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
         val testKey = AccountJwk(kid = key.kid, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
-
-        // Mock KMS client response
-//        val expectedJwt = "test.jwt.token"
-//        every {
-//            kmsClient.sign(
-//                any(),
-//                any(),
-//                TEST_KEY_ID
-//            )
-//        } returns expectedJwt
-
-        // Mock empty results for optional components
-        every { subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { critQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
-        every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
 
         val result = statementService.publishByAccount(testAccount.toDTO())
 
@@ -176,32 +150,16 @@ class EntityConfigurationStatementServiceTest {
 
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-//        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
 
     @Test
-    fun testPublishByAccountDryRun() = runTest {
-        // Mock account service response
-        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
-
+    fun `test publish by account dry run`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
-
-        // Mock key service response
         val testKey = AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
-
-        // Mock KMS client response
-//        val expectedJwt = "test.jwt.token"
-//        every {
-//            kmsClient.sign(
-//                any(),
-//                any(),
-//                TEST_KEY_ID
-//            )
-//        } returns expectedJwt
 
         val result = statementService.publishByAccount(testAccount.toDTO(), dryRun = true)
 
@@ -209,19 +167,13 @@ class EntityConfigurationStatementServiceTest {
         assertEquals(3, result.split(".").size)
         assertTrue(result.startsWith("ey"))
 
-//        assertEquals(expectedJwt, result)
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-//        verify { kmsClient.sign(any(), any(), TEST_KEY_ID) }
         verify(exactly = 0) { entityConfigurationStatementQueries.create(any(), any(), any()) }
     }
 
     @Test
-    fun testPublishByAccountNoKeys() = runTest {
-        // Mock account service response
-        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
-
-        // Mock empty key response
+    fun `test publish by account no keys`() = runTest {
         every { jwkService.getKeys(testAccount.toDTO()) } returns emptyArray()
 
         assertFailsWith<IllegalArgumentException> {
@@ -230,6 +182,103 @@ class EntityConfigurationStatementServiceTest {
 
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
         verify { jwkService.getKeys(testAccount.toDTO()) }
-//        verify(exactly = 0) { kmsClient.sign(any(), any(), any()) }
+    }
+
+    @Test
+    fun `test add federation entity metadata`() = runTest {
+        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
+
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+
+        val testMetadata = listOf(
+            mockk<com.sphereon.oid.fed.persistence.models.Metadata> {
+                every { key } returns "test_key"
+                every { metadata } returns """{"test": "value"}"""
+            }
+        )
+        every { Persistence.metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns testMetadata
+
+        every { Persistence.subordinateQueries.findByAccountId(testAccount.id).executeAsList() } returns listOf(mockk())
+        every { Persistence.trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+
+        val resultWithSubordinates = statementService.findByAccount(testAccount.toDTO())
+
+        assertNotNull(resultWithSubordinates.metadata)
+        assertTrue(resultWithSubordinates.metadata?.containsKey("federation_entity") == true)
+        assertTrue(resultWithSubordinates.metadata?.containsKey("test_key") == true)
+
+        val parsedMetadata = resultWithSubordinates.metadata?.get("test_key")
+        assertNotNull(parsedMetadata)
+        assertTrue(parsedMetadata.jsonObject.containsKey("test"))
+    }
+
+    @Test
+    fun `test add trust mark issuers`() = runTest {
+        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
+
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
+        every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+
+        val testTrustMarkType = mockk<com.sphereon.oid.fed.persistence.models.TrustMarkType> {
+            every { id } returns 1  // Note the 'L' for Long
+            every { identifier } returns "test_trust_mark_type"
+        }
+        every { Persistence.trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns listOf(
+            testTrustMarkType
+        )
+
+        val testTrustMarkIssuers = listOf(
+            mockk<com.sphereon.oid.fed.persistence.models.TrustMarkIssuer> {
+                every { issuer_identifier } returns "issuer1"
+            },
+            mockk<com.sphereon.oid.fed.persistence.models.TrustMarkIssuer> {
+                every { issuer_identifier } returns "issuer2"
+            }
+        )
+
+        every {
+            Persistence.trustMarkIssuerQueries.findByTrustMarkTypeId(1).executeAsList()
+        } returns testTrustMarkIssuers
+
+        val result = statementService.findByAccount(testAccount.toDTO())
+
+        assertNotNull(result.trustMarkIssuers)
+        assertTrue(result.trustMarkIssuers?.containsKey("test_trust_mark_type") == true)
+
+        val issuers = result.trustMarkIssuers?.get("test_trust_mark_type")
+        assertNotNull(issuers)
+        assertEquals(2, issuers.size)
+        assertTrue(issuers.contains("issuer1"))
+        assertTrue(issuers.contains("issuer2"))
+    }
+
+    @Test
+    fun `test add received trust marks`() = runTest {
+        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
+
+        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
+        every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+
+        val testReceivedTrustMark = mockk<com.sphereon.oid.fed.persistence.models.ReceivedTrustMark> {
+            every { id } returns 1
+            every { account_id } returns testAccount.id
+            every { created_at } returns FIXED_TIMESTAMP
+            every { trust_mark_type_identifier } returns "test-trust-mark-id"
+            every { jwt } returns "test-jwt-token"
+        }
+
+        every {
+            Persistence.receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList()
+        } returns listOf(testReceivedTrustMark)
+
+        val result = statementService.findByAccount(testAccount.toDTO())
+
+        assertNotNull(result.trustMarks)
+        assertEquals(1, result.trustMarks?.size)
+
+        val trustMark = result.trustMarks?.first()
+        assertNotNull(trustMark)
+        assertEquals("test-trust-mark-id", trustMark.id)
     }
 }

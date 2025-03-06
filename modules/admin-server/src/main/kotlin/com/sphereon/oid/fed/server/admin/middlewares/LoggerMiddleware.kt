@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.server.admin.middlewares
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.server.admin.helpers.LoggerHelper
 import jakarta.servlet.FilterChain
@@ -12,8 +11,6 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class LoggerMiddleware : OncePerRequestFilter() {
-    private val logger = Logger.tag(this::class.simpleName ?: "LoggerMiddleware")
-
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         return request.requestURI.endsWith("/status")
     }
@@ -27,7 +24,6 @@ class LoggerMiddleware : OncePerRequestFilter() {
             val operation = getOperationName(request)
             LoggerHelper.logRequestDetailsDebug(request, operation)
 
-            // For POST, PUT, DELETE operations, also log at INFO level
             if (isWriteOperation(request)) {
                 val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as? Account
                 if (account != null) {
@@ -39,7 +35,7 @@ class LoggerMiddleware : OncePerRequestFilter() {
             filterChain.doFilter(request, response)
         } catch (e: Exception) {
             logger.error("Error in logging middleware: ${e.message}", e)
-            filterChain.doFilter(request, response) // Continue the chain even if logging fails
+            filterChain.doFilter(request, response)
         }
     }
 

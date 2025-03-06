@@ -13,7 +13,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertNull
 
 object CryptoService : ICryptoService {
     override suspend fun verify(jwt: String, key: Jwk): Boolean {
@@ -56,7 +56,7 @@ class TrustChainServiceTest {
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertFalse(response.error)
+        assertNull(response.errorMessage)
         assertEquals(4, response.trustChain?.size)
 
         assertEquals(
@@ -88,7 +88,7 @@ class TrustChainServiceTest {
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertFalse(response2.error)
+        assertNull(response2.errorMessage)
         assertEquals(3, response2.trustChain?.size)
         assertEquals(
             response2.trustChain?.get(0),
@@ -116,7 +116,7 @@ class TrustChainServiceTest {
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertFalse(resolveResponse.error)
+        assertNull(resolveResponse.errorMessage)
 
         // Now verify the trust chain
         val verifyResponse = client.trustChainVerify(
@@ -126,7 +126,7 @@ class TrustChainServiceTest {
         )
 
         assertEquals(true, verifyResponse.isValid)
-        assertEquals(null, verifyResponse.error)
+        assertEquals(null, verifyResponse.errorMessage)
 
         // Test with empty chain
         val emptyChainResponse = client.trustChainVerify(
@@ -136,7 +136,7 @@ class TrustChainServiceTest {
         )
 
         assertEquals(false, emptyChainResponse.isValid)
-        assertEquals("Trust chain must contain at least 3 elements", emptyChainResponse.error)
+        assertEquals("Trust chain must contain at least 3 elements", emptyChainResponse.errorMessage)
 
         // Test with wrong trust anchor
         val wrongAnchorResponse = client.trustChainVerify(
@@ -146,7 +146,7 @@ class TrustChainServiceTest {
         )
 
         assertEquals(false, wrongAnchorResponse.isValid)
-        assertEquals("Last statement issuer does not match trust anchor", wrongAnchorResponse.error)
+        assertEquals("Last statement issuer does not match trust anchor", wrongAnchorResponse.errorMessage)
     }
 
     @Test
@@ -157,7 +157,7 @@ class TrustChainServiceTest {
             arrayOf("https://oidc.registry.servizicie.interno.gov.it")
         )
 
-        assertFalse(resolveResponse.error)
+        assertNull(resolveResponse.errorMessage)
         val chain = resolveResponse.trustChain!!
 
         // Test with current time after expiration
@@ -169,7 +169,7 @@ class TrustChainServiceTest {
         )
 
         assertEquals(false, expiredResponse.isValid)
-        assertEquals("Statement at position 0 has expired", expiredResponse.error)
+        assertEquals("Statement at position 0 has expired", expiredResponse.errorMessage)
 
         // Test with current time before issuance
         val pastTime = 1528346615L // Way in the past, before iat
@@ -180,6 +180,6 @@ class TrustChainServiceTest {
         )
 
         assertEquals(false, notYetValidResponse.isValid)
-        assertEquals("Statement at position 0 has invalid iat", notYetValidResponse.error)
+        assertEquals("Statement at position 0 has invalid iat", notYetValidResponse.errorMessage)
     }
 }

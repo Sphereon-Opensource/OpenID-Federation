@@ -7,11 +7,21 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Metadata
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class MetadataServiceTest {
     private lateinit var metadataService: MetadataService
@@ -47,7 +57,7 @@ class MetadataServiceTest {
     }
 
     @Test
-    fun testCreateEntityConfigurationMetadata() {
+    fun `create entity configuration metadata succeeds`() {
         val metadata = Metadata(
             id = 1,
             account_id = testAccount.id,
@@ -57,12 +67,13 @@ class MetadataServiceTest {
             deleted_at = null
         )
 
-        every { metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY) } returns mockk {
-            every { executeAsOneOrNull() } returns null
-        }
-        every { metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString()) } returns mockk {
-            every { executeAsOneOrNull() } returns metadata
-        }
+        every {
+            metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY).executeAsOneOrNull()
+        } returns null
+
+        every {
+            metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString()).executeAsOneOrNull()
+        } returns metadata
 
         val result = metadataService.createEntityConfigurationMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
 
@@ -74,7 +85,7 @@ class MetadataServiceTest {
     }
 
     @Test
-    fun testCreateDuplicateMetadata() {
+    fun `create duplicate metadata fails with exception`() {
         val existingMetadata = Metadata(
             id = 1,
             account_id = testAccount.id,
@@ -95,7 +106,7 @@ class MetadataServiceTest {
     }
 
     @Test
-    fun testFindByAccount() {
+    fun `find by account returns list of metadata`() {
         val metadataList = listOf(
             Metadata(1, testAccount.id, "key1", """{"test": "value1"}""", FIXED_TIMESTAMP, null),
             Metadata(2, testAccount.id, "key2", """{"test": "value2"}""", FIXED_TIMESTAMP, null)
@@ -113,7 +124,7 @@ class MetadataServiceTest {
     }
 
     @Test
-    fun testDeleteMetadata() {
+    fun `delete metadata succeeds for valid id`() {
         val metadata = Metadata(
             id = 1,
             account_id = testAccount.id,
@@ -123,12 +134,13 @@ class MetadataServiceTest {
             deleted_at = null
         )
 
-        every { metadataQueries.findById(metadata.id) } returns mockk {
-            every { executeAsOneOrNull() } returns metadata
-        }
-        every { metadataQueries.delete(metadata.id) } returns mockk {
-            every { executeAsOneOrNull() } returns metadata
-        }
+        every {
+            metadataQueries.findById(metadata.id).executeAsOneOrNull()
+        } returns metadata
+
+        every {
+            metadataQueries.delete(metadata.id).executeAsOneOrNull()
+        } returns metadata
 
         val result = metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
 
@@ -138,13 +150,14 @@ class MetadataServiceTest {
         verify { metadataQueries.delete(metadata.id) }
     }
 
+
     @Test
-    fun testDeleteNonExistentMetadata() {
+    fun `delete non-existent metadata fails with not found exception`() {
         val nonExistentId = 999
 
-        every { metadataQueries.findById(nonExistentId) } returns mockk {
-            every { executeAsOneOrNull() } returns null
-        }
+        every {
+            metadataQueries.findById(nonExistentId).executeAsOneOrNull()
+        } returns null
 
         assertFailsWith<NotFoundException> {
             metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), nonExistentId)
@@ -153,7 +166,7 @@ class MetadataServiceTest {
     }
 
     @Test
-    fun testDeleteMetadataFromDifferentAccount() {
+    fun `delete metadata from different account fails with not found exception`() {
         val differentAccountId = 2
         val metadata = Metadata(
             id = 1,
@@ -164,13 +177,44 @@ class MetadataServiceTest {
             deleted_at = null
         )
 
-        every { metadataQueries.findById(metadata.id) } returns mockk {
-            every { executeAsOneOrNull() } returns metadata
-        }
+        every {
+            metadataQueries.findById(metadata.id).executeAsOneOrNull()
+        } returns metadata
 
         assertFailsWith<NotFoundException> {
             metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
         }
         verify { metadataQueries.findById(metadata.id) }
+    }
+
+    @Test
+    fun `create metadata fails with unexpected error`() {
+        val unexpectedError = RuntimeException("Unexpected database error")
+
+        every {
+            Persistence.metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY)
+        } returns mockk {
+            every { executeAsOneOrNull() } returns null
+        }
+
+        every {
+            Persistence.metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString())
+        } throws unexpectedError
+
+        val exception = assertFailsWith<RuntimeException> {
+            metadataService.createEntityConfigurationMetadata(
+                testAccount.toDTO(),
+                TEST_KEY,
+                TEST_METADATA
+            )
+        }
+
+        assertEquals(unexpectedError.message, exception.message)
+        verify {
+            Persistence.metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY)
+        }
+        verify {
+            Persistence.metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString())
+        }
     }
 }

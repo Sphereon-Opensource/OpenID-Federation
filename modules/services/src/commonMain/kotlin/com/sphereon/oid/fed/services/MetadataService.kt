@@ -11,7 +11,7 @@ import com.sphereon.oid.fed.services.mappers.metadata.toDTO
 import kotlinx.serialization.json.JsonObject
 
 class MetadataService {
-    private val logger = Logger.tag("EntityConfigurationMetadataService")
+    private val logger = Logger.tag("MetadataService")
 
     fun createEntityConfigurationMetadata(
         account: Account,

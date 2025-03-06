@@ -389,4 +389,377 @@ class SubordinateServiceTest {
             subordinateService.createSubordinateJwk(testAccount.toDTO(), subordinate.id, testJwk)
         }
     }
+
+    @Test
+    fun `get subordinate jwks returns correct jwks`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val subordinateJwks = listOf(
+            SubordinateJwk(1, subordinate.id, "{\"kid\":\"kid1\", \"kty\":\"EC\"}", FIXED_TIMESTAMP, null),
+            SubordinateJwk(2, subordinate.id, "{\"kid\":\"kid2\", \"kty\":\"EC\"}", FIXED_TIMESTAMP, null)
+        )
+
+        every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
+        every { subordinateJwkQueries.findBySubordinateId(subordinate.id).executeAsList() } returns subordinateJwks
+
+        val result = subordinateService.getSubordinateJwks(testAccount.toDTO(), subordinate.id)
+
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        verify { subordinateQueries.findById(subordinate.id) }
+        verify { subordinateJwkQueries.findBySubordinateId(subordinate.id) }
+    }
+
+    @Test
+    fun `get subordinate jwks throws NotFoundException for non-existent subordinate`() {
+        every { subordinateQueries.findById(999).executeAsOneOrNull() } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.getSubordinateJwks(testAccount.toDTO(), 999)
+        }
+        verify { subordinateQueries.findById(999) }
+
+    }
+
+    @Test
+    fun `delete subordinate jwk succeeds`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val jwkId = 5
+        val subordinateJwk = SubordinateJwk(
+            id = jwkId,
+            subordinate_id = subordinate.id,
+            key = "{\"kid\":\"test-kid\", \"kty\":\"EC\"}",
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
+        every { subordinateJwkQueries.findById(jwkId).executeAsOneOrNull() } returns subordinateJwk
+        every { subordinateJwkQueries.delete(jwkId).executeAsOne() } returns subordinateJwk
+
+        val result = subordinateService.deleteSubordinateJwk(testAccount.toDTO(), subordinate.id, jwkId)
+
+        assertNotNull(result)
+        verify { subordinateQueries.findById(subordinate.id) }
+        verify { subordinateJwkQueries.findById(jwkId) }
+        verify { subordinateJwkQueries.delete(jwkId) }
+
+    }
+
+    @Test
+    fun `delete subordinate jwk throws NotFoundException for non-existent subordinate`() {
+        every { subordinateQueries.findById(999).executeAsOneOrNull() } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.deleteSubordinateJwk(testAccount.toDTO(), 999, 1)
+        }
+        verify { subordinateQueries.findById(999) }
+    }
+
+    @Test
+    fun `delete subordinate jwk throws NotFoundException for subordinate from different account`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = 999, // Different account
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.deleteSubordinateJwk(testAccount.toDTO(), subordinate.id, 1)
+        }
+        verify { subordinateQueries.findById(subordinate.id) }
+    }
+
+    @Test
+    fun `delete subordinate jwk throws NotFoundException for non-existent jwk`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val jwkId = 5
+
+        every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
+        every { subordinateJwkQueries.findById(jwkId).executeAsOneOrNull() } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.deleteSubordinateJwk(testAccount.toDTO(), subordinate.id, jwkId)
+        }
+        verify { subordinateQueries.findById(subordinate.id) }
+        verify { subordinateJwkQueries.findById(jwkId) }
+
+    }
+
+    @Test
+    fun `fetch subordinate statement succeeds`() {
+        val statement = SubordinateStatement(
+            id = 1,
+            subordinate_id = 1,
+            iss = TEST_ISS,
+            sub = TEST_SUB,
+            statement = "test-statement-jwt",
+            expires_at = System.currentTimeMillis() / 1000 + 3600,
+            created_at = FIXED_TIMESTAMP
+        )
+
+        every { subordinateStatementQueries.findByIssAndSub(TEST_ISS, TEST_SUB).executeAsOneOrNull() } returns statement
+
+        val result = subordinateService.fetchSubordinateStatement(TEST_ISS, TEST_SUB)
+
+        assertEquals("test-statement-jwt", result)
+        verify { subordinateStatementQueries.findByIssAndSub(TEST_ISS, TEST_SUB) }
+    }
+
+    @Test
+    fun `fetch subordinate statement throws NotFoundException when statement doesn't exist`() {
+        every { subordinateStatementQueries.findByIssAndSub(TEST_ISS, TEST_SUB).executeAsOneOrNull() } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.fetchSubordinateStatement(TEST_ISS, TEST_SUB)
+        }
+        verify { subordinateStatementQueries.findByIssAndSub(TEST_ISS, TEST_SUB) }
+    }
+
+    @Test
+    fun `find subordinate metadata returns correct metadata`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val metadata = listOf(
+            SubordinateMetadata(
+                id = 1,
+                account_id = testAccount.id,
+                subordinate_id = subordinate.id,
+                key = "key1",
+                metadata = "{\"test1\": \"value1\"}",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            ),
+            SubordinateMetadata(
+                id = 2,
+                account_id = testAccount.id,
+                subordinate_id = subordinate.id,
+                key = "key2",
+                metadata = "{\"test2\": \"value2\"}",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            )
+        )
+
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsOneOrNull()
+        } returns subordinate
+        every {
+            Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsList()
+        } returns metadata
+
+        val result = subordinateService.findSubordinateMetadata(testAccount.toDTO(), subordinate.id)
+
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        assertEquals("key1", result[0].key)
+        assertEquals("key2", result[1].key)
+    }
+
+    @Test
+    fun `find subordinate metadata throws NotFoundException when subordinate doesn't exist`() {
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, 999).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.findSubordinateMetadata(testAccount.toDTO(), 999)
+        }
+    }
+
+    @Test
+    fun `create metadata succeeds with valid input`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val key = "test-key"
+        val metadata = JsonObject(mapOf("test" to JsonPrimitive("value")))
+
+        val createdMetadata = SubordinateMetadata(
+            id = 1,
+            account_id = testAccount.id,
+            subordinate_id = subordinate.id,
+            key = key,
+            metadata = metadata.toString(),
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsOneOrNull()
+        } returns subordinate
+        every {
+            Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndKey(
+                testAccount.id,
+                subordinate.id,
+                key
+            ).executeAsOneOrNull()
+        } returns null
+        every {
+            Persistence.subordinateMetadataQueries.create(testAccount.id, subordinate.id, key, metadata.toString())
+                .executeAsOneOrNull()
+        } returns createdMetadata
+
+        val result = subordinateService.createMetadata(testAccount.toDTO(), subordinate.id, key, metadata)
+
+        assertNotNull(result)
+        assertEquals(key, result.key)
+        assertEquals(metadata.toString(), result.metadata.toString())
+    }
+
+    @Test
+    fun `create metadata throws EntityAlreadyExistsException when metadata already exists`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val key = "test-key"
+        val metadata = JsonObject(mapOf("test" to JsonPrimitive("value")))
+
+        val existingMetadata = SubordinateMetadata(
+            id = 1,
+            account_id = testAccount.id,
+            subordinate_id = subordinate.id,
+            key = key,
+            metadata = metadata.toString(),
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsOneOrNull()
+        } returns subordinate
+        every {
+            Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndKey(
+                testAccount.id,
+                subordinate.id,
+                key
+            ).executeAsOneOrNull()
+        } returns existingMetadata
+
+        assertFailsWith<EntityAlreadyExistsException> {
+            subordinateService.createMetadata(testAccount.toDTO(), subordinate.id, key, metadata)
+        }
+    }
+
+    @Test
+    fun `delete subordinate metadata succeeds with valid input`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        val metadataId = 1
+        val metadata = SubordinateMetadata(
+            id = metadataId,
+            account_id = testAccount.id,
+            subordinate_id = subordinate.id,
+            key = "test-key",
+            metadata = "{\"test\": \"value\"}",
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsOneOrNull()
+        } returns subordinate
+        every {
+            Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndId(
+                testAccount.id,
+                subordinate.id,
+                metadataId
+            ).executeAsOneOrNull()
+        } returns metadata
+        every { Persistence.subordinateMetadataQueries.delete(metadataId).executeAsOneOrNull() } returns metadata
+
+        val result = subordinateService.deleteSubordinateMetadata(testAccount.toDTO(), subordinate.id, metadataId)
+
+        assertNotNull(result)
+        assertEquals("test-key", result.key)
+    }
+
+    @Test
+    fun `delete subordinate metadata throws NotFoundException when subordinate doesn't exist`() {
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, 999).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.deleteSubordinateMetadata(testAccount.toDTO(), 999, 1)
+        }
+    }
+
+    @Test
+    fun `delete subordinate metadata throws NotFoundException when metadata doesn't exist`() {
+        val subordinate = Subordinate(
+            id = 1,
+            account_id = testAccount.id,
+            identifier = TEST_SUB,
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every {
+            Persistence.subordinateQueries.findByAccountIdAndSubordinateId(testAccount.id, subordinate.id)
+                .executeAsOneOrNull()
+        } returns subordinate
+        every {
+            Persistence.subordinateMetadataQueries.findByAccountIdAndSubordinateIdAndId(
+                testAccount.id,
+                subordinate.id,
+                999
+            ).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            subordinateService.deleteSubordinateMetadata(testAccount.toDTO(), subordinate.id, 999)
+        }
+    }
 }

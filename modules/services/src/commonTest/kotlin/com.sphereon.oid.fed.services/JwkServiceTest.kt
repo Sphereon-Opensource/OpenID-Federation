@@ -65,7 +65,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun create_key_succeeds_with_valid_input() = testScope.runTest {
+    fun `create key succeeds with valid input`() = testScope.runTest {
         // First generate a real key using the crypto provider
         val generatedKey = cryptoProvider.generateKeyAsync()
         generatedKid = generatedKey.kid ?: "test-kid"
@@ -99,7 +99,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun get_keys_returns_all_keys_for_account() {
+    fun `get keys returns all keys for account`() {
         val jwks = listOf(
             Jwk(
                 1,
@@ -123,7 +123,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun revoke_key_succeeds_for_valid_key() {
+    fun `revoke key succeeds for valid key`() {
         val keyId = 1
         val reason = "Test revocation"
         val jwk = Jwk(
@@ -152,7 +152,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun revoke_key_fails_for_key_from_different_account() {
+    fun `revoke key fails for key from different account`() {
         val keyId = 1
         val differentAccountId = 2
         val jwk = Jwk(
@@ -177,7 +177,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun get_federation_historical_keys_jwt_succeeds() = testScope.runTest {
+    fun `get federation historical keys jwt succeeds`() = testScope.runTest {
         // First generate a real key using the crypto provider
         val generatedKey = cryptoProvider.generateKeyAsync()
         generatedKid = generatedKey.kid ?: "test-kid"
@@ -206,7 +206,7 @@ class JwkServiceTest {
     }
 
     @Test
-    fun get_federation_historical_keys_jwt_fails_when_no_keys_exist() = testScope.runTest {
+    fun `get federation historical keys jwt fails when no keys exist`() = testScope.runTest {
         val accountService = mockk<AccountService>()
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()

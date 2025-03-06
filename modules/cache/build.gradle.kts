@@ -62,8 +62,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
-                implementation("com.mayakapps.kache:kache:2.1.0")
-                implementation("com.mayakapps.kache:file-kache:2.1.0")
+                implementation(libs.kache)
+                implementation(libs.kache.file)
             }
         }
 
@@ -72,8 +72,8 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
-                implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.kotlin.stdlib)
             }
         }
     }

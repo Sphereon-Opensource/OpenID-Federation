@@ -22,7 +22,7 @@ class EntityConfigurationStatementService(
     private val jwkService: JwkService,
     private val kmsProvider: IKeyManagementSystem
 ) {
-    private val logger = Logger.tag("EntityConfigurationStatementService")
+    private val logger = Logger.tag("EntityConfigurationService")
     private val queries = Persistence
 
     companion object {

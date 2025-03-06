@@ -2,9 +2,9 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version "2.0.0"
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.npmPublish)
     id("maven-publish")
-    id("dev.petuska.npm.publish") version "3.4.3"
 }
 
 repositories {
@@ -12,8 +12,6 @@ repositories {
     mavenLocal()
     google()
 }
-
-
 
 kotlin {
     jvm()
@@ -60,8 +58,6 @@ kotlin {
     }
 
     sourceSets {
-        val ktor_version: String by project
-
         all {
             languageSettings.optIn("kotlin.js.ExperimentalJsExport")
             languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")

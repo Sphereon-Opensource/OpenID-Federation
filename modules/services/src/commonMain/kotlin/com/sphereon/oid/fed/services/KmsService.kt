@@ -9,34 +9,75 @@ import com.sphereon.crypto.kms.azure.CredentialOpts
 import com.sphereon.crypto.kms.azure.ExponentialBackoffRetryOpts
 import com.sphereon.crypto.kms.azure.SecretCredentialOpts
 
-object KmsService {
-    private val provider: String = System.getenv("KMS_PROVIDER") ?: "memory"
+enum class KmsProviderType {
+    MEMORY,
+    AZURE;
 
-    private val azureConfig by lazy {
-        AzureKeyVaultClientConfig(
-            applicationId = System.getenv("AZURE_KEYVAULT_APPLICATION_ID"),
-            keyvaultUrl = System.getenv("AZURE_KEYVAULT_URL"),
-            tenantId = System.getenv("AZURE_KEYVAULT_TENANT_ID"),
-            credentialOpts = CredentialOpts(
-                credentialMode = CredentialMode.SERVICE_CLIENT_SECRET,
-                secretCredentialOpts = SecretCredentialOpts(
-                    clientId = System.getenv("AZURE_KEYVAULT_CLIENT_ID"),
-                    clientSecret = System.getenv("AZURE_KEYVAULT_CLIENT_SECRET")
-                )
-            ),
-            exponentialBackoffRetryOpts = ExponentialBackoffRetryOpts(
-                maxRetries = System.getenv("AZURE_KEYVAULT_MAX_RETRIES")?.toInt() ?: 10,
-                baseDelayInMS = System.getenv("AZURE_KEYVAULT_BASE_DELAY")?.toLong() ?: 500L,
-                maxDelayInMS = System.getenv("AZURE_KEYVAULT_MAX_DELAY")?.toLong() ?: 15000L
-            )
-        )
+    companion object {
+        fun fromString(value: String?): KmsProviderType {
+            return when (value?.lowercase()) {
+                "azure" -> AZURE
+                "memory" -> MEMORY
+                else -> throw SecurityException("Unknown KMS provider")
+            }
+        }
     }
+}
 
+class KmsService private constructor(
+    provider: KmsProviderType,
+    azureConfig: AzureKeyVaultClientConfig?
+) {
     private val kmsProvider: IKeyManagementSystem = when (provider) {
-        "memory" -> EcDSACryptoProvider()
-        "azure" -> AzureKeyVaultCryptoProvider(azureConfig)
-        else -> EcDSACryptoProvider()
+        KmsProviderType.MEMORY -> EcDSACryptoProvider()
+        KmsProviderType.AZURE -> {
+            requireNotNull(azureConfig) { "Azure configuration is required when using AZURE provider type" }
+            AzureKeyVaultCryptoProvider(azureConfig)
+        }
     }
 
     fun getKmsProvider(): IKeyManagementSystem = kmsProvider
+
+    companion object {
+        /**
+         * Creates a KmsService with in-memory provider
+         */
+        fun createMemoryKms(): KmsService {
+            return KmsService(KmsProviderType.MEMORY, null)
+        }
+
+        /**
+         * Creates a KmsService with Azure Key Vault provider
+         */
+        fun createAzureKms(
+            applicationId: String,
+            keyvaultUrl: String,
+            tenantId: String,
+            clientId: String,
+            clientSecret: String,
+            maxRetries: Int = 10,
+            baseDelayInMS: Long = 500L,
+            maxDelayInMS: Long = 15000L
+        ): KmsService {
+            val config = AzureKeyVaultClientConfig(
+                applicationId = applicationId,
+                keyvaultUrl = keyvaultUrl,
+                tenantId = tenantId,
+                credentialOpts = CredentialOpts(
+                    credentialMode = CredentialMode.SERVICE_CLIENT_SECRET,
+                    secretCredentialOpts = SecretCredentialOpts(
+                        clientId = clientId,
+                        clientSecret = clientSecret
+                    )
+                ),
+                exponentialBackoffRetryOpts = ExponentialBackoffRetryOpts(
+                    maxRetries = maxRetries,
+                    baseDelayInMS = baseDelayInMS,
+                    maxDelayInMS = maxDelayInMS
+                )
+            )
+
+            return KmsService(KmsProviderType.AZURE, config)
+        }
+    }
 }

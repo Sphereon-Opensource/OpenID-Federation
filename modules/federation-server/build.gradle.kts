@@ -40,7 +40,6 @@ dependencies {
     implementation(libs.sphereon.kmp.crypto.kms)
     implementation(libs.whyoleg.cryptography.core)
     implementation(libs.kotlin.stdlib)
-
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)

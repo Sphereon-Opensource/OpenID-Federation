@@ -38,12 +38,11 @@ dependencies {
     implementation(libs.springboot.actuator) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
-    implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
-
+    implementation(libs.springboot.oauth2.client)
+    implementation(libs.springboot.security)
+    implementation(libs.springboot.oauth2.resource.server)
+    implementation(libs.kotlinx.coroutines.reactor)
+    implementation(libs.projectreactor.kotlin.extensions)
     implementation(libs.sphereon.kmp.cbor)
     implementation(libs.sphereon.kmp.crypto)
     implementation(libs.sphereon.kmp.crypto.kms)
@@ -53,12 +52,11 @@ dependencies {
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     implementation(libs.whyoleg.cryptography.core)
-
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
     testImplementation(libs.springboot.testcontainer)
     testImplementation(libs.testcontainer.postgres)
-    runtimeOnly(libs.postgres)
+    runtimeOnly(libs.postgresql)
     runtimeOnly(libs.springboot.devtools)
     implementation(libs.ktor.serialization.kotlinx.json)
 }
