@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version "2.0.0"
+    alias(libs.plugins.kotlinSerialization)
     id("maven-publish")
+    alias(libs.plugins.kover)
 }
 
 group = "com.sphereon.oid.fed.services"
@@ -10,6 +11,16 @@ repositories {
     mavenCentral()
     mavenLocal()
     google()
+
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+    }
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+    }
 }
 
 kotlin {
@@ -23,12 +34,16 @@ kotlin {
                 api(projects.modules.openapi)
                 api(projects.modules.persistence)
                 api(projects.modules.openidFederationCommon)
-                api(projects.modules.localKms)
+                implementation(libs.kotlin.stdlib)
+                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.ktor.serialization.kotlinx.json)
-                api("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                // Add Ktor client core and engine dependencies
-                implementation("io.ktor:ktor-client-core:2.3.7")
-                implementation("io.ktor:ktor-client-cio:2.3.7")
+                implementation(libs.kotlinx.datetime)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.sphereon.kmp.cbor)
+                implementation(libs.sphereon.kmp.crypto)
+                implementation(libs.sphereon.kmp.crypto.kms)
+                implementation(libs.sphereon.kmp.crypto.kms.azure)
+                implementation(libs.whyoleg.cryptography.core)
             }
         }
 
@@ -39,16 +54,14 @@ kotlin {
                 implementation(projects.modules.openapi)
                 implementation(projects.modules.persistence)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(projects.modules.localKms)
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
-                implementation("io.mockk:mockk:1.13.9")
+                implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.mockk)
             }
         }
 
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
-                implementation("io.mockk:mockk:1.13.9")
             }
         }
     }

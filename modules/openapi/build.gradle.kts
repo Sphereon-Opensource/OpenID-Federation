@@ -4,10 +4,10 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version "2.0.0"
-    id("org.openapi.generator") version "7.7.0"
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.openapiGenerator)
     id("maven-publish")
-    id("dev.petuska.npm.publish") version "3.4.3"
+    alias(libs.plugins.npmPublish)
 }
 
 project.extra.set("openApiPackage", "com.sphereon.oid.fed.openapi")

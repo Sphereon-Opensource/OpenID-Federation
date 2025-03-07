@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
@@ -19,7 +20,7 @@ import com.sphereon.oid.fed.persistence.models.SubordinateMetadata as Subordinat
 class SubordinateService(
     private val accountService: AccountService,
     private val jwkService: JwkService,
-    private val kmsClient: KmsClient
+    private val kmsProvider: IKeyManagementSystem
 ) {
     private val logger = Logger.tag("SubordinateService")
     private val subordinateQueries = Persistence.subordinateQueries
@@ -141,7 +142,7 @@ class SubordinateService(
         return statement.build()
     }
 
-    fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false): String {
+    suspend fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false): String {
         logger.info("Publishing subordinate statement for ID: $id, account: ${account.username} (dryRun: $dryRun)")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -160,13 +161,11 @@ class SubordinateService(
             val key = keys[0].kid
             logger.debug("Using key with ID: $key")
 
-            val jwt = kmsClient.sign(
-                payload = Json.encodeToJsonElement(
-                    SubordinateStatement.serializer(),
-                    subordinateStatement
-                ).jsonObject,
-                header = JwtHeader(typ = "entity-statement+jwt", kid = key!!),
-                keyId = key
+            val jwtService = JwtService(kmsProvider)
+            val jwt = jwtService.signSerializable(
+                subordinateStatement,
+                JwtHeader(typ = "entity-statement+jwt", kid = key!!),
+                key
             )
             logger.debug("Successfully signed subordinate statement")
 

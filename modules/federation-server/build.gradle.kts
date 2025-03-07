@@ -9,6 +9,21 @@ plugins {
 
 group = "com.sphereon.oid.fed.server.federation"
 
+repositories {
+    mavenCentral()
+    mavenLocal()
+
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+    }
+    maven {
+        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+    }
+    maven {
+        url = uri("https://jitpack.io")
+    }
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -20,11 +35,16 @@ dependencies {
     api(projects.modules.openidFederationCommon)
     api(projects.modules.persistence)
     api(projects.modules.services)
+    implementation(libs.sphereon.kmp.cbor)
+    implementation(libs.sphereon.kmp.crypto)
+    implementation(libs.sphereon.kmp.crypto.kms)
+    implementation(libs.whyoleg.cryptography.core)
+    implementation(libs.kotlin.stdlib)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
-    implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation(libs.springboot.security)
+    implementation(libs.springboot.oauth2.resource.server)
     implementation(libs.kotlin.reflect)
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)

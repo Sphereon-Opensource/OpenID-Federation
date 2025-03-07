@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.persistence.Persistence
@@ -7,29 +8,46 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.persistence.models.JwkQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class JwkServiceTest {
     private lateinit var jwkService: JwkService
-    private lateinit var kmsClient: KmsClient
     private lateinit var jwkQueries: JwkQueries
     private lateinit var testAccount: Account
+    private val cryptoProvider = EcDSACryptoProvider()
+
+    // Use default value until we can generate one
+    private var generatedKid: String = "test-kid"
+
+    protected val testDispatcher = StandardTestDispatcher()
+    protected val testScope = TestScope(testDispatcher)
 
     companion object {
         private val FIXED_TIMESTAMP: LocalDateTime = LocalDateTime.parse("2025-01-13T12:00:00")
-        private const val TEST_KID = "test-kid"
-        private const val TEST_KEY = """{"kid":"test-kid","kty":"RSA","use":"sig"}"""
+        private const val TEST_KEY = """{"kid":"test-kid","kty":"EC","use":"sig","crv":"P-256"}"""
     }
 
     @BeforeTest
     fun setup() {
-        kmsClient = mockk()
         jwkQueries = mockk(relaxed = true)
         mockkObject(Persistence)
         every { Persistence.jwkQueries } returns jwkQueries
-        jwkService = JwkService(kmsClient)
+        jwkService = JwkService(cryptoProvider)
         testAccount = Account(
             id = 1,
             username = "testUser",
@@ -47,40 +65,52 @@ class JwkServiceTest {
     }
 
     @Test
-    fun `create key succeeds with valid input`() {
+    fun `create key succeeds with valid input`() = testScope.runTest {
+        // First generate a real key using the crypto provider
+        val generatedKey = cryptoProvider.generateKeyAsync()
+        generatedKid = generatedKey.kid ?: "test-kid"
+
         val jwkWithPrivateKey = JwkWithPrivateKey(
-            kid = TEST_KID,
-            kty = "RSA",
+            kid = generatedKid,
+            kty = "EC",
             use = "sig"
         )
-        val jwk = Jwk(
+
+        val returnedJwk = Jwk(
             id = 1,
             account_id = testAccount.id,
-            kid = TEST_KID,
-            key = TEST_KEY,
+            kid = generatedKid,
+            key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,
             revoked_reason = null
         )
 
-        every { kmsClient.generateKeyPair() } returns jwkWithPrivateKey
-        every { jwkQueries.create(testAccount.id, TEST_KID, any()) } returns mockk {
-            every { executeAsOne() } returns jwk
+        // Mock JwkQueries.create to return a valid Jwk
+        every { jwkQueries.create(any(), any(), any()) } returns mockk {
+            every { executeAsOne() } returns returnedJwk
         }
 
         val result = jwkService.createKey(testAccount.toDTO())
 
         assertNotNull(result)
-        assertEquals(TEST_KID, result.kid)
-        verify { kmsClient.generateKeyPair() }
-        verify { jwkQueries.create(testAccount.id, TEST_KID, any()) }
+        assertEquals(generatedKid, result.kid)
+        verify { jwkQueries.create(testAccount.id, any(), any()) }
     }
 
     @Test
     fun `get keys returns all keys for account`() {
         val jwks = listOf(
-            Jwk(1, testAccount.id, "kid1", TEST_KEY, FIXED_TIMESTAMP, null, null),
-            Jwk(2, testAccount.id, "kid2", TEST_KEY, FIXED_TIMESTAMP, null, null)
+            Jwk(
+                1,
+                testAccount.id,
+                generatedKid,
+                TEST_KEY.replace("test-kid", generatedKid),
+                FIXED_TIMESTAMP,
+                null,
+                null
+            ),
+            Jwk(2, testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), FIXED_TIMESTAMP, null, null)
         )
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
@@ -99,8 +129,8 @@ class JwkServiceTest {
         val jwk = Jwk(
             id = keyId,
             account_id = testAccount.id,
-            kid = TEST_KID,
-            key = TEST_KEY,
+            kid = generatedKid,
+            key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = FIXED_TIMESTAMP,
             revoked_reason = reason
@@ -116,7 +146,7 @@ class JwkServiceTest {
         val result = jwkService.revokeKey(testAccount.toDTO(), keyId, reason)
 
         assertNotNull(result)
-        assertEquals(TEST_KID, result.kid)
+        assertEquals(generatedKid, result.kid)
         verify { jwkQueries.findById(keyId) }
         verify { jwkQueries.revoke(reason, keyId) }
     }
@@ -128,8 +158,8 @@ class JwkServiceTest {
         val jwk = Jwk(
             id = keyId,
             account_id = differentAccountId,
-            kid = TEST_KID,
-            key = TEST_KEY,
+            kid = generatedKid,
+            key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,
             revoked_reason = null
@@ -147,27 +177,36 @@ class JwkServiceTest {
     }
 
     @Test
-    fun `get federation historical keys jwt succeeds`() {
+    fun `get federation historical keys jwt succeeds`() = testScope.runTest {
+        // First generate a real key using the crypto provider
+        val generatedKey = cryptoProvider.generateKeyAsync()
+        generatedKid = generatedKey.kid ?: "test-kid"
+
         val accountService = mockk<AccountService>()
-        val jwks = listOf(
-            Jwk(1, testAccount.id, TEST_KID, TEST_KEY, FIXED_TIMESTAMP, null, null)
+        val jwk = Jwk(
+            id = 1,
+            account_id = testAccount.id,
+            kid = generatedKid,
+            key = TEST_KEY.replace("test-kid", generatedKid),
+            created_at = FIXED_TIMESTAMP,
+            revoked_at = null,
+            revoked_reason = null
         )
-        val expectedJwt = "test.jwt.token"
+
+        val jwks = listOf(jwk)
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns "test-identifier"
-        every { kmsClient.sign(any(), any(), TEST_KID) } returns expectedJwt
 
         val result = jwkService.getFederationHistoricalKeysJwt(testAccount.toDTO(), accountService)
 
-        assertEquals(expectedJwt, result)
+        assertNotNull(result)
         verify { jwkQueries.findByAccountId(testAccount.id) }
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
-        verify { kmsClient.sign(any(), any(), TEST_KID) }
     }
 
     @Test
-    fun `get federation historical keys jwt fails when no keys exist`() {
+    fun `get federation historical keys jwt fails when no keys exist`() = testScope.runTest {
         val accountService = mockk<AccountService>()
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()

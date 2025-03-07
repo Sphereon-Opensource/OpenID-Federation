@@ -11,24 +11,30 @@ androidx-espresso-core = "3.5.1"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.1.5"
 compose-plugin = "1.6.10"
+hikari = "6.2.1"
 junit = "4.13.2"
-kotlin = "2.0.0"
+kache = "2.1.1"
+kotlin = "2.1.10"
 ktor = "2.3.12"
-kotlinxSerialization = "1.7.1"
-kotlinxCoroutines = "1.8.0"
-springboot = "3.3.1"
-springDependencyManagement = "1.1.5"
-kermitLogging = "2.0.4"
-kotlinxDatetime = "0.6.1"
-sqldelight = "2.0.2"
-hikari = "5.1.0"
-postgresql = "42.7.3"
+kotlinxCoroutines = "1.9.0"
+kotlinxDatetime = "0.6.2"
+kotlinxSerialization = "1.7.3"
+kover = "0.9.1"
+mockk = "1.13.17"
 nimbusJoseJwt = "9.40"
+npmPublish = "3.5.3"
+openapi = "7.7.0"
+sphereonKmp = "0.2.0-SNAPSHOT.25"
+springboot = "3.4.3"
+springDependencyManagement = "1.1.7"
+kermitLogging = "2.0.5"
+sqldelight = "2.0.2"
+postgresql = "42.7.3"
+projectreactor = "1.2.3"
+testcontainers = "1.20.6"
+whyoleg-cryptography = "0.4.0"
 
 [libraries]
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-junit" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-espresso-core" }
@@ -36,14 +42,23 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 androidx-material = { group = "com.google.android.material", name = "material", version.ref = "androidx-material" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+kache = { module = "com.mayakapps.kache:kache", version.ref = "kache" }
+kache-file = { module = "com.mayakapps.kache:file-kache", version.ref = "kache" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-core-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-js", version.ref = "kotlinxCoroutines" }
-
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test-js", version.ref = "kotlinxCoroutines" }
 kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging" }
+kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-core-jvm = { module = "io.ktor:ktor-client-core-jvm", version.ref = "ktor" }
 ktor-client-core-js = { module = "io.ktor:ktor-client-core-js", version.ref = "ktor" }
@@ -57,31 +72,39 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-cio-jvm = { module = "io.ktor:ktor-client-cio-jvm", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
-
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
-springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator" }
-springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web" }
-springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc" }
-springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools" }
-springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test" }
-postgres = { module = "org.postgresql:postgresql" }
-springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers" }
-testcontainer-postgres = { group = "org.testcontainers", name = "postgresql" }
-testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
-sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
-hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
-postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-
+postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
+projectreactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version.ref = "projectreactor" }
+sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto = { module = "com.sphereon.kmp:sphereon-kmp-crypto-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
+springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator", version.ref = "springboot" }
+springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security", version.ref = "springboot" }
+springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server", version.ref = "springboot" }
+springboot-oauth2-client = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-client", version.ref = "springboot" }
+springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web", version.ref = "springboot" }
+springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc", version.ref = "springboot" }
+springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
+springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
+springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
+sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
+testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
+testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
+whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinPluginSpring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+openapiGenerator = { id = "org.openapi.generator", version.ref = "openapi" }
+npmPublish = { id = "dev.petuska.npm.publish", version.ref = "npmPublish" }
 springboot = { id = "org.springframework.boot", version.ref = "springboot" }
 springDependencyManagement = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
-kotlinPluginSpring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }

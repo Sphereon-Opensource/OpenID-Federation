@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
@@ -7,35 +8,38 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.oid.fed.openapi.models.HistoricalKey
-import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.jwk.toDTO
 import com.sphereon.oid.fed.services.mappers.jwk.toHistoricalKey
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope.coroutineContext
+import kotlinx.coroutines.runBlocking
 
 class JwkService(
-    private val kmsClient: KmsClient
+    private val kmsProvider: IKeyManagementSystem
 ) {
     private val logger = Logger.tag("KeyService")
     private val jwkQueries = Persistence.jwkQueries
 
+    @OptIn(DelicateCoroutinesApi::class)
     fun createKey(account: Account): AccountJwk {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        val jwk = kmsClient.generateKeyPair()
-        logger.debug("Generated key pair with KID: ${jwk.kid}")
+        return runBlocking(coroutineContext) {
+            val jwk = kmsProvider.generateKeyAsync()
+            logger.debug("Generated key pair with KID: ${jwk.kid}")
 
-        val createdJwk = jwkQueries.create(
-            account_id = account.id,
-            kid = jwk.kid,
-            key = Json.encodeToString(JwkWithPrivateKey.serializer(), jwk),
-        ).executeAsOne()
-        logger.info("Successfully created key with KID: ${jwk.kid} for account ID: ${account.id}")
+            val createdJwk = jwkQueries.create(
+                account_id = account.id,
+                kid = jwk.kid,
+                key = jwk.jose.publicJwk.toJsonString()
+            ).executeAsOne()
+            logger.info("Successfully created key with KID: ${jwk.kid} for account ID: ${account.id}")
 
-        return createdJwk.toDTO()
+            createdJwk.toDTO()
+        }
     }
 
     fun getKeys(account: Account): Array<AccountJwk> {
@@ -80,7 +84,7 @@ class JwkService(
         }.toTypedArray()
     }
 
-    fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String {
+    suspend fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String {
         val iss = accountService.getAccountIdentifierByAccount(account)
 
         val historicalKeysJwkObject = FederationHistoricalKeysResponse(
@@ -96,16 +100,12 @@ class JwkService(
             throw IllegalArgumentException("The system is in an invalid state.")
         }
 
-        val key = keys[0].kid
+        val kid = keys[0].kid!!
 
-        val jwt = kmsClient.sign(
-            payload = Json.encodeToJsonElement(
-                FederationHistoricalKeysResponse.serializer(),
-                historicalKeysJwkObject
-            ).jsonObject,
-            header = JwtHeader(typ = "jwk-set+jwt", kid = key!!),
-            keyId = key
-        )
+        val header = JwtHeader(typ = "jwk-set+jwt", kid = kid)
+
+        val jwtService = JwtService(kmsProvider)
+        val jwt = jwtService.signSerializable(historicalKeysJwkObject, header, kid)
 
         logger.verbose("Successfully built federation historical keys JWT for username: ${account.username}")
         logger.debug("JWT: $jwt")

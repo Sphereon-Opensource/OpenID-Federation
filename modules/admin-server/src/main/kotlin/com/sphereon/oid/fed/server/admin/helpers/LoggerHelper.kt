@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletRequest
 
 class LoggerHelper {
     companion object {
-        private val logger = Logger.tag("RequestLogger")
+        private val logger = Logger.tag("AdminServerRequestLogger")
         private val sensitiveHeaders = setOf(
             "authorization",
             "x-api-key",
@@ -45,9 +45,10 @@ class LoggerHelper {
                 }
             }
 
+
             logger.debug(
                 message = "Received $operation request",
-                context = metadata
+                metadata = metadata
             )
         }
 
@@ -61,7 +62,7 @@ class LoggerHelper {
 
             logger.info(
                 message = "Received $operation request",
-                context = metadata
+                metadata = metadata
             )
         }
     }
