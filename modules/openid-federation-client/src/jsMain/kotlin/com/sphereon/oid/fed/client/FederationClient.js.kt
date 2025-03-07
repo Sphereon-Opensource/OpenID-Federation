@@ -6,11 +6,11 @@ import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.
 import com.sphereon.oid.fed.client.services.trustChainService.TrustChainService
 import com.sphereon.oid.fed.client.services.trustMarkService.TrustMarkService
 import com.sphereon.oid.fed.client.types.ICryptoService
-import com.sphereon.oid.fed.client.types.TrustChainResolveResponse
-import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
-import com.sphereon.oid.fed.client.types.VerifyTrustChainResponse
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.TrustChainResolveResponse
+import com.sphereon.oid.fed.openapi.models.TrustMarkValidationResponse
+import com.sphereon.oid.fed.openapi.models.VerifyTrustChainResponse
 import io.ktor.client.*
 import io.ktor.client.engine.js.*
 import io.ktor.client.plugins.*

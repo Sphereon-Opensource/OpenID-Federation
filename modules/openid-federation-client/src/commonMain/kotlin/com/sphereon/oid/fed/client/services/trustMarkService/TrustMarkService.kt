@@ -5,10 +5,10 @@ import com.sphereon.oid.fed.client.helpers.findKeyInJwks
 import com.sphereon.oid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.oid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.oid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementService
-import com.sphereon.oid.fed.client.types.TrustMarkValidationResponse
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.Jwt
 import com.sphereon.oid.fed.openapi.models.TrustMarkOwner
+import com.sphereon.oid.fed.openapi.models.TrustMarkValidationResponse
 import kotlinx.serialization.json.jsonPrimitive
 
 private val logger = TrustMarkServiceConst.LOG

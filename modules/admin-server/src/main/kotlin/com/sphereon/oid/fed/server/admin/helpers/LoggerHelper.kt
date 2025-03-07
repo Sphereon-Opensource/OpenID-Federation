@@ -5,7 +5,7 @@ import jakarta.servlet.http.HttpServletRequest
 
 class LoggerHelper {
     companion object {
-        private val logger = Logger.tag("RequestLogger")
+        private val logger = Logger.tag("AdminServerRequestLogger")
         private val sensitiveHeaders = setOf(
             "authorization",
             "x-api-key",

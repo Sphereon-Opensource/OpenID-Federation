@@ -8,6 +8,8 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateTrustMark
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
+import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
@@ -583,5 +585,319 @@ class TrustMarkServiceTest {
         val result = trustMarkService.getTrustMarkStatus(testAccount.toDTO(), request)
 
         assertFalse(result)
+    }
+
+    @Test
+    fun `get trust marked subs returns filtered subjects when sub is provided`() {
+        val request = TrustMarkListRequest(
+            trustMarkId = TEST_IDENTIFIER,
+            sub = TEST_SUB
+        )
+
+        val subjects = listOf(TEST_SUB)
+
+        every {
+            trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub!!
+            ).executeAsList()
+        } returns subjects
+
+        val result = trustMarkService.getTrustMarkedSubs(testAccount.toDTO(), request)
+
+        assertEquals(1, result.size)
+        assertEquals(TEST_SUB, result[0])
+        verify {
+            trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub!!
+            )
+        }
+    }
+
+    @Test
+    fun `get trust marked subs returns all subjects when no sub is provided`() {
+        val request = TrustMarkListRequest(
+            trustMarkId = TEST_IDENTIFIER,
+            sub = null
+        )
+
+        val subjects = listOf(TEST_SUB, "https://another-subject.com")
+
+        every {
+            trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier(
+                testAccount.id,
+                request.trustMarkId
+            ).executeAsList()
+        } returns subjects
+
+        val result = trustMarkService.getTrustMarkedSubs(testAccount.toDTO(), request)
+
+        assertEquals(2, result.size)
+        assertTrue(result.contains(TEST_SUB))
+        assertTrue(result.contains("https://another-subject.com"))
+        verify {
+            trustMarkQueries.findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier(
+                testAccount.id,
+                request.trustMarkId
+            )
+        }
+    }
+
+    @Test
+    fun `get trust mark returns trust mark value for valid request`() {
+        val request = TrustMarkRequest(
+            trustMarkId = TEST_IDENTIFIER,
+            sub = TEST_SUB
+        )
+
+        val trustMark = TrustMarkEntity(
+            id = 1,
+            account_id = testAccount.id,
+            sub = TEST_SUB,
+            trust_mark_type_identifier = TEST_IDENTIFIER,
+            exp = null,
+            iat = (System.currentTimeMillis() / 1000).toInt(),
+            trust_mark_value = "test-trust-mark-jwt",
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+
+        every {
+            trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub
+            ).executeAsOneOrNull()
+        } returns trustMark
+
+        val result = trustMarkService.getTrustMark(testAccount.toDTO(), request)
+
+        assertEquals("test-trust-mark-jwt", result)
+        verify {
+            trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub
+            )
+        }
+    }
+
+    @Test
+    fun `get trust mark throws NotFoundException when trust mark does not exist`() {
+        val request = TrustMarkRequest(
+            trustMarkId = TEST_IDENTIFIER,
+            sub = TEST_SUB
+        )
+
+        every {
+            trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub
+            ).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            trustMarkService.getTrustMark(testAccount.toDTO(), request)
+        }
+        verify {
+            trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(
+                testAccount.id,
+                request.trustMarkId,
+                request.sub
+            )
+        }
+    }
+
+    @Test
+    fun `get trust marks for account returns all trust marks`() {
+        val trustMarks = listOf(
+            TrustMarkEntity(
+                id = 1,
+                account_id = testAccount.id,
+                sub = TEST_SUB,
+                trust_mark_type_identifier = TEST_IDENTIFIER,
+                exp = null,
+                iat = (System.currentTimeMillis() / 1000).toInt(),
+                trust_mark_value = "test-trust-mark-jwt-1",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            ),
+            TrustMarkEntity(
+                id = 2,
+                account_id = testAccount.id,
+                sub = "https://another-subject.com",
+                trust_mark_type_identifier = "another-type",
+                exp = null,
+                iat = (System.currentTimeMillis() / 1000).toInt(),
+                trust_mark_value = "test-trust-mark-jwt-2",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            )
+        )
+
+        every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns trustMarks
+
+        val result = trustMarkService.getTrustMarksForAccount(testAccount.toDTO())
+
+        assertNotNull(result)
+        assertEquals(2, result.size)
+        verify { trustMarkQueries.findByAccountId(testAccount.id) }
+    }
+
+    @Test
+    fun `get trust marks for account returns empty list when no trust marks exist`() {
+        every { trustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
+
+        val result = trustMarkService.getTrustMarksForAccount(testAccount.toDTO())
+
+        assertTrue(result.isEmpty())
+        verify { trustMarkQueries.findByAccountId(testAccount.id) }
+    }
+
+    @Test
+    fun `delete trust mark type fails for non-existent type`() {
+        val nonExistentTypeId = 999
+
+        every {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            trustMarkService.deleteTrustMarkType(testAccount.toDTO(), nonExistentTypeId)
+        }
+
+        verify {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId)
+        }
+    }
+
+    @Test
+    fun `get issuers fails when trust mark type does not exist`() {
+        val nonExistentTypeId = 999
+
+        every {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            trustMarkService.getIssuersForTrustMarkType(testAccount.toDTO(), nonExistentTypeId)
+        }
+
+        verify {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId)
+        }
+    }
+
+    @Test
+    fun `add issuer fails when trust mark type does not exist`() {
+        val nonExistentTypeId = 999
+        val issuerIdentifier = "https://test-issuer.com"
+
+        every {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            trustMarkService.addIssuerToTrustMarkType(
+                testAccount.toDTO(),
+                nonExistentTypeId,
+                issuerIdentifier
+            )
+        }
+
+        verify {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId)
+        }
+    }
+
+    @Test
+    fun `remove issuer fails when trust mark type does not exist`() {
+        val nonExistentTypeId = 999
+        val issuerIdentifier = "https://test-issuer.com"
+
+        every {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
+        } returns null
+
+        assertFailsWith<NotFoundException> {
+            trustMarkService.removeIssuerFromTrustMarkType(
+                testAccount.toDTO(),
+                nonExistentTypeId,
+                issuerIdentifier
+            )
+        }
+
+        verify {
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId)
+        }
+    }
+
+    @Test
+    fun `create trust mark with expiration succeeds`() = runTest {
+        val expirationTime = (System.currentTimeMillis() / 1000 + 3600).toInt() // 1 hour from now
+        val createDto = CreateTrustMark(
+            sub = TEST_SUB,
+            trustMarkTypeIdentifier = TEST_IDENTIFIER,
+            exp = expirationTime,
+            logoUri = null,
+            ref = null,
+            delegation = null
+        )
+
+        val key = kmsProvider.generateKeyAsync()
+
+        val keys = arrayOf(
+            AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+        )
+
+        every { jwkService.getKeys(testAccount.toDTO()) } returns keys
+        every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
+
+        val expectedIat = (FIXED_TIMESTAMP.toEpochSecond(ZoneOffset.UTC)).toInt()
+        val createdTrustMark = TrustMarkEntity(
+            id = 1,
+            account_id = testAccount.id,
+            sub = TEST_SUB,
+            trust_mark_type_identifier = TEST_IDENTIFIER,
+            exp = expirationTime,
+            iat = expectedIat,
+            trust_mark_value = "TEST_JWT",
+            created_at = FIXED_TIMESTAMP,
+            deleted_at = null
+        )
+        val queryResult = mockk<Query<TrustMarkEntity>>()
+        every { queryResult.executeAsOne() } returns createdTrustMark
+        every {
+            trustMarkQueries.create(
+                account_id = testAccount.id,
+                sub = TEST_SUB,
+                trust_mark_type_identifier = TEST_IDENTIFIER,
+                exp = expirationTime,
+                iat = expectedIat,
+                trust_mark_value = any()
+            )
+        } returns queryResult
+
+        val result = trustMarkService.createTrustMark(
+            testAccount.toDTO(),
+            createDto,
+            FIXED_TIMESTAMP.toEpochSecond(ZoneOffset.UTC) * 1000
+        )
+
+        assertNotNull(result)
+        verify {
+            trustMarkQueries.create(
+                account_id = testAccount.id,
+                sub = TEST_SUB,
+                trust_mark_type_identifier = TEST_IDENTIFIER,
+                exp = expirationTime,
+                iat = expectedIat,
+                trust_mark_value = any()
+            )
+        }
     }
 }
