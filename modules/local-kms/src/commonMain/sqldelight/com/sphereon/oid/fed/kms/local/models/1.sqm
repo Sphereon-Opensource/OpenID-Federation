@@ -1,5 +1,0 @@
-CREATE TABLE Keys (
-    id TEXT PRIMARY KEY,
-    key TEXT NOT NULL,
-    deleted_at BIGINT
-);

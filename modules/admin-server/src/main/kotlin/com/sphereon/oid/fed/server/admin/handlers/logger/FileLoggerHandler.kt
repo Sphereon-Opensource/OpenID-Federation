@@ -1,10 +1,15 @@
 package com.sphereon.oid.fed.server.admin.handlers.logger
 
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.logger.LoggerConfig
+import com.sphereon.oid.fed.logger.LoggerOutputFormatEnum
 import java.io.File
 import java.nio.file.Files
 
-class FileLoggerHandler(private val logFile: File) : Logger.LogWriter {
+class FileLoggerHandler(
+    private val logFile: File,
+    private val config: LoggerConfig = LoggerConfig()
+) : Logger.LogWriter {
     init {
         try {
             println("Attempting to initialize log file at: ${logFile.absolutePath}")
@@ -63,7 +68,11 @@ class FileLoggerHandler(private val logFile: File) : Logger.LogWriter {
     override fun log(event: Logger.LogEvent) {
         synchronized(this) {
             try {
-                logFile.appendText("${event.formattedMessage}\n")
+                val logMessage = when (config.output) {
+                    LoggerOutputFormatEnum.TEXT -> event.formattedMessage
+                    LoggerOutputFormatEnum.JSON -> event.toJson()
+                }
+                logFile.appendText("$logMessage\n")
             } catch (e: Exception) {
                 println("Failed to write to log file: ${logFile.absolutePath}. Error: ${e.message}")
                 // Consider implementing a fallback logging mechanism here

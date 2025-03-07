@@ -1,11 +1,25 @@
 package com.sphereon.oid.fed.server.federation.controllers
 
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.ResolveResponse
+import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkStatusResponse
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.*
-import com.sphereon.oid.fed.services.mappers.toDTO
-import org.springframework.web.bind.annotation.*
+import com.sphereon.oid.fed.services.AccountService
+import com.sphereon.oid.fed.services.JwkService
+import com.sphereon.oid.fed.services.ResolveService
+import com.sphereon.oid.fed.services.SubordinateService
+import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.mappers.account.toDTO
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
 
 
 @RestController
@@ -145,13 +159,13 @@ class FederationController(
     }
 
     @GetMapping("/historical-keys", produces = ["application/jwk-set+jwt"])
-    fun getRootFederationHistoricalKeys(): String {
+    suspend fun getRootFederationHistoricalKeys(): String {
         val account = accountQueries.findByUsername("root").executeAsOne()
         return jwkService.getFederationHistoricalKeysJwt(account.toDTO(), accountService)
     }
 
     @GetMapping("/{username}/historical-keys", produces = ["application/jwk-set+jwt"])
-    fun getFederationHistoricalKeys(@PathVariable username: String): String {
+    suspend fun getFederationHistoricalKeys(@PathVariable username: String): String {
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
         return jwkService.getFederationHistoricalKeysJwt(account.toDTO(), accountService)

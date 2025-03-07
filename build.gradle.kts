@@ -92,7 +92,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.4.23-SNAPSHOT"
+    version = "0.4.27-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     // Common repository configuration for all projects
@@ -138,7 +138,7 @@ tasks.register("checkDockerStatus") {
     doLast {
         val output = ByteArrayOutputStream()
         val process = exec {
-            commandLine("docker", "compose", "ps", "-q", "db", "local-kms-db")
+            commandLine("docker", "compose", "ps", "-q", "db")
             isIgnoreExitValue = true
             standardOutput = output
         }
@@ -159,7 +159,7 @@ tasks.register("dockerCleanup") {
     description = "Stops and removes specific Docker containers"
     doLast {
         exec {
-            commandLine("docker", "compose", "rm", "-fsv", "db", "local-kms-db")
+            commandLine("docker", "compose", "rm", "-fsv", "db")
         }
     }
 }
@@ -205,7 +205,7 @@ tasks.register("dockerStart") {
     description = "Starts specific Docker containers"
     doLast {
         exec {
-            commandLine("docker", "compose", "up", "-d", "db", "local-kms-db")
+            commandLine("docker", "compose", "up", "-d", "db")
         }
         waitForDatabase()
     }
@@ -219,10 +219,10 @@ tasks.register("dockerEnsureRunning") {
     doLast {
         if (!project.ext.has("containersRunning") || !project.ext.get("containersRunning").toString().toBoolean()) {
             exec {
-                commandLine("docker", "compose", "rm", "-fsv", "db", "local-kms-db")
+                commandLine("docker", "compose", "rm", "-fsv", "db")
             }
             exec {
-                commandLine("docker", "compose", "up", "-d", "db", "local-kms-db")
+                commandLine("docker", "compose", "up", "-d", "db")
             }
         }
         waitForDatabase()

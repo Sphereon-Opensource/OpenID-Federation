@@ -1647,8 +1647,6 @@ components:
 
     Jwk:
       type: object
-      x-tags:
-        - federation
       required:
         - kty
         - kid
@@ -1784,8 +1782,6 @@ components:
 
     CreateCrit:
       type: object
-      x-tags:
-        - federation
       properties:
         claim:
           type: string
@@ -1867,8 +1863,6 @@ components:
 
     CreateTrustMarkType:
       type: object
-      x-tags:
-        - federation
       properties:
         identifier:
           type: string
@@ -1879,8 +1873,6 @@ components:
 
     CreateTrustMarkTypeIssuer:
       type: object
-      x-tags:
-        - federation
       properties:
         identifier:
           type: string
@@ -1912,8 +1904,6 @@ components:
 
     ErrorResponse:
       type: object
-      x-tags:
-        - federation
       required:
         - error
         - message
@@ -1934,8 +1924,6 @@ components:
 
     FederationEntityMetadata:
       type: object
-      x-tags:
-        - federation
       properties:
         federation_fetch_endpoint:
           type: string
@@ -1975,8 +1963,6 @@ components:
 
     FederationHistoricalKeysResponse:
       type: object
-      x-tags:
-        - federation
       required:
         - iss
         - iat
@@ -2054,8 +2040,6 @@ components:
 
     JwkRevoked:
       type: object
-      x-tags:
-        - federation
       required:
         - revoked_at
       properties:
@@ -2118,8 +2102,6 @@ components:
 
     JwtHeader:
       type: object
-      x-tags:
-        - federation
       required:
         - kid
       properties:
@@ -2211,8 +2193,6 @@ components:
 
     PublishStatementRequest:
       type: object
-      x-tags:
-        - federation
       properties:
         dry-run:
           type: boolean
@@ -2246,8 +2226,6 @@ components:
 
     ResolveResponse:
       type: object
-      x-tags:
-        - federation
       required:
         - iss
         - sub
@@ -2321,8 +2299,6 @@ components:
 
     SubordinateJwk:
       type: object
-      x-tags:
-        - federation
       properties:
         id:
           type: integer
@@ -2343,8 +2319,6 @@ components:
 
     SubordinateMetadata:
       type: object
-      x-tags:
-        - federation
       properties:
         id:
           type: integer
@@ -2434,8 +2408,6 @@ components:
           example: UP
     TrustMark:
       type: object
-      x-tags:
-        - federation
       properties:
         id:
           type: string
@@ -2450,8 +2422,6 @@ components:
         - trust_mark
     TrustMarkIssuers:
       type: object
-      x-tags:
-        - federation
       description: A mapping of trust mark identifiers to their associated issuers.
       additionalProperties:
         type: array
@@ -2470,8 +2440,6 @@ components:
 
     TrustMarkOwners:
       type: object
-      x-tags:
-        - federation
       additionalProperties:
         $ref: '#/components/schemas/TrustMarkOwner'
       example:
@@ -2487,8 +2455,6 @@ components:
                 use: sig
     TrustMarkOwner:
       type: object
-      x-tags:
-        - federation
       properties:
         sub:
           type: string
@@ -2595,8 +2561,6 @@ components:
 
     TrustMarkType:
       type: object
-      x-tags:
-        - federation
       properties:
         id:
           type: integer
@@ -2623,3 +2587,36 @@ components:
         - name
         - issuerPolicy
         - createdAt
+    VerifyTrustChainResponse:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        errorMessage:
+          type: string
+      required:
+        - isValid
+    TrustChainResolveResponse:
+      type: object
+      properties:
+        trustChain:
+          type: array
+          nullable: true
+          description: A list of strings representing the resolved trust chain. Each string contains a JWT.
+          items:
+            type: string
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error message in case of a failure, if any.
+      required:
+        - error
+    TrustMarkValidationResponse:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+        errorMessage:
+          type: string
+      required:
+        - isValid

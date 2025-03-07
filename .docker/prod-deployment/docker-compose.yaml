@@ -19,23 +19,6 @@ services:
       retries: 20
     restart: unless-stopped
 
-  local-kms-db:
-    image: postgres:latest
-    container_name: openid-federation-local-kms-datastore
-    environment:
-      POSTGRES_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      POSTGRES_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      POSTGRES_DB: ${LOCAL_KMS_DATASOURCE_DB}
-    volumes:
-      - /mnt/openid-federation/volumes/local-kms:/var/lib/postgresql/data
-    networks:
-      - backend
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d ${LOCAL_KMS_DATASOURCE_DB} -U ${LOCAL_KMS_DATASOURCE_USER}" ]
-      interval: 3s
-      timeout: 5s
-      retries: 20
-
   federation-server:
     image: sphereonregistry.azurecr.io/federation-server:latest
     container_name: openid-federation-server
@@ -89,8 +72,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      local-kms-db:
-        condition: service_healthy
     networks:
       - frontend
       - backend
@@ -102,7 +83,7 @@ services:
       - "traefik.http.routers.federation-admin.tls.certresolver=acmeresolver"
       - "traefik.http.services.federation-admin.loadbalancer.server.port=8080"
       - "traefik.http.services.federation-admin.loadbalancer.server.scheme=http"
-         # IP Whitelist middleware
+      # IP Whitelist middleware
       - "traefik.http.routers.federation-admin.middlewares=admin-whitelist-sourceip"
       - "traefik.http.middlewares.admin-whitelist-sourceip.ipwhitelist.sourcerange=${ADMIN_IP_WHITELIST}"
     restart: unless-stopped

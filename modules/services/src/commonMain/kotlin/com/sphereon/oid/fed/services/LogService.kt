@@ -1,14 +1,15 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Log
 import com.sphereon.oid.fed.persistence.models.LogQueries
-import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.log.toDTO
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 open class LogService(private val logQueries: LogQueries) {
     fun insertLog(
-        severity: String,
+        severity: Logger.Severity,
         message: String,
         tag: String,
         timestamp: Long,
@@ -16,7 +17,7 @@ open class LogService(private val logQueries: LogQueries) {
         metadata: Map<String, String>
     ) {
         logQueries.insertLog(
-            severity = severity,
+            severity = severity.name,
             message = message,
             tag = tag,
             timestamp = timestamp,

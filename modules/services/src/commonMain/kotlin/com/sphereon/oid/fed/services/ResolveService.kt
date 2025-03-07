@@ -33,9 +33,9 @@ class ResolveService(
             // Get the trust chain from subject to trust anchor
             logger.debug("Resolving trust chain from $sub to trust anchor: $trustAnchor")
             val trustChainResolution = client.trustChainResolve(sub, arrayOf(trustAnchor))
-            logger.debug("Trust chain resolution completed: ${if (trustChainResolution.error) "failed" else "success"}")
+            logger.debug("Trust chain resolution completed: ${trustChainResolution.errorMessage ?: "success"}")
 
-            if (trustChainResolution.error) {
+            if (trustChainResolution.errorMessage != null) {
                 logger.error("Trust chain resolution failed: ${trustChainResolution.errorMessage}")
                 throw IllegalStateException("Failed to resolve trust chain: ${trustChainResolution.errorMessage}")
             }
@@ -77,12 +77,10 @@ class ResolveService(
         try {
             val metadata = statement.metadata ?: return JsonObject(mapOf())
 
-            // If entityTypes is null or empty, return all metadata
             if (entityTypes.isNullOrEmpty()) {
                 return metadata.jsonObject
             }
 
-            // Filter metadata based on entity types
             val filteredEntries = metadata.jsonObject.entries.filter { (key, _) ->
                 entityTypes.contains(key)
             }

@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.services.LogService
 class DatabaseLoggerHandler(private val logService: LogService) : Logger.LogWriter {
     override fun log(event: Logger.LogEvent) {
         logService.insertLog(
-            severity = event.severity.name,
+            severity = event.severity,
             message = event.message,
             tag = event.tag,
             timestamp = event.timestamp,
