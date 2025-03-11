@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.0.4
 tags:
   - name: accounts
     description: Account management operations
@@ -24,7 +24,7 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.1.0-d41
+  version: 0.4.0-d41
 servers:
   # Added by API Auto Mocking Plugin
   - description: SwaggerHub API Auto Mocking
@@ -37,6 +37,7 @@ paths:
       tags:
         - accounts
       summary: List all accounts
+      operationId: listAccounts
       security:
         - bearerAuth: [ ]
       description: Retrieve a list of all accounts.
@@ -67,6 +68,7 @@ paths:
       tags:
         - accounts
       summary: Register a new tenant account
+      operationId: registerNewTenantAccount
       security:
         - bearerAuth: [ ]
       description: Endpoint for an admin to create a new account.
@@ -101,6 +103,7 @@ paths:
       tags:
         - accounts
       summary: Delete current account
+      operationId: deleteCurrentAccount
       security:
         - bearerAuth: [ ]
       description: Delete the account.
@@ -131,6 +134,7 @@ paths:
       tags:
         - keys
       summary: List all keys
+      operationId: listKeys
       security:
         - bearerAuth: [ ]
       description: Retrieve all keys associated with the specified account.
@@ -170,6 +174,7 @@ paths:
       security:
         - bearerAuth: [ ]
       description: Create a new key for the specified account.
+      operationId: createKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -199,6 +204,7 @@ paths:
       security:
         - bearerAuth: [ ]
       description: Revoke a key by its ID for the specified account.
+      operationId: revokeKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: keyId
@@ -243,6 +249,7 @@ paths:
       tags:
         - metadata
       summary: Get entity configuration metadata
+      operationId: getEntityMetadata
       security:
         - bearerAuth: [ ]
       description: Retrieve metadata entries for a specified account.
@@ -273,6 +280,7 @@ paths:
       tags:
         - metadata
       summary: Create entity configuration metadata
+      operationId: createEntityMetadata
       security:
         - bearerAuth: [ ]
       description: Add a new metadata entry for the specified account.
@@ -309,6 +317,7 @@ paths:
       tags:
         - metadata
       summary: Delete account metadata
+      operationId: deleteEntityMetadata
       security:
         - bearerAuth: [ ]
       description: Deletes a specific metadata entry for the specified account.
@@ -350,6 +359,7 @@ paths:
       tags:
         - authority-hints
       summary: Get authority hints
+      operationId: getAuthorityHints
       security:
         - bearerAuth: [ ]
       description: Retrieve all authority hints for the specified account.
@@ -380,6 +390,7 @@ paths:
       tags:
         - authority-hints
       summary: Create an authority hint
+      operationId: createAuthorityHints
       security:
         - bearerAuth: [ ]
       description: Add a new authority hint for the specified account.
@@ -419,6 +430,7 @@ paths:
       security:
         - bearerAuth: [ ]
       description: Remove an authority hint by its ID for the specified account.
+      operationId: deleteAuthorityHints
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -454,6 +466,7 @@ paths:
       security:
         - bearerAuth: [ ]
       description: Retrieve the entity configuration statement for the specified account.
+      operationId: getEntityStatement
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -479,6 +492,7 @@ paths:
       tags:
         - entity-statements
       summary: Sign and publish entity configuration statement
+      operationId: signAndPublishEntityStatement
       security:
         - bearerAuth: [ ]
       description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
@@ -517,6 +531,7 @@ paths:
       tags:
         - subordinates
       summary: Get subordinates
+      operationId: listSubordinates
       security:
         - bearerAuth: [ ]
       description: Retrieve all subordinates associated with the specified account.
@@ -547,6 +562,7 @@ paths:
       tags:
         - subordinates
       summary: Create a subordinate
+      operationId: createSubordinate
       security:
         - bearerAuth: [ ]
       description: Create a subordinate for the specified account.
@@ -583,6 +599,7 @@ paths:
       tags:
         - subordinates
       summary: Delete subordinate
+      operationId: deleteSubordinate
       security:
         - bearerAuth: [ ]
       description: Deletes a specific subordinate for the specified account.
@@ -627,6 +644,7 @@ paths:
   '/subordinates/{id}/jwks':
     get:
       summary: Get subordinate JWKs
+      operationId: listJwksBySubordinateId
       tags:
         - subordinates
       security:
@@ -665,6 +683,7 @@ paths:
       tags:
         - subordinates
       summary: Create a subordinate JWK
+      operationId: createSubordinateJwk
       security:
         - bearerAuth: [ ]
       description: Create a JWK for the specified subordinate.
@@ -708,6 +727,7 @@ paths:
       tags:
         - subordinates
       summary: Delete subordinate JWK
+      operationId: deleteSubordinateJwk
       security:
         - bearerAuth: [ ]
       description: Delete a JWK associated with the specified subordinate.
@@ -750,6 +770,7 @@ paths:
       tags:
         - subordinates
       summary: Get subordinate metadata
+      operationId: getSubordinateMetadata
       security:
         - bearerAuth: [ ]
       description: Retrieve metadata associated with the specified subordinate.
@@ -786,6 +807,7 @@ paths:
       tags:
         - subordinates
       summary: Create subordinate metadata
+      operationId: createSubordinateMetadata
       security:
         - bearerAuth: [ ]
       description: Create metadata for the specified subordinate.
@@ -828,6 +850,7 @@ paths:
       tags:
         - subordinates
       summary: Delete subordinate metadata
+      operationId: deleteSubordinateMetadata
       security:
         - bearerAuth: [ ]
       description: Delete metadata associated with the specified subordinate.
@@ -869,6 +892,7 @@ paths:
       tags:
         - subordinates
       summary: Get subordinate statement object
+      operationId: getSubordinateSatement
       security:
         - bearerAuth: [ ]
       description: Retrieve the subordinate statement for the specified subordinate.
@@ -903,6 +927,7 @@ paths:
       tags:
         - subordinates
       summary: Sign and publish subordinate statement
+      operationId: signAndPublishSubordinateStatement
       security:
         - bearerAuth: [ ]
       description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
@@ -945,6 +970,7 @@ paths:
       tags:
         - trust-marks
       summary: Get all Trust Mark Types
+      operationId: listTrustMarkTypes
       security:
         - bearerAuth: [ ]
       parameters:
@@ -963,6 +989,7 @@ paths:
       tags:
         - trust-marks
       summary: Create a Trust Mark Type
+      operationId: createTrustMarkType
       security:
         - bearerAuth: [ ]
       parameters:
@@ -986,6 +1013,7 @@ paths:
       tags:
         - trust-marks
       summary: Get a Trust Mark Type by ID
+      operationId: getTrustMarkType
       security:
         - bearerAuth: [ ]
       parameters:
@@ -1006,6 +1034,7 @@ paths:
       tags:
         - trust-marks
       summary: Delete a Trust Mark Type
+      operationId: deleteTrustMarkType
       security:
         - bearerAuth: [ ]
       parameters:
@@ -1146,6 +1175,7 @@ paths:
       security:
         - bearerAuth: [ ]
       description: Create or update a Trust Mark for the specified account.
+      operationId: createTrustMark
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
@@ -1196,6 +1226,7 @@ paths:
       tags:
         - trust-marks
       summary: List Trust Marks
+      operationId: listTrustMarks
       security:
         - bearerAuth: [ ]
       description: List all Trust Marks for the specified account.
@@ -1237,6 +1268,7 @@ paths:
       tags:
         - trust-marks
       summary: Delete a Trust Mark
+      operationId: deleteTrustMark
       security:
         - bearerAuth: [ ]
       description: Delete an existing Trust Mark for the specified account.
@@ -1282,6 +1314,7 @@ paths:
       tags:
         - trust-marks
       summary: Create a Received Trust Mark
+      operationId: createReceivedTrustMark
       security:
         - bearerAuth: [ ]
       description: Create or update a received Trust Mark for the specified account.
@@ -1331,6 +1364,7 @@ paths:
       tags:
         - trust-marks
       summary: List Received Trust Marks
+      operationId: listReceivedTrustMarks
       security:
         - bearerAuth: [ ]
       description: Retrieve all received Trust Marks for the specified account.
@@ -1377,6 +1411,7 @@ paths:
       tags:
         - trust-marks
       summary: Delete a Received Trust Mark
+      operationId: deleteReceivedTrustMark
       security:
         - bearerAuth: [ ]
       description: Delete a specific received Trust Mark for the specified account.
@@ -1438,6 +1473,7 @@ paths:
   /logs:
     get:
       summary: Get recent logs
+      operationId: getLogs
       tags:
         - system
       security:
@@ -1477,6 +1513,7 @@ paths:
       tags:
         - system
       summary: Get logs by severity
+      operationId: getLogsBySeverity
       security:
         - bearerAuth: [ ]
       description: Retrieve logs filtered by severity level
@@ -1521,6 +1558,7 @@ paths:
       tags:
         - system
       summary: Get logs by tag
+      operationId: getLogsByTag
       security:
         - bearerAuth: [ ]
       description: Retrieve logs filtered by tag
@@ -1740,7 +1778,7 @@ components:
           description: Expiration time after which the statement MUST NOT be accepted for processing.
         iat:
           type: integer
-          format: date-time
+          format: int32
           description: The time the statement was issued.
         jwks:
           type: object
@@ -1989,12 +2027,12 @@ components:
           properties:
             iat:
               type: number
-              format: number
+              format: int32
               description: The time the key was issued.
               example: 1629936000
             exp:
               type: number
-              format: number
+              format: int32
               description: The time the key will expire.
               example: 1632528000
             revoked:
