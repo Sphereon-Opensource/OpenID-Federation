@@ -29,7 +29,20 @@ data class LoggerConfig(
     val severity: Logger.Severity = Logger.Severity.Info
 )
 
-class Logger internal constructor(private val tag: String = "", private val config: LoggerConfig = LoggerConfig()) {
+/**
+ * Logger class responsible for handling structured and configurable logging in the application.
+ * Provides methods to log messages at various severity levels (Verbose, Debug, Info, Warn, Error, Assert).
+ * Supports custom log formats, log writers, and a configurable logging mechanism.
+ *
+ * @constructor Creates a logger instance with a specific tag and configuration.
+ *
+ * @param tag A unique identifier for the source of the logs. Defaults to an empty string.
+ * @param config Configuration object specifying output formatting and minimum severity level.
+ */
+class Logger internal constructor(
+    private val tag: String = "",
+    private val config: LoggerConfig = LoggerConfig()
+) {
     enum class Severity {
         Verbose,
         Debug,
@@ -50,12 +63,28 @@ class Logger internal constructor(private val tag: String = "", private val conf
         }
     }
 
+    /**
+     * Interface representing a mechanism for writing log events to a specific destination.
+     *
+     * Log writers implementing this interface are responsible for handling log events based on their specific
+     * requirements, such as writing to files, databases, or external monitoring systems.
+     */
     interface LogWriter {
         val minSeverity: Severity get() = Severity.Verbose
         fun log(event: LogEvent)
         fun close() {}
     }
 
+    /**
+     * Represents a JSON-serializable log event with various attributes for logging purposes.
+     *
+     * @property severity The severity level of the log (e.g., Verbose, Debug, Info, etc.).
+     * @property message The log message providing details of the event.
+     * @property tag A label used to categorize the log for easier identification.
+     * @property timestamp The timestamp of when the log event occurred in milliseconds since the epoch.
+     * @property exception An optional exception information containing its message and stacktrace.
+     * @property metadata A map of additional key-value pairs providing context to the log event.
+     */
     @Serializable
     data class LogEventJson(
         val severity: String,
@@ -120,10 +149,27 @@ class Logger internal constructor(private val tag: String = "", private val conf
 
     private val logger = KermitLogger.withTag(tag)
 
+    /**
+     * Determines whether logging should occur based on the provided severity level.
+     *
+     * @param severity The severity level of the log message.
+     * @return True if the provided severity level is greater than or equal to the minimum
+     *         severity level defined in the logger configuration; otherwise, false.
+     */
     private fun shouldLog(severity: Severity): Boolean =
         severity.ordinal >= config.severity.ordinal
 
-    private fun createLogEvent(
+    /**
+     * Builds a LogEvent from the provided parameters.
+     *
+     * @param severity The severity level.
+     * @param message The log message.
+     * @param tag The tag for the log.
+     * @param throwable An optional throwable.
+     * @param metadata Additional metadata.
+     * @return A new LogEvent.
+     */
+    private fun buildLogEvent(
         severity: Severity,
         message: String,
         tag: String,
@@ -155,55 +201,60 @@ class Logger internal constructor(private val tag: String = "", private val conf
         dispatchToLogWriters(event)
     }
 
-    fun verbose(
+    /**
+     * Common logging function that does not log in case the severity is below the threshold.
+     *
+     * @param severity The severity level.
+     * @param message The log message.
+     * @param tag The log tag.
+     * @param throwable An optional throwable.
+     * @param metadata Additional metadata.
+     */
+    private fun logWithSeverity(
+        severity: Severity,
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
         metadata: Map<String, String> = emptyMap()
     ) {
-        if (!shouldLog(Severity.Verbose)) return
-        log(createLogEvent(Severity.Verbose, message, tag, throwable, metadata))
+        if (!shouldLog(severity)) return
+        log(buildLogEvent(severity, message, tag, throwable, metadata))
     }
+
+    fun verbose(
+        message: String,
+        tag: String = this.tag,
+        throwable: Throwable? = null,
+        metadata: Map<String, String> = emptyMap()
+    ) = logWithSeverity(Severity.Verbose, message, tag, throwable, metadata)
 
     fun debug(
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
         metadata: Map<String, String> = emptyMap()
-    ) {
-        if (!shouldLog(Severity.Debug)) return
-        log(createLogEvent(Severity.Debug, message, tag, throwable, metadata))
-    }
+    ) = logWithSeverity(Severity.Debug, message, tag, throwable, metadata)
 
     fun info(
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
         metadata: Map<String, String> = emptyMap()
-    ) {
-        if (!shouldLog(Severity.Info)) return
-        log(createLogEvent(Severity.Info, message, tag, throwable, metadata))
-    }
+    ) = logWithSeverity(Severity.Info, message, tag, throwable, metadata)
 
     fun warn(
         message: String,
         tag: String = this.tag,
         throwable: Throwable? = null,
         metadata: Map<String, String> = emptyMap()
-    ) {
-        if (!shouldLog(Severity.Warn)) return
-        log(createLogEvent(Severity.Warn, message, tag, throwable, metadata))
-    }
+    ) = logWithSeverity(Severity.Warn, message, tag, throwable, metadata)
 
     fun error(
         message: String,
         throwable: Throwable? = null,
         tag: String = this.tag,
         metadata: Map<String, String> = emptyMap()
-    ) {
-        if (!shouldLog(Severity.Error)) return
-        log(createLogEvent(Severity.Error, message, tag, throwable, metadata))
-    }
+    ) = logWithSeverity(Severity.Error, message, tag, throwable, metadata)
 
     private fun dispatchToLogWriters(event: LogEvent) {
         registeredLogWriters

@@ -4,7 +4,11 @@ plugins {
 }
 
 group = "com.sphereon.oid.fed.logger"
-
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 repositories {
     mavenCentral()
 }
@@ -23,6 +27,16 @@ kotlin {
                 implementation(libs.kermit.logging)
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.serialization.json)
+            }
+        }
+
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+                implementation(kotlin("test-common"))
+                implementation(kotlin("test-annotations-common"))
+                implementation(libs.ktor.client.mock)
+                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
