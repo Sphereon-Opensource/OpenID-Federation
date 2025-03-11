@@ -62,6 +62,35 @@ open class ServiceConfig {
         val providerType = environment.getProperty("sphereon.federation.service.kms.provider", "memory")
 
         return when (KmsType.fromString(providerType)) {
+            KmsType.AWS -> {
+                try {
+                    KmsService.createAwsKms(
+                        applicationId = environment.getRequiredProperty("sphereon.federation.aws.application-id"),
+                        region = environment.getRequiredProperty("sphereon.federation.aws.region"),
+                        accessKeyId = environment.getRequiredProperty("sphereon.federation.aws.access-key-id"),
+                        secretAccessKey = environment.getRequiredProperty("sphereon.federation.aws.secret-access-key"),
+                        maxRetries = environment.getProperty(
+                            "sphereon.federation.aws.max-retries",
+                            Int::class.java,
+                            10
+                        ),
+                        baseDelayInMS = environment.getProperty(
+                            "sphereon.federation.aws.base-delay",
+                            Long::class.java,
+                            500L
+                        ),
+                        maxDelayInMS = environment.getProperty(
+                            "sphereon.federation.aws.max-delay",
+                            Long::class.java,
+                            15000L
+                        )
+                    ).getKmsProvider()
+                } catch (e: Exception) {
+                    logger.error("Error initializing AWS KMS provider: ${e.message}")
+                    throw e
+                }
+            }
+
             KmsType.AZURE -> {
                 try {
                     KmsService.createAzureKms(

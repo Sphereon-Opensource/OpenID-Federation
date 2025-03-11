@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.sphereon.kmp.cbor)
     implementation(libs.sphereon.kmp.crypto)
     implementation(libs.sphereon.kmp.crypto.kms)
+    implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
     implementation(libs.whyoleg.cryptography.core)
     implementation(libs.kotlin.stdlib)
     implementation(libs.springboot.actuator)

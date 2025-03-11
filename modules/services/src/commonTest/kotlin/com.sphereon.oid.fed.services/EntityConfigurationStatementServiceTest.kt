@@ -1,7 +1,8 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.crypto.kms.EcDSACryptoProvider
+
 import com.sphereon.crypto.kms.IKeyManagementSystem
+import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.persistence.Persistence

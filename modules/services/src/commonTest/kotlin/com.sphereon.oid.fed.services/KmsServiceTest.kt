@@ -1,7 +1,9 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.crypto.kms.EcDSACryptoProvider
+
+import com.sphereon.crypto.kms.aws.AwsKmsCryptoProvider
 import com.sphereon.crypto.kms.azure.AzureKeyVaultCryptoProvider
+import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -36,12 +38,31 @@ class KmsServiceTest {
         assertIs<AzureKeyVaultCryptoProvider>(provider)
     }
 
+
+    @Test
+    fun `getKmsProvider returns AwsKeyVaultCryptoProvider when using AWS provider`() {
+        // Create KmsService with placeholder configuration
+        val kmsService = KmsService.createAwsKms(
+            applicationId = "test-app-id",
+            region = "eu-west-1",
+            accessKeyId = "test-access-key-id",
+            secretAccessKey = "test-secret-access-key"
+        )
+
+        val provider = kmsService.getKmsProvider()
+
+        assertNotNull(provider)
+        assertIs<AwsKmsCryptoProvider>(provider)
+    }
+
     @Test
     fun `fromString returns correct KmsProviderType for valid input`() {
         assertEquals(KmsType.MEMORY, KmsType.fromString("memory"))
         assertEquals(KmsType.MEMORY, KmsType.fromString("MeMoRy"))
         assertEquals(KmsType.AZURE, KmsType.fromString("azure"))
         assertEquals(KmsType.AZURE, KmsType.fromString("AZURE"))
+        assertEquals(KmsType.AWS, KmsType.fromString("aws"))
+        assertEquals(KmsType.AWS, KmsType.fromString("AWS"))
     }
 
     @Test
