@@ -90,9 +90,9 @@ class InMemoryCache<K : Any, V : Any>(
         return cache.getOrPut(key, creationFunction)
     }
 
-    override suspend fun getUnderCreationKeys(options: CacheOptions): Set<K> {
+    /*override suspend fun getUnderCreationKeys(options: CacheOptions): Set<K> {
         return cache.getUnderCreationKeys()
-    }
+    }*/
 
     override suspend fun put(key: K, value: V): V? {
         return cache.put(key, value)
@@ -109,20 +109,20 @@ class InMemoryCache<K : Any, V : Any>(
         cache.putAll(from)
     }
 
-    override suspend fun putAsync(
+   /* override suspend fun putAsync(
         key: K,
         creationFunction: suspend (key: K) -> V?
     ): Deferred<V?> {
         return cache.putAsync(key, creationFunction)
-    }
+    }*/
 
     override suspend fun remove(key: K): V? {
         return cache.remove(key)
     }
 
-    override suspend fun removeAllUnderCreation() {
+    /*override suspend fun removeAllUnderCreation() {
         cache.getUnderCreationKeys().forEach { cache.remove(it) }
-    }
+    }*/
 
     override suspend fun resize(maxSize: Long) {
         trimToSize(maxSize)

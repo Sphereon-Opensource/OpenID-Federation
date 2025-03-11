@@ -6,7 +6,11 @@ plugins {
 }
 
 group = "com.sphereon.oid.fed.services"
-
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 repositories {
     mavenCentral()
     mavenLocal()

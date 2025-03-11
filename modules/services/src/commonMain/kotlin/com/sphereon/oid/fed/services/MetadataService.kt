@@ -10,9 +10,32 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.metadata.toDTO
 import kotlinx.serialization.json.JsonObject
 
+/**
+ * The MetadataService class provides operations for managing metadata configurations associated
+ * with an account. The operations include creating, retrieving, and deleting metadata entries
+ * while ensuring certain constraints are adhered to, such as one metadata entry per account-key pair.
+ */
 class MetadataService {
+    /**
+     * Logger instance specifically tagged for the MetadataService class.
+     * Used to log messages and events related to metadata operations,
+     * facilitating easier debugging and tracing within this service.
+     */
     private val logger = Logger.tag("MetadataService")
 
+    /**
+     * Creates a new entity configuration metadata entry for a specified account and key.
+     * If metadata for the given account ID and key already exists, an exception is thrown.
+     * Logs the process and handles exceptions during the creation process.
+     *
+     * @param account The account for which the metadata is being created.
+     * @param key The unique key representing the metadata.
+     * @param metadata The metadata content to be associated with the account and key.
+     * @return The created Metadata object containing details of the newly created entity.
+     * @throws EntityAlreadyExistsException If metadata for the given account ID and key already exists.
+     * @throws IllegalStateException If the metadata creation fails unexpectedly.
+     * @throws Exception If any other error occurs during the creation process.
+     */
     fun createEntityConfigurationMetadata(
         account: Account,
         key: String,
@@ -46,6 +69,13 @@ class MetadataService {
         }
     }
 
+    /**
+     * Finds and retrieves a list of Metadata associated with the provided account.
+     *
+     * @param account The account for which metadata is to be fetched. Must be a valid Account object.
+     * @return A list of Metadata objects associated with the given account.
+     * @throws Exception if there is an error during the retrieval process.
+     */
     fun findByAccount(account: Account): List<Metadata> {
         logger.debug("Finding metadata for account: ${account.username}")
         try {
@@ -60,6 +90,15 @@ class MetadataService {
         }
     }
 
+    /**
+     * Deletes a metadata record associated with the given account and ID.
+     *
+     * @param account The account associated with the metadata to be deleted.
+     * @param id The unique identifier of the metadata record to delete.
+     * @return The deleted metadata record as a Metadata object.
+     * @throws NotFoundException If the metadata record is not found or does not belong to the given account.
+     * @throws Exception If an unexpected error occurs during the operation.
+     */
     fun deleteEntityConfigurationMetadata(account: Account, id: Int): Metadata {
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
         try {

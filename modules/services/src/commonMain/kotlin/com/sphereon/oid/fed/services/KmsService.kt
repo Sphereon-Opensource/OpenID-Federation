@@ -9,12 +9,12 @@ import com.sphereon.crypto.kms.azure.CredentialOpts
 import com.sphereon.crypto.kms.azure.ExponentialBackoffRetryOpts
 import com.sphereon.crypto.kms.azure.SecretCredentialOpts
 
-enum class KmsProviderType {
+enum class KmsType {
     MEMORY,
     AZURE;
 
     companion object {
-        fun fromString(value: String?): KmsProviderType {
+        fun fromString(value: String?): KmsType {
             return when (value?.lowercase()) {
                 "azure" -> AZURE
                 "memory" -> MEMORY
@@ -25,12 +25,12 @@ enum class KmsProviderType {
 }
 
 class KmsService private constructor(
-    provider: KmsProviderType,
+    provider: KmsType,
     azureConfig: AzureKeyVaultClientConfig?
 ) {
     private val kmsProvider: IKeyManagementSystem = when (provider) {
-        KmsProviderType.MEMORY -> EcDSACryptoProvider()
-        KmsProviderType.AZURE -> {
+        KmsType.MEMORY -> EcDSACryptoProvider()
+        KmsType.AZURE -> {
             requireNotNull(azureConfig) { "Azure configuration is required when using AZURE provider type" }
             AzureKeyVaultCryptoProvider(azureConfig)
         }
@@ -43,7 +43,7 @@ class KmsService private constructor(
          * Creates a KmsService with in-memory provider
          */
         fun createMemoryKms(): KmsService {
-            return KmsService(KmsProviderType.MEMORY, null)
+            return KmsService(KmsType.MEMORY, null)
         }
 
         /**
@@ -77,7 +77,7 @@ class KmsService private constructor(
                 )
             )
 
-            return KmsService(KmsProviderType.AZURE, config)
+            return KmsService(KmsType.AZURE, config)
         }
     }
 }

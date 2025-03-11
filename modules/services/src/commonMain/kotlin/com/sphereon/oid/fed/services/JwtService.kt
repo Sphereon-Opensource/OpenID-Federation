@@ -14,11 +14,12 @@ import kotlinx.serialization.serializer
  * Service for handling JWT creation, signing, and validation operations.
  * This centralizes all JWT operations to avoid redundancy across services.
  */
-class JwtService(private val kmsProvider: IKeyManagementSystem) {
+class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
+
     private val logger = Logger.tag("JwtService")
 
     /**
-     * Signs a payload with the specified key ID and returns a JWT
+     * Signs a payload with the specified key ID and returns a JWT.
      *
      * @param payload The payload to sign
      * @param header The JWT header
@@ -27,13 +28,7 @@ class JwtService(private val kmsProvider: IKeyManagementSystem) {
      */
     suspend fun sign(payload: JsonObject, header: JwtHeader, keyId: String): String {
         logger.debug("Signing payload with key: $keyId")
-
-        val headerJson = Json.encodeToJsonElement(JwtHeader.serializer(), header).jsonObject.toString()
-        val payloadJson = payload.toString()
-
-        // Create properly formatted base64url-encoded segments
-        val headerB64 = base64UrlEncode(headerJson.toByteArray())
-        val payloadB64 = base64UrlEncode(payloadJson.toByteArray())
+        val (headerB64, payloadB64) = prepareSigningInput(header, payload)
         val signingInput = "$headerB64.$payloadB64"
 
         val keyInfo = KeyInfo<Jwk>(
@@ -41,22 +36,20 @@ class JwtService(private val kmsProvider: IKeyManagementSystem) {
             kmsKeyRef = keyId
         )
 
-        // Sign the properly formatted message
-        val signature = kmsProvider.createRawSignatureAsync(
+        // Sign the properly formatted input
+        val signature = keyManagementSystem.createRawSignatureAsync(
             keyInfo,
             signingInput.toByteArray(),
             false
         )
-
         val signatureB64 = base64UrlEncode(signature)
         val jwt = "$headerB64.$payloadB64.$signatureB64"
-
         logger.debug("Successfully signed JWT with key: $keyId")
         return jwt
     }
 
     /**
-     * Signs a serializable payload object with the specified key ID and returns a JWT
+     * Signs a serializable payload object with the specified key ID and returns a JWT.
      *
      * @param payload The payload object to serialize and sign
      * @param header The JWT header
@@ -69,7 +62,22 @@ class JwtService(private val kmsProvider: IKeyManagementSystem) {
     }
 
     /**
-     * Utility function to perform base64url encoding
+     * Prepares the signing input by encoding the JWT header and payload.
+     *
+     * @param header The JWT header object
+     * @param payload The payload as a JsonObject
+     * @return A Pair containing the base64url-encoded header and payload
+     */
+    private fun prepareSigningInput(header: JwtHeader, payload: JsonObject): Pair<String, String> {
+        val headerJsonStr = Json.encodeToJsonElement(JwtHeader.serializer(), header).jsonObject.toString()
+        val payloadJsonStr = payload.toString()
+        val headerB64 = base64UrlEncode(headerJsonStr.toByteArray())
+        val payloadB64 = base64UrlEncode(payloadJsonStr.toByteArray())
+        return Pair(headerB64, payloadB64)
+    }
+
+    /**
+     * Utility function to perform base64url encoding.
      */
     private fun base64UrlEncode(input: ByteArray): String {
         val base64 = java.util.Base64.getEncoder().encodeToString(input)

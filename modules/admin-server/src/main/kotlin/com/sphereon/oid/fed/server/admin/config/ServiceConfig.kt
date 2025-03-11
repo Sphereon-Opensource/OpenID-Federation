@@ -5,15 +5,15 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.AuthorityHintService
-import com.sphereon.oid.fed.services.CritService
+import com.sphereon.oid.fed.services.CriticalClaimService
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.KmsProviderType
+import com.sphereon.oid.fed.services.KmsType
 import com.sphereon.oid.fed.services.KmsService
 import com.sphereon.oid.fed.services.LogService
 import com.sphereon.oid.fed.services.MetadataService
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
-import com.sphereon.oid.fed.services.ResolveService
+import com.sphereon.oid.fed.services.ResolutionService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
@@ -61,8 +61,8 @@ open class ServiceConfig {
     open fun kmsProvider(environment: Environment): IKeyManagementSystem {
         val providerType = environment.getProperty("sphereon.federation.service.kms.provider", "memory")
 
-        return when (KmsProviderType.fromString(providerType)) {
-            KmsProviderType.AZURE -> {
+        return when (KmsType.fromString(providerType)) {
+            KmsType.AZURE -> {
                 try {
                     KmsService.createAzureKms(
                         applicationId = environment.getRequiredProperty("sphereon.federation.azure.application-id"),
@@ -115,8 +115,8 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun critService(): CritService {
-        return CritService()
+    open fun critService(): CriticalClaimService {
+        return CriticalClaimService()
     }
 
     @Bean
@@ -136,8 +136,8 @@ open class ServiceConfig {
     @Bean
     open fun resolveService(
         accountService: AccountService,
-    ): ResolveService {
-        return ResolveService(
+    ): ResolutionService {
+        return ResolutionService(
             accountService
         )
     }

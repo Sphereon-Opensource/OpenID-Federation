@@ -10,106 +10,183 @@ import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.oid.fed.openapi.models.HistoricalKey
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.services.mappers.jwk.toDTO
 import com.sphereon.oid.fed.services.mappers.jwk.toHistoricalKey
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope.coroutineContext
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+/**
+ * Service responsible for operations related to JSON Web Keys (JWK).
+ *
+ * This service includes functionalities to create, manage, revoke, and retrieve keys associated with accounts,
+ * as well as generating federated historical keys in JWT format.
+ *
+ * @constructor Initializes the service with a specific key management system.
+ * @param keyManagementSystem The instance responsible for managing cryptographic keys.
+ */
 class JwkService(
-    private val kmsProvider: IKeyManagementSystem
+    private val keyManagementSystem: IKeyManagementSystem
 ) {
-    private val logger = Logger.tag("KeyService")
+    /**
+     * Companion object for the JwkService class.
+     * Provides constants and utility functions relevant to the service's operation.
+     */
+    companion object {
+        /**
+         * Represents the type of JWT (JSON Web Token) utilized in JWK (JSON Web Key) sets
+         * within the `JwkService` class. This constant defines the JWT type as "jwk-set+jwt",
+         * which is specifically used to signify the integration of JWTs with JWK sets in
+         * key management and cryptographic operations.
+         */
+        private const val JWT_TYPE = "jwk-set+jwt"
+    }
+
+    /**
+     * Logger instance used for logging events and debugging information within the `JwkService` class.
+     * It is configured with a specific tag ("JwkService") to differentiate logs emitted by this service from others.
+     */
+    private val logger = Logger.tag("JwkService")
+    /**
+     * A reference to the JWK (JSON Web Key) related database queries handled via the `Persistence` layer.
+     * This allows for operations such as storage, retrieval, and management of JWKs.
+     */
     private val jwkQueries = Persistence.jwkQueries
 
-    @OptIn(DelicateCoroutinesApi::class)
-    fun createKey(account: Account): AccountJwk {
+    /**
+     * Creates a new JSON Web Key (JWK) for the specified account and stores it in the system.
+     *
+     * The method generates a new key, assigns it to the provided account, and returns the created JWK object.
+     *
+     * @param account The account for which a new JWK is being created. It must include the unique account ID and username.
+     * @return The created JWK object associated with the specified account.
+     */
+    suspend fun createKey(account: Account): AccountJwk = withContext(Dispatchers.IO) {
         logger.info("Creating new key for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        return runBlocking(coroutineContext) {
-            val jwk = kmsProvider.generateKeyAsync()
-            logger.debug("Generated key pair with KID: ${jwk.kid}")
+        val generatedJwk = keyManagementSystem.generateKeyAsync()
+        requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
+        logger.debug("Generated key pair with KID: ${generatedJwk.kid}")
 
-            val createdJwk = jwkQueries.create(
-                account_id = account.id,
-                kid = jwk.kid,
-                key = jwk.jose.publicJwk.toJsonString()
-            ).executeAsOne()
-            logger.info("Successfully created key with KID: ${jwk.kid} for account ID: ${account.id}")
+        val createdKey = jwkQueries.create(
+            account_id = account.id,
+            kid = generatedJwk.kid,
+            key = generatedJwk.jose.publicJwk.toJsonString()
+        ).executeAsOne()
 
-            createdJwk.toDTO()
-        }
+        logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${account.id}")
+        createdKey.toDTO()
     }
 
+    /**
+     * Retrieves the keys associated with a given account.
+     *
+     * @param account The account for which the keys are to be retrieved.
+     * @return An array of AccountJwk objects representing the keys associated with the given account.
+     */
     fun getKeys(account: Account): Array<AccountJwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
-
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() }.toTypedArray()
+        val keys = jwkQueries.findByAccountId(account.id)
+            .executeAsList()
+            .map { it.toDTO() }
+            .toTypedArray()
         logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
         return keys
     }
 
+    /**
+     * Revokes a specific key associated with the provided account.
+     *
+     * @param account The account associated with the key to be revoked.
+     * @param keyId The unique identifier of the key to be revoked.
+     * @param reason An optional reason for revoking the key.
+     * @return The updated `AccountJwk` object representing the revoked key.
+     * @throws DataAccessException If an error occurs while accessing the data store.
+     * @throws NotFoundException If the key does not belong to the specified account.
+     */
     fun revokeKey(account: Account, keyId: Int, reason: String?): AccountJwk {
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        var key = jwkQueries.findById(keyId).executeAsOne()
+        var existingKey = jwkQueries.findById(keyId).executeAsOne()
         logger.debug("Found key with ID: $keyId")
 
-        if (key.account_id != account.id) {
-            logger.error("Key ID: $keyId does not belong to account: ${account.username}")
-            throw NotFoundException(Constants.KEY_NOT_FOUND)
-        }
-
+        ensureKeyOwnership(existingKey, account)
         try {
-            key = jwkQueries.revoke(reason, keyId).executeAsOne()
+            existingKey = jwkQueries.revoke(reason, keyId).executeAsOne()
             logger.debug("Revoked key ID: $keyId with reason: ${reason ?: "no reason provided"}")
             logger.info("Successfully revoked key ID: $keyId")
         } catch (e: Exception) {
+            // Assume DataAccessException represents data access errors
             logger.error("Failed to revoke key ID: $keyId due to: ${e.message}")
             throw e
         }
-
-        return key.toDTO()
+        return existingKey.toDTO()
     }
 
-    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
-        logger.debug("Retrieving federation historical keys for account: ${account.username}")
-        val keys = jwkQueries.findByAccountId(account.id).executeAsList()
-        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
+    /**
+     * Generates and returns a JWT representing the historical federation keys for the specified account.
+     *
+     * The JWT is created using the account's federation historical keys and signed with the primary key.
+     *
+     * @param account The account for which the federation historical keys JWT is being generated.
+     *                The account should include the necessary information like username and identifier.
+     * @param accountService The service used to interact with account-related functionality,
+     *                       such as retrieving account identifiers.
+     * @return A `String` representing the signed JWT containing the federation historical keys.
+     * @throws IllegalStateException If no keys are found for the account or if the primary key lacks an identifier.
+     */
+    suspend fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String =
+        withContext(Dispatchers.IO) {
+            val iss = accountService.getAccountIdentifierByAccount(account)
+            val federationKeysResponse = FederationHistoricalKeysResponse(
+                iss = iss,
+                iat = (System.currentTimeMillis() / 1000).toInt(),
+                propertyKeys = getFederationHistoricalKeys(account)
+            )
 
-        return keys.map {
-            it.toHistoricalKey()
-        }.toTypedArray()
-    }
+            val keys = getKeys(account)
+            if (keys.isEmpty()) {
+                logger.error("No keys found for account: ${account.username}")
+                throw IllegalStateException("The system is in an invalid state: no keys for account.")
+            }
+            // If the key's kid value is not set, explicitly throw an exception.
+            val kid = keys.firstOrNull()?.kid ?: throw IllegalStateException("Primary key has a null identifier.")
 
-    suspend fun getFederationHistoricalKeysJwt(account: Account, accountService: AccountService): String {
-        val iss = accountService.getAccountIdentifierByAccount(account)
-
-        val historicalKeysJwkObject = FederationHistoricalKeysResponse(
-            iss = iss,
-            iat = (System.currentTimeMillis() / 1000).toInt(),
-            propertyKeys = getFederationHistoricalKeys(account)
-        )
-
-        val keys = getKeys(account)
-
-        if (keys.isEmpty()) {
-            logger.error("No keys found for account: ${account.username}")
-            throw IllegalArgumentException("The system is in an invalid state.")
+            val header = JwtHeader(typ = JWT_TYPE, kid = kid)
+            val jwtService = JwtService(keyManagementSystem)
+            val jwt = jwtService.signSerializable(federationKeysResponse, header, kid)
+            logger.verbose("Successfully built federation historical keys JWT for username: ${account.username}")
+            logger.debug("JWT: $jwt")
+            jwt
         }
 
-        val kid = keys[0].kid!!
+    /**
+     * Ensures that the given JSON Web Key (JWK) belongs to the specified account.
+     * If the key does not belong to the account, an error is logged, and a NotFoundException is thrown.
+     *
+     * @param jwk The JSON Web Key to check ownership for.
+     * @param account The account to verify ownership against.
+     * @throws NotFoundException if the JWK does not belong to the specified account.
+     */
+    private fun ensureKeyOwnership(jwk: Jwk, account: Account) {
+        if (jwk.account_id != account.id) {
+            logger.error("Key does not belong to account: ${account.username}")
+            throw NotFoundException(Constants.KEY_NOT_FOUND)
+        }
+    }
 
-        val header = JwtHeader(typ = "jwk-set+jwt", kid = kid)
-
-        val jwtService = JwtService(kmsProvider)
-        val jwt = jwtService.signSerializable(historicalKeysJwkObject, header, kid)
-
-        logger.verbose("Successfully built federation historical keys JWT for username: ${account.username}")
-        logger.debug("JWT: $jwt")
-
-        return jwt
+    /**
+     * Retrieves the historical federation keys associated with a specific account.
+     *
+     * @param account The account for which the historical federation keys are being retrieved.
+     * @return An array of historical keys associated with the given account.
+     */
+    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
+        logger.debug("Retrieving federation historical keys for account: ${account.username}")
+        val records = jwkQueries.findByAccountId(account.id).executeAsList()
+        logger.debug("Found ${records.size} keys for account ID: ${account.id}")
+        return records.map { it.toHistoricalKey() }.toTypedArray()
     }
 }

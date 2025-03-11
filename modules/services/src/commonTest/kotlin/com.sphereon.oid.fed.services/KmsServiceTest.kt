@@ -38,20 +38,20 @@ class KmsServiceTest {
 
     @Test
     fun `fromString returns correct KmsProviderType for valid input`() {
-        assertEquals(KmsProviderType.MEMORY, KmsProviderType.fromString("memory"))
-        assertEquals(KmsProviderType.MEMORY, KmsProviderType.fromString("MeMoRy"))
-        assertEquals(KmsProviderType.AZURE, KmsProviderType.fromString("azure"))
-        assertEquals(KmsProviderType.AZURE, KmsProviderType.fromString("AZURE"))
+        assertEquals(KmsType.MEMORY, KmsType.fromString("memory"))
+        assertEquals(KmsType.MEMORY, KmsType.fromString("MeMoRy"))
+        assertEquals(KmsType.AZURE, KmsType.fromString("azure"))
+        assertEquals(KmsType.AZURE, KmsType.fromString("AZURE"))
     }
 
     @Test
     fun `fromString throws SecurityException for invalid input`() {
         assertFailsWith<SecurityException> {
-            KmsProviderType.fromString("invalid")
+            KmsType.fromString("invalid")
         }
 
         assertFailsWith<SecurityException> {
-            KmsProviderType.fromString("")
+            KmsType.fromString("")
         }
     }
 }

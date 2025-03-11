@@ -9,11 +9,12 @@ import com.sphereon.oid.fed.openapi.models.TrustMark
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 
-class ResolveService(
+class ResolutionService(
     private val accountService: AccountService,
 ) {
-    private val logger = Logger.tag("ResolveService")
+    private val logger = Logger.tag("ResolutionService")
     private val client = FederationClient()
+    private val ONE_DAY_IN_SEC = 3600 * 24
 
     suspend fun resolveEntity(
         account: Account,
@@ -53,21 +54,32 @@ class ResolveService(
             val currentTime = System.currentTimeMillis() / 1000
             logger.debug("Building resolve response with current time: $currentTime")
 
-            val response = ResolveResponse(
-                iss = accountService.getAccountIdentifierByAccount(account),
-                sub = sub,
-                iat = currentTime.toString(),
-                exp = (currentTime + 3600 * 24).toString(), // 24 hours expiration
-                metadata = filteredMetadata,
-                trustMarks = trustMarks,
-                trustChain = trustChainResolution.trustChain
-            )
+            val response = buildResolveResponse(currentTime, account, sub, filteredMetadata, trustMarks, trustChainResolution.trustChain)
             logger.debug("Successfully built resolve response")
             return response
         } catch (e: Exception) {
             logger.error("Failed to resolve entity for subject: $sub", e)
             throw e
         }
+    }
+
+    private fun buildResolveResponse(
+        currentTime: Long,
+        account: Account,
+        sub: String,
+        metadata: JsonObject,
+        trustMarks: Array<TrustMark>,
+        trustChain: Array<String>?
+    ): ResolveResponse {
+        return ResolveResponse(
+            iss = accountService.getAccountIdentifierByAccount(account),
+            sub = sub,
+            iat = currentTime.toString(),
+            exp = (currentTime + ONE_DAY_IN_SEC).toString(),
+            metadata = metadata,
+            trustMarks = trustMarks,
+            trustChain = trustChain
+        )
     }
 
     private fun getFilteredMetadata(

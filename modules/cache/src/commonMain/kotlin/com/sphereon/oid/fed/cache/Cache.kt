@@ -1,7 +1,12 @@
 package com.sphereon.oid.fed.cache
 
-import kotlinx.coroutines.Deferred
-
+/**
+ * Represents a generic cache interface for handling key-value pairs with additional functionalities such as size
+ * management, expiration handling, and data retrieval strategies.
+ *
+ * @param K The type of the keys maintained by this cache.
+ * @param V The type of mapped values in this cache.
+ */
 interface Cache<K, V> {
     suspend fun clear()
     suspend fun close()
@@ -22,7 +27,7 @@ interface Cache<K, V> {
         options: CacheOptions = CacheOptions()
     ): V?
 
-    suspend fun getUnderCreationKeys(options: CacheOptions = CacheOptions()): Set<K>
+//    suspend fun getUnderCreationKeys(options: CacheOptions = CacheOptions()): Set<K>
 
     suspend fun put(key: K, value: V): V?
     suspend fun put(
@@ -31,13 +36,13 @@ interface Cache<K, V> {
     ): V?
 
     suspend fun putAll(from: Map<out K, V>)
-    suspend fun putAsync(
-        key: K,
-        creationFunction: suspend (key: K) -> V?
-    ): Deferred<V?>
+//    suspend fun putAsync(
+//        key: K,
+//        creationFunction: suspend (key: K) -> V?
+//    ): Deferred<V?>
 
     suspend fun remove(key: K): V?
-    suspend fun removeAllUnderCreation()
+//    suspend fun removeAllUnderCreation()
 
     suspend fun resize(maxSize: Long)
     suspend fun getCurrentSize(options: CacheOptions = CacheOptions()): Long

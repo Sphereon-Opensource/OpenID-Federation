@@ -26,8 +26,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class ResolveServiceTest {
-    private lateinit var resolveService: ResolveService
+class ResolutionServiceTest {
+    private lateinit var resolutionService: ResolutionService
     private lateinit var accountService: AccountService
     private lateinit var federationClient: FederationClient
 
@@ -60,7 +60,7 @@ class ResolveServiceTest {
             )
         } returns TrustMarkValidationResponse(isValid = false, errorMessage = null)
 
-        resolveService = ResolveService(accountService)
+        resolutionService = ResolutionService(accountService)
     }
 
     @AfterTest
@@ -88,7 +88,7 @@ class ResolveServiceTest {
         } returns failedTrustChainResolution
 
         assertFailsWith<IllegalStateException> {
-            resolveService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, null)
+            resolutionService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, null)
         }
 
         coVerify { anyConstructed<FederationClient>().entityConfigurationStatementGet(SUBJECT) }
@@ -115,7 +115,7 @@ class ResolveServiceTest {
         } returns TrustMarkValidationResponse(isValid = false, errorMessage = null)
 
         val entityTypes = arrayOf("openid_relying_party")
-        val result = resolveService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, entityTypes)
+        val result = resolutionService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, entityTypes)
 
         assertNotNull(result.metadata)
         assertTrue(result.metadata.toString().contains("openid_relying_party"))
@@ -140,7 +140,7 @@ class ResolveServiceTest {
             federationClient.trustMarksVerify(any(), any())
         } returns TrustMarkValidationResponse(isValid = false, errorMessage = null)
 
-        val result = resolveService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, null)
+        val result = resolutionService.resolveEntity(account, SUBJECT, TRUST_ANCHOR, null)
 
         assertNotNull(result.metadata)
         assertTrue(result.metadata.toString().contains("openid_relying_party"))

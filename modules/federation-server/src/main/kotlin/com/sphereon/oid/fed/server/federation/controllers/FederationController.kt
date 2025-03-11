@@ -9,7 +9,7 @@ import com.sphereon.oid.fed.openapi.models.TrustMarkStatusResponse
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.ResolveService
+import com.sphereon.oid.fed.services.ResolutionService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.mappers.account.toDTO
@@ -29,7 +29,7 @@ class FederationController(
     private val subordinateService: SubordinateService,
     private val trustMarkService: TrustMarkService,
     private val jwkService: JwkService,
-    private val resolveService: ResolveService
+    private val resolutionService: ResolutionService
 ) {
     private val accountQueries = Persistence.accountQueries
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
@@ -178,7 +178,7 @@ class FederationController(
         @RequestParam("entity_type", required = false) entityTypes: Array<String>?
     ): ResolveResponse {
         val account = accountQueries.findByUsername("root").executeAsOne()
-        return resolveService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
+        return resolutionService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
     }
 
     @GetMapping("/{username}/resolve", produces = ["application/resolve-response+jwt"])
@@ -191,6 +191,6 @@ class FederationController(
         val account = accountQueries.findByUsername(username).executeAsOneOrNull()
             ?: throw NotFoundException("Account not found")
 
-        return resolveService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
+        return resolutionService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
     }
 }

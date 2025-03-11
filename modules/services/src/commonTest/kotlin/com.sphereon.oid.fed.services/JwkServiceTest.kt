@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.persistence.models.JwkQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
+import io.mockk.awaits
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -17,6 +18,7 @@ import io.mockk.verify
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import java.lang.IllegalStateException
 import java.time.LocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -212,7 +214,7 @@ class JwkServiceTest {
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns emptyList()
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns "test-identifier"
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<IllegalStateException> {
             jwkService.getFederationHistoricalKeysJwt(testAccount.toDTO(), accountService)
         }
         verify { jwkQueries.findByAccountId(testAccount.id) }
