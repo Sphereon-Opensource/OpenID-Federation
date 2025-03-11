@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    alias(libs.plugins.kover)
 }
 
 group = "com.sphereon.oid.fed.logger"

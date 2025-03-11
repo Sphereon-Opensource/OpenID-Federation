@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.npmPublish)
     id("maven-publish")
+    alias(libs.plugins.kover)
 }
 
 repositories {

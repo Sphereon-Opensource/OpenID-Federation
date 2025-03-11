@@ -6,7 +6,6 @@ import kotlin.js.JsExport
 /**
  * Interface for the FederationClient
  */
-@JsExport.Ignore
 interface IFederationClient {
     val cryptoServiceCallback: ICryptoService?
     val httpClient: HttpClient?

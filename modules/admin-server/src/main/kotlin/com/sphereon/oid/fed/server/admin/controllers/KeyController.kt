@@ -5,6 +5,7 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.services.JwkService
 import jakarta.servlet.http.HttpServletRequest
+import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -24,7 +25,7 @@ class KeyController(
     @ResponseStatus(HttpStatus.CREATED)
     fun create(request: HttpServletRequest): AccountJwk {
         val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return jwkService.createKey(account)
+        return runBlocking {  jwkService.createKey(account) }
     }
 
     @GetMapping
