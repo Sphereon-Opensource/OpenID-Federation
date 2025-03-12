@@ -92,8 +92,15 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "1.0.0-SNAPSHOT"
+    version = "0.6.0-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
+
+
+    configurations {
+        all {
+            exclude(group= "org.slf4j", module= "slf4j-simple")
+        }
+    }
 
     // Common repository configuration for all projects
     repositories {

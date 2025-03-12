@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.0.4
 info:
   title: OpenID Federation Server API
   description: This API exposes standardized OpenID Federation endpoints that enable entity participation within a federation through statement exchange, trust negotiation, and metadata discovery.
@@ -8,7 +8,7 @@ info:
   license:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-  version: 0.1.0-d41
+  version: 0.4.0-d41
 servers:
   - url: http://localhost:8080
     description: Federation Server
@@ -53,7 +53,7 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: fetchEntityStatement
   /list:
     get:
       tags:
@@ -99,12 +99,13 @@ paths:
           $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/ServerError'
+      operationId: listSubordinates
   /fetch:
     get:
       tags:
         - federation
       summary: Fetch Subordinate Statement
-      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub``.
+      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub`.
       parameters:
         - name: sub
           in: query
@@ -126,6 +127,7 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/ServerError'
+      operationId: fetchSubordinateStatement
   /resolve:
     get:
       tags:
@@ -162,7 +164,7 @@ paths:
           $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: resolveEntityStatement
   /trust-mark:
     get:
       tags:
@@ -195,7 +197,7 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: getTrustMark
   /trust-mark-status:
     get:
       tags:
@@ -247,7 +249,7 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: checkTrustMarkStatus
   /trust-mark-list:
     get:
       tags:
@@ -281,7 +283,7 @@ paths:
           $ref: '#/components/responses/BadRequestError'
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: listTrustMarkedEntities
   /historical-keys:
     get:
       tags:
@@ -297,7 +299,7 @@ paths:
                 type: string
         '500':
           $ref: '#/components/responses/ServerError'
-
+      operationId: getHistoricalKeys
 components:
   responses:
     BadRequestError:

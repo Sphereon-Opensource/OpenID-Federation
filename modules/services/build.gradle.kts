@@ -46,7 +46,9 @@ kotlin {
                 implementation(libs.sphereon.kmp.cbor)
                 implementation(libs.sphereon.kmp.crypto)
                 implementation(libs.sphereon.kmp.crypto.kms)
+                implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
                 implementation(libs.sphereon.kmp.crypto.kms.azure)
+                implementation(libs.sphereon.kmp.crypto.kms.aws)
                 implementation(libs.whyoleg.cryptography.core)
             }
         }

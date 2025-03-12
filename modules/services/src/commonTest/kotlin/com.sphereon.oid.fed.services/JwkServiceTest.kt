@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.crypto.kms.EcDSACryptoProvider
+import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.persistence.Persistence

@@ -24,7 +24,7 @@ mockk = "1.13.17"
 nimbusJoseJwt = "9.40"
 npmPublish = "3.5.3"
 openapi = "7.7.0"
-sphereonKmp = "0.2.0-SNAPSHOT.25"
+sphereonKmp = "0.2.1"
 springboot = "3.4.3"
 springDependencyManagement = "1.1.7"
 kermitLogging = "2.0.5"
@@ -79,7 +79,9 @@ projectreactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-
 sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto = { module = "com.sphereon.kmp:sphereon-kmp-crypto-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto-kms-ecdsa = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-ecdsa-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
+sphereon-kmp-crypto-kms-aws = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-aws-multiplatform", version.ref = "sphereonKmp" }
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator", version.ref = "springboot" }
 springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security", version.ref = "springboot" }
 springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server", version.ref = "springboot" }
