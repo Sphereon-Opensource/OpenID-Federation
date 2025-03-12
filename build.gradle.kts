@@ -92,7 +92,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.5.1-SNAPSHOT"
+    version = "0.5.3-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
 
