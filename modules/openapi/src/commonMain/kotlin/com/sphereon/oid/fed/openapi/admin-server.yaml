@@ -24,7 +24,7 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.4.0-d41
+  version: 0.5.0-d41
 servers:
   # Added by API Auto Mocking Plugin
   - description: SwaggerHub API Auto Mocking
@@ -177,6 +177,13 @@ paths:
       operationId: createKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Create key data
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateKey'
       responses:
         '201':
           description: Key created successfully
@@ -1826,6 +1833,30 @@ components:
           description: A critical claims that must be understood and processed.
       required:
         - claim
+
+
+    CreateKey:
+      type: object
+      properties:
+        kmsKeyRef:
+          type: string
+          description: The KMS Key reference/name you want to use. Not every KMS supports this feature!
+          example: my-key
+        signatureAlgorithm:
+          $ref: '#/components/schemas/SignatureAlgorithm'
+      additionalProperties: false
+      example:
+        kmsKeyRef: my-example-key
+        signatureAlgorithm: ES256
+
+    SignatureAlgorithm:
+      description: The signature algorithm to use in JOSE/JWA format
+      type: string
+      enum:
+        - ES256
+        - ES384
+        - ES512
+      default: ES256
 
     CreateMetadata:
       type: object

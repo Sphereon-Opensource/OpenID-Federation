@@ -1,11 +1,16 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.generic.KeyOperations
+import com.sphereon.crypto.generic.SignatureAlgorithm
+import com.sphereon.crypto.jose.JwaAlgorithm
+import com.sphereon.crypto.jose.JwkUse
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AccountJwk
+import com.sphereon.oid.fed.openapi.models.CreateKey
 import com.sphereon.oid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.oid.fed.openapi.models.HistoricalKey
 import com.sphereon.oid.fed.openapi.models.JwtHeader
@@ -47,6 +52,7 @@ class JwkService(
      * It is configured with a specific tag ("JwkService") to differentiate logs emitted by this service from others.
      */
     private val logger = Logger.tag("JwkService")
+
     /**
      * A reference to the JWK (JSON Web Key) related database queries handled via the `Persistence` layer.
      * This allows for operations such as storage, retrieval, and management of JWKs.
@@ -61,11 +67,12 @@ class JwkService(
      * @param account The account for which a new JWK is being created. It must include the unique account ID and username.
      * @return The created JWK object associated with the specified account.
      */
-    suspend fun createKey(account: Account): AccountJwk = withContext(Dispatchers.IO) {
-        logger.info("Creating new key for account: ${account.username}")
+    suspend fun createKey(account: Account, opts: CreateKeyArgs = CreateKeyArgs()): AccountJwk = withContext(Dispatchers.IO) {
+        logger.info("Creating new key for account: ${account.username}, with options: $opts")
         logger.debug("Found account with ID: ${account.id}")
 
-        val generatedJwk = keyManagementSystem.generateKeyAsync()
+        val (kmsKeyRef, use, keyOperations, alg) = opts
+        val generatedJwk = keyManagementSystem.generateKeyAsync(kmsKeyRef, use, keyOperations, alg)
         requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
         logger.debug("Generated key pair with KID: ${generatedJwk.kid}")
 
@@ -188,5 +195,44 @@ class JwkService(
         val records = jwkQueries.findByAccountId(account.id).executeAsList()
         logger.debug("Found ${records.size} keys for account ID: ${account.id}")
         return records.map { it.toHistoricalKey() }.toTypedArray()
+    }
+}
+
+data class CreateKeyArgs(
+    val kmsKeyRef: String? = null,
+    val use: JwkUse = JwkUse.sig,
+    val keyOperations: Array<out KeyOperations> = arrayOf(KeyOperations.SIGN, KeyOperations.VERIFY),
+    val alg: SignatureAlgorithm = SignatureAlgorithm.ECDSA_SHA256
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CreateKeyArgs
+
+        if (kmsKeyRef != other.kmsKeyRef) return false
+        if (use != other.use) return false
+        if (!keyOperations.contentEquals(other.keyOperations)) return false
+        if (alg != other.alg) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = kmsKeyRef?.hashCode() ?: 0
+        result = 31 * result + use.hashCode()
+        result = 31 * result + keyOperations.contentHashCode()
+        result = 31 * result + alg.hashCode()
+        return result
+    }
+
+    companion object {
+        fun fromModel(model: CreateKey) = with(model) {
+            CreateKeyArgs(
+                kmsKeyRef = kmsKeyRef,
+                alg = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(signatureAlgorithm?.value) ?: JwaAlgorithm.ES256)
+            )
+        }
+
     }
 }
