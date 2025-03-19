@@ -15,13 +15,16 @@
 
 # OpenID Federation multiplatform Server and client
 
-Welcome to the OpenID Federation project. This repository implements a Kotlin Multiplatform solution, enabling shared code across multiple platforms (such as the JVM, JS, and Native). Whether you are a developer familiar with Kotlin or new to multiplatform projects, this guide will help you understand the core concepts, architecture, and deployment instructions for the project.
+Welcome to the OpenID Federation project. This repository implements a Kotlin Multiplatform solution, enabling shared code across multiple platforms (such as the JVM, JS, and
+Native). Whether you are a developer familiar with Kotlin or new to multiplatform projects, this guide will help you understand the core concepts, architecture, and deployment
+instructions for the project.
 
 ---
 
 ## Background
 
-OpenID Federation is a framework designed to facilitate secure and interoperable interactions among entities within a federation. It utilizes JSON Web Tokens (JWTs) to securely represent and transmit necessary metadata, ensuring trust and security across various organizations and systems.
+OpenID Federation is a framework designed to facilitate secure and interoperable interactions among entities within a federation. It utilizes JSON Web Tokens (JWTs) to securely
+represent and transmit necessary metadata, ensuring trust and security across various organizations and systems.
 
 ---
 
@@ -71,9 +74,17 @@ For complete API details, please refer to the following resources:
 
 ## Servers Deployment Instructions
 
+### Environment variables
+
+We are using environment variables to configure certain components, like for instance the key management system. This is independent of the deployment you choose, like using the
+docker compose, or running the API servers directly on a JVM. In the root folder you will find the [.env.example](.env.example) file. Copy this file to `.env` or `.env.local`.
+
+The docker compose method should automatically pick up the environment variables you put in there.
+
 ### Docker Setup
 
-For seamless deployment of the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an efficient and straightforward deployment and orchestration environment.
+For seamless deployment of the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an efficient and straightforward deployment and orchestration
+environment.
 
 ### Essential Commands
 
@@ -111,7 +122,6 @@ For seamless deployment of the OpenID Federation servers, Docker and Docker Comp
 - **Admin Server API**: Accessible at http://localhost:8081
 - **Default Keycloak Server**: Accessible at http://localhost:8082
 
-
 # OpenID Federation Configuration Guide
 
 This guide will help new users configure and deploy the OpenID Federation service, including setting up environment
@@ -122,6 +132,7 @@ variables, the root entity, and necessary dependencies. Follow the steps outline
 ### Publishing Updates
 
 Any changes affecting Entity Statements or Subordinate Statements must be explicitly published to take effect. This includes:
+
 - Metadata changes
 - Trust Mark modifications
 - Configuration updates
@@ -140,12 +151,20 @@ configurations specific to the root entity.
 
 ---
 
+## Postman collection
+
+This README show the steps to interact with the API down below. You can use a tool like CURL or use the Swagger UI to interact with the API. We have also
+included [a postman collection](./resources/OIDF.postman_collection.json) you can import into Postman. It contains examples for most endpoints and also at the toplevel has an
+OAUth2 integration. So you can get an access token from the toplevel folder and then use that token automatically in subsequent calls.
+
 ## Step 1: Configure Environment Variables
 
 Set the following environment variables in your deployment environment. These variables are critical for configuring the
 service and connecting to the required resources.
 
 ### General Configuration
+
+**Note:** See the notes above about copying the .env.example to .env or .env.local first
 
 ```env
 APP_KEY=Nit5tWts42QeCynT1Q476LyStDeSd4xb
@@ -167,45 +186,55 @@ DATASOURCE_DB=openid-federation-db
 # The database name.
 ```
 
+See [.env.example](.env.example) for all the allowd values and their explanations
+
 ### Key Management System (KMS)
 
 The service supports multiple KMS providers. Use the environment variable `KMS_PROVIDER` to select the desired provider:
+
 - `memory`: In-memory KMS (for development and testing only!)
 - `aws`: AWS Key Management Service
 - `azure`: Azure Key Vault
 
 #### In-Memory KMS (Default/testing)
+
 ```env
 KMS_PROVIDER=memory
 # When set to 'memory', the service uses a local in-memory key store for encryption and decryption.
 ```
 
+**Note:** The memory KMS is not storing any private keys!. It is in memory, which means they will be gone after a reboot. This was done on purpose, as you should use an external
+KMS system with proper protection like Azure Keyvault or AWS KMS.
+
 #### AWS KMS Example
+
 When configured like below, AWS Key Management Service will be used. You need to provide your AWS region, and you will also need to provide an access key id and secret.
 
 **Creating an AWS Access Key and Secret Access Key**
+
 1. **Sign In to AWS Management Console**
    Use your AWS account credentials to sign in at [https://aws.amazon.com/](https://aws.amazon.com/).
 2. **Navigate to IAM (Identity and Access Management)**
-   - In the AWS Management Console, search for **IAM** or select it from the list of services.
-   - IAM lets you manage users, groups, roles, and their associated access credentials.
+    - In the AWS Management Console, search for **IAM** or select it from the list of services.
+    - IAM lets you manage users, groups, roles, and their associated access credentials.
 
 3. **Create or Select an IAM User**
-   - If you already have a user for programmatic access, select that user from the **Users** tab.
-   - Otherwise, to create a new user:
-      - Click on **Add User**.
-      - Enter a username.
-      - Under **Select AWS Access Type**, check **Programmatic access** (this is needed to generate an access key and secret key).
+    - If you already have a user for programmatic access, select that user from the **Users** tab.
+    - Otherwise, to create a new user:
+        - Click on **Add User**.
+        - Enter a username.
+        - Under **Select AWS Access Type**, check **Programmatic access** (this is needed to generate an access key and secret key).
 
 4. **Set Permissions**
-   - For initial testing, you could attach existing policies like **AWSKeyManagementServicePowerUser** to ensure the user has permission to work with AWS KMS.
-   - For production environments, it’s best to follow the principle of least privilege and attach only the necessary permissions.
+    - For initial testing, you could attach existing policies like **AWSKeyManagementServicePowerUser** to ensure the user has permission to work with AWS KMS.
+    - For production environments, it’s best to follow the principle of least privilege and attach only the necessary permissions.
 
 5. **Review and Create User**
-   - Complete the steps and on the final screen, AWS will display an **Access Key ID** and **Secret Access Key**.
-   - **Important:** Save your secret access key securely as it is shown only once. You can download the credentials as a CSV file.
+    - Complete the steps and on the final screen, AWS will display an **Access Key ID** and **Secret Access Key**.
+    - **Important:** Save your secret access key securely as it is shown only once. You can download the credentials as a CSV file.
 
 Use the values from step 5 to set the Environment variables:
+
 ```env
 KMS_PROVIDER=aws
 # Use 'aws' to select AWS Key Management Service.
@@ -224,6 +253,7 @@ AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 ```
 
 Optional environment variables for AWS:
+
 ```env
 AWS_MAX_RETRIES=5
 # The maximum number of retries for operations against AWS KMS, defaults to 10.
@@ -236,6 +266,7 @@ AWS_MAX_DELAY=2000
 ```
 
 #### Azure Key Vault Example
+
 ```env
 KMS_PROVIDER=azure
 # Use 'azure' to select Azure Key Vault as the KMS.
@@ -257,6 +288,7 @@ AZURE_KEYVAULT_CLIENT_SECRET=your-keyvault-client-secret
 ```
 
 Optional environment variables for Azure Keyvault:
+
 ```env
 AZURE_KEYVAULT_MAX_RETRIES=5
 # The maximum number of retries for operations against Azure Key Vault, defaults to 10
@@ -284,11 +316,12 @@ OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/openid-federat
 ---
 
 ### Notes:
+
 1. Replace default values (e.g., `admin`, `localhost`, `password`) with secure values for production environments.
 2. Ensure the `ROOT_IDENTIFIER` is a publicly accessible URL if deploying in a live environment.
 3. Select the appropriate KMS provider based on your environment:
-   - For development or testing, the in-memory KMS is sufficient.
-   - For production, use AWS KMS or Azure Key Vault to ensure robust security for key management.
+    - For development or testing, the in-memory KMS is sufficient. Note: Keys are ephemeral and thus will be gone after a restart/reboot
+    - For production, use AWS KMS or Azure Key Vault to ensure robust security for key management.
 4. Never commit sensitive credentials (such as AWS or Azure secrets) into version control.
 
 ## Step 2: Start the Service Stack
@@ -321,9 +354,9 @@ The admin endpoints are protected and require a valid JWT access token. To acqui
    Use `x-www-form-urlencoded` format with the following parameters:
 
    ```text
-   grant_type=client_credentials
-   client_id=openid-client
-   client_secret=th1s1s4s3cr3tth4tMUSTb3ch4ng3d
+
+/
+
    ```
 
 3. **Example cURL Command**:
@@ -407,6 +440,18 @@ To delete a tenant account, follow these steps:
    ```http
    POST http://localhost:8081/keys
    X-Account-Username: {username}  # Optional, defaults to root
+   ```
+
+You can use the param kms_key_ref to assign a name to the key. This value will not end up in the JWK itself, but you can use it for selecting which key to sign with. The kid value
+could also be used, but that is typically not known upfront as in most cases it is generated as the SHA1 thumbprint of the JWK.
+
+You can also provide a JOSE/JWA signature algorithm provided the KMS configured supports it. Typical values are ES256, ES384, ES512
+
+ ```json
+{
+  "kms_key_ref": "my-key",
+  "signature_algorithm": "ES256"
+}
    ```
 
 ### List Keys
@@ -613,9 +658,9 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```json
    {
-       "key": "example_key",
+       "kid": "example_key",
        "key_ops": ["sign", "verify"],
-       "kty": "RSA"
+       "kty": "EC"
    }
    ```
 
@@ -659,12 +704,12 @@ Remember to publish your entity configuration after making changes to authority 
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally include a `dry-run` parameter in the request body to test the statement publication without making
+2. Optionally include a `dry_run` parameter in the request body to test the statement publication without making
    changes:
 
    ```json
    {
-       "dry-run": true
+       "dry_run": true
    }
    ```
 
@@ -690,12 +735,12 @@ Remember to publish your entity configuration after making changes to authority 
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-2. Optionally, include a `dry-run` parameter in the request body to test the statement publication without making
+2. Optionally, include a `dry_run` parameter in the request body to test the statement publication without making
    changes:
 
    ```json
    {
-       "dry-run": true
+       "dry_run": true
    }
    ```
 

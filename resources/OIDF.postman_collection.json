@@ -1,0 +1,671 @@
+{
+	"info": {
+		"_postman_id": "74c548d5-ef9b-4b86-93d8-b543b23d3e66",
+		"name": "OIDF",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17494151",
+		"_collection_link": "https://sphreon.postman.co/workspace/Team-Workspace~c8a51e94-4d24-49bd-8915-d6e8cef02040/collection/17494151-74c548d5-ef9b-4b86-93d8-b543b23d3e66?action=share&source=collection_link&creator=17494151"
+	},
+	"item": [
+		{
+			"name": "Accounts",
+			"item": [
+				{
+					"name": "List accounts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/accounts",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"accounts"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create account",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": " {\r\n       \"username\": \"subordinate1\",\r\n       \"identifier\": \"http://localhost:8081/subordinate1\"\r\n   }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/accounts",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"accounts"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subordinates",
+			"item": [
+				{
+					"name": "Subordinate metadata",
+					"item": [
+						{
+							"name": "List metadata",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/metadata",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"metadata"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create metadata",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n       \"key\": \"example_key\",\r\n       \"metadata\": {\r\n           \"description\": \"Example metadata description\"\r\n       }\r\n   }",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/metadata",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"metadata"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Subordinate statements",
+					"item": [
+						{
+							"name": "Get subordinate statement",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/statement",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"statement"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Publish subordinate statement",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"dry_run\": false,\r\n    \"kms_key_ref\": \"my-key2\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/statement",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"statement"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Subordinate JWKs",
+					"item": [
+						{
+							"name": "List subordinate JWKs",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/jwks",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"jwks"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "Create subordinate JWK",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n       \"kid\": \"example_key2\",\r\n       \"kty\": \"EC\"\r\n   }",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/jwks",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"jwks"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "New Request",
+							"request": {
+								"method": "GET",
+								"header": []
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "List subordinates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/subordinates",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"subordinates"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create subordinate",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n       \"identifier\": \"http://localhost:8081/subordinate1\"\r\n   }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/subordinates",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"subordinates"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Keys",
+			"item": [
+				{
+					"name": "List keys",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/keys",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"keys"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke key",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/keys/{{keyId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"keys",
+								"{{keyId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create key",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"kms_key_ref\": \"my-key\",\r\n    \"signature_algorithm\": \"ES256\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/keys",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"keys"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Metadata",
+			"item": [
+				{
+					"name": "List metadata",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/metadata",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"metadata"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create metadata",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n       \"key\": \"basic_metadata\",\r\n       \"metadata\": {\r\n           \"client_uri\": \"http://localhost:8081\",\r\n           \"contacts\": [\r\n               \"admin@example.com\",\r\n               \"support@example.com\"\r\n           ]\r\n       }\r\n   }",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/metadata",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"metadata"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authority hints",
+			"item": [
+				{
+					"name": "List auhtority hints",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/authority-hints",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"authority-hints"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create authority hint",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"identifier\": \"http://localhost:8081/authority-hints\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/authority-hints",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"authority-hints"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Entity Statements",
+			"item": [
+				{
+					"name": "Get entity statement",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/entity-statement",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"entity-statement"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Publish entity statement",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"dry_run\": true,\r\n    \"kms_key_ref\": \"my-key2\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/entity-statement",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"entity-statement"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Access token",
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"content-type": true
+				}
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/x-www-form-urlencoded",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "grant_type=client_credentials&client_id=openid-client&client_secret=th1s1s4s3cr3tth4tMUSTb3ch4ng3d",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8082/realms/openid-federation/protocol/openid-connect/token",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8082",
+					"path": [
+						"realms",
+						"openid-federation",
+						"protocol",
+						"openid-connect",
+						"token"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "tokenType",
+				"value": "Bearer",
+				"type": "string"
+			},
+			{
+				"key": "accessToken",
+				"value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJHUTRBT0lLTHhyTHNsX0k4VEpIZGZxelVpenNsSlA4dEFSdGJIR2kyWm5rIn0.eyJleHAiOjE3NDIzMzUzMTEsImlhdCI6MTc0MjI5OTMxMSwianRpIjoiYWJkOGY1NmUtZGY4Yy00ZGUxLThiMmEtZjU5ODRjZGEzMjIzIiwiaXNzIjoiaHR0cDovL2tleWNsb2FrOjgwODAvcmVhbG1zL29wZW5pZC1mZWRlcmF0aW9uIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjliYzM0YjMzLTRhOGQtNDkyYS04MGFhLWFhOWQ2YmZiMWM2MiIsInR5cCI6IkJlYXJlciIsImF6cCI6Im9wZW5pZC1jbGllbnQiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbImRlZmF1bHQtcm9sZXMtb3BlbmlkLWZlZGVyYXRpb24iLCJvZmZsaW5lX2FjY2VzcyIsImFkbWluIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImNsaWVudEhvc3QiOiIxNzIuMTguMC4xIiwicm9sZXMiOlsiZGVmYXVsdC1yb2xlcy1vcGVuaWQtZmVkZXJhdGlvbiIsIm9mZmxpbmVfYWNjZXNzIiwiYWRtaW4iLCJ1bWFfYXV0aG9yaXphdGlvbiJdLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJzZXJ2aWNlLWFjY291bnQtb3BlbmlkLWNsaWVudCIsImNsaWVudEFkZHJlc3MiOiIxNzIuMTguMC4xIiwiY2xpZW50X2lkIjoib3BlbmlkLWNsaWVudCJ9.Wy684iLEJzTBgptH1BncthanOHgwAOAOy3B_4xuswuO96QieAV1S27XrvX72JUt7HNJeSaDL3kneiTm8Fhc8CUzNXIl9Jj0KzWnFhEJXSl2M0_uKFrND92Ko1c4H3rNZSGLQ0s8UGYDs9tN2Enwd9KKIvQq2AkrdshfYvrdsgbkxg9gl6h9IsgQbt7gTEzrL2E5_MCAOUBKjxhECPbZX90PSWq89me7QNA45goBFpiaaJQhTR2PybhCkf6kRUvEvWZLi9O9nqS-ZczidGoL2SMMVKfbedHiudSUOvY8n_qxfU7fJScUAOrP6lyQ2hBMS1NU5LJZBD_1QeRbZ4Ko9LQ",
+				"type": "string"
+			},
+			{
+				"key": "refreshRequestParams",
+				"value": [],
+				"type": "any"
+			},
+			{
+				"key": "tokenRequestParams",
+				"value": [],
+				"type": "any"
+			},
+			{
+				"key": "authRequestParams",
+				"value": [],
+				"type": "any"
+			},
+			{
+				"key": "tokenName",
+				"value": "OIDF local token",
+				"type": "string"
+			},
+			{
+				"key": "challengeAlgorithm",
+				"value": "S256",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "client_credentials",
+				"type": "string"
+			},
+			{
+				"key": "clientSecret",
+				"value": "th1s1s4s3cr3tth4tMUSTb3ch4ng3d",
+				"type": "string"
+			},
+			{
+				"key": "clientId",
+				"value": "openid-client",
+				"type": "string"
+			},
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "client_authentication",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "accessTokenUrl",
+				"value": "http://localhost:8082/realms/openid-federation/protocol/openid-connect/token",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "subordinateId",
+			"value": "subordinateId",
+			"type": "default"
+		},
+		{
+			"key": "jwkKid",
+			"value": "jwkKid",
+			"type": "default"
+		},
+		{
+			"key": "keyId",
+			"value": "keyId",
+			"type": "default"
+		}
+	]
+}
