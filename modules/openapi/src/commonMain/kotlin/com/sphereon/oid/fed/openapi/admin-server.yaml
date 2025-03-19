@@ -502,11 +502,11 @@ paths:
       operationId: signAndPublishEntityStatement
       security:
         - bearerAuth: [ ]
-      description: Sign and publish the entity configuration statement for the specified account. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      description: Sign and publish the entity configuration statement for the specified account. If `dry_run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
-        description: Optional request body for a dry-run
+        description: Optional request body for a dry_run
         required: false
         content:
           application/json:
@@ -937,7 +937,7 @@ paths:
       operationId: signAndPublishSubordinateStatement
       security:
         - bearerAuth: [ ]
-      description: Sign and publish the subordinate statement for the specified subordinate. If `dry-run` is `true`, outputs the signed JWT without publishing it.
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dry_run` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -1198,7 +1198,7 @@ paths:
                   default: false
       responses:
         '200':
-          description: Trust Mark dry-run successful
+          description: Trust Mark dry_run successful
           content:
             application/json:
               schema:
@@ -1709,7 +1709,6 @@ components:
           type: string
           description: The key ID.
           example: 12345
-          nullable: true
         x:
           type: string
           description: The X coordinate for EC keys (optional).
@@ -1838,11 +1837,15 @@ components:
     CreateKey:
       type: object
       properties:
-        kmsKeyRef:
+        kms:
+          type: string
+          description: The Key Management System to use. Needs to be a supported and configured KMS!
+          example: memory
+        kms_key_ref:
           type: string
           description: The KMS Key reference/name you want to use. Not every KMS supports this feature!
           example: my-key
-        signatureAlgorithm:
+        signature_algorithm:
           $ref: '#/components/schemas/SignatureAlgorithm'
       additionalProperties: false
       example:
@@ -2085,6 +2088,14 @@ components:
               format: uuid
               description: The universally unique identifier for the JWK record.
               example: 123e4567-e89b-12d3-a456-426614174000
+            kms:
+              type: string
+              description: The Key Management System
+              example: memory
+            kms_key_ref:
+              type: string
+              description: The KMS Key reference (the id of the key in the KMS) if supported
+              example: my-key
             account_id:
               type: integer
               description: The ID of the account associated with this JWK.
@@ -2263,7 +2274,15 @@ components:
     PublishStatementRequest:
       type: object
       properties:
-        dry-run:
+        kms_key_ref:
+          type: string
+          description: 'The KMS Key reference to use. If not provided the first key for the account will be used unless the kid parameter is set'
+          example: "my-jwk-name"
+        kid:
+          type: string
+          description: 'The kid of the key to use. If a kms_key_ref is provided it will always take priority'
+          example: "1234"
+        dry_run:
           type: boolean
           description: 'If true, the request will be validated but not persisted.'
           example: false
@@ -2368,6 +2387,10 @@ components:
 
     SubordinateJwk:
       type: object
+      required:
+        - id
+        - subordinate_id
+        - key
       properties:
         id:
           type: integer
@@ -2378,11 +2401,11 @@ components:
           description: The ID of the subordinated account associated with this key.
           example: 1
         key:
-          additionalProperties: true
+          $ref: '#/components/schemas/Jwk'
         created_at:
           type: string
           format: date-time
-          description: The timestamp when the key  was created.
+          description: The timestamp when the key was created.
           example: '2024-08-06T12:34:56Z'
           nullable: false
 
@@ -2419,6 +2442,13 @@ components:
           description: The timestamp when the Metadata was deleted.
           example: '2024-08-06T12:34:56Z'
           nullable: true
+      required:
+        - id
+        - account_id
+        - subordinate_id
+        - key
+        - metadata
+        - created_at
 
     SubordinateStatement:
       allOf:
@@ -2519,6 +2549,8 @@ components:
               - alg: RS256
                 e: AQAB
                 kid: key1
+                kms_key_rf: key1
+                kms: memory
                 kty: RSA
                 'n': pnXBOusEANuug6ewezb9J_...
                 use: sig
