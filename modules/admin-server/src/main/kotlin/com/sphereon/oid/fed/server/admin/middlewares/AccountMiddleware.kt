@@ -2,6 +2,7 @@ package com.sphereon.oid.fed.server.admin.middlewares
 
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.services.AccountService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -58,4 +59,10 @@ class AccountMiddleware(
             )
         }
     }
+}
+
+
+fun getAccountFromRequest(request: HttpServletRequest): Account {
+    val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) ?: throw NotFoundException("Account not found")
+    return account as Account
 }
