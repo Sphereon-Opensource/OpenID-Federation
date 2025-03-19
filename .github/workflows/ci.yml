@@ -30,6 +30,7 @@ jobs:
         id: build
         env:
           APP_KEY: ${{ secrets.APP_KEY }}
+          DATASOURCE_DB: "openid-federation-db"
           DATASOURCE_USER: ${{ secrets.DATASOURCE_USER }}
           DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
           DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
