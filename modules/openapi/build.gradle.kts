@@ -31,6 +31,12 @@ kotlin {
             )
             filter { line: String ->
                 line.replace(
+                    "io.ktor.util.InternalAPI",
+                    "io.ktor.utils.io.InternalAPI"
+                )
+            }
+            filter { line: String ->
+                line.replace(
                     "kotlin.collections.Map<kotlin.String, kotlin.Any>",
                     "kotlinx.serialization.json.JsonObject"
                 )

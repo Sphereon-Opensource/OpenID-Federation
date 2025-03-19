@@ -92,7 +92,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.5.4-SNAPSHOT"
+    version = "0.5.5-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
 
@@ -104,8 +104,8 @@ allprojects {
 
     // Common repository configuration for all projects
     repositories {
-        mavenCentral()
         mavenLocal()
+        mavenCentral()
         google()
     }
 }
