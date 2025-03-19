@@ -2,8 +2,10 @@ create:
 INSERT INTO Jwk (
     account_id,
     kid,
+    kms,
+    kms_key_ref,
     key
-) VALUES (?, ?, ?)
+) VALUES (?, ?, ?, ?, ?)
 RETURNING *;
 
 revoke:
@@ -23,3 +25,9 @@ findById:
 SELECT *
 FROM Jwk
 WHERE id = ?;
+
+findByAccountAndKmsKeyRef:
+SELECT *
+FROM Jwk
+WHERE account_id = ?
+AND kms_key_ref = ?;
