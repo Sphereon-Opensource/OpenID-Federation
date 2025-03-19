@@ -5,10 +5,15 @@ services:
     user: postgres
     security_opt:
       - no-new-privileges:true
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
-      POSTGRES_USER: ${DATASOURCE_USER}
-      POSTGRES_PASSWORD: ${DATASOURCE_PASSWORD}
-      POSTGRES_DB: ${DATASOURCE_DB}
+      - POSTGRES_USER
+        POSTGRES_PASSWORD
+        POSTGRES_DB
     ports:
       - "5432:5432"
     volumes:
@@ -42,15 +47,27 @@ services:
           memory: 768M
     ports:
       - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
-      DATASOURCE_URL: ${DATASOURCE_URL}
-      DATASOURCE_USER: ${DATASOURCE_USER}
-      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-      APP_KEY: ${APP_KEY}
-      KMS_PROVIDER: ${KMS_PROVIDER}
-      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-      DEV_MODE: ${DEV_MODE}
-      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
+      - DATASOURCE_URL
+        DATASOURCE_USER
+        DATASOURCE_PASSWORD
+        APP_KEY
+        KMS_PROVIDER
+        ROOT_IDENTIFIER
+        DEV_MODE
+        LOGGER_SEVERITY
+#    environment:
+#      DATASOURCE_URL: ${DATASOURCE_URL}
+#      DATASOURCE_USER: ${DATASOURCE_USER}
+#      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+#      APP_KEY: ${APP_KEY}
+#      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+#      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
     depends_on:
       db:
         condition: service_healthy
@@ -82,17 +99,31 @@ services:
           memory: 768M
     ports:
       - "8081:8080"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
-      DATASOURCE_URL: ${DATASOURCE_URL}
-      DATASOURCE_USER: ${DATASOURCE_USER}
-      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-      APP_KEY: ${APP_KEY}
-      KMS_PROVIDER: ${KMS_PROVIDER}
-      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-      OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
-      DEV_MODE: ${DEV_MODE}
-      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
-      LOGGER_OUTPUT: ${LOGGER_OUTPUT}
+      - DATASOURCE_URL
+        DATASOURCE_USER
+        DATASOURCE_PASSWORD
+        APP_KEY
+        KMS_PROVIDER
+        ROOT_IDENTIFIER
+        OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI
+        DEV_MODE
+        LOGGER_SEVERITY
+        LOGGER_OUTPUT
+#    environment:
+#      DATASOURCE_URL: ${DATASOURCE_URL}
+#      DATASOURCE_USER: ${DATASOURCE_USER}
+#      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+#      APP_KEY: ${APP_KEY}
+#      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+#      OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
+#      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
+#      LOGGER_OUTPUT: ${LOGGER_OUTPUT}
     depends_on:
       db:
         condition: service_healthy
@@ -126,11 +157,20 @@ services:
           memory: 768M
     ports:
       - "8082:8080"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
-      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
-      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
-      - KC_HEALTH_ENABLED=true
-      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC
+      - KC_BOOTSTRAP_ADMIN_USERNAME
+      - KC_BOOTSTRAP_ADMIN_PASSWORD
+      - KC_HEALTH_ENABLED
+      - JAVA_OPTS
+#      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
+#      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
+#      - KC_HEALTH_ENABLED=true
+#      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC
     volumes:
       - ./.docker/keycloak:/opt/keycloak/data/import/
     restart: unless-stopped
