@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateAccount
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.AccountService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -26,7 +26,7 @@ class AccountController(
 
     @DeleteMapping
     fun deleteAccount(request: HttpServletRequest): Account {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return accountService.deleteAccount(account)
     }
 }

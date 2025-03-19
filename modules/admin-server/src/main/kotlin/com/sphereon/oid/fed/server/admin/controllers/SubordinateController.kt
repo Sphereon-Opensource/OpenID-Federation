@@ -1,15 +1,14 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.oid.fed.openapi.models.SubordinateJwk
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.Subordinate
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
 import jakarta.servlet.http.HttpServletRequest
-import kotlinx.serialization.json.JsonObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -28,7 +27,7 @@ class SubordinateController(
 ) {
     @GetMapping
     fun getSubordinates(request: HttpServletRequest): Array<Subordinate> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.findSubordinatesByAccount(account)
     }
 
@@ -38,7 +37,7 @@ class SubordinateController(
         request: HttpServletRequest,
         @RequestBody subordinate: CreateSubordinate
     ): Subordinate {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.createSubordinate(account, subordinate)
     }
 
@@ -47,7 +46,7 @@ class SubordinateController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): Subordinate {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.deleteSubordinate(account, id)
     }
 
@@ -56,9 +55,9 @@ class SubordinateController(
     fun createSubordinateJwk(
         request: HttpServletRequest,
         @PathVariable id: Int,
-        @RequestBody jwk: JsonObject
+        @RequestBody jwk: Jwk
     ): SubordinateJwk {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.createSubordinateJwk(account, id, jwk)
     }
 
@@ -67,7 +66,7 @@ class SubordinateController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): Array<SubordinateJwk> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.getSubordinateJwks(account, id)
     }
 
@@ -77,7 +76,7 @@ class SubordinateController(
         @PathVariable id: Int,
         @PathVariable jwkId: Int
     ) {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         subordinateService.deleteSubordinateJwk(account, id, jwkId)
     }
 
@@ -86,7 +85,7 @@ class SubordinateController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): SubordinateStatement {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.getSubordinateStatement(account, id)
     }
 
@@ -96,12 +95,14 @@ class SubordinateController(
         @PathVariable id: Int,
         @RequestBody body: PublishStatementRequest?
     ): ResponseEntity<String> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        val result = subordinateService.publishSubordinateStatement(account, id, body?.dryRun)
+        val account = getAccountFromRequest(request)
+        val result = subordinateService.publishSubordinateStatement(account = account,  id = id, dryRun = body?.dryRun, kmsKeyRef = body?.kmsKeyRef, kid = body?.kid)
         return if (body?.dryRun == true) {
             ResponseEntity.ok(result)
         } else {
             ResponseEntity.status(HttpStatus.CREATED).body(result)
         }
     }
+
+
 }

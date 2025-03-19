@@ -1,9 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -21,7 +20,7 @@ class EntityStatementController(
 ) {
     @GetMapping
     fun getEntityStatement(request: HttpServletRequest): EntityConfigurationStatement {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return entityConfigurationStatementService.findByAccount(account)
     }
 
@@ -30,8 +29,8 @@ class EntityStatementController(
         request: HttpServletRequest,
         @RequestBody body: PublishStatementRequest?
     ): ResponseEntity<String> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        val result = entityConfigurationStatementService.publishByAccount(account, body?.dryRun)
+        val account = getAccountFromRequest(request)
+        val result = entityConfigurationStatementService.publishByAccount(account, dryRun = body?.dryRun, kmsKeyRef = body?.kmsKeyRef, kid = body?.kid)
         return if (body?.dryRun == true) {
             ResponseEntity.ok(result)
         } else {

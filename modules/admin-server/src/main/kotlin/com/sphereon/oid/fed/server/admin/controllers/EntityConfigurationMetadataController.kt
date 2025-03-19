@@ -1,9 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.Metadata
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.MetadataService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -16,7 +15,7 @@ class EntityConfigurationMetadataController(
 ) {
     @GetMapping
     fun getEntityConfigurationMetadata(request: HttpServletRequest): List<Metadata> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return metadataService.findByAccount(account).toList()
     }
 
@@ -26,7 +25,7 @@ class EntityConfigurationMetadataController(
         request: HttpServletRequest,
         @RequestBody body: CreateMetadata
     ): Metadata {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return metadataService.createEntityConfigurationMetadata(
             account,
             body.key,
@@ -39,7 +38,7 @@ class EntityConfigurationMetadataController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): Metadata {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return metadataService.deleteEntityConfigurationMetadata(
             account,
             id

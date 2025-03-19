@@ -1,9 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -16,7 +15,7 @@ class TrustMarkTypeController(
 ) {
     @GetMapping
     fun getTrustMarkTypes(request: HttpServletRequest): List<TrustMarkType> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.findAllByAccount(account)
     }
 
@@ -26,7 +25,7 @@ class TrustMarkTypeController(
         request: HttpServletRequest,
         @RequestBody createDto: CreateTrustMarkType
     ): TrustMarkType {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.createTrustMarkType(account, createDto)
     }
 
@@ -35,7 +34,7 @@ class TrustMarkTypeController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): TrustMarkType {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.findById(account, id)
     }
 
@@ -44,7 +43,7 @@ class TrustMarkTypeController(
         request: HttpServletRequest,
         @PathVariable id: Int
     ): TrustMarkType {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.deleteTrustMarkType(account, id)
     }
 }

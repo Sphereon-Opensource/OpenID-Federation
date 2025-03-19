@@ -1,9 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateTrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMark
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -24,7 +23,7 @@ class TrustMarkController(
 
     @GetMapping
     fun getTrustMarks(request: HttpServletRequest): List<TrustMark> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.getTrustMarksForAccount(account)
     }
 
@@ -34,7 +33,7 @@ class TrustMarkController(
         request: HttpServletRequest,
         @RequestBody body: CreateTrustMark
     ): TrustMark {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.createTrustMark(account, body)
     }
 
@@ -43,7 +42,7 @@ class TrustMarkController(
         request: HttpServletRequest,
         @PathVariable trustMarkId: Int
     ): TrustMark {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return trustMarkService.deleteTrustMark(account, trustMarkId)
     }
 }

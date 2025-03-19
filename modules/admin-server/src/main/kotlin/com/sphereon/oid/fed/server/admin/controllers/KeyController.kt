@@ -1,10 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
+
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateKey
-import com.sphereon.oid.fed.openapi.models.CreateTrustMark
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.CreateKeyArgs
 import com.sphereon.oid.fed.services.JwkService
 import jakarta.servlet.http.HttpServletRequest
@@ -28,13 +27,13 @@ class KeyController(
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createKey(request: HttpServletRequest, @RequestBody body: CreateKey): AccountJwk {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
-        return runBlocking {  jwkService.createKey(account, CreateKeyArgs.fromModel(body)) }
+        val account = getAccountFromRequest(request)
+        return runBlocking { jwkService.createKey(account, CreateKeyArgs.fromModel(body)) }
     }
 
     @GetMapping
     fun getKeys(request: HttpServletRequest): Array<AccountJwk> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return jwkService.getKeys(account)
     }
 
@@ -44,7 +43,7 @@ class KeyController(
         @PathVariable keyId: Int,
         @RequestParam reason: String?
     ): AccountJwk {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return jwkService.revokeKey(account, keyId, reason)
     }
 }

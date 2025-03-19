@@ -3,8 +3,8 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.logger.Logger
+import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Crit as CritEntity
 
 /**

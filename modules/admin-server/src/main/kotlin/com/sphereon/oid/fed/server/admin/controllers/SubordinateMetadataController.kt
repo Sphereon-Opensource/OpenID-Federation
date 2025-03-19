@@ -1,9 +1,8 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
+import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
@@ -19,7 +18,7 @@ class SubordinateMetadataController(
         request: HttpServletRequest,
         @PathVariable subordinateId: Int
     ): Array<SubordinateMetadata> {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.findSubordinateMetadata(account, subordinateId)
     }
 
@@ -30,7 +29,7 @@ class SubordinateMetadataController(
         @PathVariable subordinateId: Int,
         @RequestBody body: CreateMetadata
     ): SubordinateMetadata {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.createMetadata(
             account,
             subordinateId,
@@ -45,7 +44,7 @@ class SubordinateMetadataController(
         @PathVariable subordinateId: Int,
         @PathVariable id: Int
     ): SubordinateMetadata {
-        val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) as Account
+        val account = getAccountFromRequest(request)
         return subordinateService.deleteSubordinateMetadata(
             account,
             subordinateId,
