@@ -23,28 +23,29 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      *
      * @param payload The payload to sign
      * @param header The JWT header
-     * @param keyId The ID of the key to use for signing
+     * @param kid The ID of the key to use for signing
+     * @param kmsKeyRef The key reference of the KMS. This is the internal name. Defaults to kid value
      * @return The signed JWT
      */
-    suspend fun sign(payload: JsonObject, header: JwtHeader, keyId: String): String {
-        logger.debug("Signing payload with key: $keyId")
+    suspend fun sign(payload: JsonObject, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
+        logger.debug("Signing payload with key: $kid")
         val (headerB64, payloadB64) = prepareSigningInput(header, payload)
         val signingInput = "$headerB64.$payloadB64"
 
         val keyInfo = KeyInfo<Jwk>(
-            kid = keyId,
-            kmsKeyRef = keyId
+            kid = kid,
+            kmsKeyRef = kmsKeyRef
         )
 
         // Sign the properly formatted input
         val signature = keyManagementSystem.createRawSignatureAsync(
-            keyInfo,
-            signingInput.toByteArray(),
-            false
+            keyInfo = keyInfo,
+            input = signingInput.toByteArray(),
+            requireX5Chain = false
         )
         val signatureB64 = base64UrlEncode(signature)
         val jwt = "$headerB64.$payloadB64.$signatureB64"
-        logger.debug("Successfully signed JWT with key: $keyId")
+        logger.debug("Successfully signed JWT with key: $kid")
         return jwt
     }
 
@@ -53,12 +54,13 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      *
      * @param payload The payload object to serialize and sign
      * @param header The JWT header
-     * @param keyId The ID of the key to use for signing
+     * @param kid The ID of the key to use for signing
+     * @param kmsKeyRef The internal KMS Key name/id
      * @return The signed JWT
      */
-    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, keyId: String): String {
+    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
         val payloadJson = Json.encodeToJsonElement(Json.serializersModule.serializer(), payload).jsonObject
-        return sign(payloadJson, header, keyId)
+        return sign(payloadJson, header, kid, kmsKeyRef)
     }
 
     /**

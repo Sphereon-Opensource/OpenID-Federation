@@ -420,7 +420,7 @@ class TrustMarkServiceTest {
         val key = kmsProvider.generateKeyAsync()
 
         val keys = arrayOf(
-            AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+            AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
         )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
@@ -851,7 +851,7 @@ class TrustMarkServiceTest {
         val key = kmsProvider.generateKeyAsync()
 
         val keys = arrayOf(
-            AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+            AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
         )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys

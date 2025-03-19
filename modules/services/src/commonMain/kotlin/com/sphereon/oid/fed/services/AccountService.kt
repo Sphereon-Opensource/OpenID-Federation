@@ -87,6 +87,7 @@ class AccountService(
             logger.debug("Found explicit identifier for username: ${account.username}")
             return it
         }
+        check(config.rootIdentifier.isNotBlank() || config.rootIdentifier.isNotEmpty()) { "Root identifier is not configured" }
         val computedIdentifier = if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
             config.rootIdentifier
         } else {

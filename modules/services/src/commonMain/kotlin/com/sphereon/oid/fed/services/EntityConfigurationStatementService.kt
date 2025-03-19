@@ -1,12 +1,10 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.crypto.kms.IKeyManagementSystem
-import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
-import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwtHeader
@@ -76,11 +74,11 @@ class EntityConfigurationStatementService(
      * @return The JWT created for the entity configuration statement.
      * @throws IllegalArgumentException If the account does not have a valid key with a `kid` or required data is missing.
      */
-    suspend fun publishByAccount(account: Account, dryRun: Boolean? = false): String {
+    suspend fun publishByAccount(account: Account, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
         logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
 
         val entityConfigurationStatement = findByAccount(account)
-        val keys = getKeysOrThrow(account)
+        val keys = jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
         val key = keys[0].kid ?: throw IllegalArgumentException("First key must have a kid")
 
         val jwt = createSignedJwt(entityConfigurationStatement, key)
@@ -273,21 +271,7 @@ class EntityConfigurationStatementService(
             }
     }
 
-    /**
-     * Retrieves the keys associated with the given account or throws an exception if no keys are found.
-     *
-     * @param account The account for which the keys are to be retrieved.
-     * @return An array of AccountJwk objects associated with the given account.
-     * @throws IllegalArgumentException If no keys are found for the account.
-     */
-    private fun getKeysOrThrow(account: Account): Array<AccountJwk> {
-        return jwkService.getKeys(account).also {
-            if (it.isEmpty()) {
-                logger.error("No keys found for account: ${account.username}")
-                throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
-            }
-        }
-    }
+
 
     /**
      * Creates a signed JWT using the provided entity configuration statement and key ID.

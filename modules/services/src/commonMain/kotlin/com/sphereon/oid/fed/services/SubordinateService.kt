@@ -9,6 +9,7 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.subordinateJwk.toDTO
+import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJsonString
 import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJwk
 import com.sphereon.oid.fed.services.mappers.subordinateMetadata.toDTO
 import kotlinx.serialization.json.Json
@@ -38,17 +39,20 @@ class SubordinateService(
      * log messages originating from this service.
      */
     private val logger = Logger.tag("SubordinateService")
+
     /**
      * Represents the persistence mechanism used for managing subordinate-related queries.
      * This property is utilized within the SubordinateService class to interact with and
      * perform database operations related to subordinate entities.
      */
     private val subordinateQueries = Persistence.subordinateQueries
+
     /**
      * Provides access to database queries related to subordinate JSON Web Keys (JWKs).
      * This property is utilized for managing subordinate-specific JWK data within persistence layers.
      */
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
+
     /**
      * Provides access to database queries related to subordinate statements.
      * This property is used internally within the SubordinateService class
@@ -204,6 +208,8 @@ class SubordinateService(
         val currentTimeSeconds = (System.currentTimeMillis() / 1000).toInt()
         val expirationTime = currentTimeSeconds + 3600 * 24 * 365
 
+        check(accountIdentifier.isNotEmpty()) { "Account identifier is empty" }
+
         val statement = SubordinateStatementObjectBuilder()
             .iss(accountIdentifier)
             .sub(subordinate.identifier)
@@ -236,7 +242,7 @@ class SubordinateService(
      * @throws IllegalArgumentException If no keys are found for the account.
      * @throws Exception If an error occurs during the subordinate statement publishing process.
      */
-    suspend fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false): String {
+    suspend fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
         logger.info("Publishing subordinate statement for ID: $id, account: ${account.username} (dryRun: $dryRun)")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -244,21 +250,16 @@ class SubordinateService(
             val subordinateStatement = getSubordinateStatement(account, id)
             logger.debug("Generated subordinate statement with subject: ${subordinateStatement.sub}")
 
-            val keys = jwkService.getKeys(account)
-            logger.debug("Found ${keys.size} keys for account")
-
-            if (keys.isEmpty()) {
-                logger.error("No keys found for account: ${account.username}")
-                throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
-            }
-            val selectedKeyId = keys[0].kid
-            logger.debug("Using key with ID: $selectedKeyId")
+            val keys = jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
+            val key = keys[0]
+            logger.debug("Using key with key ref: ${key.kmsKeyRef} and ID: ${key.kid}")
 
             val jwtService = JwtService(kmsProvider)
             val jwt = jwtService.signSerializable(
-                subordinateStatement,
-                JwtHeader(typ = "entity-statement+jwt", kid = selectedKeyId!!),
-                selectedKeyId
+                payload = subordinateStatement,
+                header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid),
+                kid = key.kid,
+                kmsKeyRef = key.kmsKeyRef,
             )
             logger.debug("Successfully signed subordinate statement")
 
@@ -296,7 +297,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate does not exist or does not belong to the given account.
      * @throws Exception If an unexpected error occurs during the creation process.
      */
-    fun createSubordinateJwk(account: Account, id: Int, jwk: JsonObject): SubordinateJwk {
+    fun createSubordinateJwk(account: Account, id: Int, jwk: Jwk): SubordinateJwk {
         logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -310,7 +311,7 @@ class SubordinateService(
                 throw NotFoundException(Constants.SUBORDINATE_NOT_FOUND)
             }
 
-            val createdJwk = subordinateJwkQueries.create(key = jwk.toString(), subordinate_id = subordinate.id)
+            val createdJwk = subordinateJwkQueries.create(key = jwk.toJsonString(), subordinate_id = subordinate.id)
                 .executeAsOne()
             logger.info("Successfully created subordinate JWK with ID: ${createdJwk.id}")
             return createdJwk.toDTO()

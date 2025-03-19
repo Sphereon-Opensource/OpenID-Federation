@@ -13,5 +13,6 @@ fun SubordinateMetadataEntity.toDTO(): SubordinateMetadata {
         metadata = Json.parseToJsonElement(this.metadata).jsonObject,
         accountId = this.account_id,
         createdAt = this.created_at.toString(),
+        deletedAt = this.deleted_at?.toString()
     )
 }

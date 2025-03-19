@@ -31,7 +31,8 @@ class JwkServiceTest {
     private lateinit var jwkService: JwkService
     private lateinit var jwkQueries: JwkQueries
     private lateinit var testAccount: Account
-    private val cryptoProvider = EcDSACryptoProvider()
+    private val kmsService = KmsService.createMemoryKms()
+    private val cryptoProvider = kmsService.getKmsProvider()
 
     // Use default value until we can generate one
     private var generatedKid: String = "test-kid"
@@ -49,7 +50,7 @@ class JwkServiceTest {
         jwkQueries = mockk(relaxed = true)
         mockkObject(Persistence)
         every { Persistence.jwkQueries } returns jwkQueries
-        jwkService = JwkService(cryptoProvider)
+        jwkService = JwkService(kmsService)
         testAccount = Account(
             id = 1,
             username = "testUser",
@@ -82,6 +83,8 @@ class JwkServiceTest {
             id = 1,
             account_id = testAccount.id,
             kid = generatedKid,
+            kms = "memory",
+            kms_key_ref = generatedKid,
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,
@@ -89,7 +92,7 @@ class JwkServiceTest {
         )
 
         // Mock JwkQueries.create to return a valid Jwk
-        every { jwkQueries.create(any(), any(), any()) } returns mockk {
+        every { jwkQueries.create(any(), any(), any(), any(), any()) } returns mockk {
             every { executeAsOne() } returns returnedJwk
         }
 
@@ -97,7 +100,7 @@ class JwkServiceTest {
 
         assertNotNull(result)
         assertEquals(generatedKid, result.kid)
-        verify { jwkQueries.create(testAccount.id, any(), any()) }
+        verify { jwkQueries.create(testAccount.id, any(), any(), any(), any()) }
     }
 
     @Test
@@ -108,11 +111,13 @@ class JwkServiceTest {
                 testAccount.id,
                 generatedKid,
                 TEST_KEY.replace("test-kid", generatedKid),
-                FIXED_TIMESTAMP,
                 null,
-                null
+                null,
+                FIXED_TIMESTAMP,
+                TEST_KEY.replace("test-kid", generatedKid),
+                "memory",
             ),
-            Jwk(2, testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), FIXED_TIMESTAMP, null, null)
+            Jwk(2, testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), null, null, FIXED_TIMESTAMP, TEST_KEY.replace("test-kid", "kid2"), "memory")
         )
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
@@ -132,6 +137,8 @@ class JwkServiceTest {
             id = keyId,
             account_id = testAccount.id,
             kid = generatedKid,
+            kms = "memory",
+            kms_key_ref = generatedKid,
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = FIXED_TIMESTAMP,
@@ -161,6 +168,8 @@ class JwkServiceTest {
             id = keyId,
             account_id = differentAccountId,
             kid = generatedKid,
+            kms = "memory",
+            kms_key_ref = generatedKid,
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,
@@ -189,6 +198,8 @@ class JwkServiceTest {
             id = 1,
             account_id = testAccount.id,
             kid = generatedKid,
+            kms = "memory",
+            kms_key_ref = generatedKid,
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,

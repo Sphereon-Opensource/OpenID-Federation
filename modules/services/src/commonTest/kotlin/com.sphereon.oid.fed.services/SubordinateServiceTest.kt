@@ -6,6 +6,7 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Subordinate
@@ -17,6 +18,7 @@ import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJsonString
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -274,7 +276,7 @@ class SubordinateServiceTest {
 
         val keys = arrayOf(
             AccountJwk(
-                kid = generatedKey.kid,
+                kid = generatedKey.kid ?: generatedKey.kmsKeyRef,
                 kty = generatedKey.jose.publicJwk.kty.toString(),
                 use = generatedKey.jose.publicJwk.use
             )
@@ -288,6 +290,7 @@ class SubordinateServiceTest {
         } returns emptyList()
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
+        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(), any()) } returns keys
 
         every {
             subordinateStatementQueries.create(
@@ -332,8 +335,9 @@ class SubordinateServiceTest {
         } returns emptyList()
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
         every { jwkService.getKeys(testAccount.toDTO()) } returns emptyArray()
+        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(), any()) } throws NotFoundException("No keys found")
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith< NotFoundException> {
             subordinateService.publishSubordinateStatement(testAccount.toDTO(), subordinate.id)
         }
     }
@@ -348,18 +352,18 @@ class SubordinateServiceTest {
             deleted_at = null
         )
 
-        val testJwk = JsonObject(mapOf("kid" to JsonPrimitive("test-kid")))
+        val testJwk = Jwk(kid = "test-kid", kty = "EC")
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
         every {
             subordinateJwkQueries.create(
-                key = testJwk.toString(),
+                key = testJwk.toJsonString(),
                 subordinate_id = subordinate.id
             ).executeAsOne()
         } returns SubordinateJwk(
             id = 1,
             subordinate_id = subordinate.id,
-            key = testJwk.toString(),
+            key = testJwk.toJsonString(),
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
         )
@@ -381,7 +385,7 @@ class SubordinateServiceTest {
             deleted_at = null
         )
 
-        val testJwk = JsonObject(mapOf("kid" to JsonPrimitive("test-kid")))
+        val testJwk = Jwk(kid = "test-kid", kty = "EC")
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
 

@@ -9,6 +9,6 @@ fun ReceivedTrustMarkEntity.toDTO(): ReceivedTrustMark {
         accountId = this.account_id,
         trustMarkTypeIdentifier = this.trust_mark_type_identifier,
         jwt = this.jwt,
-        createdAt = this.created_at.toString()
+        createdAt = this.created_at?.toString()
     )
 }

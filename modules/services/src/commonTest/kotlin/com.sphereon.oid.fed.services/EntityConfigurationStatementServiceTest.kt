@@ -4,6 +4,7 @@ package com.sphereon.oid.fed.services
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
@@ -124,7 +125,7 @@ class EntityConfigurationStatementServiceTest {
     @Test
     fun `test find by account`() {
         val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
-        every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+        every { jwkService.getKeys(testAccount.toDTO(), any()) } returns arrayOf(testKey)
 
         val result = statementService.findByAccount(testAccount.toDTO())
 
@@ -132,7 +133,7 @@ class EntityConfigurationStatementServiceTest {
         assertEquals(TEST_IDENTIFIER, result.iss)
         assertNotNull(result.jwks)
         assertNotNull(result.jwks.propertyKeys)
-        assertTrue { result.jwks.propertyKeys?.isNotEmpty() ?: false }
+        assertTrue { result.jwks.propertyKeys?.isNotEmpty() == true }
         assertEquals(TEST_KEY_ID, result.jwks.propertyKeys?.first()?.kid)
     }
 
@@ -140,8 +141,9 @@ class EntityConfigurationStatementServiceTest {
     fun `test publish by account`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
-        val testKey = AccountJwk(kid = key.kid, kty = "EC", use = "sig")
+        val testKey = AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(),any()) } returns arrayOf(testKey)
 
         val result = statementService.publishByAccount(testAccount.toDTO())
 
@@ -158,9 +160,10 @@ class EntityConfigurationStatementServiceTest {
     fun `test publish by account dry run`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
-        val testKey = AccountJwk(kid = key.kid, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+        val testKey = AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
+        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(),any()) } returns arrayOf(testKey)
 
         val result = statementService.publishByAccount(testAccount.toDTO(), dryRun = true)
 
@@ -175,9 +178,10 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun `test publish by account no keys`() = runTest {
-        every { jwkService.getKeys(testAccount.toDTO()) } returns emptyArray()
+        every { jwkService.getAssertedKeysForAccount(any(), any(), any(), any()) } throws NotFoundException("No keys found")
+        every { jwkService.getKeys(any(), any()) } returns emptyArray()
 
-        assertFailsWith<IllegalArgumentException> {
+        assertFailsWith<NotFoundException> {
             statementService.publishByAccount(testAccount.toDTO())
         }
 

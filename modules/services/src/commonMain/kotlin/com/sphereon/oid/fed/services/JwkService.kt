@@ -4,7 +4,6 @@ import com.sphereon.crypto.generic.KeyOperations
 import com.sphereon.crypto.generic.SignatureAlgorithm
 import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.jose.JwkUse
-import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
@@ -31,8 +30,9 @@ import kotlinx.coroutines.withContext
  * @param keyManagementSystem The instance responsible for managing cryptographic keys.
  */
 class JwkService(
-    private val keyManagementSystem: IKeyManagementSystem
+    private val kmsService: KmsService
 ) {
+    private val keyManagementSystem = kmsService.getKmsProvider()
     /**
      * Companion object for the JwkService class.
      * Provides constants and utility functions relevant to the service's operation.
@@ -70,15 +70,22 @@ class JwkService(
     suspend fun createKey(account: Account, opts: CreateKeyArgs = CreateKeyArgs()): AccountJwk = withContext(Dispatchers.IO) {
         logger.info("Creating new key for account: ${account.username}, with options: $opts")
         logger.debug("Found account with ID: ${account.id}")
+        val (_, kmsKeyRef, use, keyOperations, alg) = opts
+        val kms = opts.kms ?: kmsService.getKmsType().name
+        check(kmsService.getKmsType().name.lowercase() == kms.lowercase()) { "Provided KMS type $kms does not match configured KMS type ${kmsService.getKmsType().name}" }
+        // TODO: Support multiple KMS systems at the same time. That is why we have the KeyManager service in the crypto module
 
-        val (kmsKeyRef, use, keyOperations, alg) = opts
+        check(getKeys(account, includeRevoked = false).find { kmsKeyRef !== null && it.kmsKeyRef == kmsKeyRef } == null) { "Key with KMS key ref $kmsKeyRef already exists for account ID: ${account.id}"}
         val generatedJwk = keyManagementSystem.generateKeyAsync(kmsKeyRef, use, keyOperations, alg)
+        requireNotNull(generatedJwk.kmsKeyRef) { "Generated key kmsKeyRef cannot be null" }
         requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
-        logger.debug("Generated key pair with KID: ${generatedJwk.kid}")
+        logger.debug("Generated key pair with KID: ${generatedJwk.kid} kms: ${kms} and kmsKeyRef: ${generatedJwk.kmsKeyRef} for account ID: ${account.id}")
 
         val createdKey = jwkQueries.create(
             account_id = account.id,
             kid = generatedJwk.kid,
+            kms_key_ref = generatedJwk.kmsKeyRef,
+            kms = kms,
             key = generatedJwk.jose.publicJwk.toJsonString()
         ).executeAsOne()
 
@@ -92,13 +99,35 @@ class JwkService(
      * @param account The account for which the keys are to be retrieved.
      * @return An array of AccountJwk objects representing the keys associated with the given account.
      */
-    fun getKeys(account: Account): Array<AccountJwk> {
+    fun getKeys(account: Account, includeRevoked: Boolean = false): Array<AccountJwk> {
         logger.debug("Retrieving keys for account: ${account.username}")
         val keys = jwkQueries.findByAccountId(account.id)
             .executeAsList()
+            .filter { includeRevoked || it.revoked_at == null }
             .map { it.toDTO() }
             .toTypedArray()
-        logger.debug("Found ${keys.size} keys for account ID: ${account.id}")
+        logger.debug("Found ${keys.size} keys for account ID: ${account.id}, including revoked keys: $includeRevoked")
+        return keys
+    }
+
+
+    /**
+     * Retrieves the keys associated with the given account or throws an exception if no keys are found.
+     *
+     * @param account The account for which the keys are to be retrieved.
+     * @param kmsKeyRef A KMS Key reference. Takes precedence over a kid
+     * @param kid A kid value. kmsKeyRef always takes precedence
+     * @return An array of AccountJwk objects associated with the given account.
+     * @throws IllegalArgumentException If no keys are found for the account.
+     */
+    fun getAssertedKeysForAccount(account: Account, includeRevoked: Boolean = false, kmsKeyRef: String? = null, kid: String? = null): Array<AccountJwk> {
+        val keys = getKeys(account, includeRevoked).filter { kmsKeyRef === null || it.kmsKeyRef == kmsKeyRef }.filter { kid === null || it.kid  == kid }.toTypedArray()
+        println("Found ${keys.size} keys for account: ${account.username} and filters key ref: ${kmsKeyRef}, kid: $kid")
+
+        if (keys.isEmpty()) {
+            logger.error("No keys found for account: ${account.username}")
+            throw NotFoundException(Constants.NO_KEYS_FOUND)
+        }
         return keys
     }
 
@@ -199,17 +228,32 @@ class JwkService(
 }
 
 data class CreateKeyArgs(
+    val kms: String? = null,
     val kmsKeyRef: String? = null,
     val use: JwkUse = JwkUse.sig,
     val keyOperations: Array<out KeyOperations> = arrayOf(KeyOperations.SIGN, KeyOperations.VERIFY),
     val alg: SignatureAlgorithm = SignatureAlgorithm.ECDSA_SHA256
 ) {
+
+
+    companion object {
+        fun fromModel(model: CreateKey) = with(model) {
+            CreateKeyArgs(
+                kms = kms,
+                kmsKeyRef = kmsKeyRef,
+                alg = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(signatureAlgorithm?.value) ?: JwaAlgorithm.ES256)
+            )
+        }
+
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
         other as CreateKeyArgs
 
+        if (kms != other.kms) return false
         if (kmsKeyRef != other.kmsKeyRef) return false
         if (use != other.use) return false
         if (!keyOperations.contentEquals(other.keyOperations)) return false
@@ -219,20 +263,11 @@ data class CreateKeyArgs(
     }
 
     override fun hashCode(): Int {
-        var result = kmsKeyRef?.hashCode() ?: 0
+        var result = kms?.hashCode() ?: 0
+        result = 31 * result + (kmsKeyRef?.hashCode() ?: 0)
         result = 31 * result + use.hashCode()
         result = 31 * result + keyOperations.contentHashCode()
         result = 31 * result + alg.hashCode()
         return result
-    }
-
-    companion object {
-        fun fromModel(model: CreateKey) = with(model) {
-            CreateKeyArgs(
-                kmsKeyRef = kmsKeyRef,
-                alg = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(signatureAlgorithm?.value) ?: JwaAlgorithm.ES256)
-            )
-        }
-
     }
 }

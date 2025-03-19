@@ -16,6 +16,8 @@ fun JwkEntity.toDTO(): AccountJwk {
 
     return AccountJwk(
         id = this.id,
+        kms = this.kms,
+        kmsKeyRef = this.kms_key_ref,
         e = key.e,
         x = key.x,
         y = key.y,
@@ -29,7 +31,7 @@ fun JwkEntity.toDTO(): AccountJwk {
         x5t = key.x5t,
         x5u = key.x5u,
         x5tS256 = key.x5tS256,
-        revokedAt = this.revoked_at.toString(),
+        revokedAt = this.revoked_at?.toString(),
         revokedReason = this.revoked_reason,
     )
 }

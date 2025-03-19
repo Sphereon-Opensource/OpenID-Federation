@@ -9,5 +9,6 @@ fun SubordinateEntity.toDTO(): Subordinate {
         accountId = this.account_id,
         identifier = this.identifier,
         createdAt = this.created_at.toString(),
+        deletedAt = this.deleted_at?.toString()
     )
 }

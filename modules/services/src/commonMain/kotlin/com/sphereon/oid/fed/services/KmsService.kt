@@ -15,6 +15,13 @@ import com.sphereon.crypto.kms.model.AwsKmsClientConfig
 import com.sphereon.crypto.kms.model.KeyProviderConfig
 import com.sphereon.crypto.kms.model.KeyProviderSettings
 import com.sphereon.crypto.kms.model.KeyProviderType
+import com.sphereon.oid.fed.logger.Logger
+
+/**
+ * Logger instance used for logging events and debugging information within the `JwkService` class.
+ * It is configured with a specific tag ("JwkService") to differentiate logs emitted by this service from others.
+ */
+private val logger = Logger.tag("KmsService")
 
 enum class KmsType {
     MEMORY,
@@ -34,23 +41,30 @@ enum class KmsType {
 }
 
 class KmsService private constructor(
-    provider: KmsType,
+    private val kmsType: KmsType,
     azureConfig: AzureKeyVaultClientConfig? = null,
     awsConfig: AwsKmsClientConfig? = null
 
 ) {
-    private val kmsProvider: IKeyManagementSystem = when (provider) {
-        KmsType.MEMORY -> EcDSACryptoProvider()
+    private val kmsProvider: IKeyManagementSystem = when (kmsType) {
+        KmsType.MEMORY -> {
+            logger.debug("Using in-memory KMS provider")
+            EcDSACryptoProvider()
+        }
         KmsType.AWS -> {
+            logger.debug("Using AWS KMS provider with id ${awsConfig?.applicationId}")
             requireNotNull(awsConfig) { "AWS configuration is required when using AWS Provider type" }
-            AwsKmsCryptoProvider(KeyProviderSettings(id = awsConfig.applicationId, config = KeyProviderConfig(type = KeyProviderType.AWS_KMS, aws = awsConfig)))
+            AwsKmsCryptoProvider(KeyProviderSettings(id = awsConfig.applicationId ?: "aws", config = KeyProviderConfig(type = KeyProviderType.AWS_KMS, aws = awsConfig)))
         }
 
         KmsType.AZURE -> {
+            logger.debug("Using Azure KMS provider with id ${azureConfig?.applicationId}")
             requireNotNull(azureConfig) { "Azure configuration is required when using AZURE provider type" }
             AzureKeyVaultCryptoProvider(azureConfig)
         }
     }
+
+    fun getKmsType(): KmsType = kmsType
 
     fun getKmsProvider(): IKeyManagementSystem = kmsProvider
 
@@ -63,7 +77,7 @@ class KmsService private constructor(
         }
 
         fun createAwsKms(
-            applicationId: String,
+            applicationId: String = "aws",
             region: String,
             accessKeyId: String,
             secretAccessKey: String,
