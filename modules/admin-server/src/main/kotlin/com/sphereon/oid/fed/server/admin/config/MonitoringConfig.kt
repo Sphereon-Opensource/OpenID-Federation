@@ -21,6 +21,7 @@ class MonitoringConfig {
     @Value("\${monitoring.memory.warning-threshold-percent:80}")
     private var memoryWarningThresholdPercent: Int = 80
 
+    // TODO: This does very little, as load is relative to the amount of cores/processors. So on a multicore system a load of 0.8 could be totally fine
     @Value("\${monitoring.load.warning-threshold:0.8}")
     private var loadWarningThreshold: Double = 0.8
 

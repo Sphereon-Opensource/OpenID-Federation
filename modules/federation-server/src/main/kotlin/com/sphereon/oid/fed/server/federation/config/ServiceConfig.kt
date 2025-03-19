@@ -9,6 +9,7 @@ import com.sphereon.oid.fed.services.CriticalClaimService
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import com.sphereon.oid.fed.services.JwkService
 import com.sphereon.oid.fed.services.JwtService
+import com.sphereon.oid.fed.services.KmsService
 import com.sphereon.oid.fed.services.LogService
 import com.sphereon.oid.fed.services.MetadataService
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
@@ -50,13 +51,19 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun keyManagementSystem(): IKeyManagementSystem {
-        return EcDSACryptoProvider()
+    open fun kmsService(): KmsService {
+        return KmsService.createMemoryKms()
+    }
+
+
+    @Bean
+    open fun keyManagementSystem(kmsService: KmsService): IKeyManagementSystem {
+        return kmsService.getKmsProvider()
     }
 
     @Bean
-    open fun keyService(keyManagementSystem: IKeyManagementSystem): JwkService {
-        return JwkService(keyManagementSystem)
+    open fun keyService(kmsService: KmsService): JwkService {
+        return JwkService(kmsService)
     }
 
     @Bean

@@ -3,19 +3,7 @@ package com.sphereon.oid.fed.server.admin.config
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.AccountService
-import com.sphereon.oid.fed.services.AuthorityHintService
-import com.sphereon.oid.fed.services.CriticalClaimService
-import com.sphereon.oid.fed.services.EntityConfigurationStatementService
-import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.KmsType
-import com.sphereon.oid.fed.services.KmsService
-import com.sphereon.oid.fed.services.LogService
-import com.sphereon.oid.fed.services.MetadataService
-import com.sphereon.oid.fed.services.ReceivedTrustMarkService
-import com.sphereon.oid.fed.services.ResolutionService
-import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -52,20 +40,22 @@ open class ServiceConfig {
         return AccountService(accountServiceConfig)
     }
 
+
+
     @Bean
-    open fun keyService(kmsProvider: IKeyManagementSystem): JwkService {
-        return JwkService(kmsProvider)
+    open fun kmsType(environment: Environment): KmsType {
+        return KmsType.fromString(environment.getProperty("sphereon.federation.service.kms.provider", "memory"))
     }
 
     @Bean
-    open fun kmsProvider(environment: Environment): IKeyManagementSystem {
+    open fun kmsService(environment: Environment): KmsService {
         val providerType = environment.getProperty("sphereon.federation.service.kms.provider", "memory")
 
         return when (KmsType.fromString(providerType)) {
             KmsType.AWS -> {
                 try {
                     KmsService.createAwsKms(
-                        applicationId = environment.getRequiredProperty("sphereon.federation.aws.application-id"),
+                        applicationId = environment.getProperty("sphereon.federation.aws.application-id", "sphereon-federation-aws"),
                         region = environment.getRequiredProperty("sphereon.federation.aws.region"),
                         accessKeyId = environment.getRequiredProperty("sphereon.federation.aws.access-key-id"),
                         secretAccessKey = environment.getRequiredProperty("sphereon.federation.aws.secret-access-key"),
@@ -84,7 +74,7 @@ open class ServiceConfig {
                             Long::class.java,
                             15000L
                         )
-                    ).getKmsProvider()
+                    )
                 } catch (e: Exception) {
                     logger.error("Error initializing AWS KMS provider: ${e.message}")
                     throw e
@@ -114,33 +104,44 @@ open class ServiceConfig {
                             Long::class.java,
                             15000L
                         )
-                    ).getKmsProvider()
+                    )
                 } catch (e: Exception) {
                     logger.error("Error initializing Azure KMS provider: ${e.message}")
                     throw e
                 }
             }
 
-            else -> KmsService.createMemoryKms().getKmsProvider()
+            else -> KmsService.createMemoryKms()
         }
     }
+
+    @Bean
+    open fun jwkService(kmsService: KmsService): JwkService {
+        return JwkService(kmsService)
+    }
+
+    @Bean
+    open fun keyManagementSystem(kmsService: KmsService): IKeyManagementSystem {
+        return kmsService.getKmsProvider()
+    }
+
 
     @Bean
     open fun subordinateService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsProvider: IKeyManagementSystem
+        keyManagementSystem: IKeyManagementSystem
     ): SubordinateService {
-        return SubordinateService(accountService, jwkService, kmsProvider)
+        return SubordinateService(accountService, jwkService, keyManagementSystem)
     }
 
     @Bean
     open fun trustMarkService(
         jwkService: JwkService,
-        kmsProvider: IKeyManagementSystem,
+        keyManagementSystem: IKeyManagementSystem,
         accountService: AccountService
     ): TrustMarkService {
-        return TrustMarkService(jwkService, kmsProvider, accountService)
+        return TrustMarkService(jwkService, keyManagementSystem, accountService)
     }
 
     @Bean
