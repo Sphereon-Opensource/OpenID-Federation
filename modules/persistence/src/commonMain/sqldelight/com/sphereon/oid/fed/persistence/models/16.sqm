@@ -1,0 +1,19 @@
+-- 1. Add the new column 'kms_key_ref' as NOT NULL with a temporary default.
+ALTER TABLE Jwk ADD COLUMN kms_key_ref VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE Jwk ADD COLUMN kms VARCHAR(255) NOT NULL DEFAULT 'memory';
+
+-- 2. Populate 'kms_key_ref' with the existing values from the 'kid' column.
+UPDATE Jwk
+SET kms_key_ref = kid;
+
+-- Remove the default as it’s only needed for the data migration.
+ALTER TABLE Jwk ALTER COLUMN kms_key_ref DROP DEFAULT;
+
+-- 3. Drop the unique constraint on the 'kid' column.
+-- ALTER TABLE Jwk DROP CONSTRAINT jwk_kid_key;
+
+-- 4. Create a unique composite constraint on (kid, account_id).
+ALTER TABLE Jwk ADD CONSTRAINT unique_kid_account_id UNIQUE (kid, account_id);
+
+-- 5. Create a unique composite constraint on (kms_key_ref, account_id).
+ALTER TABLE Jwk ADD CONSTRAINT unique_kms_key_ref_account_id UNIQUE (kms_key_ref, account_id);

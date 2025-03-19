@@ -1,10 +1,12 @@
-CREATE TABLE jwk (
+CREATE TABLE Jwk (
     id SERIAL PRIMARY KEY,
     uuid UUID DEFAULT gen_random_uuid(),
     account_id INT NOT NULL,
     kty VARCHAR(10) NOT NULL,
     crv VARCHAR(10),
     kid VARCHAR(255) UNIQUE,
+    kms VARCHAR(255),
+    kms_key_ref VARCHAR(255),
     x TEXT,
     y TEXT,
     d TEXT,
