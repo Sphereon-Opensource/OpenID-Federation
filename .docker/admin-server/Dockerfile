@@ -3,6 +3,8 @@ RUN microdnf install findutils
 
 WORKDIR /app
 COPY . /app
+
+RUN rm .env*
 RUN chmod +x ./gradlew
 
 RUN ./gradlew :modules:admin-server:bootJar -x test -x allTests -x jsBrowserTest
