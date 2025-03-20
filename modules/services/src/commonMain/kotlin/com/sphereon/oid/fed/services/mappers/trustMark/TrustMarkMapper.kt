@@ -2,6 +2,8 @@ package com.sphereon.oid.fed.services.mappers.trustMark
 
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
+import com.sphereon.oid.fed.openapi.models.TrustMarkTypesResponse
+import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
@@ -28,3 +30,7 @@ fun ReceivedTrustMark.toTrustMark(): TrustMark {
         trustMark = this.jwt
     )
 }
+
+fun List<TrustMark>.toTrustMarksResponse() = TrustMarksResponse(this.toTypedArray())
+
+fun List<TrustMarkType>.toTrustMarkTypesResponse() = TrustMarkTypesResponse(this.toTypedArray())

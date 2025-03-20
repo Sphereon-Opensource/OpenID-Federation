@@ -2,8 +2,10 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMark
+import com.sphereon.oid.fed.openapi.models.ReceivedTrustMarksResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.ReceivedTrustMarkService
+import com.sphereon.oid.fed.services.mappers.receivedTrustMark.toReceivedTrustMarksResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -17,16 +19,16 @@ class ReceivedTrustMarkController(
     @ResponseStatus(HttpStatus.CREATED)
     fun createReceivedTrustMark(
         request: HttpServletRequest,
-        @RequestBody dto: CreateReceivedTrustMark
+        @RequestBody receivedTrustMarkData: CreateReceivedTrustMark
     ): ReceivedTrustMark {
         val account = getAccountFromRequest(request)
-        return receivedTrustMarkService.createReceivedTrustMark(account, dto)
+        return receivedTrustMarkService.createReceivedTrustMark(account, receivedTrustMarkData)
     }
 
     @GetMapping
-    fun listReceivedTrustMarks(request: HttpServletRequest): Array<ReceivedTrustMark> {
+    fun listReceivedTrustMarks(request: HttpServletRequest): ReceivedTrustMarksResponse {
         val account = getAccountFromRequest(request)
-        return receivedTrustMarkService.listReceivedTrustMarks(account)
+        return receivedTrustMarkService.listReceivedTrustMarks(account).toReceivedTrustMarksResponse()
     }
 
     @DeleteMapping("/{receivedTrustMarkId}")

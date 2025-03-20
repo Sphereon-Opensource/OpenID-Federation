@@ -14,7 +14,7 @@ fun LogEntity.toDTO(): Log = Log(
 )
 
 fun String.toLogSeverity(): Log.Severity {
-    return when (this) {
+    return when (this.uppercase()) {
         "VERBOSE" -> Log.Severity.Verbose
         "DEBUG" -> Log.Severity.Debug
         "INFO" -> Log.Severity.Info

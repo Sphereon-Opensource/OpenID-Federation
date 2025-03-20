@@ -2,8 +2,10 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.CreateTrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMark
+import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.mappers.trustMark.toTrustMarksResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -22,9 +24,9 @@ class TrustMarkController(
 ) {
 
     @GetMapping
-    fun getTrustMarks(request: HttpServletRequest): List<TrustMark> {
+    fun getTrustMarks(request: HttpServletRequest): TrustMarksResponse {
         val account = getAccountFromRequest(request)
-        return trustMarkService.getTrustMarksForAccount(account)
+        return trustMarkService.getTrustMarksForAccount(account).toTrustMarksResponse()
     }
 
     @PostMapping

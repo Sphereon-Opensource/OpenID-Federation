@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services.mappers.metadata
 
 import com.sphereon.oid.fed.openapi.models.Metadata
+import com.sphereon.oid.fed.openapi.models.MetadataResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import com.sphereon.oid.fed.persistence.models.Metadata as MetadataEntity
@@ -14,3 +15,5 @@ fun MetadataEntity.toDTO(): Metadata {
         accountId = this.account_id
     )
 }
+
+fun List<Metadata>.toMetadataResponse() = MetadataResponse(this.toTypedArray())

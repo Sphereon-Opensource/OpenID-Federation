@@ -1,18 +1,17 @@
 package com.sphereon.oid.fed.services.mappers.jwk
 
+import com.sphereon.crypto.jose.Jwk
+import com.sphereon.crypto.jose.Jwk.Companion.serializer
+import com.sphereon.json.cryptoJsonSerializer
 import com.sphereon.oid.fed.openapi.models.AccountJwk
+import com.sphereon.oid.fed.openapi.models.AccountJwksResponse
 import com.sphereon.oid.fed.openapi.models.HistoricalKey
-import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwkRevoked
-import kotlinx.serialization.json.Json
+import com.sphereon.oid.fed.openapi.models.Jwk as JwkDto
 import com.sphereon.oid.fed.persistence.models.Jwk as JwkEntity
 
-private val json = Json {
-    ignoreUnknownKeys = true
-}
-
 fun JwkEntity.toDTO(): AccountJwk {
-    val key = json.decodeFromString<Jwk>(this.key)
+    val key: Jwk = cryptoJsonSerializer.decodeFromString<Jwk>(serializer(), this.key)
 
     return AccountJwk(
         id = this.id,
@@ -22,37 +21,37 @@ fun JwkEntity.toDTO(): AccountJwk {
         x = key.x,
         y = key.y,
         n = key.n,
-        alg = key.alg,
-        crv = key.crv,
-        kid = key.kid,
-        kty = key.kty,
+        alg = key.getSignatureAlgorithm()?.jose?.value,
+        crv = key.crv?.value,
+        kid = key.getKidAsString(false)!!,
+        kty = key.getKty().jose.value,
         use = key.use,
         x5c = key.x5c,
         x5t = key.x5t,
         x5u = key.x5u,
-        x5tS256 = key.x5tS256,
+        x5tS256 = key.x5t_S256,
         revokedAt = this.revoked_at?.toString(),
         revokedReason = this.revoked_reason,
     )
 }
 
 fun JwkEntity.toHistoricalKey(): HistoricalKey {
-    val key = json.decodeFromString<Jwk>(this.key)
+    val key: Jwk = cryptoJsonSerializer.decodeFromString(this.key)
 
     return HistoricalKey(
         e = key.e,
         x = key.x,
         y = key.y,
         n = key.n,
-        alg = key.alg,
-        crv = key.crv,
-        kid = key.kid,
-        kty = key.kty,
+        alg = key.getSignatureAlgorithm()?.jose?.value,
+        crv = key.crv?.value,
+        kid = key.getKidAsString(false)!!,
+        kty = key.getKty().jose.value,
         use = key.use,
         x5c = key.x5c,
         x5t = key.x5t,
         x5u = key.x5u,
-        x5tS256 = key.x5tS256,
+        x5tS256 = key.x5t_S256,
         revoked = JwkRevoked(
             reason = this.revoked_reason,
             revokedAt = this.revoked_at.toString()
@@ -60,8 +59,8 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
     )
 }
 
-fun AccountJwk.toJwk(): Jwk {
-    return Jwk(
+fun AccountJwk.toJwk(): JwkDto {
+    return JwkDto(
         e = this.e,
         x = this.x,
         y = this.y,
@@ -77,3 +76,5 @@ fun AccountJwk.toJwk(): Jwk {
         x5tS256 = this.x5tS256
     )
 }
+
+fun  Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this)

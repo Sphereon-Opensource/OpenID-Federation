@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services.mappers.subordinateMetadata
 
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadataResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import com.sphereon.oid.fed.persistence.models.SubordinateMetadata as SubordinateMetadataEntity
@@ -16,3 +17,6 @@ fun SubordinateMetadataEntity.toDTO(): SubordinateMetadata {
         deletedAt = this.deleted_at?.toString()
     )
 }
+
+
+fun Array<SubordinateMetadata>.toSubordinateMetadataResponse() = SubordinateMetadataResponse(this)

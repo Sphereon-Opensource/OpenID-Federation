@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services.mappers.subordinate
 
 import com.sphereon.oid.fed.openapi.models.Subordinate
+import com.sphereon.oid.fed.openapi.models.SubordinatesResponse
 import com.sphereon.oid.fed.persistence.models.Subordinate as SubordinateEntity
 
 fun SubordinateEntity.toDTO(): Subordinate {
@@ -12,3 +13,8 @@ fun SubordinateEntity.toDTO(): Subordinate {
         deletedAt = this.deleted_at?.toString()
     )
 }
+
+
+fun Array<SubordinateEntity>.toDTOs(): Array<Subordinate> = this.map { it.toDTO() }.toTypedArray()
+fun Array<Subordinate>.toSubordinatesResponse() = SubordinatesResponse(this)
+

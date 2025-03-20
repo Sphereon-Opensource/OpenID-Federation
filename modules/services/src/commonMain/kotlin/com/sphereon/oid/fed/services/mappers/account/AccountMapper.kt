@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services.mappers.account
 
 import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.AccountsResponse
 import com.sphereon.oid.fed.persistence.models.Account as AccountEntity
 
 fun AccountEntity.toDTO(): Account {
@@ -10,3 +11,5 @@ fun AccountEntity.toDTO(): Account {
         identifier = this.identifier
     )
 }
+
+fun List<Account>.toAccountsResponse(): AccountsResponse = AccountsResponse(this.toTypedArray())

@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services.mappers.receivedTrustMark
 
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMark
+import com.sphereon.oid.fed.openapi.models.ReceivedTrustMarksResponse
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark as ReceivedTrustMarkEntity
 
 fun ReceivedTrustMarkEntity.toDTO(): ReceivedTrustMark {
@@ -12,3 +13,6 @@ fun ReceivedTrustMarkEntity.toDTO(): ReceivedTrustMark {
         createdAt = this.created_at?.toString()
     )
 }
+
+
+fun Array<ReceivedTrustMark>.toReceivedTrustMarksResponse() = ReceivedTrustMarksResponse(this)

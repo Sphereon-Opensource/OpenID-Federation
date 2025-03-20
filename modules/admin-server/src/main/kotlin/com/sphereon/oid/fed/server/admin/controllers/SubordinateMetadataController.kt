@@ -2,8 +2,10 @@ package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadataResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
+import com.sphereon.oid.fed.services.mappers.subordinateMetadata.toSubordinateMetadataResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -17,9 +19,9 @@ class SubordinateMetadataController(
     fun get(
         request: HttpServletRequest,
         @PathVariable subordinateId: Int
-    ): Array<SubordinateMetadata> {
+    ): SubordinateMetadataResponse {
         val account = getAccountFromRequest(request)
-        return subordinateService.findSubordinateMetadata(account, subordinateId)
+        return subordinateService.findSubordinateMetadata(account, subordinateId).toSubordinateMetadataResponse()
     }
 
     @PostMapping
