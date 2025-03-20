@@ -1,4 +1,4 @@
-import org.springframework.aot.hint.predicate.RuntimeHintsPredicates.serialization
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 
 plugins {
     alias(libs.plugins.springboot)
@@ -8,6 +8,14 @@ plugins {
     id("maven-publish")
     application
 }
+
+tasks.register<Copy>("copyOpenAPI") {
+    from("../openapi/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/admin-server.yaml")
+    into("src/main/resources/public")
+//    from(tasks.compileJava)
+}
+//
+tasks.processResources.dependsOn(":modules:admin-server:copyOpenAPI")
 
 repositories {
     mavenLocal()
@@ -55,6 +63,7 @@ dependencies {
     implementation(libs.springboot.data.jdbc)
     implementation(libs.kotlin.reflect)
     implementation(libs.whyoleg.cryptography.core)
+    implementation(libs.springdoc.starter.webmvc.ui)
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
     testImplementation(libs.springboot.testcontainer)

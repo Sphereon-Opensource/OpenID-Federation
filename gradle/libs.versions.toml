@@ -27,6 +27,7 @@ npmPublish = "3.5.3"
 openapi = "7.12.0"
 sphereonKmp = "0.2.4"
 springboot = "3.4.3"
+springdoc = "2.8.5"
 springDependencyManagement = "1.1.7"
 kermitLogging = "2.0.5"
 sqldelight = "2.0.2"
@@ -92,6 +93,7 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
 springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
+springdoc-starter-webmvc-ui = { group = "org.springdoc", name="springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc"}
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
 testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }

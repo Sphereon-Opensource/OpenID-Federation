@@ -1,4 +1,4 @@
-openapi: 3.0.4
+openapi: 3.0.3
 info:
   title: OpenID Federation Server API
   description: This API exposes standardized OpenID Federation endpoints that enable entity participation within a federation through statement exchange, trust negotiation, and metadata discovery.
