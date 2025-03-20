@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers.jwk
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.crypto.jose.Jwk
 import com.sphereon.crypto.jose.Jwk.Companion.serializer

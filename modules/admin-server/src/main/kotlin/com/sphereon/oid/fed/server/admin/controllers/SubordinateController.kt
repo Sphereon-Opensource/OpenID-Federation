@@ -3,8 +3,8 @@ package com.sphereon.oid.fed.server.admin.controllers
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.mappers.subordinate.toSubordinatesResponse
-import com.sphereon.oid.fed.services.mappers.subordinateJwk.toSubordinateJwksResponse
+import com.sphereon.oid.fed.services.mappers.toSubordinatesResponse
+import com.sphereon.oid.fed.services.mappers.toSubordinateJwksResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

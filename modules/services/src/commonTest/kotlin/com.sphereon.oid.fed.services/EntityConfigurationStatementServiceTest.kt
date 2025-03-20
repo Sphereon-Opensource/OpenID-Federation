@@ -18,7 +18,7 @@ import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
-import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

@@ -15,8 +15,8 @@ import com.sphereon.oid.fed.openapi.models.HistoricalKey
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Jwk
-import com.sphereon.oid.fed.services.mappers.jwk.toDTO
-import com.sphereon.oid.fed.services.mappers.jwk.toHistoricalKey
+import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.toHistoricalKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

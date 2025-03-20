@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
-import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*

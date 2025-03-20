@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Metadata
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
-import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

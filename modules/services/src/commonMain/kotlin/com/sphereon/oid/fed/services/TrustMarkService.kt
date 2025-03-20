@@ -17,7 +17,7 @@ import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
-import com.sphereon.oid.fed.services.mappers.trustMark.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 
 /**

@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.openapi.models.AuthorityHintsResponse
 import com.sphereon.oid.fed.openapi.models.CreateAuthorityHint
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.AuthorityHintService
-import com.sphereon.oid.fed.services.mappers.authorityHints.toAuthorityHintsResponse
+import com.sphereon.oid.fed.services.mappers.toAuthorityHintsResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*

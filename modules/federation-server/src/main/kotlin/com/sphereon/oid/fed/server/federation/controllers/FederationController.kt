@@ -12,7 +12,7 @@ import com.sphereon.oid.fed.services.JwkService
 import com.sphereon.oid.fed.services.ResolutionService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
-import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping

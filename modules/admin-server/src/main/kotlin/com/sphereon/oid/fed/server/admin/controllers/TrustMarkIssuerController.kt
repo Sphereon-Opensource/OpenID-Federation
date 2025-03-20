@@ -1,10 +1,12 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.openapi.models.AddTrustMarkIssuerResponse
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeIssuer
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypeIssuersResponse
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.mappers.toAddTrustMarkIssuerResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.*
 
@@ -28,13 +30,13 @@ class TrustMarkIssuerController(
         request: HttpServletRequest,
         @PathVariable id: Int,
         @RequestBody body: CreateTrustMarkTypeIssuer
-    ): TrustMarkIssuer {
+    ): AddTrustMarkIssuerResponse {
         val account = getAccountFromRequest(request)
         return trustMarkService.addIssuerToTrustMarkType(
             account,
             id,
             body.identifier
-        )
+        ).toAddTrustMarkIssuerResponse()
     }
 
     @DeleteMapping("/{issuerIdentifier}")

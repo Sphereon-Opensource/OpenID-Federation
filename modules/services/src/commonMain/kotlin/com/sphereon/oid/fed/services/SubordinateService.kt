@@ -8,12 +8,10 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.subordinate.toDTO
-import com.sphereon.oid.fed.services.mappers.subordinate.toDTOs
-import com.sphereon.oid.fed.services.mappers.subordinateJwk.toDTO
-import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJsonString
-import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJwk
-import com.sphereon.oid.fed.services.mappers.subordinateMetadata.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTOs
+import com.sphereon.oid.fed.services.mappers.toJsonString
+import com.sphereon.oid.fed.services.mappers.toJwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject

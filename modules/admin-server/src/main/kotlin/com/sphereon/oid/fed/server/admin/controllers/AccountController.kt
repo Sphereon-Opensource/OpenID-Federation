@@ -4,7 +4,7 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.AccountService
-import com.sphereon.oid.fed.services.mappers.account.toAccountsResponse
+import com.sphereon.oid.fed.services.mappers.toAccountsResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*

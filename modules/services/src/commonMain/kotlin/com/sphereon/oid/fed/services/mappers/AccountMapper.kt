@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers.account
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AccountsResponse

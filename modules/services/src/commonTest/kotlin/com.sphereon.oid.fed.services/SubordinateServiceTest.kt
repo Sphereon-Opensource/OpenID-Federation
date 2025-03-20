@@ -17,8 +17,8 @@ import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
-import com.sphereon.oid.fed.services.mappers.account.toDTO
-import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJsonString
+import com.sphereon.oid.fed.services.mappers.toDTO
+import com.sphereon.oid.fed.services.mappers.toJsonString
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

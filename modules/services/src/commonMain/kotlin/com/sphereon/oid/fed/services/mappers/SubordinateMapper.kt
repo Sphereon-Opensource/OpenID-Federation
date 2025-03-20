@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers.subordinate
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.Subordinate
 import com.sphereon.oid.fed.openapi.models.SubordinatesResponse

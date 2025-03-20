@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers.subordinateMetadata
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadataResponse

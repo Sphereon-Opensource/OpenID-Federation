@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.metadata.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import kotlinx.serialization.json.JsonObject
 
 /**

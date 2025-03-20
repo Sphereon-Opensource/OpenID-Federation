@@ -5,7 +5,7 @@ import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
-import com.sphereon.oid.fed.services.mappers.trustMark.toTrustMarksResponse
+import com.sphereon.oid.fed.services.mappers.toTrustMarksResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping

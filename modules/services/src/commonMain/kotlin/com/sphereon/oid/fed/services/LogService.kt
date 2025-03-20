@@ -3,8 +3,7 @@ package com.sphereon.oid.fed.services
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Log
 import com.sphereon.oid.fed.persistence.models.LogQueries
-import com.sphereon.oid.fed.services.mappers.log.toDTO
-import kotlinx.serialization.encodeToString
+import com.sphereon.oid.fed.services.mappers.toDTO
 import kotlinx.serialization.json.Json
 
 /**

@@ -6,7 +6,7 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.oid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.receivedTrustMark.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 
 /**
  * Service responsible for handling operations related to received trust marks.

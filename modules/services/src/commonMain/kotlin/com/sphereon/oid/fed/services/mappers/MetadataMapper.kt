@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.services.mappers.metadata
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.openapi.models.MetadataResponse

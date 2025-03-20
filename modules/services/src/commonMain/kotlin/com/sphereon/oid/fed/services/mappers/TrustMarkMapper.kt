@@ -1,12 +1,17 @@
-package com.sphereon.oid.fed.services.mappers.trustMark
+package com.sphereon.oid.fed.services.mappers
 
+
+import com.sphereon.oid.fed.openapi.models.AddTrustMarkIssuerResponse
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypesResponse
 import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
+import com.sphereon.oid.fed.openapi.models.TrustMarkTypeIssuersResponse
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
+import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
+import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer as TrustMarkIssuerEntity
 
 fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
     return TrustMarkType(
@@ -34,3 +39,5 @@ fun ReceivedTrustMark.toTrustMark(): TrustMark {
 fun List<TrustMark>.toTrustMarksResponse() = TrustMarksResponse(this.toTypedArray())
 
 fun List<TrustMarkType>.toTrustMarkTypesResponse() = TrustMarkTypesResponse(this.toTypedArray())
+
+fun TrustMarkIssuerEntity.toAddTrustMarkIssuerResponse(): AddTrustMarkIssuerResponse = AddTrustMarkIssuerResponse(id = this.id, issuer = this.issuer_identifier, trustMarkTypeId = this.trust_mark_type_id, createdAt = this.created_at.toString())

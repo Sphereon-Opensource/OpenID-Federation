@@ -24,13 +24,13 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.5.0-d41
+  version: 0.9.0-d41
 servers:
-  # Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/SphereonInt/OpenIDFederationAdminServer/0.1.0-d41
   - url: http://localhost:8081
     description: Admin Server
+security:
+  - oAuth2: [ ]
+  - bearerAuth: [ ]
 paths:
   /accounts:
     get:
@@ -38,8 +38,6 @@ paths:
         - accounts
       summary: List all accounts
       operationId: listAccounts
-      security:
-        - bearerAuth: [ ]
       description: Retrieve a list of all accounts.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -67,8 +65,7 @@ paths:
         - accounts
       summary: Register a new tenant account
       operationId: registerNewTenantAccount
-      security:
-        - bearerAuth: [ ]
+
       description: Endpoint for an admin to create a new account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -102,8 +99,7 @@ paths:
         - accounts
       summary: Delete current account
       operationId: deleteCurrentAccount
-      security:
-        - bearerAuth: [ ]
+
       description: Delete the account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -133,8 +129,7 @@ paths:
         - keys
       summary: List all keys
       operationId: listKeys
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve all keys associated with the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -167,8 +162,7 @@ paths:
       tags:
         - keys
       summary: Create a new key
-      security:
-        - bearerAuth: [ ]
+
       description: Create a new key for the specified account.
       operationId: createKey
       parameters:
@@ -204,8 +198,7 @@ paths:
       tags:
         - keys
       summary: Revoke a key
-      security:
-        - bearerAuth: [ ]
+
       description: Revoke a key by its ID for the specified account.
       operationId: revokeKey
       parameters:
@@ -253,8 +246,7 @@ paths:
         - metadata
       summary: Get entity configuration metadata
       operationId: getEntityMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve metadata entries for a specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -282,8 +274,7 @@ paths:
         - metadata
       summary: Create entity configuration metadata
       operationId: createEntityMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Add a new metadata entry for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -319,8 +310,7 @@ paths:
         - metadata
       summary: Delete account metadata
       operationId: deleteEntityMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Deletes a specific metadata entry for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -361,8 +351,7 @@ paths:
         - authority-hints
       summary: Get authority hints
       operationId: getAuthorityHints
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve all authority hints for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -390,8 +379,7 @@ paths:
         - authority-hints
       summary: Create an authority hint
       operationId: createAuthorityHints
-      security:
-        - bearerAuth: [ ]
+
       description: Add a new authority hint for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -426,8 +414,7 @@ paths:
       tags:
         - authority-hints
       summary: Delete an authority hint
-      security:
-        - bearerAuth: [ ]
+
       description: Remove an authority hint by its ID for the specified account.
       operationId: deleteAuthorityHints
       parameters:
@@ -462,8 +449,7 @@ paths:
       tags:
         - entity-statements
       summary: Get entity configuration statement object
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve the entity configuration statement for the specified account.
       operationId: getEntityStatement
       parameters:
@@ -492,8 +478,7 @@ paths:
         - entity-statements
       summary: Sign and publish entity configuration statement
       operationId: signAndPublishEntityStatement
-      security:
-        - bearerAuth: [ ]
+
       description: Sign and publish the entity configuration statement for the specified account. If `dryRun` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -531,8 +516,7 @@ paths:
         - subordinates
       summary: Get subordinates
       operationId: listSubordinates
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve all subordinates associated with the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -560,8 +544,7 @@ paths:
         - subordinates
       summary: Create a subordinate
       operationId: createSubordinate
-      security:
-        - bearerAuth: [ ]
+
       description: Create a subordinate for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -597,8 +580,7 @@ paths:
         - subordinates
       summary: Delete subordinate
       operationId: deleteSubordinate
-      security:
-        - bearerAuth: [ ]
+
       description: Deletes a specific subordinate for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -611,14 +593,6 @@ paths:
       responses:
         '200':
           description: Subordinate deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Subordinate deleted successfully
         '400':
           description: Invalid request
           content:
@@ -644,8 +618,7 @@ paths:
       operationId: listJwksBySubordinateId
       tags:
         - subordinates
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve all JWKs associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -679,8 +652,7 @@ paths:
         - subordinates
       summary: Create a subordinate JWK
       operationId: createSubordinateJwk
-      security:
-        - bearerAuth: [ ]
+
       description: Create a JWK for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -723,8 +695,7 @@ paths:
         - subordinates
       summary: Delete subordinate JWK
       operationId: deleteSubordinateJwk
-      security:
-        - bearerAuth: [ ]
+
       description: Delete a JWK associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -766,8 +737,7 @@ paths:
         - subordinates
       summary: Get subordinate metadata
       operationId: getSubordinateMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve metadata associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -801,8 +771,7 @@ paths:
         - subordinates
       summary: Create subordinate metadata
       operationId: createSubordinateMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Create metadata for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -844,8 +813,7 @@ paths:
         - subordinates
       summary: Delete subordinate metadata
       operationId: deleteSubordinateMetadata
-      security:
-        - bearerAuth: [ ]
+
       description: Delete metadata associated with the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -886,8 +854,7 @@ paths:
         - subordinates
       summary: Get subordinate statement object
       operationId: getSubordinateSatement
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve the subordinate statement for the specified subordinate.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -921,8 +888,7 @@ paths:
         - subordinates
       summary: Sign and publish subordinate statement
       operationId: signAndPublishSubordinateStatement
-      security:
-        - bearerAuth: [ ]
+
       description: Sign and publish the subordinate statement for the specified subordinate. If `dryRun` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -964,8 +930,7 @@ paths:
         - trust-marks
       summary: Get all Trust Mark Types
       operationId: listTrustMarkTypes
-      security:
-        - bearerAuth: [ ]
+
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -981,8 +946,7 @@ paths:
         - trust-marks
       summary: Create a Trust Mark Type
       operationId: createTrustMarkType
-      security:
-        - bearerAuth: [ ]
+
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
@@ -1005,8 +969,7 @@ paths:
         - trust-marks
       summary: Get a Trust Mark Type by ID
       operationId: getTrustMarkType
-      security:
-        - bearerAuth: [ ]
+
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -1026,8 +989,7 @@ paths:
         - trust-marks
       summary: Delete a Trust Mark Type
       operationId: deleteTrustMarkType
-      security:
-        - bearerAuth: [ ]
+
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -1043,8 +1005,7 @@ paths:
       tags:
         - trust-marks
       summary: Get Issuers for a Trust Mark Type
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve a list of issuers for the specified Trust Mark Type.
       operationId: getIssuersForTrustMarkType
       parameters:
@@ -1068,8 +1029,7 @@ paths:
       tags:
         - trust-marks
       summary: Add Issuer to Trust Mark Type
-      security:
-        - bearerAuth: [ ]
+
       description: Add a new issuer to the specified Trust Mark Type.
       operationId: addIssuerToTrustMarkType
       parameters:
@@ -1087,29 +1047,31 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - identifier
               properties:
                 identifier:
                   type: string
                   description: Identifier of the issuer.
-                  example: https://issuer.example.com
+            examples:
+              request:
+                description: "Example request"
+                value:
+                  identifier: "https://issuer.example.com"
       responses:
         '201':
           description: Issuer successfully added to the Trust Mark Type.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: Unique ID of the Trust Mark Issuer.
-                    example: issuer-123
-                  identifier:
-                    type: string
-                    description: Identifier of the issuer.
-                    example: https://issuer.example.com
+                $ref: '#/components/schemas/AddTrustMarkIssuerResponse'
+              examples:
+                response:
+                  description: Issuer added to trustmark
+                  value:
+                    id: "issuer-123"
+                    issuer: "https://issuer.example.com"
+                    trustMarkTypeId: 1
+                    createdAt: "2024-12-01T12:00:00Z"
+
         '404':
           description: Account or Trust Mark Type not found.
         '400':
@@ -1119,8 +1081,7 @@ paths:
       tags:
         - trust-marks
       summary: Remove Issuer from Trust Mark Type
-      security:
-        - bearerAuth: [ ]
+
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
@@ -1148,11 +1109,14 @@ paths:
                   id:
                     type: string
                     description: Unique ID of the removed Trust Mark Issuer.
-                    example: issuer-123
                   identifier:
                     type: string
                     description: Identifier of the removed issuer.
-                    example: https://issuer.example.com
+              examples:
+                example:
+                  value:
+                    id: issuer-123
+                    identifier: https://issuer.example.com
         '404':
           description: Account, Trust Mark Type, or Issuer not found.
   '/trust-marks':
@@ -1160,8 +1124,7 @@ paths:
       tags:
         - trust-marks
       summary: Create or Update a Trust Mark
-      security:
-        - bearerAuth: [ ]
+
       description: Create or update a Trust Mark for the specified account.
       operationId: createTrustMark
       parameters:
@@ -1215,8 +1178,7 @@ paths:
         - trust-marks
       summary: List Trust Marks
       operationId: listTrustMarks
-      security:
-        - bearerAuth: [ ]
+
       description: List all Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1245,8 +1207,7 @@ paths:
         - trust-marks
       summary: Delete a Trust Mark
       operationId: deleteTrustMark
-      security:
-        - bearerAuth: [ ]
+
       description: Delete an existing Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1266,7 +1227,8 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Trust Mark deleted successfully
+                example:
+                  message: Trust Mark deleted successfully
         '400':
           description: Invalid request
           content:
@@ -1291,8 +1253,7 @@ paths:
         - trust-marks
       summary: Create a Received Trust Mark
       operationId: createReceivedTrustMark
-      security:
-        - bearerAuth: [ ]
+
       description: Create or update a received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1331,8 +1292,7 @@ paths:
         - trust-marks
       summary: List Received Trust Marks
       operationId: listReceivedTrustMarks
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve all received Trust Marks for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1362,8 +1322,7 @@ paths:
         - trust-marks
       summary: Delete a Received Trust Mark
       operationId: deleteReceivedTrustMark
-      security:
-        - bearerAuth: [ ]
+
       description: Delete a specific received Trust Mark for the specified account.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1409,6 +1368,7 @@ paths:
         - system
       summary: Check node status
       description: Check the status of the Admin Node.
+      security: [ ]
       responses:
         '200':
           description: Successful status check
@@ -1426,8 +1386,6 @@ paths:
       operationId: getLogs
       tags:
         - system
-      security:
-        - bearerAuth: [ ]
       description: Retrieve the most recent logs from the system
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1464,8 +1422,7 @@ paths:
         - system
       summary: Get logs by severity
       operationId: getLogsBySeverity
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve logs filtered by severity level
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1509,8 +1466,7 @@ paths:
         - system
       summary: Get logs by tag
       operationId: getLogsByTag
-      security:
-        - bearerAuth: [ ]
+
       description: Retrieve logs filtered by tag
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -1554,6 +1510,13 @@ components:
       scheme: bearer
       description: Bearer token authentication
       bearerFormat: JWT
+    oAuth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8082/realms/openid-federation/protocol/openid-connect/token
+          refreshUrl: http://localhost:8082/realms/openid-federation/protocol/openid-connect/token
+          scopes: { }
   parameters:
     AccountUsername:
       name: X-Account-Username
@@ -1921,17 +1884,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TrustMark'
-#            type: object
-#            properties:
-#              trustMarkId:
-#                type: string
-#                description: The identifier of the Trust Mark.
-#              trustMark:
-#                type: string
-#                description: The JWT of the Trust Mark.
-#              entityId:
-#                type: string
-#                description: The Entity Identifier of the entity to which the Trust Mark is issued.
+    #            type: object
+    #            properties:
+    #              trustMarkId:
+    #                type: string
+    #                description: The identifier of the Trust Mark.
+    #              trustMark:
+    #                type: string
+    #                description: The JWT of the Trust Mark.
+    #              entityId:
+    #                type: string
+    #                description: The Entity Identifier of the entity to which the Trust Mark is issued.
 
     CreateTrustMarkType:
       type: object
@@ -2297,21 +2260,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReceivedTrustMark'
-#            type: object
-#            properties:
-#              trustMarkId:
-#                type: string
-#                description: The unique identifier of the received Trust Mark.
-#              trustMarkTypeId:
-#                type: string
-#                description: The identifier of the Trust Mark Type.
-#              issuedJwt:
-#                type: string
-#                description: The JWT representing the received Trust Mark.
-#              receivedAt:
-#                type: string
-#                format: date-time
-#                description: The timestamp when the Trust Mark was received.
+    #            type: object
+    #            properties:
+    #              trustMarkId:
+    #                type: string
+    #                description: The unique identifier of the received Trust Mark.
+    #              trustMarkTypeId:
+    #                type: string
+    #                description: The identifier of the Trust Mark Type.
+    #              issuedJwt:
+    #                type: string
+    #                description: The JWT representing the received Trust Mark.
+    #              receivedAt:
+    #                type: string
+    #                format: date-time
+    #                description: The timestamp when the Trust Mark was received.
     CreateReceivedTrustMarkResponse:
       type: object
       properties:
@@ -2596,6 +2559,26 @@ components:
           items:
             type: string
             example: https://issuer.example.com
+    AddTrustMarkIssuerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique ID of the Trust Mark Issuer for this type.
+        trustMarkTypeId:
+          type: integer
+          description: The id of the trustmark type
+          example: 1
+        issuer:
+          type: string
+          description: The unique identifier for the issuer added to the trustmark.
+          example: "https://www.example.com"
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was created.
+          example: "2024-12-01T12:00:00Z"
+
     TrustMarkIssuers:
       type: object
       description: A mapping of trust mark identifiers to their associated issuers.

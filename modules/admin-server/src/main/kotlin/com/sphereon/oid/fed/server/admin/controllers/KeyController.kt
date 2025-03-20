@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.openapi.models.CreateKey
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.CreateKeyArgs
 import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.mappers.jwk.toAccountJwksResponse
+import com.sphereon.oid.fed.services.mappers.toAccountJwksResponse
 import jakarta.servlet.http.HttpServletRequest
 import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus

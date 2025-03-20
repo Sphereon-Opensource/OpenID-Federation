@@ -1,12 +1,8 @@
-package com.sphereon.oid.fed.services.mappers.subordinateJwk
+package com.sphereon.oid.fed.services.mappers
 
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.SubordinateJwk
 import com.sphereon.oid.fed.openapi.models.SubordinateJwksResponse
-import com.sphereon.oid.fed.services.mappers.jsonSerialization
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
 import com.sphereon.oid.fed.persistence.models.SubordinateJwk as SubordinateJwkEntity
 
 

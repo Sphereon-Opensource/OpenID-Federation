@@ -29,7 +29,6 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: status
-      x-internal: false
   /.well-known/openid-federation:
     get:
       tags:

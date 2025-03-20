@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.authorityHints.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 
 /**
  * Service class responsible for managing operations related to AuthorityHint entities.

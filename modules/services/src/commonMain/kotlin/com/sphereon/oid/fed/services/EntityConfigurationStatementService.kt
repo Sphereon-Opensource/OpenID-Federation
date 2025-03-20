@@ -9,8 +9,8 @@ import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.mappers.jwk.toJwk
-import com.sphereon.oid.fed.services.mappers.trustMark.toTrustMark
+import com.sphereon.oid.fed.services.mappers.toJwk
+import com.sphereon.oid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement as EntityConfigurationStatementEntity

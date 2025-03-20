@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Jwk
 
 import com.sphereon.oid.fed.persistence.models.JwkQueries
-import com.sphereon.oid.fed.services.mappers.account.toDTO
+import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.jsonSerialization
 
 import io.mockk.clearAllMocks
