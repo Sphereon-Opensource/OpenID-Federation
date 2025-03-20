@@ -1,3 +1,5 @@
+import org.springframework.aot.hint.predicate.RuntimeHintsPredicates.serialization
+
 plugins {
     alias(libs.plugins.springboot)
     alias(libs.plugins.springDependencyManagement)
@@ -42,6 +44,7 @@ dependencies {
     implementation(libs.springboot.security)
     implementation(libs.springboot.oauth2.resource.server)
     implementation(libs.kotlinx.coroutines.reactor)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.projectreactor.kotlin.extensions)
     implementation(libs.sphereon.kmp.cbor)
     implementation(libs.sphereon.kmp.crypto)
