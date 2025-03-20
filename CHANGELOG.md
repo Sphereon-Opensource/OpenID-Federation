@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0 - 20250320
+## 0.9.0 - 20250320
 
 ### Documentation
 
