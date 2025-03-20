@@ -5,9 +5,12 @@ import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
+import org.springframework.http.converter.json.KotlinSerializationJsonHttpMessageConverter
 
 val logger = Logger.tag("ServiceConfig")
 
@@ -18,6 +21,16 @@ open class ServiceConfig {
         return AccountServiceConfig(
             environment.getProperty("sphereon.federation.root-identifier", "http://localhost:8080")
         )
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @Bean
+    fun messageConverter(): KotlinSerializationJsonHttpMessageConverter {
+        return KotlinSerializationJsonHttpMessageConverter(Json {
+            ignoreUnknownKeys = true
+            explicitNulls = false
+            encodeDefaults = true
+        })
     }
 
     @Bean

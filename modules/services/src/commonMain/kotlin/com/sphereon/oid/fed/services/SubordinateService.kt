@@ -8,6 +8,8 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.services.mappers.subordinate.toDTO
+import com.sphereon.oid.fed.services.mappers.subordinate.toDTOs
 import com.sphereon.oid.fed.services.mappers.subordinateJwk.toDTO
 import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJsonString
 import com.sphereon.oid.fed.services.mappers.subordinateJwk.toJwk
@@ -66,10 +68,10 @@ class SubordinateService(
      * @param account The account whose subordinates need to be retrieved. Includes details such as ID and username.
      * @return An array of SubordinateEntity objects associated with the specified account.
      */
-    fun findSubordinatesByAccount(account: Account): Array<SubordinateEntity> {
+    fun findSubordinatesByAccount(account: Account): Array<Subordinate> {
         val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
         logger.debug("Found ${subordinates.size} subordinates for account: ${account.username}")
-        return subordinates
+        return subordinates.toDTOs()
     }
 
     /**
@@ -96,7 +98,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate does not exist or belongs to a different account.
      * @throws Exception For any other errors encountered during the delete operation.
      */
-    fun deleteSubordinate(account: Account, id: Int): SubordinateEntity {
+    fun deleteSubordinate(account: Account, id: Int): Subordinate {
         logger.info("Attempting to delete subordinate ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -112,7 +114,7 @@ class SubordinateService(
 
             val deletedSubordinate = subordinateQueries.delete(subordinate.id).executeAsOne()
             logger.info("Successfully deleted subordinate ID: $id")
-            return deletedSubordinate
+            return deletedSubordinate.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to delete subordinate ID: $id", e)
             throw e
@@ -129,7 +131,7 @@ class SubordinateService(
      * @throws EntityAlreadyExistsException If a subordinate with the same identifier already exists for the given account.
      * @throws Exception If an error occurs during the creation process.
      */
-    fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): SubordinateEntity {
+    fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): Subordinate {
         logger.info("Creating new subordinate for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -145,7 +147,7 @@ class SubordinateService(
 
             val createdSubordinate = subordinateQueries.create(account.id, subordinateDTO.identifier).executeAsOne()
             logger.info("Successfully created subordinate with ID: ${createdSubordinate.id}")
-            return createdSubordinate
+            return createdSubordinate.toDTO()
         } catch (e: Exception) {
             logger.error("Failed to create subordinate for account: ${account.username}", e)
             throw e

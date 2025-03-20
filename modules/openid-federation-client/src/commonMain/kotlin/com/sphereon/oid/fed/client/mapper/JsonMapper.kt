@@ -10,8 +10,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.reflect.KClass
 
 
-private val json = Json {
+val jsonSerialization = Json {
     ignoreUnknownKeys = true
+    explicitNulls = false
+    encodeDefaults = true
     isLenient = true
 }
 
@@ -21,7 +23,7 @@ private val json = Json {
 @OptIn(InternalSerializationApi::class)
 fun <T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
     val payload: JsonObject = decodeJWTComponents(jwtToken).payload
-    return json.decodeFromJsonElement(targetType.serializer(), payload)
+    return jsonSerialization.decodeFromJsonElement(targetType.serializer(), payload)
 }
 
 /*
@@ -39,7 +41,7 @@ fun decodeJWTComponents(jwtToken: String): Jwt {
 
     return try {
         Jwt(
-            json.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
+            jsonSerialization.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
         )
     } catch (e: Exception) {
         throw JwtDecodingException("Error decoding JWT components", e)

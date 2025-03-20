@@ -1,14 +1,15 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Jwk
+
 import com.sphereon.oid.fed.persistence.models.JwkQueries
 import com.sphereon.oid.fed.services.mappers.account.toDTO
-import io.mockk.awaits
+import com.sphereon.oid.fed.services.mappers.jsonSerialization
+
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -230,5 +231,14 @@ class JwkServiceTest {
         }
         verify { jwkQueries.findByAccountId(testAccount.id) }
         verify { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) }
+    }
+
+    @Test
+    fun `Jwk mapper should work with AWS JWK`() = testScope.runTest {
+        val kmsJwk: String = "{\"alg\":\"ES384\",\"key_ops\":[\"sign\",\"verify\"],\"kid\":\"98132819-b429-453d-99f7-f412ddc19d2a\",\"kty\":\"EC\",\"x\":\"QqLEa3qW0yFN__0m_raS2ubphKbYWJsfB50l-fMYyKMCsbh_GLVk1Up47I522JSN\",\"y\":\"XsXAJZ5so7VXhVxxb0UjxA1cZvu9X1mT32-OZHOM-1GV9z5ruRaSB6422rrnpvam\"}"
+
+        val jwk: com.sphereon.oid.fed.openapi.models.Jwk = jsonSerialization.decodeFromString(kmsJwk)
+        jsonSerialization.encodeToString(jwk)
+        assertNotNull(jwk)
     }
 }
