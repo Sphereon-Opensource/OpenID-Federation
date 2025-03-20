@@ -49,9 +49,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Account'
+                $ref: '#/components/schemas/AccountsResponse'
         '401':
           description: Unauthorized
           content:
@@ -146,9 +144,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/AccountJwksResponse'
         '400':
           description: Invalid request
           content:
@@ -268,9 +264,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Metadata'
+                $ref: '#/components/schemas/MetadataResponse'
         '404':
           description: Account not found
           content:
@@ -378,9 +372,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AuthorityHint'
+                $ref: '#/components/schemas/AuthorityHintsResponse'
         '404':
           description: Account not found
           content:
@@ -502,11 +494,11 @@ paths:
       operationId: signAndPublishEntityStatement
       security:
         - bearerAuth: [ ]
-      description: Sign and publish the entity configuration statement for the specified account. If `dry_run` is `true`, outputs the signed JWT without publishing it.
+      description: Sign and publish the entity configuration statement for the specified account. If `dryRun` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
-        description: Optional request body for a dry_run
+        description: Optional request body for a dryRun
         required: false
         content:
           application/json:
@@ -550,9 +542,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Subordinate'
+                $ref: '#/components/schemas/SubordinatesResponse'
         '400':
           description: Invalid request
           content:
@@ -671,9 +661,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SubordinateJwk'
+                $ref: '#/components/schemas/SubordinateJwksResponse'
         '400':
           description: Invalid request
           content:
@@ -795,9 +783,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SubordinateMetadata'
+                $ref: '#/components/schemas/SubordinateMetadataResponse'
         '400':
           description: Invalid request
           content:
@@ -937,7 +923,7 @@ paths:
       operationId: signAndPublishSubordinateStatement
       security:
         - bearerAuth: [ ]
-      description: Sign and publish the subordinate statement for the specified subordinate. If `dry_run` is `true`, outputs the signed JWT without publishing it.
+      description: Sign and publish the subordinate statement for the specified subordinate. If `dryRun` is `true`, outputs the signed JWT without publishing it.
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
         - name: id
@@ -988,9 +974,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TrustMarkType'
+                $ref: '#/components/schemas/TrustMarkTypesResponse'
 
     post:
       tags:
@@ -1077,10 +1061,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
-                  example: https://issuer.example.com
+                $ref: '#/components/schemas/TrustMarkTypeIssuersResponse'
         '404':
           description: Account or Trust Mark Type not found.
     post:
@@ -1192,13 +1173,13 @@ paths:
             schema:
               type: object
               properties:
-                dry_run: # TO-DO Add correct required attributes
+                dryRun: # TO-DO Add correct required attributes
                   type: boolean
                   description: 'If true, the entity statement will be generated but not persisted.'
                   default: false
       responses:
         '200':
-          description: Trust Mark dry_run successful
+          description: Trust Mark dryRun successful
           content:
             application/json:
               schema:
@@ -1245,19 +1226,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    trustMarkId:
-                      type: string
-                      description: The identifier of the Trust Mark.
-                    trustMark:
-                      type: string
-                      description: The JWT of the Trust Mark.
-                    entityId:
-                      type: string
-                      description: The Entity Identifier of the entity to which the Trust Mark is issued.
+                $ref: '#/components/schemas/TrustMarksResponse'
         '400':
           description: Invalid request
           content:
@@ -1332,18 +1301,8 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                trustMarkTypeId:
-                  type: string
-                  description: The identifier of the Trust Mark Type.
-                  example: https://example.com/trust-mark-type
-                jwt:
-                  type: string
-                  description: The JWT representing the received Trust Mark.
-              required:
-                - trustMarkTypeId
-                - jwt
+              $ref: '#/components/schemas/CreateReceivedTrustMarkResponse'
+
       responses:
         '201':
           description: Received Trust Mark created successfully.
@@ -1383,23 +1342,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    trustMarkId:
-                      type: string
-                      description: The unique identifier of the received Trust Mark.
-                    trustMarkTypeId:
-                      type: string
-                      description: The identifier of the Trust Mark Type.
-                    issuedJwt:
-                      type: string
-                      description: The JWT representing the received Trust Mark.
-                    receivedAt:
-                      type: string
-                      format: date-time
-                      description: The timestamp when the Trust Mark was received.
+                $ref: '#/components/schemas/ReceivedTrustMarksResponse'
         '400':
           description: Invalid request parameters.
           content:
@@ -1653,6 +1596,15 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
   schemas:
+    AccountsResponse:
+      type: object
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Account'
+      required:
+        - accounts
     Account:
       type: object
       properties:
@@ -1673,6 +1625,17 @@ components:
       required:
         - id
         - username
+
+    AuthorityHintsResponse:
+      type: object
+      required:
+        - authorityHints
+      properties:
+        authorityHints:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorityHint'
+
     AuthorityHint:
       type: object
       properties:
@@ -1690,6 +1653,15 @@ components:
         - accountId
         - admin
 
+    AccountJwksResponse:
+      type: object
+      required:
+        - jwks
+      properties:
+        jwks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountJwk'
     Jwk:
       type: object
       required:
@@ -1841,11 +1813,11 @@ components:
           type: string
           description: The Key Management System to use. Needs to be a supported and configured KMS!
           example: memory
-        kms_key_ref:
+        kmsKeyRef:
           type: string
           description: The KMS Key reference/name you want to use. Not every KMS supports this feature!
           example: my-key
-        signature_algorithm:
+        signatureAlgorithm:
           $ref: '#/components/schemas/SignatureAlgorithm'
       additionalProperties: false
       example:
@@ -1860,6 +1832,16 @@ components:
         - ES384
         - ES512
       default: ES256
+
+    MetadataResponse:
+      type: object
+      required:
+        - metadata
+      properties:
+        metadata:
+          type: array
+          items:
+            $ref: '#/components/schemas/Metadata'
 
     CreateMetadata:
       type: object
@@ -1932,6 +1914,24 @@ components:
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    TrustMarksResponse:
+      type: object
+      properties:
+        trustMarks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustMark'
+#            type: object
+#            properties:
+#              trustMarkId:
+#                type: string
+#                description: The identifier of the Trust Mark.
+#              trustMark:
+#                type: string
+#                description: The JWT of the Trust Mark.
+#              entityId:
+#                type: string
+#                description: The Entity Identifier of the entity to which the Trust Mark is issued.
 
     CreateTrustMarkType:
       type: object
@@ -2092,26 +2092,26 @@ components:
               type: string
               description: The Key Management System
               example: memory
-            kms_key_ref:
+            kmsKeyRef:
               type: string
               description: The KMS Key reference (the id of the key in the KMS) if supported
               example: my-key
-            account_id:
+            accountId:
               type: integer
               description: The ID of the account associated with this JWK.
               example: 100
-            revoked_at:
+            revokedAt:
               type: string
               format: date-time
               description: 'The timestamp when the JWK was revoked, if applicable.'
               example: '2024-09-01T12:34:56Z'
               nullable: true
-            revoked_reason:
+            revokedReason:
               type: string
               description: 'The reason for revoking the JWK, if applicable.'
               example: Key compromise
               nullable: true
-            created_at:
+            createdAt:
               type: string
               format: date-time
               description: The timestamp when the JWK was created.
@@ -2121,9 +2121,9 @@ components:
     JwkRevoked:
       type: object
       required:
-        - revoked_at
+        - revokedAt
       properties:
-        revoked_at:
+        revokedAt:
           type: string
           format: date-time
         reason:
@@ -2248,7 +2248,7 @@ components:
           type: integer
           description: The unique identifier for the Metadata record.
           example: 1
-        account_id:
+        accountId:
           type: integer
           description: The ID of the account associated with this Metadata.
           example: 1
@@ -2258,13 +2258,13 @@ components:
           example: openid_relying_party
         metadata:
           additionalProperties: true
-        created_at:
+        createdAt:
           type: string
           format: date-time
           description: The timestamp when the Metadata was created.
           example: '2024-08-06T12:34:56Z'
           nullable: false
-        deleted_at:
+        deletedAt:
           type: string
           format: date-time
           description: The timestamp when the Metadata was deleted.
@@ -2274,18 +2274,58 @@ components:
     PublishStatementRequest:
       type: object
       properties:
-        kms_key_ref:
+        kmsKeyRef:
           type: string
           description: 'The KMS Key reference to use. If not provided the first key for the account will be used unless the kid parameter is set'
           example: "my-jwk-name"
         kid:
           type: string
-          description: 'The kid of the key to use. If a kms_key_ref is provided it will always take priority'
+          description: 'The kid of the key to use. If a kmsKeyRef is provided it will always take priority'
           example: "1234"
-        dry_run:
+        dryRun:
           type: boolean
           description: 'If true, the request will be validated but not persisted.'
           example: false
+
+
+    ReceivedTrustMarksResponse:
+      type: object
+      required:
+        - receivedTrustMarks
+      properties:
+        receivedTrustMarks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivedTrustMark'
+#            type: object
+#            properties:
+#              trustMarkId:
+#                type: string
+#                description: The unique identifier of the received Trust Mark.
+#              trustMarkTypeId:
+#                type: string
+#                description: The identifier of the Trust Mark Type.
+#              issuedJwt:
+#                type: string
+#                description: The JWT representing the received Trust Mark.
+#              receivedAt:
+#                type: string
+#                format: date-time
+#                description: The timestamp when the Trust Mark was received.
+    CreateReceivedTrustMarkResponse:
+      type: object
+      properties:
+        trustMarkTypeId:
+          type: string
+          description: The identifier of the Trust Mark Type.
+          example: https://example.com/trust-mark-type
+        jwt:
+          type: string
+          description: The JWT representing the received Trust Mark.
+      required:
+        - trustMarkTypeId
+        - jwt
+
 
     ReceivedTrustMark:
       type: object
@@ -2294,7 +2334,7 @@ components:
           type: integer
           description: The unique identifier for the received Trust Mark.
           example: 123
-        account_id:
+        accountId:
           type: integer
           description: The account ID of the Trust Mark holder.
           example: 456
@@ -2306,7 +2346,7 @@ components:
           type: string
           description: The received Trust Mark JWT.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        created_at:
+        createdAt:
           type: string
           format: date-time
           description: The timestamp when the Trust Mark was created.
@@ -2351,6 +2391,16 @@ components:
           items:
             type: string
 
+    SubordinatesResponse:
+      type: object
+      properties:
+        subordinates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subordinate'
+      required:
+        - subordinates
+
     Subordinate:
       type: object
       properties:
@@ -2385,30 +2435,46 @@ components:
         - identifier
         - createdAt
 
+    SubordinateJwksResponse:
+      type: object
+      required:
+        - jwks
+      properties:
+        jwks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubordinateJwk'
+
     SubordinateJwk:
       type: object
       required:
         - id
-        - subordinate_id
+        - subordinateId
         - key
       properties:
         id:
           type: integer
           description: The unique identifier for the Subordinate key record.
           example: 1
-        subordinate_id:
+        subordinateId:
           type: integer
           description: The ID of the subordinated account associated with this key.
           example: 1
         key:
           $ref: '#/components/schemas/Jwk'
-        created_at:
+        createdAt:
           type: string
           format: date-time
           description: The timestamp when the key was created.
           example: '2024-08-06T12:34:56Z'
           nullable: false
-
+    SubordinateMetadataResponse:
+      type: object
+      properties:
+        subordinateMetadata:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubordinateMetadata'
     SubordinateMetadata:
       type: object
       properties:
@@ -2416,11 +2482,11 @@ components:
           type: integer
           description: The unique identifier for the Subordinate Metadata record.
           example: 1
-        account_id:
+        accountId:
           type: integer
           description: The ID of the account associated with this Metadata.
           example: 1
-        subordinate_id:
+        subordinateId:
           type: integer
           description: The ID of the subordinate associated with this Metadata.
           example: 1
@@ -2430,13 +2496,13 @@ components:
           example: openid_relying_party
         metadata:
           additionalProperties: true
-        created_at:
+        createdAt:
           type: string
           format: date-time
           description: The timestamp when the Metadata was created.
           example: '2024-08-06T12:34:56Z'
           nullable: false
-        deleted_at:
+        deletedAt:
           type: string
           format: date-time
           description: The timestamp when the Metadata was deleted.
@@ -2444,11 +2510,11 @@ components:
           nullable: true
       required:
         - id
-        - account_id
-        - subordinate_id
+        - accountId
+        - subordinateId
         - key
         - metadata
-        - created_at
+        - createdAt
 
     SubordinateStatement:
       allOf:
@@ -2505,6 +2571,7 @@ components:
           type: string
           description: The current status of the node.
           example: UP
+
     TrustMark:
       type: object
       properties:
@@ -2519,6 +2586,16 @@ components:
       required:
         - id
         - trust_mark
+    TrustMarkTypeIssuersResponse:
+      type: object
+      required:
+        - issuers
+      properties:
+        issuers:
+          type: array
+          items:
+            type: string
+            example: https://issuer.example.com
     TrustMarkIssuers:
       type: object
       description: A mapping of trust mark identifiers to their associated issuers.
@@ -2549,7 +2626,7 @@ components:
               - alg: RS256
                 e: AQAB
                 kid: key1
-                kms_key_rf: key1
+                kmsKeyRef: key1
                 kms: memory
                 kty: RSA
                 'n': pnXBOusEANuug6ewezb9J_...
@@ -2659,6 +2736,16 @@ components:
           type: boolean
           description: The status of the Trust Mark.
           example: true
+
+    TrustMarkTypesResponse:
+      type: object
+      required:
+        - trustMarkTypes
+      properties:
+        trustMarkTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustMarkType'
 
     TrustMarkType:
       type: object
