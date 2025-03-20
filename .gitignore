@@ -32,3 +32,5 @@ kotlin-js-store/
 !logs/.gitkeep
 !logs/admin-server/.gitkeep
 !logs/federation-server/.gitkeep
+/modules/admin-server/src/main/resources/admin-server.yaml
+/modules/admin-server/src/main/resources/public/admin-server.yaml

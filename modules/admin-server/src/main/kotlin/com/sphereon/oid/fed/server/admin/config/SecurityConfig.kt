@@ -45,8 +45,11 @@ class SecurityConfig {
         }
 
         http {
-            authorizeRequests {
+            authorizeHttpRequests {
                 authorize("/status", permitAll)
+                authorize("/api-docs/**", permitAll)
+                authorize("/swagger-ui/**", permitAll)
+                authorize("/admin-server.yaml", permitAll)
                 authorize("/**", hasRole("admin"))
             }
             oauth2ResourceServer {
