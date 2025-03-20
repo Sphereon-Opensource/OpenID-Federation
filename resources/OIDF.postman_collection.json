@@ -149,7 +149,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"dry_run\": false,\r\n    \"kms_key_ref\": \"my-key2\"\r\n}",
+									"raw": "{\r\n    \"dry_run\": false,\r\n    \"kmsKeyRef\": \"my-key384\"\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -229,10 +229,24 @@
 							"response": []
 						},
 						{
-							"name": "New Request",
+							"name": "Delete subordinate jwk",
 							"request": {
-								"method": "GET",
-								"header": []
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:8081/subordinates/{{subordinateId}}/jwks/{{jwkKid}}",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "8081",
+									"path": [
+										"subordinates",
+										"{{subordinateId}}",
+										"jwks",
+										"{{jwkKid}}"
+									]
+								}
 							},
 							"response": []
 						}
@@ -336,7 +350,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"kms_key_ref\": \"my-key\",\r\n    \"signature_algorithm\": \"ES256\"\r\n}",
+							"raw": "{\r\n    \"kmsKeyRef\": \"my-key384\",\r\n    \"signatureAlgorithm\": \"ES384\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -492,7 +506,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"dry_run\": true,\r\n    \"kms_key_ref\": \"my-key2\"\r\n}",
+							"raw": "{\r\n    \"dryRun\": true,\r\n    \"kmsKeyRef\": \"my-key384\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
