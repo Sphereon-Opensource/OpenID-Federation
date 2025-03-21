@@ -44,10 +44,6 @@ elif [[ $COMMIT_MSG =~ ^(fix|docs|style|refactor|perf|test|chore): ]]; then
     # Patch version bump
     PATCH=$((PATCH + 1))
     echo "Fix/maintenance detected - Bumping patch version"
-else
-    # Default to patch bump if no conventional commit prefix is found
-    PATCH=$((PATCH + 1))
-    echo "No conventional commit prefix found - Defaulting to patch bump"
 fi
 
 # Construct new version
