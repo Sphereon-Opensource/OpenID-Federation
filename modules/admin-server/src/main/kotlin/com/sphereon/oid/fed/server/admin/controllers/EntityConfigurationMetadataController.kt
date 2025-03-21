@@ -38,7 +38,7 @@ class EntityConfigurationMetadataController(
     @DeleteMapping("/{id}")
     fun deleteEntityConfigurationMetadata(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): Metadata {
         val account = getAccountFromRequest(request)
         return metadataService.deleteEntityConfigurationMetadata(

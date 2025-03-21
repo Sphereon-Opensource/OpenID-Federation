@@ -1,17 +1,11 @@
 package com.sphereon.oid.fed.services.mappers
 
 
-import com.sphereon.oid.fed.openapi.models.AddTrustMarkIssuerResponse
-import com.sphereon.oid.fed.openapi.models.TrustMark
-import com.sphereon.oid.fed.openapi.models.TrustMarkType
-import com.sphereon.oid.fed.openapi.models.TrustMarkTypesResponse
-import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
-import com.sphereon.oid.fed.openapi.models.TrustMarkTypeIssuersResponse
+import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
-import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
-import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer as TrustMarkIssuerEntity
+import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
 
 fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
     return TrustMarkType(

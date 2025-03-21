@@ -1,12 +1,18 @@
+import kotlin.String;
+
 CREATE TABLE Jwk (
-    id SERIAL PRIMARY KEY,
-    account_id INT NOT NULL,
-    kid VARCHAR(255) UNIQUE,
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    account_id UUID AS kotlin.String NOT NULL,
+    kid VARCHAR(255),
+    kms VARCHAR(255) NOT NULL DEFAULT 'memory',
+    kms_key_ref VARCHAR(255) NOT NULL,
     key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     revoked_at TIMESTAMP,
     revoked_reason TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_AccountJwk FOREIGN KEY (account_id) REFERENCES Account (id)
 );
 
 CREATE INDEX jwk_account_id_index ON Jwk (account_id);
+CREATE UNIQUE INDEX unique_kid_account_id_active ON Jwk (kid, account_id, revoked_at) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX unique_kms_key_ref_account_id_active ON Jwk (kms_key_ref, account_id, revoked_at) WHERE revoked_at IS NULL;

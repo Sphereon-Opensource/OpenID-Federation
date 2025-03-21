@@ -27,7 +27,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class JwkServiceTest {
     private lateinit var jwkService: JwkService
     private lateinit var jwkQueries: JwkQueries
@@ -53,7 +56,7 @@ class JwkServiceTest {
         every { Persistence.jwkQueries } returns jwkQueries
         jwkService = JwkService(kmsService)
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -81,7 +84,7 @@ class JwkServiceTest {
         )
 
         val returnedJwk = Jwk(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             kid = generatedKid,
             kms = "memory",
@@ -108,17 +111,17 @@ class JwkServiceTest {
     fun `get keys returns all keys for account`() {
         val jwks = listOf(
             Jwk(
-                1,
+                Uuid.random().toString(),
                 testAccount.id,
                 generatedKid,
                 TEST_KEY.replace("test-kid", generatedKid),
-                null,
-                null,
-                FIXED_TIMESTAMP,
-                TEST_KEY.replace("test-kid", generatedKid),
                 "memory",
+                TEST_KEY.replace("test-kid", generatedKid),
+                FIXED_TIMESTAMP,
+                null,
+                null,
             ),
-            Jwk(2, testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), null, null, FIXED_TIMESTAMP, TEST_KEY.replace("test-kid", "kid2"), "memory")
+            Jwk(Uuid.random().toString(), testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), "memory", TEST_KEY.replace("test-kid", "kid2"), FIXED_TIMESTAMP, null, null)
         )
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
@@ -132,7 +135,7 @@ class JwkServiceTest {
 
     @Test
     fun `revoke key succeeds for valid key`() {
-        val keyId = 1
+        val keyId = Uuid.random().toString()
         val reason = "Test revocation"
         val jwk = Jwk(
             id = keyId,
@@ -163,8 +166,8 @@ class JwkServiceTest {
 
     @Test
     fun `revoke key fails for key from different account`() {
-        val keyId = 1
-        val differentAccountId = 2
+        val keyId = Uuid.random().toString()
+        val differentAccountId = Uuid.random().toString()
         val jwk = Jwk(
             id = keyId,
             account_id = differentAccountId,
@@ -196,7 +199,7 @@ class JwkServiceTest {
 
         val accountService = mockk<AccountService>()
         val jwk = Jwk(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             kid = generatedKid,
             kms = "memory",
@@ -235,7 +238,8 @@ class JwkServiceTest {
 
     @Test
     fun `Jwk mapper should work with AWS JWK`() = testScope.runTest {
-        val kmsJwk: String = "{\"alg\":\"ES384\",\"key_ops\":[\"sign\",\"verify\"],\"kid\":\"98132819-b429-453d-99f7-f412ddc19d2a\",\"kty\":\"EC\",\"x\":\"QqLEa3qW0yFN__0m_raS2ubphKbYWJsfB50l-fMYyKMCsbh_GLVk1Up47I522JSN\",\"y\":\"XsXAJZ5so7VXhVxxb0UjxA1cZvu9X1mT32-OZHOM-1GV9z5ruRaSB6422rrnpvam\"}"
+        val kmsJwk: String =
+            "{\"alg\":\"ES384\",\"key_ops\":[\"sign\",\"verify\"],\"kid\":\"98132819-b429-453d-99f7-f412ddc19d2a\",\"kty\":\"EC\",\"x\":\"QqLEa3qW0yFN__0m_raS2ubphKbYWJsfB50l-fMYyKMCsbh_GLVk1Up47I522JSN\",\"y\":\"XsXAJZ5so7VXhVxxb0UjxA1cZvu9X1mT32-OZHOM-1GV9z5ruRaSB6422rrnpvam\"}"
 
         val jwk: com.sphereon.oid.fed.openapi.models.Jwk = jsonSerialization.decodeFromString(kmsJwk)
         jsonSerialization.encodeToString(jwk)

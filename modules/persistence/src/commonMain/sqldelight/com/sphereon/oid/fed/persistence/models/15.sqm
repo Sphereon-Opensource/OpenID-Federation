@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS Log (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     severity TEXT NOT NULL,
     message TEXT NOT NULL,
     tag TEXT NOT NULL,

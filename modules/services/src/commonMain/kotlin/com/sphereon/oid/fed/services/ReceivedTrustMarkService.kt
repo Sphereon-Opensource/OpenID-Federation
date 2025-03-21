@@ -71,7 +71,7 @@ class ReceivedTrustMarkService {
      */
     fun deleteReceivedTrustMark(
         account: Account,
-        trustMarkId: Int
+        trustMarkId: String
     ): ReceivedTrustMark {
         val username = account.username
         logger.info("Attempting to delete trust mark ID: $trustMarkId for account: $username")
@@ -88,7 +88,7 @@ class ReceivedTrustMarkService {
      * @param account The account for which the trust mark needs to be validated.
      * @param trustMarkId The unique identifier of the trust mark to verify.
      */
-    private fun ensureTrustMarkExists(account: Account, trustMarkId: Int) {
+    private fun ensureTrustMarkExists(account: Account, trustMarkId: String) {
         val username = account.username
         val existing = receivedTrustMarkQueries.findByAccountIdAndId(account.id, trustMarkId).executeAsOneOrNull()
         if (existing == null) {

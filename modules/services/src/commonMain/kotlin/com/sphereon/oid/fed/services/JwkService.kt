@@ -141,7 +141,7 @@ class JwkService(
      * @throws DataAccessException If an error occurs while accessing the data store.
      * @throws NotFoundException If the key does not belong to the specified account.
      */
-    fun revokeKey(account: Account, keyId: Int, reason: String?): AccountJwk {
+    fun revokeKey(account: Account, keyId: String, reason: String?): AccountJwk {
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 

@@ -32,7 +32,7 @@ class CriticalClaimController(
     @DeleteMapping("/{id}")
     fun deleteCriticalClaim(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): Crit {
         val account = getAccountFromRequest(request)
         return criticalClaimService.delete(account, id)

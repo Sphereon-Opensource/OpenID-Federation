@@ -118,7 +118,7 @@ class TrustMarkService(
      * @return The TrustMarkType associated with the specified ID within the given account.
      * @throws NotFoundException If no TrustMarkType with the specified ID exists for the account.
      */
-    fun findById(account: Account, id: Int): TrustMarkType {
+    fun findById(account: Account, id: String): TrustMarkType {
         logger.debug("Finding trust mark type ID: $id for account ID: ${account.id}")
         val definition = assertTrustMarkTypePresent(account, id)
         return definition.toDTO()
@@ -131,7 +131,7 @@ class TrustMarkService(
      * @param id The unique identifier of the trust mark type to delete.
      * @return The deleted trust mark type as a TrustMarkType object.
      */
-    fun deleteTrustMarkType(account: Account, id: Int): TrustMarkType {
+    fun deleteTrustMarkType(account: Account, id: String): TrustMarkType {
         logger.info("Deleting trust mark type ID: $id for account ID: ${account.id}")
         assertTrustMarkTypePresent(account, id)
         val deletedType = trustMarkTypeQueries.delete(id).executeAsOne()
@@ -147,7 +147,7 @@ class TrustMarkService(
      * @return A list containing the identifiers of issuers associated with the specified trust mark type.
      * @throws NotFoundException If the specified trust mark type is not found for the provided account.
      */
-    fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: Int): List<String> {
+    fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): List<String> {
         logger.debug("Getting issuers for trust mark type ID: $trustMarkTypeId, account ID: ${account.id}")
         assertTrustMarkTypePresent(account, trustMarkTypeId)
         val issuers = trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId)
@@ -167,7 +167,7 @@ class TrustMarkService(
      * @return The created TrustMarkIssuer after successfully associating the issuer with the trust mark type.
      * @throws EntityAlreadyExistsException if the issuer is already associated with the specified trust mark type.
      */
-    fun addIssuerToTrustMarkType(account: Account, trustMarkTypeId: Int, issuerIdentifier: String): TrustMarkIssuer {
+    fun addIssuerToTrustMarkType(account: Account, trustMarkTypeId: String, issuerIdentifier: String): TrustMarkIssuer {
         logger.info("Adding issuer $issuerIdentifier to trust mark type ID: $trustMarkTypeId")
         assertTrustMarkTypePresent(account, trustMarkTypeId)
         val existingIssuer = trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId)
@@ -198,7 +198,7 @@ class TrustMarkService(
      */
     fun removeIssuerFromTrustMarkType(
         account: Account,
-        trustMarkTypeId: Int,
+        trustMarkTypeId: String,
         issuerIdentifier: String
     ): TrustMarkIssuer {
         logger.info("Removing issuer $issuerIdentifier from trust mark type ID: $trustMarkTypeId")
@@ -240,7 +240,7 @@ class TrustMarkService(
      * @param trustMarkTypeId The unique identifier for the trust mark type to be verified.
      * @throws NotFoundException If no trust mark type with the specified ID exists for the account.
      */
-    private fun assertTrustMarkTypePresent(account: Account, trustMarkTypeId: Int) =
+    private fun assertTrustMarkTypePresent(account: Account, trustMarkTypeId: String) =
         trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
             ?: run {
                 logger.error("Trust mark type not found with ID: $trustMarkTypeId")
@@ -317,7 +317,7 @@ class TrustMarkService(
      *
      * @throws NotFoundException If the Trust Mark with the specified ID is not found for the given account.
      */
-    fun deleteTrustMark(account: Account, id: Int): TrustMark {
+    fun deleteTrustMark(account: Account, id: String): TrustMark {
         logger.info("Deleting trust mark ID: $id for account ID: $account.id")
         trustMarkQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: throw NotFoundException("Trust mark with ID $id not found for account $account.id.").also {

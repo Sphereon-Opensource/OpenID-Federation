@@ -22,7 +22,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class MetadataServiceTest {
     private lateinit var metadataService: MetadataService
     private lateinit var metadataQueries: MetadataQueries
@@ -41,7 +44,7 @@ class MetadataServiceTest {
         every { Persistence.metadataQueries } returns metadataQueries
         metadataService = MetadataService()
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -59,7 +62,7 @@ class MetadataServiceTest {
     @Test
     fun `create entity configuration metadata succeeds`() {
         val metadata = Metadata(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             key = TEST_KEY,
             metadata = TEST_METADATA.toString(),
@@ -87,7 +90,7 @@ class MetadataServiceTest {
     @Test
     fun `create duplicate metadata fails with exception`() {
         val existingMetadata = Metadata(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             key = TEST_KEY,
             metadata = TEST_METADATA.toString(),
@@ -108,8 +111,8 @@ class MetadataServiceTest {
     @Test
     fun `find by account returns list of metadata`() {
         val metadataList = listOf(
-            Metadata(1, testAccount.id, "key1", """{"test": "value1"}""", FIXED_TIMESTAMP, null),
-            Metadata(2, testAccount.id, "key2", """{"test": "value2"}""", FIXED_TIMESTAMP, null)
+            Metadata(Uuid.random().toString(), testAccount.id, "key1", """{"test": "value1"}""", FIXED_TIMESTAMP, null),
+            Metadata(Uuid.random().toString(), testAccount.id, "key2", """{"test": "value2"}""", FIXED_TIMESTAMP, null)
         )
 
         every { metadataQueries.findByAccountId(testAccount.id).executeAsList() } returns metadataList
@@ -126,7 +129,7 @@ class MetadataServiceTest {
     @Test
     fun `delete metadata succeeds for valid id`() {
         val metadata = Metadata(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             key = TEST_KEY,
             metadata = TEST_METADATA.toString(),
@@ -153,7 +156,7 @@ class MetadataServiceTest {
 
     @Test
     fun `delete non-existent metadata fails with not found exception`() {
-        val nonExistentId = 999
+        val nonExistentId = Uuid.random().toString()
 
         every {
             metadataQueries.findById(nonExistentId).executeAsOneOrNull()
@@ -167,9 +170,9 @@ class MetadataServiceTest {
 
     @Test
     fun `delete metadata from different account fails with not found exception`() {
-        val differentAccountId = 2
+        val differentAccountId = Uuid.random().toString()
         val metadata = Metadata(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = differentAccountId, // Different account ID
             key = TEST_KEY,
             metadata = TEST_METADATA.toString(),

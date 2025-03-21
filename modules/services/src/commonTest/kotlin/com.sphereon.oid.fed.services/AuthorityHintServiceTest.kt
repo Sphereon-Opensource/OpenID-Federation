@@ -11,7 +11,10 @@ import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class AuthorityHintServiceTest {
     private lateinit var authorityHintService: AuthorityHintService
     private lateinit var authorityHintQueries: AuthorityHintQueries
@@ -20,7 +23,7 @@ class AuthorityHintServiceTest {
     companion object {
         private val FIXED_TIMESTAMP: LocalDateTime = LocalDateTime.parse("2025-01-13T12:00:00")
         private const val TEST_IDENTIFIER = "test-authority-hint"
-        private const val NON_EXISTENT_ID = 999
+        private const val NON_EXISTENT_ID = "c16c7a21-6665-44b5-a696-b835495afb0f"
     }
 
     @BeforeTest
@@ -30,7 +33,7 @@ class AuthorityHintServiceTest {
         every { Persistence.authorityHintQueries } returns authorityHintQueries
         authorityHintService = AuthorityHintService()
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -48,7 +51,7 @@ class AuthorityHintServiceTest {
     @Test
     fun `create authority hint - should succeed when hint doesn't exist`() {
         val authorityHint = AuthorityHint(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -73,7 +76,7 @@ class AuthorityHintServiceTest {
     @Test
     fun `create authority hint - should throw EntityAlreadyExistsException when hint exists`() {
         val existingAuthorityHint = AuthorityHint(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -109,7 +112,7 @@ class AuthorityHintServiceTest {
     @Test
     fun `delete authority hint - should succeed when hint exists`() {
         val authorityHint = AuthorityHint(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -147,7 +150,7 @@ class AuthorityHintServiceTest {
     @Test
     fun `delete authority hint - should throw IllegalStateException when deletion fails`() {
         val authorityHint = AuthorityHint(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -170,8 +173,8 @@ class AuthorityHintServiceTest {
     @Test
     fun `find authority hints - should return list when hints exist`() {
         val authorityHints = listOf(
-            AuthorityHint(1, testAccount.id, "hint1", FIXED_TIMESTAMP, null),
-            AuthorityHint(2, testAccount.id, "hint2", FIXED_TIMESTAMP, null)
+            AuthorityHint(Uuid.random().toString(), testAccount.id, "hint1", FIXED_TIMESTAMP, null),
+            AuthorityHint(Uuid.random().toString(), testAccount.id, "hint2", FIXED_TIMESTAMP, null)
         )
 
         every { authorityHintQueries.findByAccountId(testAccount.id).executeAsList() } returns authorityHints

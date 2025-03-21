@@ -25,7 +25,10 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class ResolutionServiceTest {
     private lateinit var resolutionService: ResolutionService
     private lateinit var accountService: AccountService
@@ -149,7 +152,7 @@ class ResolutionServiceTest {
 
     private fun createTestAccount(): Account {
         return Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testuser",
             identifier = ACCOUNT_IDENTIFIER
         )

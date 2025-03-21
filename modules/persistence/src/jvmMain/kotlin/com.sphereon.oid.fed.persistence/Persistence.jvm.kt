@@ -4,21 +4,35 @@ import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.oid.fed.persistence.config.DatabaseConfig
+import com.sphereon.oid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.oid.fed.persistence.database.PlatformSqlDriver
+import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AccountQueries
+import com.sphereon.oid.fed.persistence.models.AuthorityHint
 import com.sphereon.oid.fed.persistence.models.AuthorityHintQueries
+import com.sphereon.oid.fed.persistence.models.Crit
 import com.sphereon.oid.fed.persistence.models.CritQueries
+import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatement
 import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.persistence.models.JwkQueries
 import com.sphereon.oid.fed.persistence.models.LogQueries
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
+import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.Subordinate
+import com.sphereon.oid.fed.persistence.models.SubordinateJwk
 import com.sphereon.oid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateMetadata
 import com.sphereon.oid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.oid.fed.persistence.models.SubordinateQueries
+import com.sphereon.oid.fed.persistence.models.SubordinateStatement
 import com.sphereon.oid.fed.persistence.models.SubordinateStatementQueries
+import com.sphereon.oid.fed.persistence.models.TrustMark
+import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.oid.fed.persistence.models.TrustMarkQueries
+import com.sphereon.oid.fed.persistence.models.TrustMarkType
 import com.sphereon.oid.fed.persistence.models.TrustMarkTypeQueries
 
 /**
@@ -48,7 +62,33 @@ actual object Persistence {
     init {
         driver = createDriver()
         runMigrations(driver)
-        database = Database(driver)
+        // We are mapping the Postgres UUID types to OpenAPI model string types
+        database = Database(
+            driver,
+            AccountAdapter = Account.Adapter(JavaUuidStringAdapter),
+            AuthorityHintAdapter = AuthorityHint.Adapter(
+                JavaUuidStringAdapter,
+                JavaUuidStringAdapter
+            ),
+            CritAdapter = Crit.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            EntityConfigurationStatementAdapter = EntityConfigurationStatement.Adapter(
+                JavaUuidStringAdapter,
+                JavaUuidStringAdapter
+            ),
+            JwkAdapter = Jwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            MetadataAdapter = com.sphereon.oid.fed.persistence.models.Metadata.Adapter(
+                JavaUuidStringAdapter,
+                JavaUuidStringAdapter
+            ),
+            ReceivedTrustMarkAdapter = ReceivedTrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            SubordinateAdapter = Subordinate.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            SubordinateJwkAdapter = SubordinateJwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            SubordinateMetadataAdapter = SubordinateMetadata.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter, JavaUuidStringAdapter),
+            SubordinateStatementAdapter = SubordinateStatement.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkAdapter = TrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkIssuerAdapter = TrustMarkIssuer.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter)
+        )
 
         accountQueries = database.accountQueries
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries

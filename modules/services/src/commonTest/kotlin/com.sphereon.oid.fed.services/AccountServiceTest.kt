@@ -12,7 +12,10 @@ import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class AccountServiceTest {
     private lateinit var accountService: AccountService
     private lateinit var config: AccountServiceConfig
@@ -39,6 +42,7 @@ class AccountServiceTest {
         unmockkObject(Persistence)
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     @Test
     fun `create account succeeds when username is unique`() {
         val createAccountDTO = CreateAccount(
@@ -46,7 +50,7 @@ class AccountServiceTest {
             identifier = "test-identifier"
         )
         val account = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = createAccountDTO.username,
             identifier = createAccountDTO.identifier,
             created_at = FIXED_TIMESTAMP,
@@ -70,6 +74,7 @@ class AccountServiceTest {
         verify { accountQueries.create(createAccountDTO.username, createAccountDTO.identifier) }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     @Test
     fun `create account fails when username already exists`() {
         val createAccountDTO = CreateAccount(
@@ -77,7 +82,7 @@ class AccountServiceTest {
             identifier = "test-identifier"
         )
         val existingAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = createAccountDTO.username,
             identifier = createAccountDTO.identifier,
             created_at = FIXED_TIMESTAMP,
@@ -98,8 +103,8 @@ class AccountServiceTest {
     @Test
     fun `get all accounts returns list of accounts`() {
         val accounts = listOf(
-            Account(1, "user1", "id1", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null),
-            Account(2, "user2", "id2", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null)
+            Account(Uuid.random().toString(), "user1", "id1", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null),
+            Account(Uuid.random().toString(), "user2", "id2", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null)
         )
         every { accountQueries.findAll().executeAsList() } returns accounts
 
@@ -114,7 +119,7 @@ class AccountServiceTest {
     fun `get account identifier returns explicit identifier when present`() {
         val explicitIdentifier = "https://explicit-identifier.com"
         val account = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = explicitIdentifier,
             created_at = FIXED_TIMESTAMP,
@@ -129,7 +134,7 @@ class AccountServiceTest {
     @Test
     fun `get account identifier returns correct path for regular account`() {
         val account = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = null,
             created_at = FIXED_TIMESTAMP,
@@ -144,7 +149,7 @@ class AccountServiceTest {
     @Test
     fun `get account identifier returns root identifier for root account`() {
         val rootAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = Constants.DEFAULT_ROOT_USERNAME,
             identifier = null,
             created_at = FIXED_TIMESTAMP,
@@ -160,7 +165,7 @@ class AccountServiceTest {
     fun `get account by username returns account when exists`() {
         val username = "existingUser"
         val account = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = username,
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -192,7 +197,7 @@ class AccountServiceTest {
     @Test
     fun `delete account succeeds for non-root account`() {
         val account = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -210,7 +215,7 @@ class AccountServiceTest {
     @Test
     fun `delete account fails for root account`() {
         val rootAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = Constants.DEFAULT_ROOT_USERNAME,
             identifier = "root-identifier",
             created_at = FIXED_TIMESTAMP,

@@ -18,7 +18,7 @@ class SubordinateMetadataController(
     @GetMapping
     fun get(
         request: HttpServletRequest,
-        @PathVariable subordinateId: Int
+        @PathVariable subordinateId: String
     ): SubordinateMetadataResponse {
         val account = getAccountFromRequest(request)
         return subordinateService.findSubordinateMetadata(account, subordinateId).toSubordinateMetadataResponse()
@@ -28,7 +28,7 @@ class SubordinateMetadataController(
     @ResponseStatus(HttpStatus.CREATED)
     fun create(
         request: HttpServletRequest,
-        @PathVariable subordinateId: Int,
+        @PathVariable subordinateId: String,
         @RequestBody body: CreateMetadata
     ): SubordinateMetadata {
         val account = getAccountFromRequest(request)
@@ -43,8 +43,8 @@ class SubordinateMetadataController(
     @DeleteMapping("/{id}")
     fun delete(
         request: HttpServletRequest,
-        @PathVariable subordinateId: Int,
-        @PathVariable id: Int
+        @PathVariable subordinateId: String,
+        @PathVariable id: String
     ): SubordinateMetadata {
         val account = getAccountFromRequest(request)
         return subordinateService.deleteSubordinateMetadata(

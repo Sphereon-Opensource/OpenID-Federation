@@ -10,7 +10,10 @@ import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.*
 import java.time.LocalDateTime
 import kotlin.test.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class ReceivedTrustMarkServiceTest {
     private lateinit var receivedTrustMarkService: ReceivedTrustMarkService
     private lateinit var receivedTrustMarkQueries: ReceivedTrustMarkQueries
@@ -29,7 +32,7 @@ class ReceivedTrustMarkServiceTest {
         every { Persistence.receivedTrustMarkQueries } returns receivedTrustMarkQueries
         receivedTrustMarkService = ReceivedTrustMarkService()
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = "test-identifier",
             created_at = FIXED_TIMESTAMP,
@@ -51,7 +54,7 @@ class ReceivedTrustMarkServiceTest {
             jwt = TEST_JWT
         )
         val trustMark = ReceivedTrustMark(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             trust_mark_type_identifier = TEST_TRUST_MARK_TYPE_IDENTIFIER,
             jwt = TEST_JWT,
@@ -86,8 +89,8 @@ class ReceivedTrustMarkServiceTest {
     @Test
     fun `list received trust marks returns all trust marks for account`() {
         val trustMarks = listOf(
-            ReceivedTrustMark(1, testAccount.id, "type1", "jwt1", FIXED_TIMESTAMP, null),
-            ReceivedTrustMark(2, testAccount.id, "type2", "jwt2", FIXED_TIMESTAMP, null)
+            ReceivedTrustMark(Uuid.random().toString(), testAccount.id, "type1", "jwt1", FIXED_TIMESTAMP, null),
+            ReceivedTrustMark(Uuid.random().toString(), testAccount.id, "type2", "jwt2", FIXED_TIMESTAMP, null)
         )
 
         every { receivedTrustMarkQueries.findByAccountId(testAccount.id).executeAsList() } returns trustMarks
@@ -103,7 +106,7 @@ class ReceivedTrustMarkServiceTest {
 
     @Test
     fun `delete received trust mark succeeds for existing trust mark`() {
-        val trustMarkId = 1
+        val trustMarkId = Uuid.random().toString()
         val trustMark = ReceivedTrustMark(
             id = trustMarkId,
             account_id = testAccount.id,
@@ -132,7 +135,7 @@ class ReceivedTrustMarkServiceTest {
 
     @Test
     fun `delete received trust mark fails for non-existent trust mark`() {
-        val nonExistentId = 999
+        val nonExistentId = Uuid.random().toString()
 
         every {
             receivedTrustMarkQueries.findByAccountIdAndId(testAccount.id, nonExistentId)

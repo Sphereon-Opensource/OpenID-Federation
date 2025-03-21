@@ -63,7 +63,7 @@ class AuthorityHintService {
      * @throws NotFoundException if the AuthorityHint with the specified ID is not found for the provided account.
      * @throws IllegalStateException if the deletion of the AuthorityHint fails.
      */
-    fun deleteAuthorityHint(account: Account, id: Int): AuthorityHint {
+    fun deleteAuthorityHint(account: Account, id: String): AuthorityHint {
         logger.debug("Attempting to delete authority hint with id: $id for account: ${account.username}")
 
         val authorityHint = Persistence.authorityHintQueries
@@ -92,7 +92,7 @@ class AuthorityHintService {
      * @param accountId The unique identifier of the account whose authority hints are to be retrieved.
      * @return A list of authority hints associated with the given account ID.
      */
-    private fun findByAccountId(accountId: Int): List<AuthorityHint> {
+    private fun findByAccountId(accountId: String): List<AuthorityHint> {
         logger.debug("Finding authority hints for account id: $accountId")
         val authorityHints = Persistence.authorityHintQueries.findByAccountId(accountId)
             .executeAsList()

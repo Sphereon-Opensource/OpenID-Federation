@@ -34,7 +34,7 @@ class AuthorityHintController(
     @DeleteMapping("/{id}")
     fun deleteAuthorityHint(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): AuthorityHint {
         val account = getAccountFromRequest(request)
         return authorityHintService.deleteAuthorityHint(account, id)

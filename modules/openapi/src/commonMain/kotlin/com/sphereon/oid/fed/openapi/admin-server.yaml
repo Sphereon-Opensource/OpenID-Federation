@@ -207,7 +207,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the key to be revoked.
         - name: reason
           in: query
@@ -318,7 +319,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the metadata entry to be deleted.
       responses:
         '200':
@@ -423,7 +425,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the authority hint to be deleted.
       responses:
         '200':
@@ -588,7 +591,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate to be deleted.
       responses:
         '200':
@@ -626,7 +630,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       responses:
         '200':
@@ -660,7 +665,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       requestBody:
         description: Metadata creation details
@@ -703,13 +709,15 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
         - name: jwkId
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the JWK.
       responses:
         '200':
@@ -745,7 +753,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       responses:
         '200':
@@ -779,7 +788,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       requestBody:
         description: Metadata creation details
@@ -821,13 +831,15 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
         - name: id
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the metadata to be deleted.
       responses:
         '200':
@@ -862,7 +874,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       responses:
         '200':
@@ -896,7 +909,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: The ID of the subordinate.
       requestBody:
         description: Dry-run flag (optional)
@@ -976,7 +990,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
       responses:
         '200':
           description: Trust mark definition details
@@ -996,7 +1011,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
       responses:
         '204':
           description: Trust mark definition deleted
@@ -1014,7 +1030,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: Identifier of the Trust Mark Type.
       responses:
         '200':
@@ -1038,7 +1055,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: Identifier of the Trust Mark Type.
       requestBody:
         description: Details of the issuer to be added.
@@ -1067,7 +1085,7 @@ paths:
                 response:
                   description: Issuer added to trustmark
                   value:
-                    id: "issuer-123"
+                    id: "123e4567-e89b-12d3-a456-426614174000"
                     issuer: "https://issuer.example.com"
                     trustMarkTypeId: 1
                     createdAt: "2024-12-01T12:00:00Z"
@@ -1090,7 +1108,8 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
+            format: uuid
           description: Identifier of the Trust Mark Type.
         - name: issuerIdentifier
           in: path
@@ -1108,14 +1127,16 @@ paths:
                 properties:
                   id:
                     type: string
+                    format: uuid
                     description: Unique ID of the removed Trust Mark Issuer.
                   identifier:
                     type: string
+                    format: uuid
                     description: Identifier of the removed issuer.
               examples:
                 example:
                   value:
-                    id: issuer-123
+                    id: "123e4567-e89b-12d3-a456-426614174000"
                     identifier: https://issuer.example.com
         '404':
           description: Account, Trust Mark Type, or Issuer not found.
@@ -1150,6 +1171,7 @@ paths:
                 properties:
                   trustMarkId:
                     type: string
+                    format: uuid
                     description: The identifier of the created or updated Trust Mark.
         '201':
           description: Trust Mark created or updated successfully
@@ -1160,6 +1182,7 @@ paths:
                 properties:
                   trustMarkId:
                     type: string
+                    format: uuid
                     description: The identifier of the created or updated Trust Mark.
         '400':
           description: Invalid request
@@ -1216,6 +1239,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
           description: The identifier of the Trust Mark to be deleted.
       responses:
         '200':
@@ -1274,6 +1298,7 @@ paths:
                 properties:
                   trustMarkId:
                     type: string
+                    format: uuid
                     description: The unique identifier of the created received Trust Mark.
         '400':
           description: Invalid request parameters.
@@ -1331,6 +1356,7 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
           description: The unique identifier of the received Trust Mark to be deleted.
       responses:
         '200':
@@ -1572,9 +1598,10 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier for the account.
-          example: 12345
+          example: "123e4567-e89b-12d3-a456-426614174000"
         username:
           type: string
           description: The username of the account.
@@ -1603,13 +1630,13 @@ components:
       type: object
       properties:
         id:
-          type: integer
-          format: int32
+          type: string
+          format: uuid
         identifier:
           type: string
         accountId:
-          type: integer
-          format: int32
+          type: string
+          format: uuid
       required:
         - id
         - identifier
@@ -1782,7 +1809,6 @@ components:
           example: my-key
         signatureAlgorithm:
           $ref: '#/components/schemas/SignatureAlgorithm'
-      additionalProperties: false
       example:
         kmsKeyRef: my-example-key
         signatureAlgorithm: ES256
@@ -2043,14 +2069,10 @@ components:
             - federation
           properties:
             id:
-              type: integer
-              description: The unique identifier for the JWK record.
-              example: 1
-            uuid:
               type: string
               format: uuid
-              description: The universally unique identifier for the JWK record.
-              example: 123e4567-e89b-12d3-a456-426614174000
+              description: The unique identifier for the JWK record.
+              example: "123e4567-e89b-12d3-a456-426614174000"
             kms:
               type: string
               description: The Key Management System
@@ -2060,9 +2082,10 @@ components:
               description: The KMS Key reference (the id of the key in the KMS) if supported
               example: my-key
             accountId:
-              type: integer
+              type: string
+              format: uuid
               description: The ID of the account associated with this JWK.
-              example: 100
+              example: "123e4567-e89b-12d3-a456-426614174000"
             revokedAt:
               type: string
               format: date-time
@@ -2169,6 +2192,7 @@ components:
       properties:
         id:
           type: integer
+          format: int64
           description: Unique identifier for the log entry
         severity:
           type: string
@@ -2208,13 +2232,15 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier for the Metadata record.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         accountId:
-          type: integer
+          type: string
+          format: uuid
           description: The ID of the account associated with this Metadata.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         key:
           type: string
           description: The key of the metadata.
@@ -2265,9 +2291,9 @@ components:
     #              trustMarkId:
     #                type: string
     #                description: The unique identifier of the received Trust Mark.
-    #              trustMarkTypeId:
+    #              trustMark:
     #                type: string
-    #                description: The identifier of the Trust Mark Type.
+    #                description: The JWT representing the received Trust Mark.
     #              issuedJwt:
     #                type: string
     #                description: The JWT representing the received Trust Mark.
@@ -2294,13 +2320,15 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier for the received Trust Mark.
-          example: 123
+          example: "123e4567-e89b-12d3-a456-426614174000"
         accountId:
-          type: integer
+          type: string
+          format: uuid
           description: The account ID of the Trust Mark holder.
-          example: 456
+          example: "123e4567-e89b-12d3-a456-426614174000"
         trust_mark_type_identifier:
           type: string
           description: The Trust Mark type identifier.
@@ -2368,15 +2396,15 @@ components:
       type: object
       properties:
         id:
-          type: integer
-          format: int32
+          type: string
+          format: uuid
           description: The unique identifier of the subordinate.
-          example: 123
+          example: "123e4567-e89b-12d3-a456-426614174000"
         accountId:
-          type: integer
-          format: int32
+          type: string
+          format: uuid
           description: The ID of the account associated with this subordinate.
-          example: 456
+          example: "123e4567-e89b-12d3-a456-426614174000"
         identifier:
           type: string
           description: The unique identifier for the subordinate.
@@ -2416,13 +2444,15 @@ components:
         - key
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier for the Subordinate key record.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         subordinateId:
-          type: integer
+          type: string
+          format: uuid
           description: The ID of the subordinated account associated with this key.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         key:
           $ref: '#/components/schemas/Jwk'
         createdAt:
@@ -2442,17 +2472,20 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier for the Subordinate Metadata record.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         accountId:
-          type: integer
+          type: string
+          format: uuid
           description: The ID of the account associated with this Metadata.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         subordinateId:
-          type: integer
+          type: string
+          format: uuid
           description: The ID of the subordinate associated with this Metadata.
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         key:
           type: string
           description: The key of the metadata.
@@ -2563,12 +2596,15 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: Unique ID of the Trust Mark Issuer for this type.
+          example: "123e4567-e89b-12d3-a456-426614174000"
         trustMarkTypeId:
-          type: integer
+          type: string
+          format: uuid
           description: The id of the trustmark type
-          example: 1
+          example: "123e4567-e89b-12d3-a456-426614174000"
         issuer:
           type: string
           description: The unique identifier for the issuer added to the trustmark.
@@ -2734,9 +2770,10 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
+          format: uuid
           description: The unique identifier of the Trust Mark Type.
-          example: 123
+          example: "123e4567-e89b-12d3-a456-426614174000"
         identifier:
           type: string
           description: The unique identifier for the Trust Mark Type.

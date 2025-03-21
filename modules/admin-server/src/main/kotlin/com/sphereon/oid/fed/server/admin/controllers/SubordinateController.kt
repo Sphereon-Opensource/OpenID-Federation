@@ -34,7 +34,7 @@ class SubordinateController(
     @DeleteMapping("/{id}")
     fun deleteSubordinate(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): Subordinate {
         val account = getAccountFromRequest(request)
         return subordinateService.deleteSubordinate(account, id)
@@ -44,7 +44,7 @@ class SubordinateController(
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinateJwk(
         request: HttpServletRequest,
-        @PathVariable id: Int,
+        @PathVariable id: String,
         @RequestBody jwk: Jwk
     ): SubordinateJwk {
         val account = getAccountFromRequest(request)
@@ -54,7 +54,7 @@ class SubordinateController(
     @GetMapping("/{id}/jwks")
     fun getSubordinateJwks(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): SubordinateJwksResponse {
         val account = getAccountFromRequest(request)
         return subordinateService.getSubordinateJwks(account, id).toSubordinateJwksResponse()
@@ -63,8 +63,8 @@ class SubordinateController(
     @DeleteMapping("/{id}/jwks/{jwkId}")
     fun deleteSubordinateJwk(
         request: HttpServletRequest,
-        @PathVariable id: Int,
-        @PathVariable jwkId: Int
+        @PathVariable id: String,
+        @PathVariable jwkId: String
     ) {
         val account = getAccountFromRequest(request)
         subordinateService.deleteSubordinateJwk(account, id, jwkId)
@@ -73,7 +73,7 @@ class SubordinateController(
     @GetMapping("/{id}/statement")
     fun getSubordinateStatement(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): SubordinateStatement {
         val account = getAccountFromRequest(request)
         return subordinateService.getSubordinateStatement(account, id)
@@ -82,7 +82,7 @@ class SubordinateController(
     @PostMapping("/{id}/statement")
     suspend fun publishSubordinateStatement(
         request: HttpServletRequest,
-        @PathVariable id: Int,
+        @PathVariable id: String,
         @RequestBody body: PublishStatementRequest?
     ): ResponseEntity<String> {
         val account = getAccountFromRequest(request)

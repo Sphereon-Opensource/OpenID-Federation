@@ -1,6 +1,6 @@
 CREATE TABLE Crit (
-    id SERIAL PRIMARY KEY,
-    account_id INT NOT NULL,
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    account_id UUID AS kotlin.String NOT NULL,
     claim TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP,

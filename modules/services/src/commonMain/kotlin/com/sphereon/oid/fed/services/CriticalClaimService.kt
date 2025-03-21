@@ -61,7 +61,7 @@ class CriticalClaimService {
      * @return The deleted critical claim as a CritEntity.
      * @throws Exception If the operation fails to delete the critical claim.
      */
-    fun delete(account: Account, id: Int): CritEntity {
+    fun delete(account: Account, id: String): CritEntity {
         logger.info("Deleting critical claim ID: $id for account: ${account.username}")
         try {
             logAccountId(account)
@@ -82,7 +82,7 @@ class CriticalClaimService {
      * @param accountId The unique identifier for the account whose critical claims are to be fetched.
      * @return An array of critical claims (`CritEntity`) associated with the given account.
      */
-    private fun getCriticalClaimsByAccountId(accountId: Int): Array<CritEntity> {
+    private fun getCriticalClaimsByAccountId(accountId: String): Array<CritEntity> {
         logger.debug("Finding critical claims for account ID: $accountId")
         val criticalClaims = Persistence.critQueries.findByAccountId(accountId).executeAsList().toTypedArray()
         logger.debug("Found ${criticalClaims.size} critical claims for account ID: $accountId")

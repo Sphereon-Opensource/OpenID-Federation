@@ -96,7 +96,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate does not exist or belongs to a different account.
      * @throws Exception For any other errors encountered during the delete operation.
      */
-    fun deleteSubordinate(account: Account, id: Int): Subordinate {
+    fun deleteSubordinate(account: Account, id: String): Subordinate {
         logger.info("Attempting to delete subordinate ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -161,7 +161,7 @@ class SubordinateService(
      * @throws NotFoundException if the subordinate is not found.
      * @throws Exception for any runtime errors occurring during the process.
      */
-    fun getSubordinateStatement(account: Account, id: Int): SubordinateStatement {
+    fun getSubordinateStatement(account: Account, id: String): SubordinateStatement {
         logger.info("Generating subordinate statement for ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -242,7 +242,7 @@ class SubordinateService(
      * @throws IllegalArgumentException If no keys are found for the account.
      * @throws Exception If an error occurs during the subordinate statement publishing process.
      */
-    suspend fun publishSubordinateStatement(account: Account, id: Int, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
+    suspend fun publishSubordinateStatement(account: Account, id: String, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
         logger.info("Publishing subordinate statement for ID: $id, account: ${account.username} (dryRun: $dryRun)")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -297,7 +297,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate does not exist or does not belong to the given account.
      * @throws Exception If an unexpected error occurs during the creation process.
      */
-    fun createSubordinateJwk(account: Account, id: Int, jwk: Jwk): SubordinateJwk {
+    fun createSubordinateJwk(account: Account, id: String, jwk: Jwk): SubordinateJwk {
         logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -330,7 +330,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate is not found.
      * @throws Exception If any other error occurs during the retrieval process.
      */
-    fun getSubordinateJwks(account: Account, id: Int): Array<SubordinateJwk> {
+    fun getSubordinateJwks(account: Account, id: String): Array<SubordinateJwk> {
         logger.info("Retrieving JWKs for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -359,7 +359,7 @@ class SubordinateService(
      * @throws NotFoundException If the subordinate or JWK is not found, or if they do not belong to the specified account.
      * @throws Exception If any other error occurs during the deletion process.
      */
-    fun deleteSubordinateJwk(account: Account, id: Int, jwkId: Int): SubordinateJwk {
+    fun deleteSubordinateJwk(account: Account, id: String, jwkId: String): SubordinateJwk {
         logger.info("Deleting subordinate JWK ID: $jwkId for subordinate ID: $id, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -423,7 +423,7 @@ class SubordinateService(
      * @throws NotFoundException If no subordinate is found for the given account and subordinate ID.
      * @throws Exception If an error occurs during the process of retrieving metadata.
      */
-    fun findSubordinateMetadata(account: Account, subordinateId: Int): Array<SubordinateMetadata> {
+    fun findSubordinateMetadata(account: Account, subordinateId: String): Array<SubordinateMetadata> {
         logger.info("Finding metadata for subordinate ID: $subordinateId, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -458,7 +458,7 @@ class SubordinateService(
      */
     fun createMetadata(
         account: Account,
-        subordinateId: Int,
+        subordinateId: String,
         key: String,
         metadata: JsonObject
     ): SubordinateMetadata {
@@ -507,7 +507,7 @@ class SubordinateService(
      * @throws NotFoundException if the account, subordinate, or metadata record is not found.
      * @throws Exception if an unexpected error occurs during the deletion process.
      */
-    fun deleteSubordinateMetadata(account: Account, subordinateId: Int, id: Int): SubordinateMetadata {
+    fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): SubordinateMetadata {
         logger.info("Deleting metadata ID: $id for subordinate ID: $subordinateId, account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")

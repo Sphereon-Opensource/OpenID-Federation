@@ -35,7 +35,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@ExperimentalUuidApi
 class EntityConfigurationStatementServiceTest {
     private lateinit var statementService: EntityConfigurationStatementService
     private lateinit var accountService: AccountService
@@ -94,7 +97,7 @@ class EntityConfigurationStatementServiceTest {
 
         // Initialize test account
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -222,11 +225,13 @@ class EntityConfigurationStatementServiceTest {
     fun `test add trust mark issuers`() = runTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
+        val trustMarkTypeId = Uuid.random().toString()
+
         val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testTrustMarkType = mockk<com.sphereon.oid.fed.persistence.models.TrustMarkType> {
-            every { id } returns 1  // Note the 'L' for Long
+            every { id } returns trustMarkTypeId
             every { identifier } returns "test_trust_mark_type"
         }
         every { Persistence.trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns listOf(
@@ -243,7 +248,7 @@ class EntityConfigurationStatementServiceTest {
         )
 
         every {
-            Persistence.trustMarkIssuerQueries.findByTrustMarkTypeId(1).executeAsList()
+            Persistence.trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId).executeAsList()
         } returns testTrustMarkIssuers
 
         val result = statementService.findByAccount(testAccount.toDTO())
@@ -262,11 +267,12 @@ class EntityConfigurationStatementServiceTest {
     fun `test add received trust marks`() = runTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
+        val trustMarkTypeId = Uuid.random().toString()
         val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testReceivedTrustMark = mockk<com.sphereon.oid.fed.persistence.models.ReceivedTrustMark> {
-            every { id } returns 1
+            every { id } returns trustMarkTypeId
             every { account_id } returns testAccount.id
             every { created_at } returns FIXED_TIMESTAMP
             every { trust_mark_type_identifier } returns "test-trust-mark-id"

@@ -34,7 +34,7 @@ class TrustMarkTypeController(
     @GetMapping("/{id}")
     fun getTrustMarkTypeById(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): TrustMarkType {
         val account = getAccountFromRequest(request)
         return trustMarkService.findById(account, id)
@@ -43,7 +43,7 @@ class TrustMarkTypeController(
     @DeleteMapping("/{id}")
     fun deleteTrustMarkType(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): TrustMarkType {
         val account = getAccountFromRequest(request)
         return trustMarkService.deleteTrustMarkType(account, id)

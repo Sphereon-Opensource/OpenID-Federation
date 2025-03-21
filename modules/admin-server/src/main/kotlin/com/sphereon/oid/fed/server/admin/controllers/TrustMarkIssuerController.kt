@@ -18,7 +18,7 @@ class TrustMarkIssuerController(
     @GetMapping
     fun getIssuersForTrustMarkType(
         request: HttpServletRequest,
-        @PathVariable id: Int
+        @PathVariable id: String
     ): TrustMarkTypeIssuersResponse {
         val account = getAccountFromRequest(request)
         // We do not create a mapper for this response like we do for others, as the extension function would apply to String lists, which is very common
@@ -28,7 +28,7 @@ class TrustMarkIssuerController(
     @PostMapping
     fun addIssuerToTrustMarkType(
         request: HttpServletRequest,
-        @PathVariable id: Int,
+        @PathVariable id: String,
         @RequestBody body: CreateTrustMarkTypeIssuer
     ): AddTrustMarkIssuerResponse {
         val account = getAccountFromRequest(request)
@@ -42,7 +42,7 @@ class TrustMarkIssuerController(
     @DeleteMapping("/{issuerIdentifier}")
     fun removeIssuerFromTrustMarkType(
         request: HttpServletRequest,
-        @PathVariable id: Int,
+        @PathVariable id: String,
         @PathVariable issuerIdentifier: String
     ): TrustMarkIssuer {
         val account = getAccountFromRequest(request)

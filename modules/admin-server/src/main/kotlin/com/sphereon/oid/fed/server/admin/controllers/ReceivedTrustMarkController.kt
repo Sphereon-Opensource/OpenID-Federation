@@ -34,7 +34,7 @@ class ReceivedTrustMarkController(
     @DeleteMapping("/{receivedTrustMarkId}")
     fun deleteReceivedTrustMark(
         request: HttpServletRequest,
-        @PathVariable receivedTrustMarkId: Int
+        @PathVariable receivedTrustMarkId: String
     ): ReceivedTrustMark {
         val account = getAccountFromRequest(request)
         return receivedTrustMarkService.deleteReceivedTrustMark(account, receivedTrustMarkId)

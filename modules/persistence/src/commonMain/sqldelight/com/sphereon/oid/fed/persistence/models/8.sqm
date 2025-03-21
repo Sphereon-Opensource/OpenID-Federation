@@ -1,6 +1,6 @@
 CREATE TABLE SubordinateStatement (
-    id SERIAL PRIMARY KEY,
-    subordinate_id INT NOT NULL,
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    subordinate_id UUID AS kotlin.String NOT NULL,
     iss TEXT NOT NULL,
     sub TEXT NOT NULL,
     statement TEXT NOT NULL,

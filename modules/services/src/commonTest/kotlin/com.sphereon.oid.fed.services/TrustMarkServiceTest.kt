@@ -34,10 +34,13 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import com.sphereon.oid.fed.persistence.models.TrustMark as TrustMarkEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer as TrustMarkIssuerEntity
 import com.sphereon.oid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
 
+@ExperimentalUuidApi
 class TrustMarkServiceTest {
     private lateinit var trustMarkService: TrustMarkService
     private lateinit var jwkService: JwkService
@@ -76,7 +79,7 @@ class TrustMarkServiceTest {
 
         // Create test account
         testAccount = Account(
-            id = 1,
+            id = Uuid.random().toString(),
             username = "testUser",
             identifier = TEST_ISS,
             created_at = FIXED_TIMESTAMP,
@@ -105,7 +108,7 @@ class TrustMarkServiceTest {
         } returns null
 
         val createdType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -134,7 +137,7 @@ class TrustMarkServiceTest {
         )
 
         val existingType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -154,8 +157,8 @@ class TrustMarkServiceTest {
     @Test
     fun `find all trust mark types by account returns correct types`() {
         val trustMarkTypes = listOf(
-            TrustMarkTypeEntity(1, testAccount.id, "type1", FIXED_TIMESTAMP, null, deleted_at = null),
-            TrustMarkTypeEntity(2, testAccount.id, "type2", FIXED_TIMESTAMP, null, deleted_at = null)
+            TrustMarkTypeEntity(Uuid.random().toString(), testAccount.id, "type1", FIXED_TIMESTAMP, null, deleted_at = null),
+            TrustMarkTypeEntity(Uuid.random().toString(), testAccount.id, "type2", FIXED_TIMESTAMP, null, deleted_at = null)
         )
 
         every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns trustMarkTypes
@@ -171,7 +174,7 @@ class TrustMarkServiceTest {
     @Test
     fun `find trust mark type by id succeeds`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -191,19 +194,20 @@ class TrustMarkServiceTest {
 
     @Test
     fun `find trust mark type by id fails for non-existent type`() {
+        val id = Uuid.random().toString()
         every {
-            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, 999).executeAsOneOrNull()
+            trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, id).executeAsOneOrNull()
         } returns null
 
         assertFailsWith<NotFoundException> {
-            trustMarkService.findById(testAccount.toDTO(), 999)
+            trustMarkService.findById(testAccount.toDTO(), id)
         }
     }
 
     @Test
     fun `delete trust mark type succeeds`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -226,7 +230,7 @@ class TrustMarkServiceTest {
     @Test
     fun `get issuers for trust mark type succeeds`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -235,8 +239,8 @@ class TrustMarkServiceTest {
         )
 
         val issuers = listOf(
-            TrustMarkIssuerEntity(1, trustMarkType.id, "issuer1", created_at = FIXED_TIMESTAMP, deleted_at = null),
-            TrustMarkIssuerEntity(2, trustMarkType.id, "issuer2", created_at = FIXED_TIMESTAMP, deleted_at = null)
+            TrustMarkIssuerEntity(Uuid.random().toString(), trustMarkType.id, "issuer1", created_at = FIXED_TIMESTAMP, deleted_at = null),
+            TrustMarkIssuerEntity(Uuid.random().toString(), trustMarkType.id, "issuer2", created_at = FIXED_TIMESTAMP, deleted_at = null)
         )
 
         every {
@@ -257,7 +261,7 @@ class TrustMarkServiceTest {
     @Test
     fun `add issuer to trust mark type succeeds`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -279,7 +283,7 @@ class TrustMarkServiceTest {
                 issuer_identifier = issuerIdentifier
             ).executeAsOne()
         } returns TrustMarkIssuerEntity(
-            1,
+            Uuid.random().toString(),
             trustMarkType.id,
             issuerIdentifier,
             created_at = FIXED_TIMESTAMP,
@@ -299,7 +303,7 @@ class TrustMarkServiceTest {
     @Test
     fun `add issuer to trust mark type fails for duplicate issuer`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -316,7 +320,7 @@ class TrustMarkServiceTest {
             trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkType.id).executeAsList()
         } returns listOf(
             TrustMarkIssuerEntity(
-                1,
+                Uuid.random().toString(),
                 trustMarkType.id,
                 issuerIdentifier,
                 created_at = FIXED_TIMESTAMP,
@@ -336,7 +340,7 @@ class TrustMarkServiceTest {
     @Test
     fun `remove issuer from trust mark type succeeds`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -347,7 +351,7 @@ class TrustMarkServiceTest {
         val issuerIdentifier = "https://existing-issuer.com"
 
         val existingIssuer = TrustMarkIssuerEntity(
-            1,
+            Uuid.random().toString(),
             trustMarkType.id,
             issuerIdentifier,
             created_at = FIXED_TIMESTAMP,
@@ -380,7 +384,7 @@ class TrustMarkServiceTest {
     @Test
     fun `remove issuer from trust mark type fails for non-existent issuer`() {
         val trustMarkType = TrustMarkTypeEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             identifier = TEST_IDENTIFIER,
             created_at = FIXED_TIMESTAMP,
@@ -428,7 +432,7 @@ class TrustMarkServiceTest {
 
         val expectedIat = (FIXED_TIMESTAMP.toEpochSecond(ZoneOffset.UTC)).toInt()
         val createdTrustMark = TrustMarkEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
             trust_mark_type_identifier = TEST_IDENTIFIER,
@@ -496,7 +500,7 @@ class TrustMarkServiceTest {
     @Test
     fun `delete trust mark succeeds`() {
         val trustMark = TrustMarkEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
             trust_mark_type_identifier = TEST_IDENTIFIER,
@@ -522,12 +526,13 @@ class TrustMarkServiceTest {
 
     @Test
     fun `delete trust mark fails for non-existent trust mark`() {
+        val id  = Uuid.random().toString()
         every {
-            trustMarkQueries.findByAccountIdAndId(testAccount.id, 999).executeAsOneOrNull()
+            trustMarkQueries.findByAccountIdAndId(testAccount.id, id).executeAsOneOrNull()
         } returns null
 
         assertFailsWith<NotFoundException> {
-            trustMarkService.deleteTrustMark(testAccount.toDTO(), 999)
+            trustMarkService.deleteTrustMark(testAccount.toDTO(), id)
         }
     }
 
@@ -541,7 +546,7 @@ class TrustMarkServiceTest {
 
         val trustMarks = listOf(
             TrustMarkEntity(
-                id = 1,
+                id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = TEST_SUB,
                 trust_mark_type_identifier = TEST_IDENTIFIER,
@@ -654,7 +659,7 @@ class TrustMarkServiceTest {
         )
 
         val trustMark = TrustMarkEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
             trust_mark_type_identifier = TEST_IDENTIFIER,
@@ -716,7 +721,7 @@ class TrustMarkServiceTest {
     fun `get trust marks for account returns all trust marks`() {
         val trustMarks = listOf(
             TrustMarkEntity(
-                id = 1,
+                id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = TEST_SUB,
                 trust_mark_type_identifier = TEST_IDENTIFIER,
@@ -727,7 +732,7 @@ class TrustMarkServiceTest {
                 deleted_at = null
             ),
             TrustMarkEntity(
-                id = 2,
+                id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = "https://another-subject.com",
                 trust_mark_type_identifier = "another-type",
@@ -760,7 +765,7 @@ class TrustMarkServiceTest {
 
     @Test
     fun `delete trust mark type fails for non-existent type`() {
-        val nonExistentTypeId = 999
+        val nonExistentTypeId = Uuid.random().toString()
 
         every {
             trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
@@ -777,7 +782,7 @@ class TrustMarkServiceTest {
 
     @Test
     fun `get issuers fails when trust mark type does not exist`() {
-        val nonExistentTypeId = 999
+        val nonExistentTypeId = Uuid.random().toString()
 
         every {
             trustMarkTypeQueries.findByAccountIdAndId(testAccount.id, nonExistentTypeId).executeAsOneOrNull()
@@ -794,7 +799,7 @@ class TrustMarkServiceTest {
 
     @Test
     fun `add issuer fails when trust mark type does not exist`() {
-        val nonExistentTypeId = 999
+        val nonExistentTypeId = Uuid.random().toString()
         val issuerIdentifier = "https://test-issuer.com"
 
         every {
@@ -816,7 +821,7 @@ class TrustMarkServiceTest {
 
     @Test
     fun `remove issuer fails when trust mark type does not exist`() {
-        val nonExistentTypeId = 999
+        val nonExistentTypeId = Uuid.random().toString()
         val issuerIdentifier = "https://test-issuer.com"
 
         every {
@@ -859,7 +864,7 @@ class TrustMarkServiceTest {
 
         val expectedIat = (FIXED_TIMESTAMP.toEpochSecond(ZoneOffset.UTC)).toInt()
         val createdTrustMark = TrustMarkEntity(
-            id = 1,
+            id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
             trust_mark_type_identifier = TEST_IDENTIFIER,

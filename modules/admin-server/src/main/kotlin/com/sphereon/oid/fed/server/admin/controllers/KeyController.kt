@@ -34,7 +34,7 @@ class KeyController(
     @DeleteMapping("/{keyId}")
     fun revokeKey(
         request: HttpServletRequest,
-        @PathVariable keyId: Int,
+        @PathVariable keyId: String,
         @RequestParam reason: String?
     ): AccountJwk {
         val account = getAccountFromRequest(request)

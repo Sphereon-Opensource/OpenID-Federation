@@ -99,7 +99,7 @@ class MetadataService {
      * @throws NotFoundException If the metadata record is not found or does not belong to the given account.
      * @throws Exception If an unexpected error occurs during the operation.
      */
-    fun deleteEntityConfigurationMetadata(account: Account, id: Int): Metadata {
+    fun deleteEntityConfigurationMetadata(account: Account, id: String): Metadata {
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")

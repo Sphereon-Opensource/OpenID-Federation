@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     id("app.cash.sqldelight") version "2.0.2"
@@ -10,7 +14,13 @@ java {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
-
+kotlin {
+    compilerOptions {
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
+        jvmToolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
+    }
+}
 repositories {
     google()
     mavenCentral()
