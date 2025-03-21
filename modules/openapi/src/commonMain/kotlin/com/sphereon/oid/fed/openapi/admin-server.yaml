@@ -24,7 +24,7 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.9.0-d41
+  version: 0.10.0-d41
 servers:
   - url: http://localhost:8081
     description: Admin Server
@@ -1151,16 +1151,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                dryRun: # TO-DO Add correct required attributes
-                  type: boolean
-                  description: 'If true, the entity statement will be generated but not persisted.'
-                  default: false
+        $ref: '#/components/requestBodies/CreateTrustMarkRequest'
       responses:
         '200':
           description: Trust Mark dryRun successful
@@ -1584,6 +1575,40 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
+  requestBodies:
+    CreateTrustMarkRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - sub
+              - trust_mark_type_identifier
+            properties:
+              sub:
+                type: string
+                description: 'The entity the Trust Mark applies to.'
+                example: http://localhost:8080/trust-mark-holder
+              trust_mark_type_identifier:
+                type: string
+                description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
+                example: http://localhost:8080/trust-mark-types/exampleType
+              logo_uri:
+                type: string
+                format: uri
+                description: Optional URL to a logo for the Trust Mark entity.
+                example: https://example.com/logo
+              exp:
+                type: integer
+                description: Optional expiration time of the Trust Mark in seconds since the epoch
+              ref:
+                type: string
+                format: uri
+                description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+              delegation:
+                type: string
+                description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark
+
   schemas:
     AccountsResponse:
       type: object

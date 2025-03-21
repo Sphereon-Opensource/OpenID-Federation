@@ -14,5 +14,5 @@ CREATE TABLE Jwk (
 );
 
 CREATE INDEX jwk_account_id_index ON Jwk (account_id);
-CREATE UNIQUE INDEX unique_kid_account_id_active ON Jwk (kid, account_id, revoked_at) WHERE revoked_at IS NULL;
-CREATE UNIQUE INDEX unique_kms_key_ref_account_id_active ON Jwk (kms_key_ref, account_id, revoked_at) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX unique_kid_account_id_active ON Jwk (kid, account_id) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX unique_kms_key_ref_account_id_active ON Jwk (kms_key_ref, account_id) WHERE revoked_at IS NULL;

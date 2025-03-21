@@ -9,7 +9,7 @@ CREATE TABLE Account (
     deleted_at TIMESTAMP
 );
 
-CREATE UNIQUE INDEX account_username_active_index ON Account (username, deleted_at) WHERE deleted_at IS NULL;
+CREATE UNIQUE INDEX account_username_active_index ON Account (username) WHERE deleted_at IS NULL;
 
 INSERT INTO Account (username) VALUES ('root');
 
