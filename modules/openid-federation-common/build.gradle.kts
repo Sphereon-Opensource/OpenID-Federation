@@ -14,6 +14,7 @@ repositories {
     mavenLocal()
     google()
 }
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -67,7 +68,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api(projects.modules.openapi)
+                api(projects.modules.openidFederationOpenapi)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.ktor.client.content.negotiation)

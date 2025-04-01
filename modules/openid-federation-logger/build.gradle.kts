@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kover)
 }
 
-group = "com.sphereon.oid.fed.logger"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)

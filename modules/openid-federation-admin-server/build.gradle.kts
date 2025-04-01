@@ -15,7 +15,7 @@ tasks.register<Copy>("copyOpenAPI") {
 //    from(tasks.compileJava)
 }
 //
-tasks.processResources.dependsOn(":modules:admin-server:copyOpenAPI")
+tasks.processResources.dependsOn(":modules:openid-federation-admin-server:copyOpenAPI")
 
 repositories {
     mavenLocal()
@@ -31,8 +31,6 @@ repositories {
     }
 }
 
-group = "com.sphereon.oid.fed.server.admin"
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -40,10 +38,10 @@ java {
 }
 
 dependencies {
-    api(projects.modules.openapi)
+    api(projects.modules.openidFederationOpenapi)
     api(projects.modules.openidFederationCommon)
-    api(projects.modules.services)
-    api(projects.modules.logger)
+    api(projects.modules.openidFederationServices)
+    api(projects.modules.openidFederationLogger)
 
     implementation(libs.springboot.actuator) {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
@@ -98,11 +96,11 @@ publishing {
             pom {
                 name.set("OpenID Federation Admin Server")
                 description.set("Admin Server for OpenID Federation")
-                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                url.set("https://github.com/Sphereon-Opensource/OpenID-Federation")
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
             }
