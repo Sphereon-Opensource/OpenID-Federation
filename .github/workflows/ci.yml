@@ -51,7 +51,7 @@ jobs:
           KMS_PROVIDER: memory
         run: |
           ./gradlew build
-          ./gradlew :modules:openapi:jsPublicPackageJson
+          ./gradlew :modules:openid-federation-openapi:jsPublicPackageJson
           ./gradlew :modules:openid-federation-common:jsPublicPackageJson
           ./gradlew publishJsPackageToNpmjsRegistry
           ./gradlew publishAllPublicationsToSphereon-opensourceRepository

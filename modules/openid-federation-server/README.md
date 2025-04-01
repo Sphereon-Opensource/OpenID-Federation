@@ -16,12 +16,12 @@ DATASOURCE_URL=<URL>
 
 To build
 <br>
-```./gradlew :modules:federation-server:build```
+```./gradlew :modules:openid-federation-server:build```
 
 To run
 <br>
-```./gradlew :modules:federation-server:bootRun```
+```./gradlew :modules:openid-federation-server:bootRun```
 
 To run tests
 <br>
-```./gradlew :modules:federation-server:test```
+```./gradlew :modules:openid-federation-server:test```

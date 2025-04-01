@@ -1,32 +1,32 @@
 {
-    "configurations": [
-        {
-            "name": "OpenID-Federation [:admin-server:build]",
-            "type": "gradle",
-            "workingDir": "$PROJECT_DIR$",
-            "tasks": [
-                ":modules:admin-server:build"
-            ],
-            "args": [
-                ""
-            ],
-            "initScripts": {
-                "flmapper": "ext.mapPath = { path -> null }"
-            }
-        },
-        {
-            "name": "OpenID-Federation [build]",
-            "type": "gradle",
-            "workingDir": "$PROJECT_DIR$",
-            "tasks": [
-                "build"
-            ],
-            "args": [
-                ""
-            ],
-            "initScripts": {
-                "flmapper": "ext.mapPath = { path -> null }"
-            }
-        }
-    ]
+  "configurations": [
+    {
+      "name": "OpenID-Federation [:admin-server:build]",
+      "type": "gradle",
+      "workingDir": "$PROJECT_DIR$",
+      "tasks": [
+        ":modules:openid-federation-admin-server:build"
+      ],
+      "args": [
+        ""
+      ],
+      "initScripts": {
+        "flmapper": "ext.mapPath = { path -> null }"
+      }
+    },
+    {
+      "name": "OpenID-Federation [build]",
+      "type": "gradle",
+      "workingDir": "$PROJECT_DIR$",
+      "tasks": [
+        "build"
+      ],
+      "args": [
+        ""
+      ],
+      "initScripts": {
+        "flmapper": "ext.mapPath = { path -> null }"
+      }
+    }
+  ]
 }

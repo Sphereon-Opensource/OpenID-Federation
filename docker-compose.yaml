@@ -36,7 +36,7 @@ services:
     image: sphereon/openid-federation-server:latest
     build:
       context: .
-      dockerfile: ./.docker/federation-server/Dockerfile
+      dockerfile: ./.docker/openid-federation-server/Dockerfile
     deploy:
       resources:
         limits:
@@ -81,14 +81,14 @@ services:
       - ./logs/openid-federation-server:/tmp/logs
     user: root
     entrypoint: >
-      /bin/sh -c "java -jar /app/federation-server.jar"
+      /bin/sh -c "java -jar /app/openid-federation-server:bootJar.jar"
     networks:
       - openid_network
   admin-server:
     image: sphereon/openid-federation-admin-server:latest
     build:
       context: .
-      dockerfile: ./.docker/admin-server/Dockerfile
+      dockerfile: ./.docker/openid-federation-admin-server/Dockerfile
     deploy:
       resources:
         limits:
@@ -129,7 +129,7 @@ services:
       - ./logs/openid-federation-admin-server:/tmp/logs
     user: root
     entrypoint: >
-      /bin/sh -c "java -jar /app/admin-server.jar"
+      /bin/sh -c "java -jar /app/openid-federation-admin-server.jar"
   keycloak:
     image: keycloak/keycloak:26.0
     user: keycloak
