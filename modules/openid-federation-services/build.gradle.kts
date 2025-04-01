@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kover)
 }
 
-group = "com.sphereon.oid.fed.services"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -34,9 +33,9 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationClient)
-                api(projects.modules.logger)
-                api(projects.modules.openapi)
-                api(projects.modules.persistence)
+                api(projects.modules.openidFederationLogger)
+                api(projects.modules.openidFederationOpenapi)
+                api(projects.modules.openidFederationPersistence)
                 api(projects.modules.openidFederationCommon)
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.coroutines.core)
@@ -56,9 +55,9 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(projects.modules.logger)
-                implementation(projects.modules.openapi)
-                implementation(projects.modules.persistence)
+                implementation(projects.modules.openidFederationLogger)
+                implementation(projects.modules.openidFederationOpenapi)
+                implementation(projects.modules.openidFederationPersistence)
                 implementation(projects.modules.openidFederationCommon)
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(libs.mockk)

@@ -5,7 +5,6 @@ plugins {
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
 }
 
-group = "com.sphereon.oid.fed"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)

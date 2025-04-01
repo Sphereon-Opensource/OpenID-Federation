@@ -11,6 +11,7 @@ androidx-core-ktx = "1.13.1"
 androidx-espresso-core = "3.5.1"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.1.5"
+bom = "1.0.0.Final"
 compose-plugin = "1.6.10"
 hikari = "6.2.1"
 junit = "4.13.2"
@@ -93,16 +94,17 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
 springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
-springdoc-starter-webmvc-ui = { group = "org.springdoc", name="springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc"}
+springdoc-starter-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
 testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
 whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
 [plugins]
-changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref="changelog" }
+changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "changelog" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+bom-generator = { id = "io.github.gradlebom.generator-plugin", version.ref = "bom" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

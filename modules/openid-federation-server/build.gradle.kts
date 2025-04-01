@@ -7,8 +7,6 @@ plugins {
     application
 }
 
-group = "com.sphereon.oid.fed.server.federation"
-
 repositories {
     mavenCentral()
     mavenLocal()
@@ -31,10 +29,10 @@ java {
 }
 
 dependencies {
-    api(projects.modules.openapi)
+    api(projects.modules.openidFederationOpenapi)
     api(projects.modules.openidFederationCommon)
-    api(projects.modules.persistence)
-    api(projects.modules.services)
+    api(projects.modules.openidFederationPersistence)
+    api(projects.modules.openidFederationServices)
     implementation(libs.sphereon.kmp.cbor)
     implementation(libs.sphereon.kmp.crypto)
     implementation(libs.sphereon.kmp.crypto.kms)
@@ -78,11 +76,11 @@ publishing {
             pom {
                 name.set("OpenID Federation Server")
                 description.set("Server for OpenID Federation")
-                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                url.set("https://github.com/Sphereon-Opensource/OpenID-Federation")
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
             }

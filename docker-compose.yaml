@@ -61,13 +61,13 @@ services:
         ROOT_IDENTIFIER
         DEV_MODE
         LOGGER_SEVERITY
-#    environment:
-#      DATASOURCE_URL: ${DATASOURCE_URL}
-#      DATASOURCE_USER: ${DATASOURCE_USER}
-#      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-#      APP_KEY: ${APP_KEY}
-#      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-#      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
+    #    environment:
+    #      DATASOURCE_URL: ${DATASOURCE_URL}
+    #      DATASOURCE_USER: ${DATASOURCE_USER}
+    #      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
+    #      APP_KEY: ${APP_KEY}
+    #      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
+    #      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
     depends_on:
       db:
         condition: service_healthy
@@ -78,7 +78,7 @@ services:
         max-size: "10m"
         max-file: "3"
     volumes:
-      - ./logs/federation-server:/tmp/logs
+      - ./logs/openid-federation-server:/tmp/logs
     user: root
     entrypoint: >
       /bin/sh -c "java -jar /app/federation-server.jar"
@@ -115,15 +115,6 @@ services:
         DEV_MODE
         LOGGER_SEVERITY
         LOGGER_OUTPUT
-#    environment:
-#      DATASOURCE_URL: ${DATASOURCE_URL}
-#      DATASOURCE_USER: ${DATASOURCE_USER}
-#      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-#      APP_KEY: ${APP_KEY}
-#      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-#      OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI}
-#      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
-#      LOGGER_OUTPUT: ${LOGGER_OUTPUT}
     depends_on:
       db:
         condition: service_healthy
@@ -135,7 +126,7 @@ services:
         max-size: "10m"
         max-file: "3"
     volumes:
-      - ./logs/admin-server:/tmp/logs
+      - ./logs/openid-federation-admin-server:/tmp/logs
     user: root
     entrypoint: >
       /bin/sh -c "java -jar /app/admin-server.jar"
@@ -167,10 +158,10 @@ services:
       - KC_BOOTSTRAP_ADMIN_PASSWORD
       - KC_HEALTH_ENABLED
       - JAVA_OPTS
-#      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
-#      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
-#      - KC_HEALTH_ENABLED=true
-#      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC
+    #      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_BOOTSTRAP_ADMIN_USERNAME}
+    #      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    #      - KC_HEALTH_ENABLED=true
+    #      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -XX:+UseG1GC
     volumes:
       - ./.docker/keycloak:/opt/keycloak/data/import/
     restart: unless-stopped

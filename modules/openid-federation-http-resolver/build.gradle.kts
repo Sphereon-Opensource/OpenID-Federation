@@ -5,7 +5,6 @@ plugins {
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
 }
 
-group = "com.sphereon.oid.fed"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -69,8 +68,8 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.ktor.client.core)
-                implementation(project(":modules:cache"))
-                implementation(project(":modules:logger"))
+                api(projects.modules.openidFederationCache)
+                api(projects.modules.openidFederationLogger)
             }
         }
 

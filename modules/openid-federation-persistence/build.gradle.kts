@@ -8,12 +8,12 @@ plugins {
     id("maven-publish")
 }
 
-group = "com.sphereon.oid.fed.persistence"
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
 }
+
 kotlin {
     compilerOptions {
         languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
@@ -49,7 +49,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(projects.modules.openapi)
+                implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationCommon)
                 implementation(libs.kotlinx.datetime)
             }
@@ -76,7 +76,7 @@ publishing {
                 licenses {
                     license {
                         name.set("The Apache License, Version 2.0")
-                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
                     }
                 }
             }
