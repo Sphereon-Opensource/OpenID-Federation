@@ -81,7 +81,7 @@ services:
       - ./logs/openid-federation-server:/tmp/logs
     user: root
     entrypoint: >
-      /bin/sh -c "java -jar /app/openid-federation-server:bootJar.jar"
+      /bin/sh -c "java -jar /app/openid-federation-server.jar"
     networks:
       - openid_network
   admin-server:
