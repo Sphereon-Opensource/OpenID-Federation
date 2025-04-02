@@ -63,8 +63,8 @@ plugins {
     alias(libs.plugins.springboot) apply false
     alias(libs.plugins.springDependencyManagement) apply false
     alias(libs.plugins.kotlinPluginSpring) apply false
+    alias(libs.plugins.node.gradle) apply false
     id("maven-publish")
-    id("com.github.node-gradle.node") version "7.0.1"
 }
 
 fun getNpmVersion(): String {
@@ -92,7 +92,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.12.3-SNAPSHOT"
+    version = "0.12.4-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
 
