@@ -7,9 +7,20 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
 import com.sphereon.oid.fed.services.mappers.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -50,13 +61,13 @@ class ReceivedTrustMarkServiceTest {
     @Test
     fun `create received trust mark succeeds with valid input`() {
         val createDto = CreateReceivedTrustMark(
-            trustMarkTypeIdentifier = TEST_TRUST_MARK_TYPE_IDENTIFIER,
+            trustMarkId = TEST_TRUST_MARK_TYPE_IDENTIFIER,
             jwt = TEST_JWT
         )
         val trustMark = ReceivedTrustMark(
             id = Uuid.random().toString(),
             account_id = testAccount.id,
-            trust_mark_type_identifier = TEST_TRUST_MARK_TYPE_IDENTIFIER,
+            trust_mark_id = TEST_TRUST_MARK_TYPE_IDENTIFIER,
             jwt = TEST_JWT,
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
@@ -75,7 +86,7 @@ class ReceivedTrustMarkServiceTest {
         val result = receivedTrustMarkService.createReceivedTrustMark(testAccount.toDTO(), createDto)
 
         assertNotNull(result)
-        assertEquals(TEST_TRUST_MARK_TYPE_IDENTIFIER, result.trustMarkTypeIdentifier)
+        assertEquals(TEST_TRUST_MARK_TYPE_IDENTIFIER, result.trustMarkId)
         assertEquals(TEST_JWT, result.jwt)
         verify {
             receivedTrustMarkQueries.create(
@@ -99,8 +110,8 @@ class ReceivedTrustMarkServiceTest {
 
         assertNotNull(result)
         assertEquals(2, result.size)
-        assertEquals("type1", result[0].trustMarkTypeIdentifier)
-        assertEquals("type2", result[1].trustMarkTypeIdentifier)
+        assertEquals("type1", result[0].trustMarkId)
+        assertEquals("type2", result[1].trustMarkId)
         verify { receivedTrustMarkQueries.findByAccountId(testAccount.id) }
     }
 
@@ -110,7 +121,7 @@ class ReceivedTrustMarkServiceTest {
         val trustMark = ReceivedTrustMark(
             id = trustMarkId,
             account_id = testAccount.id,
-            trust_mark_type_identifier = TEST_TRUST_MARK_TYPE_IDENTIFIER,
+            trust_mark_id = TEST_TRUST_MARK_TYPE_IDENTIFIER,
             jwt = TEST_JWT,
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
@@ -128,7 +139,7 @@ class ReceivedTrustMarkServiceTest {
         val result = receivedTrustMarkService.deleteReceivedTrustMark(testAccount.toDTO(), trustMarkId)
 
         assertNotNull(result)
-        assertEquals(TEST_TRUST_MARK_TYPE_IDENTIFIER, result.trustMarkTypeIdentifier)
+        assertEquals(TEST_TRUST_MARK_TYPE_IDENTIFIER, result.trustMarkId)
         verify { receivedTrustMarkQueries.findByAccountIdAndId(testAccount.id, trustMarkId) }
         verify { receivedTrustMarkQueries.delete(trustMarkId) }
     }

@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.common.exceptions.BadRequestException
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.CreateAccount
@@ -9,9 +10,19 @@ import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.AccountQueries
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import com.sphereon.oid.fed.services.mappers.toDTO
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import io.mockk.verify
 import java.time.LocalDateTime
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -47,7 +58,7 @@ class AccountServiceTest {
     fun `create account succeeds when username is unique`() {
         val createAccountDTO = CreateAccount(
             username = "testUser",
-            identifier = "test-identifier"
+            identifier = "https://test-identifier.com"
         )
         val account = Account(
             id = Uuid.random().toString(),
@@ -79,7 +90,7 @@ class AccountServiceTest {
     fun `create account fails when username already exists`() {
         val createAccountDTO = CreateAccount(
             username = "testUser",
-            identifier = "test-identifier"
+            identifier = "https://test-identifier.com"
         )
         val existingAccount = Account(
             id = Uuid.random().toString(),
@@ -101,10 +112,26 @@ class AccountServiceTest {
     }
 
     @Test
+    fun `create account fails when identifier doesn't start with https`() {
+        val createAccountDTO = CreateAccount(
+            username = "testUser",
+            identifier = "http://invalid-identifier"  // Using http:// instead of https://
+        )
+
+        every { accountQueries.findByUsername(createAccountDTO.username) } returns mockk {
+            every { executeAsOneOrNull() } returns null
+        }
+
+        assertFailsWith<BadRequestException> {
+            accountService.createAccount(createAccountDTO)
+        }
+    }
+
+    @Test
     fun `get all accounts returns list of accounts`() {
         val accounts = listOf(
-            Account(Uuid.random().toString(), "user1", "id1", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null),
-            Account(Uuid.random().toString(), "user2", "id2", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null)
+            Account(Uuid.random().toString(), "user1", "https://id1.com", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null),
+            Account(Uuid.random().toString(), "user2", "https://id2.com", FIXED_TIMESTAMP, FIXED_TIMESTAMP, null)
         )
         every { accountQueries.findAll().executeAsList() } returns accounts
 
@@ -167,7 +194,7 @@ class AccountServiceTest {
         val account = Account(
             id = Uuid.random().toString(),
             username = username,
-            identifier = "test-identifier",
+            identifier = "https://test-identifier.com",
             created_at = FIXED_TIMESTAMP,
             updated_at = FIXED_TIMESTAMP,
             deleted_at = null
@@ -199,7 +226,7 @@ class AccountServiceTest {
         val account = Account(
             id = Uuid.random().toString(),
             username = "testUser",
-            identifier = "test-identifier",
+            identifier = "https://test-identifier.com",
             created_at = FIXED_TIMESTAMP,
             updated_at = FIXED_TIMESTAMP,
             deleted_at = null
@@ -217,13 +244,13 @@ class AccountServiceTest {
         val rootAccount = Account(
             id = Uuid.random().toString(),
             username = Constants.DEFAULT_ROOT_USERNAME,
-            identifier = "root-identifier",
+            identifier = "https://root-identifier.com",
             created_at = FIXED_TIMESTAMP,
             updated_at = FIXED_TIMESTAMP,
             deleted_at = null
         )
 
-        assertFailsWith<NotFoundException> {
+        assertFailsWith<BadRequestException> {
             accountService.deleteAccount(rootAccount.toDTO())
         }
     }

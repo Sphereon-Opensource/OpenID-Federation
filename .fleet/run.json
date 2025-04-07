@@ -1,7 +1,7 @@
 {
   "configurations": [
     {
-      "name": "OpenID-Federation [:admin-server:build]",
+      "name": "OpenID-Federation [:openid-federation-admin-server:build]",
       "type": "gradle",
       "workingDir": "$PROJECT_DIR$",
       "tasks": [

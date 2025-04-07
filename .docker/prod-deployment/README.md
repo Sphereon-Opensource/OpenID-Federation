@@ -1,10 +1,12 @@
 # OpenID Federation Server Deployment
 
-This repository contains scripts and configuration files for deploying the OpenID Federation Server and Admin Server using Docker.
+This repository contains scripts and configuration files for deploying the OpenID Federation Server and Admin Server
+using Docker.
 
 ## Repository Contents
 
 ### Deployment Scripts (Local Use Only)
+
 ```
 ├── build.sh          # Build script for local development
 ├── push.sh           # Script to push images to registry
@@ -12,12 +14,13 @@ This repository contains scripts and configuration files for deploying the OpenI
 ```
 
 ### Deployment Files (To Be Deployed)
+
 ```
 ├── docker-compose.yaml
 └── config/
-    ├── federation-server/
+    ├── openid-federation-server/
     │   └── application.properties
-    └── admin-server/
+    └── openid-federation-admin-server/
         └── application.properties
 ```
 
@@ -32,16 +35,13 @@ This repository contains scripts and configuration files for deploying the OpenI
 Before running the deployment, ensure the following environment variables are properly configured:
 
 ### Database Configuration
+
 - `DATASOURCE_USER` - PostgreSQL user for the main database
 - `DATASOURCE_PASSWORD` - PostgreSQL password for the main database
 - `DATASOURCE_DB` - Main database name
 
-### Local KMS Configuration
-- `LOCAL_KMS_DATASOURCE_USER` - PostgreSQL user for the KMS database
-- `LOCAL_KMS_DATASOURCE_PASSWORD` - PostgreSQL password for the KMS database
-- `LOCAL_KMS_DATASOURCE_DB` - KMS database name
-
 ### Application Configuration
+
 - `APP_KEY` - Application key for encryption
 - `KMS_PROVIDER` - Key Management Service provider configuration
 - `ROOT_IDENTIFIER` - Root identifier for the federation
@@ -52,17 +52,20 @@ Before running the deployment, ensure the following environment variables are pr
 ## Deployment Steps
 
 1. Create required directories for persistent storage:
+
 ```bash
 sudo mkdir -p /mnt/openid-federation/volumes/{postgres,local-kms}
 ```
 
 2. Copy deployment files to target system:
+
 ```bash
 docker-compose.yaml
 config/
 ```
 
 3. Start the services using Docker Compose:
+
 ```bash
 docker-compose up -d
 ```
@@ -72,13 +75,13 @@ docker-compose up -d
 The deployment consists of the following services:
 
 - **db**: Main PostgreSQL database
-- **local-kms-db**: PostgreSQL database for the Key Management Service
-- **federation-server**: Main federation server service
-- **admin-server**: Administrative interface for the federation server
+- **openid-federation-server**: Federation server service
+- **openid-federation-admin-server**: Administrative interface for the federation server
 
 ### Networking
 
 The deployment uses two Docker networks:
+
 - `frontend`: For external communication (must be created manually)
 - `backend`: For internal service communication (automatically created)
 
@@ -103,6 +106,7 @@ docker-compose up -d
 ### Logs
 
 To view service logs:
+
 ```bash
 docker-compose logs -f [service-name]
 ```

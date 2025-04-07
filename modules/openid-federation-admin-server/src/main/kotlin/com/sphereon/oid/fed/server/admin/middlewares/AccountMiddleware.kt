@@ -61,7 +61,6 @@ class AccountMiddleware(
     }
 }
 
-
 fun getAccountFromRequest(request: HttpServletRequest): Account {
     val account = request.getAttribute(Constants.ACCOUNT_ATTRIBUTE) ?: throw NotFoundException("Account not found")
     return account as Account

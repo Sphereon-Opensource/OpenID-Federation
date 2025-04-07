@@ -32,7 +32,7 @@ services:
       timeout: 5s
       retries: 20
 
-  federation-server:
+  openid-federation-server:
     image: sphereon/openid-federation-server:latest
     build:
       context: .
@@ -51,6 +51,8 @@ services:
       - path: .env
         required: false
       - path: .env.local
+        required: false
+      - path: .env.docker
         required: false
     environment:
       - DATASOURCE_URL
@@ -84,7 +86,8 @@ services:
       /bin/sh -c "java -jar /app/openid-federation-server.jar"
     networks:
       - openid_network
-  admin-server:
+
+  openid-federation-admin-server:
     image: sphereon/openid-federation-admin-server:latest
     build:
       context: .
@@ -103,6 +106,8 @@ services:
       - path: .env
         required: false
       - path: .env.local
+        required: false
+      - path: .env.docker
         required: false
     environment:
       - DATASOURCE_URL
@@ -130,6 +135,7 @@ services:
     user: root
     entrypoint: >
       /bin/sh -c "java -jar /app/openid-federation-admin-server.jar"
+
   keycloak:
     image: keycloak/keycloak:26.0
     user: keycloak

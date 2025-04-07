@@ -78,7 +78,7 @@ class MetadataServiceTest {
             metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString()).executeAsOneOrNull()
         } returns metadata
 
-        val result = metadataService.createEntityConfigurationMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
+        val result = metadataService.createMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
 
         assertNotNull(result)
         assertEquals(TEST_KEY, result.key)
@@ -103,7 +103,7 @@ class MetadataServiceTest {
         }
 
         assertFailsWith<EntityAlreadyExistsException> {
-            metadataService.createEntityConfigurationMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
+            metadataService.createMetadata(testAccount.toDTO(), TEST_KEY, TEST_METADATA)
         }
         verify { metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY) }
     }
@@ -145,7 +145,7 @@ class MetadataServiceTest {
             metadataQueries.delete(metadata.id).executeAsOneOrNull()
         } returns metadata
 
-        val result = metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
+        val result = metadataService.deleteMetadata(testAccount.toDTO(), metadata.id)
 
         assertNotNull(result)
         assertEquals(TEST_KEY, result.key)
@@ -163,7 +163,7 @@ class MetadataServiceTest {
         } returns null
 
         assertFailsWith<NotFoundException> {
-            metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), nonExistentId)
+            metadataService.deleteMetadata(testAccount.toDTO(), nonExistentId)
         }
         verify { metadataQueries.findById(nonExistentId) }
     }
@@ -185,7 +185,7 @@ class MetadataServiceTest {
         } returns metadata
 
         assertFailsWith<NotFoundException> {
-            metadataService.deleteEntityConfigurationMetadata(testAccount.toDTO(), metadata.id)
+            metadataService.deleteMetadata(testAccount.toDTO(), metadata.id)
         }
         verify { metadataQueries.findById(metadata.id) }
     }
@@ -205,7 +205,7 @@ class MetadataServiceTest {
         } throws unexpectedError
 
         val exception = assertFailsWith<RuntimeException> {
-            metadataService.createEntityConfigurationMetadata(
+            metadataService.createMetadata(
                 testAccount.toDTO(),
                 TEST_KEY,
                 TEST_METADATA

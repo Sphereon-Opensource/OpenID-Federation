@@ -146,7 +146,14 @@ class EntityConfigurationStatementServiceTest {
 
         val testKey = AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = "EC", use = "sig")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
-        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(),any()) } returns arrayOf(testKey)
+        every {
+            jwkService.getAssertedKeysForAccount(
+                testAccount.toDTO(),
+                any(),
+                any(),
+                any()
+            )
+        } returns arrayOf(testKey)
 
         val result = statementService.publishByAccount(testAccount.toDTO())
 
@@ -163,10 +170,21 @@ class EntityConfigurationStatementServiceTest {
     fun `test publish by account dry run`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
-        val testKey = AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+        val testKey = AccountJwk(
+            kid = key.kid ?: key.kmsKeyRef,
+            kty = key.jose.publicJwk.kty.toString(),
+            use = key.jose.publicJwk.use
+        )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
-        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(),any()) } returns arrayOf(testKey)
+        every {
+            jwkService.getAssertedKeysForAccount(
+                testAccount.toDTO(),
+                any(),
+                any(),
+                any()
+            )
+        } returns arrayOf(testKey)
 
         val result = statementService.publishByAccount(testAccount.toDTO(), dryRun = true)
 
@@ -181,7 +199,14 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun `test publish by account no keys`() = runTest {
-        every { jwkService.getAssertedKeysForAccount(any(), any(), any(), any()) } throws NotFoundException("No keys found")
+        every {
+            jwkService.getAssertedKeysForAccount(
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        } throws NotFoundException("No keys found")
         every { jwkService.getKeys(any(), any()) } returns emptyArray()
 
         assertFailsWith<NotFoundException> {
@@ -275,7 +300,7 @@ class EntityConfigurationStatementServiceTest {
             every { id } returns trustMarkTypeId
             every { account_id } returns testAccount.id
             every { created_at } returns FIXED_TIMESTAMP
-            every { trust_mark_type_identifier } returns "test-trust-mark-id"
+            every { trust_mark_id } returns "test-trust-mark-id"
             every { jwt } returns "test-jwt-token"
         }
 

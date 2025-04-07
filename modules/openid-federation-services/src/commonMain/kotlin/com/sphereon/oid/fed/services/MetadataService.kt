@@ -36,7 +36,7 @@ class MetadataService {
      * @throws IllegalStateException If the metadata creation fails unexpectedly.
      * @throws Exception If any other error occurs during the creation process.
      */
-    fun createEntityConfigurationMetadata(
+    fun createMetadata(
         account: Account,
         key: String,
         metadata: JsonObject
@@ -99,7 +99,7 @@ class MetadataService {
      * @throws NotFoundException If the metadata record is not found or does not belong to the given account.
      * @throws Exception If an unexpected error occurs during the operation.
      */
-    fun deleteEntityConfigurationMetadata(account: Account, id: String): Metadata {
+    fun deleteMetadata(account: Account, id: String): Metadata {
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")

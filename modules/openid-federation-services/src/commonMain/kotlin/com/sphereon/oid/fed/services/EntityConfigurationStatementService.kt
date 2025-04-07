@@ -34,6 +34,7 @@ class EntityConfigurationStatementService(
      * Tagged specifically as "EntityConfigurationService" to associate logged messages with this class's context.
      */
     private val logger = Logger.tag("EntityConfigurationService")
+
     /**
      * Reference to the persistence layer used for handling and querying entity configuration statements.
      * Acts as an entry point for database operations related to entity configuration entities within the service.
@@ -74,11 +75,17 @@ class EntityConfigurationStatementService(
      * @return The JWT created for the entity configuration statement.
      * @throws IllegalArgumentException If the account does not have a valid key with a `kid` or required data is missing.
      */
-    suspend fun publishByAccount(account: Account, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
+    suspend fun publishByAccount(
+        account: Account,
+        dryRun: Boolean? = false,
+        kmsKeyRef: String? = null,
+        kid: String? = null
+    ): String {
         logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
 
         val entityConfigurationStatement = findByAccount(account)
-        val keys = jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
+        val keys =
+            jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
         val key = keys[0].kid ?: throw IllegalArgumentException("First key must have a kid")
 
         val jwt = createSignedJwt(entityConfigurationStatement, key)
@@ -154,6 +161,7 @@ class EntityConfigurationStatementService(
     ) {
         addFederationEntityMetadata(account, builder, identifier)
         addMetadata(account, builder)
+        addMetadataPolicy(account, builder)
         addAuthorityHints(account, builder)
         addCrits(account, builder)
         addTrustMarkIssuers(account, builder)
@@ -220,6 +228,22 @@ class EntityConfigurationStatementService(
     }
 
     /**
+     * Adds metadata policies associated with a given account to the specified entity configuration statement builder.
+     * It retrieves metadata policies linked to the account ID, parses the policy string as JSON,
+     * and adds each policy as a key-value pair (key, policy JSON) to the builder's metadata section.
+     *
+     * @param account The account whose metadata policies need to be added.
+     * @param builder The builder to which the metadata policies will be added (as metadata).
+     */
+    private fun addMetadataPolicy(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.metadataPolicyQueries.findByAccountId(account.id)
+            .executeAsList()
+            .forEach {
+                builder.metadata(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
+            }
+    }
+
+    /**
      * Adds critical claims associated with the given account to the provided builder.
      *
      * @param account The account whose associated critical claims are retrieved.
@@ -270,7 +294,6 @@ class EntityConfigurationStatementService(
                 builder.trustMark(receivedTrustMark.toTrustMark())
             }
     }
-
 
 
     /**

@@ -1,14 +1,32 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
+import com.sphereon.oid.fed.openapi.models.Subordinate
+import com.sphereon.oid.fed.openapi.models.SubordinateJwk
+import com.sphereon.oid.fed.openapi.models.SubordinateJwksResponse
+import com.sphereon.oid.fed.openapi.models.SubordinateStatement
+import com.sphereon.oid.fed.openapi.models.SubordinatesResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.mappers.toSubordinatesResponse
 import com.sphereon.oid.fed.services.mappers.toSubordinateJwksResponse
+import com.sphereon.oid.fed.services.mappers.toSubordinatesResponse
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
+import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.validation.BindException
+import org.springframework.validation.BindingResult
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/subordinates")
@@ -16,83 +34,113 @@ class SubordinateController(
     private val subordinateService: SubordinateService
 ) {
     @GetMapping
-    fun getSubordinates(request: HttpServletRequest): SubordinatesResponse {
-        val account = getAccountFromRequest(request)
-        return subordinateService.findSubordinatesByAccount(account).toSubordinatesResponse()
+    fun getSubordinates(request: HttpServletRequest): ResponseEntity<SubordinatesResponse> {
+        return subordinateService.findSubordinatesByAccount(getAccountFromRequest(request)).toSubordinatesResponse()
+            .let {
+                ResponseEntity.ok(it)
+            }
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinate(
         request: HttpServletRequest,
-        @RequestBody subordinate: CreateSubordinate
-    ): Subordinate {
-        val account = getAccountFromRequest(request)
-        return subordinateService.createSubordinate(account, subordinate)
+        @Valid @RequestBody subordinate: CreateSubordinate,
+        bindingResult: BindingResult
+    ): ResponseEntity<Subordinate> {
+        if (bindingResult.hasErrors()) {
+            throw BindException(bindingResult)
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(subordinateService.createSubordinate(getAccountFromRequest(request), subordinate))
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{subordinateId}")
     fun deleteSubordinate(
         request: HttpServletRequest,
-        @PathVariable id: String
-    ): Subordinate {
-        val account = getAccountFromRequest(request)
-        return subordinateService.deleteSubordinate(account, id)
+        @PathVariable subordinateId: String
+    ): ResponseEntity<Subordinate> {
+        return subordinateService.deleteSubordinate(getAccountFromRequest(request), subordinateId).let {
+            ResponseEntity.ok(it)
+        }
     }
 
-    @PostMapping("/{id}/jwks")
+    @PostMapping("/{subordinateId}/jwks")
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinateJwk(
         request: HttpServletRequest,
-        @PathVariable id: String,
-        @RequestBody jwk: Jwk
-    ): SubordinateJwk {
-        val account = getAccountFromRequest(request)
-        return subordinateService.createSubordinateJwk(account, id, jwk)
+        @PathVariable subordinateId: String,
+        @Valid @RequestBody jwk: Jwk,
+        bindingResult: BindingResult
+    ): ResponseEntity<SubordinateJwk> {
+        if (bindingResult.hasErrors()) {
+            throw BindException(bindingResult)
+        }
+
+        return subordinateService.createSubordinateJwk(getAccountFromRequest(request), subordinateId, jwk).let {
+            ResponseEntity.status(HttpStatus.CREATED).body(it)
+        }
     }
 
-    @GetMapping("/{id}/jwks")
+    @GetMapping("/{subordinateId}/jwks")
     fun getSubordinateJwks(
         request: HttpServletRequest,
-        @PathVariable id: String
-    ): SubordinateJwksResponse {
-        val account = getAccountFromRequest(request)
-        return subordinateService.getSubordinateJwks(account, id).toSubordinateJwksResponse()
+        @PathVariable subordinateId: String
+    ): ResponseEntity<SubordinateJwksResponse> {
+        return subordinateService.getSubordinateJwks(getAccountFromRequest(request), subordinateId)
+            .toSubordinateJwksResponse()
+            .let {
+                ResponseEntity.ok(it)
+            }
     }
 
-    @DeleteMapping("/{id}/jwks/{jwkId}")
+    @DeleteMapping("/{subordinateId}/jwks/{jwkId}")
     fun deleteSubordinateJwk(
         request: HttpServletRequest,
-        @PathVariable id: String,
+        @PathVariable subordinateId: String,
         @PathVariable jwkId: String
-    ) {
-        val account = getAccountFromRequest(request)
-        subordinateService.deleteSubordinateJwk(account, id, jwkId)
+    ): ResponseEntity<SubordinateJwk> {
+        return subordinateService.deleteSubordinateJwk(getAccountFromRequest(request), subordinateId, jwkId).let {
+            ResponseEntity.ok(it)
+        }
     }
 
-    @GetMapping("/{id}/statement")
+    @GetMapping("/{subordinateId}/statement")
     fun getSubordinateStatement(
         request: HttpServletRequest,
-        @PathVariable id: String
-    ): SubordinateStatement {
-        val account = getAccountFromRequest(request)
-        return subordinateService.getSubordinateStatement(account, id)
+        @PathVariable subordinateId: String
+    ): ResponseEntity<SubordinateStatement> {
+        return subordinateService.getSubordinateStatement(getAccountFromRequest(request), subordinateId).let {
+            ResponseEntity.ok(it)
+        }
     }
 
-    @PostMapping("/{id}/statement")
-    suspend fun publishSubordinateStatement(
+    @PostMapping("/{subordinateId}/statement")
+    fun publishSubordinateStatement(
         request: HttpServletRequest,
-        @PathVariable id: String,
-        @RequestBody body: PublishStatementRequest?
+        @PathVariable subordinateId: String,
+        @Valid @RequestBody body: PublishStatementRequest?,
+        bindingResult: BindingResult
     ): ResponseEntity<String> {
-        val account = getAccountFromRequest(request)
-        val result = subordinateService.publishSubordinateStatement(account = account, id = id, dryRun = body?.dryRun, kmsKeyRef = body?.kmsKeyRef, kid = body?.kid)
+        if (bindingResult.hasErrors()) {
+            throw BindException(bindingResult)
+        }
+
+        val result = runBlocking {
+            subordinateService.publishSubordinateStatement(
+                account = getAccountFromRequest(request),
+                id = subordinateId,
+                dryRun = body?.dryRun,
+                kmsKeyRef = body?.kmsKeyRef,
+                kid = body?.kid
+            )
+        }
+
         return if (body?.dryRun == true) {
             ResponseEntity.ok(result)
         } else {
             ResponseEntity.status(HttpStatus.CREATED).body(result)
         }
     }
-
-
 }

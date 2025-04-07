@@ -18,14 +18,14 @@ fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
 
 fun TrustMarkEntity.toDTO(): TrustMark {
     return TrustMark(
-        id = this.trust_mark_type_identifier,
+        id = this.trust_mark_id,
         trustMark = this.trust_mark_value
     )
 }
 
 fun ReceivedTrustMark.toTrustMark(): TrustMark {
     return TrustMark(
-        id = this.trust_mark_type_identifier,
+        id = this.trust_mark_id,
         trustMark = this.jwt
     )
 }
@@ -34,4 +34,9 @@ fun List<TrustMark>.toTrustMarksResponse() = TrustMarksResponse(this.toTypedArra
 
 fun List<TrustMarkType>.toTrustMarkTypesResponse() = TrustMarkTypesResponse(this.toTypedArray())
 
-fun TrustMarkIssuerEntity.toAddTrustMarkIssuerResponse(): AddTrustMarkIssuerResponse = AddTrustMarkIssuerResponse(id = this.id, issuer = this.issuer_identifier, trustMarkTypeId = this.trust_mark_type_id, createdAt = this.created_at.toString())
+fun TrustMarkIssuerEntity.toAddTrustMarkIssuerResponse(): AddTrustMarkIssuerResponse = AddTrustMarkIssuerResponse(
+    id = this.id,
+    issuer = this.issuer_identifier,
+    trustMarkTypeId = this.trust_mark_type_id,
+    createdAt = this.created_at.toString()
+)

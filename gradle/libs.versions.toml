@@ -20,7 +20,7 @@ kotlin = "2.1.20"
 ktor = "3.1.1"
 kotlinxCoroutines = "1.9.0"
 kotlinxDatetime = "0.6.2"
-kotlinxSerialization = "1.8.0"
+kotlinxSerialization = "1.8.1"
 kover = "0.9.1"
 mockk = "1.13.17"
 nimbusJoseJwt = "9.40"
@@ -29,6 +29,7 @@ npmPublish = "3.5.3"
 openapi = "7.12.0"
 sphereonKmp = "0.2.4"
 springboot = "3.4.3"
+springsecurity = "6.4.4"
 springdoc = "2.8.5"
 springDependencyManagement = "1.1.7"
 kermitLogging = "2.0.5"
@@ -86,6 +87,7 @@ sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-m
 sphereon-kmp-crypto-kms-ecdsa = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-ecdsa-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-aws = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-aws-multiplatform", version.ref = "sphereonKmp" }
+spring-security-test = { group = "org.springframework.security", name = "spring-security-test", version.ref = "springsecurity" }
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator", version.ref = "springboot" }
 springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security", version.ref = "springboot" }
 springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server", version.ref = "springboot" }
@@ -95,6 +97,7 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
 springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
+springboot-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation", version.ref = "springboot" }
 springdoc-starter-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }

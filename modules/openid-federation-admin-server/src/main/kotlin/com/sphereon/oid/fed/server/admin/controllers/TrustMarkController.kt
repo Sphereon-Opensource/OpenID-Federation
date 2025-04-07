@@ -1,13 +1,19 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateTrustMark
+import com.sphereon.oid.fed.openapi.java.models.CreateTrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import com.sphereon.oid.fed.openapi.models.TrustMarksResponse
+import com.sphereon.oid.fed.server.admin.mappers.toKotlin
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.mappers.toTrustMarksResponse
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
+import kotlinx.coroutines.runBlocking
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.validation.BindException
+import org.springframework.validation.BindingResult
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -24,27 +30,37 @@ class TrustMarkController(
 ) {
 
     @GetMapping
-    fun getTrustMarks(request: HttpServletRequest): TrustMarksResponse {
-        val account = getAccountFromRequest(request)
-        return trustMarkService.getTrustMarksForAccount(account).toTrustMarksResponse()
+    fun getTrustMarks(request: HttpServletRequest): ResponseEntity<TrustMarksResponse> {
+        return ResponseEntity.ok(
+            trustMarkService.getTrustMarksForAccount(getAccountFromRequest(request)).toTrustMarksResponse()
+        )
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    suspend fun createTrustMark(
+    fun createTrustMark(
         request: HttpServletRequest,
-        @RequestBody body: CreateTrustMark
-    ): TrustMark {
-        val account = getAccountFromRequest(request)
-        return trustMarkService.createTrustMark(account, body)
+        @Valid @RequestBody body: CreateTrustMarkRequest,
+        bindingResult: BindingResult
+    ): ResponseEntity<String> {
+        if (bindingResult.hasErrors()) {
+            throw BindException(bindingResult)
+        }
+        val trustMark =
+            runBlocking { trustMarkService.createTrustMark(getAccountFromRequest(request), body.toKotlin()) }
+
+        if (body.dryRun == true) {
+            return ResponseEntity.ok(trustMark)
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(trustMark)
     }
 
     @DeleteMapping("/{trustMarkId}")
     fun deleteTrustMark(
         request: HttpServletRequest,
         @PathVariable trustMarkId: String
-    ): TrustMark {
-        val account = getAccountFromRequest(request)
-        return trustMarkService.deleteTrustMark(account, trustMarkId)
+    ): ResponseEntity<TrustMark> {
+        return ResponseEntity.ok(trustMarkService.deleteTrustMark(getAccountFromRequest(request), trustMarkId))
     }
 }

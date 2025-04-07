@@ -7,7 +7,7 @@ import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
-import com.sphereon.oid.fed.openapi.models.CreateTrustMark
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.openapi.models.TrustMark
@@ -35,17 +35,20 @@ class TrustMarkService(
      * Tagged with the name "TrustMarkService" to easily identify logs associated with this service.
      */
     private val logger = Logger.tag("TrustMarkService")
+
     /**
      * Provides access to the persistence layer for trust mark-related operations.
      * This property is used to interact with the underlying data storage for fetching
      * and manipulating trust mark records.
      */
     private val trustMarkQueries = Persistence.trustMarkQueries
+
     /**
      * Provides access to the trust mark type queries within the persistence layer.
      * Used to interact with the database for operations related to trust mark types.
      */
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
+
     /**
      * Represents the queries related to trust mark issuers.
      * This variable is used for performing database operations
@@ -258,9 +261,9 @@ class TrustMarkService(
      */
     suspend fun createTrustMark(
         account: Account,
-        body: CreateTrustMark,
+        body: CreateTrustMarkRequest,
         currentTimeMillis: Long = System.currentTimeMillis()
-    ): TrustMark {
+    ): String {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
 
         val keys = jwkService.getKeys(account)
@@ -272,12 +275,12 @@ class TrustMarkService(
         val kid = keys[0].kid
         logger.debug("Using key with KID: $kid")
 
-        val iat = (currentTimeMillis / 1000).toInt()
+        val iat = body.iat ?: (currentTimeMillis / 1000).toInt()
 
         val trustMark = TrustMarkObjectBuilder()
             .iss(accountService.getAccountIdentifierByAccount(account))
             .sub(body.sub)
-            .id(body.trustMarkTypeIdentifier)
+            .id(body.trustMarkId)
             .iat(iat)
             .logoUri(body.logoUri)
             .ref(body.ref)
@@ -296,16 +299,21 @@ class TrustMarkService(
         )
         logger.debug("Successfully signed trust mark")
 
+        if (body.dryRun == true) {
+            logger.info("Successfully created trust mark of type ${body.trustMarkId} in dry-run mode")
+            return jwt
+        }
+
         val trustMarkEntity: TrustMarkEntity = trustMarkQueries.create(
             account_id = account.id,
             sub = body.sub,
-            trust_mark_type_identifier = body.trustMarkTypeIdentifier,
+            trust_mark_id = body.trustMarkId,
             exp = body.exp,
             iat = iat,
             trust_mark_value = jwt
         ).executeAsOne()
         logger.info("Successfully created trust mark with ID: ${trustMarkEntity.id}")
-        return trustMarkEntity.toDTO()
+        return jwt
     }
 
     /**

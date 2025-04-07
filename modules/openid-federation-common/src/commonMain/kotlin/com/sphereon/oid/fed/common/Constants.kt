@@ -19,8 +19,10 @@ object Constants {
     const val KEY_NOT_FOUND = "Key not found"
     const val KEY_ALREADY_REVOKED = "Key already revoked"
     const val SUBORDINATE_ALREADY_EXISTS = "Subordinate already exists"
-    const val ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS = "Entity configuration metadata already exists"
-    const val FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA = "Failed to create entity configuration metadata"
+    const val ENTITY_CONFIGURATION_METADATA_ALREADY_EXISTS =
+            "Entity configuration metadata already exists"
+    const val FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA =
+            "Failed to create entity configuration metadata"
     const val FAILED_TO_CREATE_SUBORDINATE_METADATA = "Failed to create subordinate metadata"
     const val ENTITY_CONFIGURATION_METADATA_NOT_FOUND = "Entity configuration metadata not found"
     const val FAILED_TO_CREATE_AUTHORITY_HINT = "Failed to create authority hint"
@@ -38,4 +40,12 @@ object Constants {
     const val SUBORDINATE_METADATA_ALREADY_EXISTS = "Subordinate metadata already exists"
     const val ROOT_IDENTIFIER_NOT_SET = "Root identifier not set"
     const val ROOT_ACCOUNT_CANNOT_BE_DELETED = "Root account cannot be deleted"
+
+    // Metadata Policy errors
+    const val ENTITY_CONFIGURATION_METADATA_POLICY_ALREADY_EXISTS =
+            "Entity configuration metadata policy already exists"
+    const val FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA_POLICY =
+            "Failed to create entity configuration metadata policy"
+    const val ENTITY_CONFIGURATION_METADATA_POLICY_NOT_FOUND =
+            "Entity configuration metadata policy not found"
 }

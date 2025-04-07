@@ -12,9 +12,8 @@ plugins {
 tasks.register<Copy>("copyOpenAPI") {
     from("../openapi/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/admin-server.yaml")
     into("src/main/resources/public")
-//    from(tasks.compileJava)
 }
-//
+
 tasks.processResources.dependsOn(":modules:openid-federation-admin-server:copyOpenAPI")
 
 repositories {
@@ -30,6 +29,15 @@ repositories {
         url = uri("https://jitpack.io")
     }
 }
+
+sourceSets {
+    main {
+        java {
+            srcDirs("../openid-federation-openapi/build/generated-java/src/main/java")
+        }
+    }
+}
+
 
 java {
     toolchain {
@@ -50,6 +58,7 @@ dependencies {
     implementation(libs.springboot.security)
     implementation(libs.springboot.oauth2.resource.server)
     implementation(libs.kotlinx.coroutines.reactor)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.projectreactor.kotlin.extensions)
     implementation(libs.sphereon.kmp.cbor)
@@ -59,6 +68,7 @@ dependencies {
     implementation(libs.kotlin.stdlib)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
+    implementation(libs.springboot.validation)
     implementation(libs.kotlin.reflect)
     implementation(libs.whyoleg.cryptography.core)
     implementation(libs.springdoc.starter.webmvc.ui)
@@ -66,6 +76,7 @@ dependencies {
     testImplementation(libs.testcontainer.junit)
     testImplementation(libs.springboot.testcontainer)
     testImplementation(libs.testcontainer.postgres)
+    testImplementation(libs.spring.security.test)
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.springboot.devtools)
     implementation(libs.ktor.serialization.kotlinx.json)
@@ -110,4 +121,12 @@ publishing {
 
 tasks.named<Jar>("jar") {
     enabled = false
+}
+
+tasks.named("compileJava").configure {
+    dependsOn(":modules:openid-federation-openapi:openApiGenerateJavaSpring")
+}
+
+tasks.named("compileKotlin").configure {
+    dependsOn(":modules:openid-federation-openapi:openApiGenerateJavaSpring")
 }

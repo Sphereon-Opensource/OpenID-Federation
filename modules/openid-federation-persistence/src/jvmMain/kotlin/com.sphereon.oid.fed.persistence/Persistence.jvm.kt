@@ -17,6 +17,8 @@ import com.sphereon.oid.fed.persistence.models.EntityConfigurationStatementQueri
 import com.sphereon.oid.fed.persistence.models.Jwk
 import com.sphereon.oid.fed.persistence.models.JwkQueries
 import com.sphereon.oid.fed.persistence.models.LogQueries
+import com.sphereon.oid.fed.persistence.models.MetadataPolicy
+import com.sphereon.oid.fed.persistence.models.MetadataPolicyQueries
 import com.sphereon.oid.fed.persistence.models.MetadataQueries
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMark
 import com.sphereon.oid.fed.persistence.models.ReceivedTrustMarkQueries
@@ -55,6 +57,7 @@ actual object Persistence {
     actual val trustMarkQueries: TrustMarkQueries
     actual val receivedTrustMarkQueries: ReceivedTrustMarkQueries
     actual val logQueries: LogQueries
+    actual val metadataPolicyQueries: MetadataPolicyQueries
 
     private val driver: SqlDriver
     private val database: Database
@@ -83,11 +86,16 @@ actual object Persistence {
             ReceivedTrustMarkAdapter = ReceivedTrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             SubordinateAdapter = Subordinate.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             SubordinateJwkAdapter = SubordinateJwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
-            SubordinateMetadataAdapter = SubordinateMetadata.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter, JavaUuidStringAdapter),
+            SubordinateMetadataAdapter = SubordinateMetadata.Adapter(
+                JavaUuidStringAdapter,
+                JavaUuidStringAdapter,
+                JavaUuidStringAdapter
+            ),
             SubordinateStatementAdapter = SubordinateStatement.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkAdapter = TrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkIssuerAdapter = TrustMarkIssuer.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
-            TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter)
+            TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            MetadataPolicyAdapter = MetadataPolicy.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
         )
 
         accountQueries = database.accountQueries
@@ -105,6 +113,7 @@ actual object Persistence {
         trustMarkQueries = database.trustMarkQueries
         receivedTrustMarkQueries = database.receivedTrustMarkQueries
         logQueries = database.logQueries
+        metadataPolicyQueries = database.metadataPolicyQueries
     }
 
     private fun createDriver(): SqlDriver {

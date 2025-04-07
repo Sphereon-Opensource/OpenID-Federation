@@ -19,6 +19,7 @@ import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.toHistoricalKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.rmi.UnexpectedException
 
 /**
  * Service responsible for operations related to JSON Web Keys (JWK).
@@ -33,6 +34,7 @@ class JwkService(
     private val kmsService: KmsService
 ) {
     private val keyManagementSystem = kmsService.getKmsProvider()
+
     /**
      * Companion object for the JwkService class.
      * Provides constants and utility functions relevant to the service's operation.
@@ -67,31 +69,41 @@ class JwkService(
      * @param account The account for which a new JWK is being created. It must include the unique account ID and username.
      * @return The created JWK object associated with the specified account.
      */
-    suspend fun createKey(account: Account, opts: CreateKeyArgs = CreateKeyArgs()): AccountJwk = withContext(Dispatchers.IO) {
-        logger.info("Creating new key for account: ${account.username}, with options: $opts")
-        logger.debug("Found account with ID: ${account.id}")
-        val (_, kmsKeyRef, use, keyOperations, alg) = opts
-        val kms = opts.kms ?: kmsService.getKmsType().name
-        check(kmsService.getKmsType().name.lowercase() == kms.lowercase()) { "Provided KMS type $kms does not match configured KMS type ${kmsService.getKmsType().name}" }
-        // TODO: Support multiple KMS systems at the same time. That is why we have the KeyManager service in the crypto module
+    suspend fun createKey(account: Account, opts: CreateKeyArgs = CreateKeyArgs()): AccountJwk =
+        withContext(Dispatchers.IO) {
+            try {
+                logger.info("Creating new key for account: ${account.username}, with options: $opts")
+                logger.debug("Found account with ID: ${account.id}")
+                val (_, kmsKeyRef, use, keyOperations, alg) = opts
+                val kms = opts.kms ?: kmsService.getKmsType().name
+                check(kmsService.getKmsType().name.lowercase() == kms.lowercase()) { "Provided KMS type $kms does not match configured KMS type ${kmsService.getKmsType().name}" }
+                // TODO: Support multiple KMS systems at the same time. That is why we have the KeyManager service in the crypto module
 
-        check(getKeys(account, includeRevoked = false).find { kmsKeyRef !== null && it.kmsKeyRef == kmsKeyRef } == null) { "Key with KMS key ref $kmsKeyRef already exists for account ID: ${account.id}"}
-        val generatedJwk = keyManagementSystem.generateKeyAsync(kmsKeyRef, use, keyOperations, alg)
-        requireNotNull(generatedJwk.kmsKeyRef) { "Generated key kmsKeyRef cannot be null" }
-        requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
-        logger.debug("Generated key pair with KID: ${generatedJwk.kid} kms: ${kms} and kmsKeyRef: ${generatedJwk.kmsKeyRef} for account ID: ${account.id}")
+                check(
+                    getKeys(
+                        account,
+                        includeRevoked = false
+                    ).find { kmsKeyRef !== null && it.kmsKeyRef == kmsKeyRef } == null) { "Key with KMS key ref $kmsKeyRef already exists for account ID: ${account.id}" }
+                val generatedJwk = keyManagementSystem.generateKeyAsync(kmsKeyRef, use, keyOperations, alg)
+                requireNotNull(generatedJwk.kmsKeyRef) { "Generated key kmsKeyRef cannot be null" }
+                requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
+                logger.debug("Generated key pair with KID: ${generatedJwk.kid} kms: ${kms} and kmsKeyRef: ${generatedJwk.kmsKeyRef} for account ID: ${account.id}")
 
-        val createdKey = jwkQueries.create(
-            account_id = account.id,
-            kid = generatedJwk.kid,
-            kms_key_ref = generatedJwk.kmsKeyRef,
-            kms = kms,
-            key = generatedJwk.jose.publicJwk.toJsonString()
-        ).executeAsOne()
+                val createdKey = jwkQueries.create(
+                    account_id = account.id,
+                    kid = generatedJwk.kid,
+                    kms_key_ref = generatedJwk.kmsKeyRef,
+                    kms = kms,
+                    key = generatedJwk.jose.publicJwk.toJsonString()
+                ).executeAsOne()
 
-        logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${account.id}")
-        createdKey.toDTO()
-    }
+                logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${account.id}")
+                createdKey.toDTO()
+            } catch (e: Exception) {
+                logger.error("Failed to create key for account: ${account.username} due to: ${e.message}")
+                throw UnexpectedException(e.message)
+            }
+        }
 
     /**
      * Retrieves the keys associated with a given account.
@@ -120,8 +132,14 @@ class JwkService(
      * @return An array of AccountJwk objects associated with the given account.
      * @throws IllegalArgumentException If no keys are found for the account.
      */
-    fun getAssertedKeysForAccount(account: Account, includeRevoked: Boolean = false, kmsKeyRef: String? = null, kid: String? = null): Array<AccountJwk> {
-        val keys = getKeys(account, includeRevoked).filter { kmsKeyRef === null || it.kmsKeyRef == kmsKeyRef }.filter { kid === null || it.kid  == kid }.toTypedArray()
+    fun getAssertedKeysForAccount(
+        account: Account,
+        includeRevoked: Boolean = false,
+        kmsKeyRef: String? = null,
+        kid: String? = null
+    ): Array<AccountJwk> {
+        val keys = getKeys(account, includeRevoked).filter { kmsKeyRef === null || it.kmsKeyRef == kmsKeyRef }
+            .filter { kid === null || it.kid == kid }.toTypedArray()
         println("Found ${keys.size} keys for account: ${account.username} and filters key ref: ${kmsKeyRef}, kid: $kid")
 
         if (keys.isEmpty()) {
@@ -145,7 +163,13 @@ class JwkService(
         logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
         logger.debug("Found account with ID: ${account.id}")
 
-        var existingKey = jwkQueries.findById(keyId).executeAsOne()
+        var existingKey = jwkQueries.findById(keyId).executeAsOneOrNull()
+
+        if (existingKey == null) {
+            logger.error("Key with ID: $keyId not found for account: ${account.username}")
+            throw NotFoundException(Constants.KEY_NOT_FOUND)
+        }
+
         logger.debug("Found key with ID: $keyId")
 
         ensureKeyOwnership(existingKey, account)
@@ -241,7 +265,9 @@ data class CreateKeyArgs(
             CreateKeyArgs(
                 kms = kms,
                 kmsKeyRef = kmsKeyRef,
-                alg = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(signatureAlgorithm?.value) ?: JwaAlgorithm.ES256)
+                alg = SignatureAlgorithm.Static.fromJose(
+                    JwaAlgorithm.Static.fromValue(signatureAlgorithm?.value) ?: JwaAlgorithm.ES256
+                )
             )
         }
 
