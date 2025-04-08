@@ -2058,6 +2058,46 @@ components:
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    CreateTrustMarkResult:
+      type: object
+      required:
+        - jwt
+        - account_id
+        - trust_mark_id
+        - sub
+        - trust_mark_value
+        - iat
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique ID of the Trust Mark.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        account_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark owner account.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        trust_mark_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark type.
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_value:
+          type: string
+          description: The JWT of the Trust Mark.
+        iat:
+          type: integer
+          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+        exp:
+          type: integer
+          description:
+
+
+
     TrustMarksResponse:
       type: object
       properties:

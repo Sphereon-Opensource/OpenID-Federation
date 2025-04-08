@@ -19,7 +19,7 @@ fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
 fun TrustMarkEntity.toDTO(): TrustMark {
     return TrustMark(
         id = this.trust_mark_id,
-        trustMark = this.trust_mark_value
+        trustMark = this.trust_mark_value,
     )
 }
 

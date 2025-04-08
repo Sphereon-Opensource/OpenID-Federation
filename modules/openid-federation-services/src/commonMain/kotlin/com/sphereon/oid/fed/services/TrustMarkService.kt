@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkRequest
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.openapi.models.TrustMark
@@ -263,7 +264,7 @@ class TrustMarkService(
         account: Account,
         body: CreateTrustMarkRequest,
         currentTimeMillis: Long = System.currentTimeMillis()
-    ): String {
+    ): CreateTrustMarkResult {
         logger.info("Creating trust mark for account ID: $account.id, subject: ${body.sub}")
 
         val keys = jwkService.getKeys(account)
@@ -301,7 +302,13 @@ class TrustMarkService(
 
         if (body.dryRun == true) {
             logger.info("Successfully created trust mark of type ${body.trustMarkId} in dry-run mode")
-            return jwt
+            return CreateTrustMarkResult(
+                trustMarkValue = jwt,
+                trustMarkId = body.trustMarkId,
+                sub = body.sub,
+                accountId = account.id,
+                iat = iat
+            )
         }
 
         val trustMarkEntity: TrustMarkEntity = trustMarkQueries.create(
@@ -313,7 +320,16 @@ class TrustMarkService(
             trust_mark_value = jwt
         ).executeAsOne()
         logger.info("Successfully created trust mark with ID: ${trustMarkEntity.id}")
-        return jwt
+
+        return CreateTrustMarkResult(
+            accountId = trustMarkEntity.account_id,
+            trustMarkValue = trustMarkEntity.trust_mark_value,
+            id = trustMarkEntity.id,
+            iat = trustMarkEntity.iat,
+            sub = trustMarkEntity.sub,
+            trustMarkId = trustMarkEntity.trust_mark_id,
+            exp = trustMarkEntity.exp,
+        )
     }
 
     /**
@@ -325,14 +341,14 @@ class TrustMarkService(
      *
      * @throws NotFoundException If the Trust Mark with the specified ID is not found for the given account.
      */
-    fun deleteTrustMark(account: Account, id: String): TrustMark {
+    fun deleteTrustMark(account: Account, id: String): TrustMarkEntity {
         logger.info("Deleting trust mark ID: $id for account ID: $account.id")
         trustMarkQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: throw NotFoundException("Trust mark with ID $id not found for account $account.id.").also {
                 logger.error("Trust mark not found with ID: $id")
             }
 
-        val deleted = trustMarkQueries.delete(id).executeAsOne().toDTO()
+        val deleted = trustMarkQueries.delete(id).executeAsOne()
         logger.info("Successfully deleted trust mark ID: $id")
         return deleted
     }
