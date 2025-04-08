@@ -15,8 +15,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -26,6 +24,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
 
 class TrustMarkApiTest {
 
@@ -81,15 +81,15 @@ class TrustMarkApiTest {
     private suspend fun createTestAccount() {
         try {
             val response =
-                client.post("$baseUrl/accounts") {
-                    contentType(ContentType.Application.Json)
-                    setBody(
-                        CreateAccount(
-                            username = testUsername!!,
-                            identifier = testAccountIdentifier!!
+                    client.post("$baseUrl/accounts") {
+                        contentType(ContentType.Application.Json)
+                        setBody(
+                                CreateAccount(
+                                        username = testUsername!!,
+                                        identifier = testAccountIdentifier!!
+                                )
                         )
-                    )
-                }
+                    }
             assertEquals(HttpStatusCode.Created, response.status, "Account creation failed")
 
             val key = client.post("$baseUrl/keys") { contentType(ContentType.Application.Json) }
@@ -102,11 +102,11 @@ class TrustMarkApiTest {
 
     private suspend fun createSampleKey(): AccountJwk {
         val response =
-            client.post("$baseUrl/keys") {
-                contentType(ContentType.Application.Json)
-                headers { append("X-Account-Username", testUsername!!) }
-                setBody(CreateKey()) // Assuming default key creation is sufficient
-            }
+                client.post("$baseUrl/keys") {
+                    contentType(ContentType.Application.Json)
+                    headers { append("X-Account-Username", testUsername!!) }
+                    setBody(CreateKey()) // Assuming default key creation is sufficient
+                }
         assertEquals(HttpStatusCode.Created, response.status, "Key creation failed")
         return response.body<AccountJwk>()
     }
@@ -114,15 +114,15 @@ class TrustMarkApiTest {
     private suspend fun createSampleTrustMarkType(): TrustMarkType {
         val identifier = "https://sample-tmt-for-tm.org/${System.currentTimeMillis()}"
         val response =
-            client.post("$baseUrl/trust-mark-types") {
-                contentType(ContentType.Application.Json)
-                headers { append("X-Account-Username", testUsername!!) }
-                setBody(CreateTrustMarkType(identifier = identifier))
-            }
+                client.post("$baseUrl/trust-mark-types") {
+                    contentType(ContentType.Application.Json)
+                    headers { append("X-Account-Username", testUsername!!) }
+                    setBody(CreateTrustMarkType(identifier = identifier))
+                }
         assertEquals(
-            HttpStatusCode.Created,
-            response.status,
-            "Failed to create sample TMT for TM test"
+                HttpStatusCode.Created,
+                response.status,
+                "Failed to create sample TMT for TM test"
         )
         return response.body()
     }
@@ -132,46 +132,44 @@ class TrustMarkApiTest {
         assertNotNull(createdTrustMarkTypeId, "TrustMarkType ID should be created in setup")
 
         val requestBody =
-            CreateTrustMarkRequest(
-                trustMarkId = createdTrustMarkTypeId!!, // The ID of the TrustMarkType
-                sub = testAccountIdentifier!! // Entity itself for simplicity
-            )
+                CreateTrustMarkRequest(
+                        trustMarkId = createdTrustMarkTypeId!!, // The ID of the TrustMarkType
+                        sub = testAccountIdentifier!! // Entity itself for simplicity
+                )
 
         val response =
-            client.post("$baseUrl/trust-marks") {
-                contentType(ContentType.Application.Json)
-                headers { append("X-Account-Username", testUsername!!) }
-                setBody(requestBody)
-            }
+                client.post("$baseUrl/trust-marks") {
+                    contentType(ContentType.Application.Json)
+                    headers { append("X-Account-Username", testUsername!!) }
+                    setBody(requestBody)
+                }
         assertEquals(HttpStatusCode.Created, response.status, "Failed to create sample Trust Mark")
         return response.body<CreateTrustMarkResult>() // Deserialize to TrustMark object
     }
 
-    //    @Test
-    //    fun `GET trust-marks should return all marks for account`() = runTest {
-    //        try {
-    //            val createdMarkJwt = createSampleTrustMark() // Ensure at least one exists
-    //            assertNotNull(createdMarkJwt)
-    //
-    //            val response =
-    //                client.get("$baseUrl/trust-marks") {
-    //                    headers { append("X-Account-Username", testUsername!!) }
-    //                }
-    //
-    //            println("GET /trust-marks Status: ${response.status}")
-    //            // println("GET /trust-marks Body: ${response.bodyAsText()}") // Can be verbose
-    //
-    //            assertEquals(HttpStatusCode.OK, response.status)
-    //            val marksResponse = response.body<TrustMarksResponse>()
-    //            assertTrue(marksResponse.trustMarks?.isNotEmpty() == true, "Response should
-    // contain trust marks")
-    //            // Optionally, find the created mark by ID if needed (requires parsing JWT or
-    // using a
-    //            // known ID)
-    //        } catch (e: Exception) {
-    //            fail("GET /trust-marks request failed: ${e.message}")
-    //        }
-    //    }
+    @Test
+    fun `GET trust-marks should return all marks for account`() = runTest {
+        try {
+            val createdMarkJwt = createSampleTrustMark()
+            assertNotNull(createdMarkJwt)
+
+            val response =
+                    client.get("$baseUrl/trust-marks") {
+                        headers { append("X-Account-Username", testUsername!!) }
+                    }
+
+            println("GET /trust-marks Status: ${response.status}")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            val marksResponse = response.body<TrustMarksResponse>()
+            assertTrue(
+                    marksResponse.trustMarks?.isNotEmpty() == true,
+                    "Response should contain trust marks"
+            )
+        } catch (e: Exception) {
+            fail("GET /trust-marks request failed: ${e.message}")
+        }
+    }
 
     @Test
     fun `POST trust-marks with valid data should create mark JWT`() = runTest {
@@ -180,19 +178,17 @@ class TrustMarkApiTest {
             assertNotNull(createdTrustMarkTypeId, "TrustMarkType ID should be created in setup")
 
             val requestBody =
-                CreateTrustMarkRequest(
-                    // kid = createdKeyId!!,
-                    trustMarkId = createdTrustMarkTypeId!!,
-                    sub = testAccountIdentifier!!
-                    // issuer = testAccountIdentifier!! // Issuer is implicit
-                )
+                    CreateTrustMarkRequest(
+                            trustMarkId = createdTrustMarkTypeId!!,
+                            sub = testAccountIdentifier!!
+                    )
 
             val response =
-                client.post("$baseUrl/trust-marks") {
-                    contentType(ContentType.Application.Json)
-                    headers { append("X-Account-Username", testUsername!!) }
-                    setBody(requestBody)
-                }
+                    client.post("$baseUrl/trust-marks") {
+                        contentType(ContentType.Application.Json)
+                        headers { append("X-Account-Username", testUsername!!) }
+                        setBody(requestBody)
+                    }
 
             println("POST /trust-marks Status: ${response.status}")
             // println("POST /trust-marks Body: ${response.bodyAsText()}") // JWT can be long
@@ -213,9 +209,9 @@ class TrustMarkApiTest {
 
             // 2. Delete the mark
             val deleteResponse =
-                client.delete("$baseUrl/trust-marks/$markIdToDelete") {
-                    headers { append("X-Account-Username", testUsername!!) }
-                }
+                    client.delete("$baseUrl/trust-marks/$markIdToDelete") {
+                        headers { append("X-Account-Username", testUsername!!) }
+                    }
 
             println("DELETE /trust-marks/$markIdToDelete Status: ${deleteResponse.status}")
             println("DELETE /trust-marks/$markIdToDelete Body: ${deleteResponse.bodyAsText()}")
@@ -226,14 +222,14 @@ class TrustMarkApiTest {
 
             // 3. Verify it's gone
             val verifyGetResponse =
-                client.get("$baseUrl/trust-marks") {
-                    headers { append("X-Account-Username", testUsername!!) }
-                }
+                    client.get("$baseUrl/trust-marks") {
+                        headers { append("X-Account-Username", testUsername!!) }
+                    }
             assertEquals(HttpStatusCode.OK, verifyGetResponse.status)
             val remainingMarks = verifyGetResponse.body<TrustMarksResponse>().trustMarks
             assertTrue(
-                remainingMarks?.none { it.id == markIdToDelete } == true,
-                "Deleted mark should not be present"
+                    remainingMarks?.none { it.id == markIdToDelete } == true,
+                    "Deleted mark should not be present"
             )
         } catch (e: Exception) {
             fail("DELETE /trust-marks request failed: ${e.message}")
@@ -245,22 +241,21 @@ class TrustMarkApiTest {
         try {
             val nonExistentUsername = "non-existent-tm-user-${System.currentTimeMillis()}"
             val requestBody =
-                CreateTrustMarkRequest(
-                    trustMarkId = createdTrustMarkTypeId ?: "dummy-tmt-id",
-                    sub = "subject"
-                )
+                    CreateTrustMarkRequest(
+                            trustMarkId = createdTrustMarkTypeId ?: "dummy-tmt-id",
+                            sub = "subject"
+                    )
 
             try {
                 val response =
-                    client.post("$baseUrl/trust-marks") {
-                        contentType(ContentType.Application.Json)
-                        headers { append("X-Account-Username", nonExistentUsername) }
-                        setBody(requestBody)
-                    }
+                        client.post("$baseUrl/trust-marks") {
+                            contentType(ContentType.Application.Json)
+                            headers { append("X-Account-Username", nonExistentUsername) }
+                            setBody(requestBody)
+                        }
 
                 println("POST /trust-marks (Non-existent Acc) Status: ${response.status}")
                 assertEquals(HttpStatusCode.NotFound, response.status) // Expecting 404 Not Found
-
             } catch (e: Exception) {
                 // Expected to fail with a 404, so this is actually a success case for this test
                 println("Expected exception occurred: ${e.message}")
@@ -276,9 +271,9 @@ class TrustMarkApiTest {
         try {
             val nonExistentId = Uuid.random().toString()
             val response =
-                client.delete("$baseUrl/trust-marks/$nonExistentId") {
-                    headers { append("X-Account-Username", testUsername!!) }
-                }
+                    client.delete("$baseUrl/trust-marks/$nonExistentId") {
+                        headers { append("X-Account-Username", testUsername!!) }
+                    }
 
             println("DELETE /trust-marks (Non-existent ID) Status: ${response.status}")
             assertEquals(HttpStatusCode.NotFound, response.status) // Expecting 404 Not Found

@@ -30,18 +30,18 @@ class TrustMarkController(private val trustMarkService: TrustMarkService) {
     @GetMapping
     fun getTrustMarks(request: HttpServletRequest): ResponseEntity<TrustMarksResponse> {
         return ResponseEntity.ok(
-            trustMarkService
-                .getTrustMarksForAccount(getAccountFromRequest(request))
-                .toTrustMarksResponse()
+                trustMarkService
+                        .getTrustMarksForAccount(getAccountFromRequest(request))
+                        .toTrustMarksResponse()
         )
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createTrustMark(
-        request: HttpServletRequest,
-        @Valid @RequestBody body: CreateTrustMarkRequest,
-        bindingResult: BindingResult
+            request: HttpServletRequest,
+            @Valid @RequestBody body: CreateTrustMarkRequest,
+            bindingResult: BindingResult
     ): ResponseEntity<CreateTrustMarkResult> {
         if (bindingResult.hasErrors()) {
             throw BindException(bindingResult)
@@ -55,11 +55,11 @@ class TrustMarkController(private val trustMarkService: TrustMarkService) {
 
     @DeleteMapping("/{trustMarkId}")
     fun deleteTrustMark(
-        request: HttpServletRequest,
-        @PathVariable trustMarkId: String
+            request: HttpServletRequest,
+            @PathVariable trustMarkId: String
     ): ResponseEntity<TrustMark> {
         return ResponseEntity.ok(
-            trustMarkService.deleteTrustMark(getAccountFromRequest(request), trustMarkId)
+                trustMarkService.deleteTrustMark(getAccountFromRequest(request), trustMarkId)
         )
     }
 }
