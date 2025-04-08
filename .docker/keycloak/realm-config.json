@@ -48,7 +48,7 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "redirectUris": [
-        "http://admin-server:8080/callback"
+        "http://openid-federation-admin-server:8080/callback"
       ],
       "webOrigins": [
         "*"
