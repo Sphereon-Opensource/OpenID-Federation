@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.java.models.CreateMetadataPolicy
+import com.sphereon.oid.fed.openapi.models.CreateMetadataPolicy
 import com.sphereon.oid.fed.openapi.models.MetadataPolicy
 import com.sphereon.oid.fed.openapi.models.MetadataPolicyResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest

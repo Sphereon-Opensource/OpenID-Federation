@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.crypto.kms.IKeyManagementSystem
+import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
@@ -239,7 +239,13 @@ class SubordinateServiceTest {
         )
 
         val subordinateJwks = listOf(
-            SubordinateJwk(Uuid.random().toString(), subordinate.id, """{"kid":"kid1", "kty":"EC"}""", FIXED_TIMESTAMP, null)
+            SubordinateJwk(
+                Uuid.random().toString(),
+                subordinate.id,
+                """{"kid":"kid1", "kty":"EC"}""",
+                FIXED_TIMESTAMP,
+                null
+            )
         )
 
         val subordinateMetadata = listOf(
@@ -280,6 +286,7 @@ class SubordinateServiceTest {
 
         val keys = arrayOf(
             AccountJwk(
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
                 kid = generatedKey.kid ?: generatedKey.kmsKeyRef,
                 kty = generatedKey.jose.publicJwk.kty.toString(),
                 use = generatedKey.jose.publicJwk.use
@@ -339,9 +346,16 @@ class SubordinateServiceTest {
         } returns emptyList()
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_ISS
         every { jwkService.getKeys(testAccount.toDTO()) } returns emptyArray()
-        every { jwkService.getAssertedKeysForAccount(testAccount.toDTO(), any(), any(), any()) } throws NotFoundException("No keys found")
+        every {
+            jwkService.getAssertedKeysForAccount(
+                testAccount.toDTO(),
+                any(),
+                any(),
+                any()
+            )
+        } throws NotFoundException("No keys found")
 
-        assertFailsWith< NotFoundException> {
+        assertFailsWith<NotFoundException> {
             subordinateService.publishSubordinateStatement(testAccount.toDTO(), subordinate.id)
         }
     }
@@ -409,8 +423,20 @@ class SubordinateServiceTest {
         )
 
         val subordinateJwks = listOf(
-            SubordinateJwk(Uuid.random().toString(), subordinate.id, "{\"kid\":\"kid1\", \"kty\":\"EC\"}", FIXED_TIMESTAMP, null),
-            SubordinateJwk(Uuid.random().toString(), subordinate.id, "{\"kid\":\"kid2\", \"kty\":\"EC\"}", FIXED_TIMESTAMP, null)
+            SubordinateJwk(
+                Uuid.random().toString(),
+                subordinate.id,
+                "{\"kid\":\"kid1\", \"kty\":\"EC\"}",
+                FIXED_TIMESTAMP,
+                null
+            ),
+            SubordinateJwk(
+                Uuid.random().toString(),
+                subordinate.id,
+                "{\"kid\":\"kid2\", \"kty\":\"EC\"}",
+                FIXED_TIMESTAMP,
+                null
+            )
         )
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate

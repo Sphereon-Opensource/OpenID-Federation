@@ -127,7 +127,8 @@ class EntityConfigurationStatementServiceTest {
 
     @Test
     fun `test find by account`() {
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey =
+            AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
         every { jwkService.getKeys(testAccount.toDTO(), any()) } returns arrayOf(testKey)
 
         val result = statementService.findByAccount(testAccount.toDTO())
@@ -144,7 +145,12 @@ class EntityConfigurationStatementServiceTest {
     fun `test publish by account`() = runTest {
         val key = kmsProvider.generateKeyAsync()
 
-        val testKey = AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = "EC", use = "sig")
+        val testKey = AccountJwk(
+            kid = key.kid ?: key.kmsKeyRef,
+            kty = "EC",
+            use = "sig",
+            id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
+        )
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
         every {
             jwkService.getAssertedKeysForAccount(
@@ -171,6 +177,7 @@ class EntityConfigurationStatementServiceTest {
         val key = kmsProvider.generateKeyAsync()
 
         val testKey = AccountJwk(
+            id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
             kid = key.kid ?: key.kmsKeyRef,
             kty = key.jose.publicJwk.kty.toString(),
             use = key.jose.publicJwk.use
@@ -221,7 +228,8 @@ class EntityConfigurationStatementServiceTest {
     fun `test add federation entity metadata`() = runTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig")
+        val testKey =
+            AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testMetadata = listOf(
@@ -252,7 +260,8 @@ class EntityConfigurationStatementServiceTest {
 
         val trustMarkTypeId = Uuid.random().toString()
 
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
+        val testKey =
+            AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testTrustMarkType = mockk<com.sphereon.oid.fed.persistence.models.TrustMarkType> {
@@ -293,7 +302,8 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         val trustMarkTypeId = Uuid.random().toString()
-        val testKey = AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig")
+        val testKey =
+            AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testReceivedTrustMark = mockk<com.sphereon.oid.fed.persistence.models.ReceivedTrustMark> {

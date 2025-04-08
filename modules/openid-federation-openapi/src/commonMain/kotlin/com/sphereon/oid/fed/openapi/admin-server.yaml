@@ -2220,6 +2220,8 @@ components:
         - type: object
           x-tags:
             - federation
+          required:
+            - id
           properties:
             id:
               type: string

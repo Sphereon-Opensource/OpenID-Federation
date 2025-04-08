@@ -100,7 +100,6 @@ class EntityConfigurationStatementTest {
                 "Entity statement does not contain the created metadata"
             )
 
-            // Optional: Publish the entity statement
             val publishResult = publishEntityStatement()
             assertNotNull(publishResult, "Entity statement publishing failed")
         } catch (e: Exception) {
@@ -134,7 +133,6 @@ class EntityConfigurationStatementTest {
 
         assertEquals(HttpStatusCode.Created, response.status, "Key creation failed with status: ${response.status}")
 
-        // Parse the response to extract the key ID
         val responseBody = response.bodyAsText()
         println("Created key: $responseBody")
 
@@ -142,7 +140,6 @@ class EntityConfigurationStatementTest {
     }
 
     private suspend fun createMetadata(): String {
-        // Create a simple metadata for an OpenID Provider
         val metadataJson = buildJsonObject {
             put("issuer", JsonPrimitive("https://test-issuer.com/$testUsername"))
             put("authorization_endpoint", JsonPrimitive("https://test-issuer.com/$testUsername/authorize"))
@@ -200,7 +197,7 @@ class EntityConfigurationStatementTest {
             }
             setBody(
                 PublishStatementRequest(
-                    dryRun = true, // Set to true to avoid actual publishing during test
+                    dryRun = true,
                     kid = testKeyId
                 )
             )

@@ -8,7 +8,6 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.toDTO
-import kotlinx.serialization.json.JsonObject
 
 /**
  * The MetadataService class provides operations for managing metadata configurations associated
@@ -39,7 +38,7 @@ class MetadataService {
     fun createMetadata(
         account: Account,
         key: String,
-        metadata: JsonObject
+        metadata: Map<String, Any>
     ): Metadata {
         logger.info("Creating entity configuration metadata for account: ${account.username}, key: $key")
         try {

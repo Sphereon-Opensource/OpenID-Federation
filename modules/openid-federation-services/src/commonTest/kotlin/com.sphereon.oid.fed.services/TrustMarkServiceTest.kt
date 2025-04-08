@@ -451,6 +451,7 @@ class TrustMarkServiceTest {
 
         val keys = arrayOf(
             AccountJwk(
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
                 kid = key.kid ?: key.kmsKeyRef,
                 kty = key.jose.publicJwk.kty.toString(),
                 use = key.jose.publicJwk.use
@@ -887,6 +888,7 @@ class TrustMarkServiceTest {
 
         val keys = arrayOf(
             AccountJwk(
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
                 kid = key.kid ?: key.kmsKeyRef,
                 kty = key.jose.publicJwk.kty.toString(),
                 use = key.jose.publicJwk.use

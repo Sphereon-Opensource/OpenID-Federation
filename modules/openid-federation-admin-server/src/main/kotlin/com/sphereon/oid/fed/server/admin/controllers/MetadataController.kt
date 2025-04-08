@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.java.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.openapi.models.MetadataResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
@@ -8,9 +8,6 @@ import com.sphereon.oid.fed.services.MetadataService
 import com.sphereon.oid.fed.services.mappers.toMetadataResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
@@ -48,7 +45,7 @@ class MetadataController(
         return metadataService.createMetadata(
             getAccountFromRequest(request),
             body.key,
-            Json.encodeToJsonElement(body.metadata).jsonObject
+            body.metadata
         ).let { ResponseEntity.status(HttpStatus.CREATED).body(it) }
     }
 
