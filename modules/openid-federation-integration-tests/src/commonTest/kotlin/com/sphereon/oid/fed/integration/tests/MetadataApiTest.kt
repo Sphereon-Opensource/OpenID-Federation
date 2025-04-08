@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-class MetadataTest {
+class MetadataApiTest {
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
     private var testUsername: String? = null

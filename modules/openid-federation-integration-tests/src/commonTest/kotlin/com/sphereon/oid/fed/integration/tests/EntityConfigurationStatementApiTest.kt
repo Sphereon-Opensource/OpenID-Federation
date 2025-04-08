@@ -25,8 +25,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
-class EntityConfigurationStatementTest {
-
+class EntityConfigurationStatementApiTest {
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
     private var testUsername: String? = null
