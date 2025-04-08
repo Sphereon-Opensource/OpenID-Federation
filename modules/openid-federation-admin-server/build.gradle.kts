@@ -123,10 +123,6 @@ tasks.named<Jar>("jar") {
     enabled = false
 }
 
-tasks.named("compileJava").configure {
-    dependsOn(":modules:openid-federation-openapi:openApiGenerateJavaSpring")
-}
-
 tasks.named("compileKotlin").configure {
-    dependsOn(":modules:openid-federation-openapi:openApiGenerateJavaSpring")
+    dependsOn(":modules:openid-federation-openapi:copyFixedJavaToOutput")
 }

@@ -259,6 +259,28 @@ tasks.register<Delete>("cleanGeneratedJava") {
     group = "build"
     delete(javaOutputDir)
 }
+
 tasks.named("clean") {
     dependsOn("cleanGeneratedJava")
+}
+
+tasks.register<Copy>("fixOpenApiJavaIssues") {
+    dependsOn("openApiGenerateJavaSpring")
+    from(javaOutputDir)
+    into("$projectDir/build/fixed-java")
+
+    filter { line: String ->
+        line.replace("kotlin.collections.Map<kotlin.String, kotlin.Any>", "kotlinx.serialization.json.JsonObject")
+    }
+}
+
+tasks.register<Copy>("copyFixedJavaToOutput") {
+    dependsOn("fixOpenApiJavaIssues")
+    from("$projectDir/build/fixed-java")
+    into(javaOutputDir)
+}
+
+// Ensure that openApiGenerateJavaSpring task includes our fixes
+tasks.named("openApiGenerateJavaSpring").configure {
+    finalizedBy("fixOpenApiJavaIssues", "copyFixedJavaToOutput")
 }
