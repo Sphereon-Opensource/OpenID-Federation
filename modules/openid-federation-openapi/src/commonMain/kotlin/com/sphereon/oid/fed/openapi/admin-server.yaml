@@ -1894,6 +1894,8 @@ components:
                 $ref: '#/components/schemas/Jwk'
         metadata:
           additionalProperties: true
+        metadata_policy:
+          additionalProperties: true
         crit:
           type: array
           items:

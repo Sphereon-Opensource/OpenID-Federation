@@ -21,7 +21,6 @@ class AccountApiTest {
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
 
-
     @BeforeTest
     fun setup() {
         baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"

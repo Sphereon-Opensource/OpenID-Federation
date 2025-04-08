@@ -4,6 +4,7 @@ import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.openapi.models.CreateKey
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.models.CreateMetadataPolicy
 import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -31,6 +32,7 @@ class EntityConfigurationStatementTest {
     private var testUsername: String? = null
     private var testKeyId: String? = null
     private var testMetadataType: String? = null
+    private var testMetadataPolicyType: String? = null
 
     val json = Json {
         prettyPrint = true
@@ -51,7 +53,8 @@ class EntityConfigurationStatementTest {
             }
         }
         testUsername = "entity-test-${System.currentTimeMillis()}"
-        testMetadataType = "openid_provider"
+        testMetadataType = "openid_provider-${System.currentTimeMillis()}"
+        testMetadataPolicyType = "openid_relying_party-${System.currentTimeMillis()}"
     }
 
     @AfterTest
@@ -87,17 +90,28 @@ class EntityConfigurationStatementTest {
 
             // Step 3: Create metadata for this account
             val metadata = createMetadata()
-            assertTrue(metadata.contains(testMetadataType!!), "Metadata creation failed")
+            assertNotNull(metadata, "Metadata creation failed")
 
-            // Step 4: Get the entity configuration statement
+            // Step 4: Create metadata policy for this account
+            val metadataPolicy = createMetadataPolicy()
+            assertNotNull(metadataPolicy, "Metadata policy creation failed")
+
+            // Step 5: Get the entity configuration statement
             val entityStatement = getEntityStatement()
             assertNotNull(entityStatement, "Entity statement retrieval failed")
 
-            // Step 5: Verify the entity statement contains our data
+            // Step 6: Verify the entity statement contains our data
             assertTrue(entityStatement.contains(testKeyId!!), "Entity statement does not contain the created key")
             assertTrue(
                 entityStatement.contains(testMetadataType!!),
                 "Entity statement does not contain the created metadata"
+            )
+
+            println(entityStatement)
+            assertTrue(entityStatement.contains(testKeyId!!), "Entity statement does not contain the created key")
+            assertTrue(
+                entityStatement.contains(testMetadataPolicyType!!),
+                "Entity statement does not contain the created policy metadata"
             )
 
             val publishResult = publishEntityStatement()
@@ -171,6 +185,8 @@ class EntityConfigurationStatementTest {
             response.status,
             "Metadata creation failed with status: ${response.status}"
         )
+
+        println(response.bodyAsText())
         return response.bodyAsText()
     }
 
@@ -209,5 +225,46 @@ class EntityConfigurationStatementTest {
             "Entity statement publishing failed with status: ${response.status}"
         )
         return response.bodyAsText()
+    }
+
+    private suspend fun createMetadataPolicy(): String {
+        println("Creating metadata policy with username: $testUsername")
+        println("Using metadata policy type: $testMetadataPolicyType")
+
+        val policyJson = buildJsonObject {
+            put("subset_of", buildJsonObject {
+                putJsonArray("response_types_supported") {
+                    add(JsonPrimitive("code"))
+                    add(JsonPrimitive("id_token"))
+                }
+            })
+            put("value", buildJsonObject {
+                put("issuer", JsonPrimitive("https://policy-enforced-issuer.com/*"))
+            })
+        }
+
+        val response = client.post("$baseUrl/metadata-policy") {
+            contentType(ContentType.Application.Json)
+            headers {
+                append("X-Account-Username", testUsername!!)
+            }
+            setBody(
+                CreateMetadataPolicy(
+                    key = testMetadataPolicyType!!,
+                    policy = policyJson
+                )
+            )
+        }
+
+        val responseBody = response.bodyAsText()
+        println("Metadata policy HTTP status: ${response.status}")
+        println("Metadata policy response: $responseBody")
+
+        assertEquals(
+            HttpStatusCode.Created,
+            response.status,
+            "Metadata policy creation failed with status: ${response.status}"
+        )
+        return responseBody
     }
 }

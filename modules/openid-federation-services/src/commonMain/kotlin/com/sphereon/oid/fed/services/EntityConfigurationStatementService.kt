@@ -239,7 +239,7 @@ class EntityConfigurationStatementService(
         queries.metadataPolicyQueries.findByAccountId(account.id)
             .executeAsList()
             .forEach {
-                builder.metadata(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
+                builder.metadataPolicy(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
             }
     }
 
