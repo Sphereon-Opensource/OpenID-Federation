@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.integration.tests
 
+import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -10,7 +11,6 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -21,8 +21,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
-@Serializable
-private data class KeyCreationResponse(val id: String)
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class KeysApiTest {
@@ -183,11 +181,10 @@ class KeysApiTest {
         val keyIdToDelete: String = try {
             val responseText = createResponse.bodyAsText()
 
-            Companion.jsonConfig.decodeFromString<KeyCreationResponse>(responseText).id
+            Companion.jsonConfig.decodeFromString<AccountJwk>(responseText).id
         } catch (e: Exception) {
             fail("Failed to parse key ID from creation response: ${e.message}")
         }
-
 
         try {
 

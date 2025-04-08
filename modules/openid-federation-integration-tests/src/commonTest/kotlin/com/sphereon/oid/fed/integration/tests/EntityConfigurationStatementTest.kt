@@ -86,8 +86,8 @@ class EntityConfigurationStatementTest {
             testKeyId = key.kid
 
             // Step 3: Create metadata for this account
-//            val metadata = createMetadata()
-//            assertTrue(metadata.contains(testMetadataType!!), "Metadata creation failed")
+            val metadata = createMetadata()
+            assertTrue(metadata.contains(testMetadataType!!), "Metadata creation failed")
 
             // Step 4: Get the entity configuration statement
             val entityStatement = getEntityStatement()
@@ -95,10 +95,10 @@ class EntityConfigurationStatementTest {
 
             // Step 5: Verify the entity statement contains our data
             assertTrue(entityStatement.contains(testKeyId!!), "Entity statement does not contain the created key")
-//            assertTrue(
-//                entityStatement.contains(testMetadataType!!),
-//                "Entity statement does not contain the created metadata"
-//            )
+            assertTrue(
+                entityStatement.contains(testMetadataType!!),
+                "Entity statement does not contain the created metadata"
+            )
 
             // Optional: Publish the entity statement
             val publishResult = publishEntityStatement()

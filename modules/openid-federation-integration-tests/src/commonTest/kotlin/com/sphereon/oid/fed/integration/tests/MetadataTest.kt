@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.putJsonArray
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -84,29 +85,29 @@ class MetadataTest {
             fail("Failed to create test account: ${e.message}")
         }
     }
-//
-//    @Test
-//    fun `GET metadata should return all metadata for account`() = runTest {
-//        try {
-//            // First, create some metadata for this account
-//            createSampleMetadata()
-//
-//            // Now get all metadata
-//            val response = client.get("$baseUrl/metadata") {
-//                headers {
-//                    append("X-Account-Username", testUsername!!)
-//                }
-//            }
-//
-//            println("Status code: ${response.status}")
-//            println("Response body: ${response.bodyAsText()}")
-//
-//            assertEquals(HttpStatusCode.OK, response.status)
-//            assertTrue(response.bodyAsText().contains("metadata"), "Response should contain metadata")
-//        } catch (e: Exception) {
-//            fail("Request failed: ${e.message}")
-//        }
-//    }
+
+    @Test
+    fun `GET metadata should return all metadata for account`() = runTest {
+        try {
+            // First, create some metadata for this account
+            createSampleMetadata()
+
+            // Now get all metadata
+            val response = client.get("$baseUrl/metadata") {
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+            }
+
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(response.bodyAsText().contains("metadata"), "Response should contain metadata")
+        } catch (e: Exception) {
+            fail("Request failed: ${e.message}")
+        }
+    }
 
     @Test
     fun `POST metadata with valid data should create metadata`() = runTest {
@@ -144,97 +145,104 @@ class MetadataTest {
             fail("Request failed: ${e.message}")
         }
     }
-//
-//    @Test
-//    fun `DELETE metadata should remove metadata entry`() = runTest {
-//        try {
-//            // First, create metadata to delete
-//            val metadataKey = "openid_provider_to_delete"
-//            val metadataJson = buildJsonObject {
-//                put("issuer", JsonPrimitive("https://delete-test.com/$testUsername"))
-//            }
-//
-//            var response = client.post("$baseUrl/metadata") {
-//                contentType(ContentType.Application.Json)
-//                headers {
-//                    append("X-Account-Username", testUsername!!)
-//                }
-//                setBody(
-//                    CreateMetadataRequest(
-//                        key = metadataKey,
-//                        metadata = metadataJson
-//                    )
-//                )
-//            }
-//
-//            assertEquals(HttpStatusCode.Created, response.status, "Failed to create test metadata")
-//
-//            // Now delete that metadata
-//            response = client.delete("$baseUrl/metadata/$metadataKey") {
-//                headers {
-//                    append("X-Account-Username", testUsername!!)
-//                }
-//            }
-//
-//            println("Status code: ${response.status}")
-//            println("Response body: ${response.bodyAsText()}")
-//
-//            assertEquals(HttpStatusCode.OK, response.status)
-//            assertTrue(response.bodyAsText().contains(metadataKey), "Response should contain the deleted metadata key")
-//        } catch (e: Exception) {
-//            fail("Request failed: ${e.message}")
-//        }
-//    }
-//
-//    @Test
-//    fun `POST metadata with invalid JSON should fail`() = runTest {
-//        try {
-//            val response = client.post("$baseUrl/metadata") {
-//                contentType(ContentType.Application.Json)
-//                headers {
-//                    append("X-Account-Username", testUsername!!)
-//                }
-//                setBody("{\"key\": \"invalid\", \"metadata\": \"not-a-json-object\"}")
-//            }
-//
-//            println("Status code: ${response.status}")
-//            println("Response body: ${response.bodyAsText()}")
-//
-//            assertEquals(HttpStatusCode.BadRequest, response.status)
-//        } catch (e: Exception) {
-//            fail("Request failed: ${e.message}")
-//        }
-//    }
-//
-//    @Test
-//    fun `POST metadata with non-existent account should fail`() = runTest {
-//        try {
-//            val nonExistentUsername = "non-existent-user-${System.currentTimeMillis()}"
-//            val metadataJson = buildJsonObject {
-//                put("issuer", JsonPrimitive("https://test.com"))
-//            }
-//
-//            val response = client.post("$baseUrl/metadata") {
-//                contentType(ContentType.Application.Json)
-//                headers {
-//                    append("X-Account-Username", nonExistentUsername)
-//                }
-//                setBody(
-//                    CreateMetadataRequest(
-//                        key = "openid_provider",
-//                        metadata = metadataJson
-//                    )
-//                )
-//            }
-//
-//            println("Status code: ${response.status}")
-//            println("Response body: ${response.bodyAsText()}")
-//
-//            assertEquals(HttpStatusCode.NotFound, response.status)
-//        } catch (e: Exception) {
-//            fail("Request failed: ${e.message}")
-//        }
-//    }
+
+    @Test
+    fun `DELETE metadata should remove metadata entry`() = runTest {
+        try {
+            // First, create metadata to delete
+            val metadataKey = "openid_provider_to_delete"
+            val metadataJson = buildJsonObject {
+                put("issuer", JsonPrimitive("https://delete-test.com/$testUsername"))
+            }
+
+            var response = client.post("$baseUrl/metadata") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+                setBody(
+                    CreateMetadata(
+                        key = metadataKey,
+                        metadata = metadataJson
+                    )
+                )
+            }
+
+            assertEquals(HttpStatusCode.Created, response.status, "Failed to create test metadata")
+
+            val responseBody = response.bodyAsText()
+            val responseJson = Json.parseToJsonElement(responseBody).jsonObject
+            val metadataId = responseJson["id"]?.toString()?.trim('"')
+                ?: fail("Failed to get metadata ID from response")
+
+            println("Extracted metadata ID: $metadataId")
+
+            // Now delete that metadata
+            response = client.delete("$baseUrl/metadata/$metadataId") {
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+            }
+
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertTrue(response.bodyAsText().contains(metadataKey), "Response should contain the deleted metadata key")
+        } catch (e: Exception) {
+            fail("Request failed: ${e.message}")
+        }
+    }
+
+    @Test
+    fun `POST metadata with invalid JSON should fail`() = runTest {
+        try {
+            val response = client.post("$baseUrl/metadata") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+                setBody("{\"key\": \"invalid\", \"metadata\": \"not-a-json-object\"}")
+            }
+
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
+            assertEquals(HttpStatusCode.BadRequest, response.status)
+        } catch (e: Exception) {
+            fail("Request failed: ${e.message}")
+        }
+    }
+
+    @Test
+    fun `POST metadata with non-existent account should fail`() = runTest {
+        try {
+            val nonExistentUsername = "non-existent-user-${System.currentTimeMillis()}"
+            val metadataJson = buildJsonObject {
+                put("issuer", JsonPrimitive("https://test.com"))
+            }
+
+            val response = client.post("$baseUrl/metadata") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("X-Account-Username", nonExistentUsername)
+                }
+                setBody(
+                    CreateMetadata(
+                        key = "openid_provider",
+                        metadata = metadataJson
+                    )
+                )
+            }
+
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+        } catch (e: Exception) {
+            fail("Request failed: ${e.message}")
+        }
+    }
 
     private suspend fun createSampleMetadata() {
         val metadataKey = "openid_provider"
