@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
     id("maven-publish")
-    alias(libs.plugins.kover)
 }
 
 java {
@@ -26,6 +24,7 @@ repositories {
         url = uri("https://jitpack.io")
     }
 }
+
 
 kotlin {
     jvm()
@@ -99,8 +98,6 @@ tasks.withType<Test>().named("jvmTest") {
     group = "verification"
 
     useJUnitPlatform()
-
-//    dependsOn(rootProject.tasks.named("dockerStartAdminServer"))
 
     testLogging {
         events("started", "passed", "skipped", "failed")

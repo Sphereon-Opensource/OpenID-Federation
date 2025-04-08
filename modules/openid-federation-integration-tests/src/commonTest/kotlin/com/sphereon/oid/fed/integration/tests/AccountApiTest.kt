@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.integration.tests
 
+import com.sphereon.oid.fed.openapi.models.CreateAccount
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
@@ -7,7 +8,6 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -15,12 +15,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
-
-@Serializable
-data class CreateAccountRequest(
-    val username: String,
-    val identifier: String? = null
-)
 
 class AccountApiTest {
 
@@ -69,7 +63,7 @@ class AccountApiTest {
             val response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    CreateAccountRequest(
+                    CreateAccount(
                         username = uniqueUsername,
                         identifier = "https://test-identifier.com/$uniqueUsername"
                     )
@@ -94,7 +88,7 @@ class AccountApiTest {
             var response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    CreateAccountRequest(
+                    CreateAccount(
                         username = username,
                         identifier = "https://test-identifier.com/$username"
                     )
@@ -107,7 +101,7 @@ class AccountApiTest {
             response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    CreateAccountRequest(
+                    CreateAccount(
                         username = username,
                         identifier = "https://another-identifier.com/$username"
                     )
@@ -131,7 +125,7 @@ class AccountApiTest {
             var response = client.post("$baseUrl/accounts") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    CreateAccountRequest(
+                    CreateAccount(
                         username = username
                     )
                 )
