@@ -8,7 +8,6 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.toDTO
-import kotlinx.serialization.json.JsonObject
 
 /**
  * The MetadataService class provides operations for managing metadata configurations associated
@@ -36,10 +35,10 @@ class MetadataService {
      * @throws IllegalStateException If the metadata creation fails unexpectedly.
      * @throws Exception If any other error occurs during the creation process.
      */
-    fun createEntityConfigurationMetadata(
+    fun createMetadata(
         account: Account,
         key: String,
-        metadata: JsonObject
+        metadata: Map<String, Any>
     ): Metadata {
         logger.info("Creating entity configuration metadata for account: ${account.username}, key: $key")
         try {
@@ -99,7 +98,7 @@ class MetadataService {
      * @throws NotFoundException If the metadata record is not found or does not belong to the given account.
      * @throws Exception If an unexpected error occurs during the operation.
      */
-    fun deleteEntityConfigurationMetadata(account: Account, id: String): Metadata {
+    fun deleteMetadata(account: Account, id: String): Metadata {
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
         try {
             logger.debug("Using account with ID: ${account.id}")

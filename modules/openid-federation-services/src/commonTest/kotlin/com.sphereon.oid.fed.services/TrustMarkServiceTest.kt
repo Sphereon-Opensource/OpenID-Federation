@@ -1,12 +1,12 @@
 package com.sphereon.oid.fed.services
 
 import app.cash.sqldelight.Query
-import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.crypto.kms.IKeyManagementSystem
+import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
-import com.sphereon.oid.fed.openapi.models.CreateTrustMark
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
@@ -157,8 +157,22 @@ class TrustMarkServiceTest {
     @Test
     fun `find all trust mark types by account returns correct types`() {
         val trustMarkTypes = listOf(
-            TrustMarkTypeEntity(Uuid.random().toString(), testAccount.id, "type1", FIXED_TIMESTAMP, null, deleted_at = null),
-            TrustMarkTypeEntity(Uuid.random().toString(), testAccount.id, "type2", FIXED_TIMESTAMP, null, deleted_at = null)
+            TrustMarkTypeEntity(
+                Uuid.random().toString(),
+                testAccount.id,
+                "type1",
+                FIXED_TIMESTAMP,
+                null,
+                deleted_at = null
+            ),
+            TrustMarkTypeEntity(
+                Uuid.random().toString(),
+                testAccount.id,
+                "type2",
+                FIXED_TIMESTAMP,
+                null,
+                deleted_at = null
+            )
         )
 
         every { trustMarkTypeQueries.findByAccountId(testAccount.id).executeAsList() } returns trustMarkTypes
@@ -239,8 +253,20 @@ class TrustMarkServiceTest {
         )
 
         val issuers = listOf(
-            TrustMarkIssuerEntity(Uuid.random().toString(), trustMarkType.id, "issuer1", created_at = FIXED_TIMESTAMP, deleted_at = null),
-            TrustMarkIssuerEntity(Uuid.random().toString(), trustMarkType.id, "issuer2", created_at = FIXED_TIMESTAMP, deleted_at = null)
+            TrustMarkIssuerEntity(
+                Uuid.random().toString(),
+                trustMarkType.id,
+                "issuer1",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            ),
+            TrustMarkIssuerEntity(
+                Uuid.random().toString(),
+                trustMarkType.id,
+                "issuer2",
+                created_at = FIXED_TIMESTAMP,
+                deleted_at = null
+            )
         )
 
         every {
@@ -412,9 +438,9 @@ class TrustMarkServiceTest {
 
     @Test
     fun `create trust mark succeeds`() = runTest {
-        val createDto = CreateTrustMark(
+        val createDto = CreateTrustMarkRequest(
             sub = TEST_SUB,
-            trustMarkTypeIdentifier = TEST_IDENTIFIER,
+            trustMarkId = TEST_IDENTIFIER,
             exp = null,
             logoUri = null,
             ref = null,
@@ -424,7 +450,12 @@ class TrustMarkServiceTest {
         val key = kmsProvider.generateKeyAsync()
 
         val keys = arrayOf(
-            AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+            AccountJwk(
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
+                kid = key.kid ?: key.kmsKeyRef,
+                kty = key.jose.publicJwk.kty.toString(),
+                use = key.jose.publicJwk.use
+            )
         )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
@@ -435,7 +466,7 @@ class TrustMarkServiceTest {
             id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
-            trust_mark_type_identifier = TEST_IDENTIFIER,
+            trust_mark_id = TEST_IDENTIFIER,
             exp = null,
             iat = expectedIat,
             trust_mark_value = "TEST_JWT",
@@ -448,7 +479,7 @@ class TrustMarkServiceTest {
             trustMarkQueries.create(
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = null,
                 iat = expectedIat,
                 trust_mark_value = any()
@@ -467,7 +498,7 @@ class TrustMarkServiceTest {
             trustMarkQueries.create(
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = null,
                 iat = expectedIat,
                 trust_mark_value = any()
@@ -477,9 +508,9 @@ class TrustMarkServiceTest {
 
     @Test
     fun `create trust mark fails when no keys exist`() = runTest {
-        val createDto = CreateTrustMark(
+        val createDto = CreateTrustMarkRequest(
             sub = TEST_SUB,
-            trustMarkTypeIdentifier = TEST_IDENTIFIER,
+            trustMarkId = TEST_IDENTIFIER,
             exp = null,
             logoUri = null,
             ref = null,
@@ -503,7 +534,7 @@ class TrustMarkServiceTest {
             id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
-            trust_mark_type_identifier = TEST_IDENTIFIER,
+            trust_mark_id = TEST_IDENTIFIER,
             exp = null,
             iat = (System.currentTimeMillis() / 1000).toInt(),
             trust_mark_value = "TEST_JWT",
@@ -526,7 +557,7 @@ class TrustMarkServiceTest {
 
     @Test
     fun `delete trust mark fails for non-existent trust mark`() {
-        val id  = Uuid.random().toString()
+        val id = Uuid.random().toString()
         every {
             trustMarkQueries.findByAccountIdAndId(testAccount.id, id).executeAsOneOrNull()
         } returns null
@@ -549,7 +580,7 @@ class TrustMarkServiceTest {
                 id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = null,
                 iat = (System.currentTimeMillis() / 1000).toInt(),
                 trust_mark_value = "TEST_JWT",
@@ -662,7 +693,7 @@ class TrustMarkServiceTest {
             id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
-            trust_mark_type_identifier = TEST_IDENTIFIER,
+            trust_mark_id = TEST_IDENTIFIER,
             exp = null,
             iat = (System.currentTimeMillis() / 1000).toInt(),
             trust_mark_value = "test-trust-mark-jwt",
@@ -724,7 +755,7 @@ class TrustMarkServiceTest {
                 id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = null,
                 iat = (System.currentTimeMillis() / 1000).toInt(),
                 trust_mark_value = "test-trust-mark-jwt-1",
@@ -735,7 +766,7 @@ class TrustMarkServiceTest {
                 id = Uuid.random().toString(),
                 account_id = testAccount.id,
                 sub = "https://another-subject.com",
-                trust_mark_type_identifier = "another-type",
+                trust_mark_id = "another-type",
                 exp = null,
                 iat = (System.currentTimeMillis() / 1000).toInt(),
                 trust_mark_value = "test-trust-mark-jwt-2",
@@ -844,9 +875,9 @@ class TrustMarkServiceTest {
     @Test
     fun `create trust mark with expiration succeeds`() = runTest {
         val expirationTime = (System.currentTimeMillis() / 1000 + 3600).toInt() // 1 hour from now
-        val createDto = CreateTrustMark(
+        val createDto = CreateTrustMarkRequest(
             sub = TEST_SUB,
-            trustMarkTypeIdentifier = TEST_IDENTIFIER,
+            trustMarkId = TEST_IDENTIFIER,
             exp = expirationTime,
             logoUri = null,
             ref = null,
@@ -856,7 +887,12 @@ class TrustMarkServiceTest {
         val key = kmsProvider.generateKeyAsync()
 
         val keys = arrayOf(
-            AccountJwk(kid = key.kid ?: key.kmsKeyRef, kty = key.jose.publicJwk.kty.toString(), use = key.jose.publicJwk.use)
+            AccountJwk(
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
+                kid = key.kid ?: key.kmsKeyRef,
+                kty = key.jose.publicJwk.kty.toString(),
+                use = key.jose.publicJwk.use
+            )
         )
 
         every { jwkService.getKeys(testAccount.toDTO()) } returns keys
@@ -867,7 +903,7 @@ class TrustMarkServiceTest {
             id = Uuid.random().toString(),
             account_id = testAccount.id,
             sub = TEST_SUB,
-            trust_mark_type_identifier = TEST_IDENTIFIER,
+            trust_mark_id = TEST_IDENTIFIER,
             exp = expirationTime,
             iat = expectedIat,
             trust_mark_value = "TEST_JWT",
@@ -880,7 +916,7 @@ class TrustMarkServiceTest {
             trustMarkQueries.create(
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = expirationTime,
                 iat = expectedIat,
                 trust_mark_value = any()
@@ -898,7 +934,7 @@ class TrustMarkServiceTest {
             trustMarkQueries.create(
                 account_id = testAccount.id,
                 sub = TEST_SUB,
-                trust_mark_type_identifier = TEST_IDENTIFIER,
+                trust_mark_id = TEST_IDENTIFIER,
                 exp = expirationTime,
                 iat = expectedIat,
                 trust_mark_value = any()

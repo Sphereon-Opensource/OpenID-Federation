@@ -1,4 +1,8 @@
 import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URI
+import java.time.Duration
+import java.time.Instant
 
 tasks.register("installGitHooks", Copy::class) {
     group = "git hooks"
@@ -63,8 +67,8 @@ plugins {
     alias(libs.plugins.springboot) apply false
     alias(libs.plugins.springDependencyManagement) apply false
     alias(libs.plugins.kotlinPluginSpring) apply false
+    alias(libs.plugins.node.gradle) apply false
     id("maven-publish")
-    id("com.github.node-gradle.node") version "7.0.1"
 }
 
 fun getNpmVersion(): String {
@@ -92,9 +96,8 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.12.3-SNAPSHOT"
+    version = "0.15.1-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
-
 
     configurations {
         all {
@@ -140,7 +143,7 @@ subprojects {
     }
 }
 
-tasks.register("checkDockerStatus") {
+tasks.register("checkDockerStatusDb") {
     group = "docker"
     description = "Checks if Docker containers are running"
     doLast {
@@ -151,10 +154,10 @@ tasks.register("checkDockerStatus") {
             standardOutput = output
         }
 
-        val containersRunning = process.exitValue == 0 && output.toString().trim().isNotEmpty()
-        project.ext.set("containersRunning", containersRunning)
+        val databaseRunning = process.exitValue == 0 && output.toString().trim().isNotEmpty()
+        project.ext.set("databaseRunning", databaseRunning)
 
-        if (containersRunning) {
+        if (databaseRunning) {
             println("Required Docker containers are already running")
         } else {
             println("Required Docker containers are not running")
@@ -167,7 +170,63 @@ tasks.register("dockerCleanup") {
     description = "Stops and removes specific Docker containers"
     doLast {
         exec {
-            commandLine("docker", "compose", "rm", "-fsv", "db")
+            commandLine(
+                "docker",
+                "compose",
+                "rm",
+                "-fsv",
+                "db",
+                "openid-federation-admin-server",
+                "openid-federation-server",
+                "keycloak"
+            )
+        }
+    }
+}
+
+tasks.register("dockerStartAdminServer") {
+    group = "docker"
+    description = "Starts specific Docker containers"
+
+    dependsOn(rootProject.tasks.named("dockerStartDb"))
+
+    doFirst {
+        exec {
+            commandLine(
+                "docker",
+                "compose",
+                "up",
+                "-d",
+                "openid-federation-admin-server"
+            )
+        }
+        waitForAdminServer()
+    }
+}
+
+tasks.register("dockerStartDb") {
+    group = "docker"
+    description = "Ensures Docker databases are running, starting them if needed"
+
+    doLast {
+        if (!project.ext.has("databaseRunning") || !project.ext.get("databaseRunning").toString().toBoolean()) {
+            exec {
+                commandLine("docker", "compose", "up", "-d", "db")
+            }
+        }
+        waitForDatabase()
+        project.ext.set("databaseRunning", true)
+    }
+}
+
+tasks.matching { it.name == "build" }.configureEach {
+    dependsOn(rootProject.tasks.named("dockerStartDb"))
+
+    doFirst {
+        if (!rootProject.ext.has("databaseRunning") || !rootProject.ext.get("databaseRunning").toString()
+                .toBoolean()
+        ) {
+            throw GradleException("Docker databases are not running. Please run './gradlew dockerStartDb' first.")
         }
     }
 }
@@ -197,57 +256,44 @@ fun waitForDatabase() {
     if (!ready) {
         throw GradleException("Database failed to become ready within the timeout period")
     }
+
     println("Database is ready!")
 }
 
-tasks.register("waitForDatabase") {
-    group = "docker"
-    description = "Waits for the database to be ready"
-    doLast {
-        waitForDatabase()
-    }
-}
+fun waitForAdminServer(timeoutSeconds: Long = 90, pollIntervalMs: Long = 3000) {
+    val statusUrl = URI.create("http://localhost:8081/status").toURL()
+    val startTime = Instant.now()
+    val endTime = startTime.plusSeconds(timeoutSeconds)
+    var attempts = 0
+    var serverReady = false
 
-tasks.register("dockerStart") {
-    group = "docker"
-    description = "Starts specific Docker containers"
-    doLast {
-        exec {
-            commandLine("docker", "compose", "up", "-d", "db")
-        }
-        waitForDatabase()
-    }
-}
+    println("Waiting for Admin Server at ${statusUrl}...")
 
-tasks.register("dockerEnsureRunning") {
-    group = "docker"
-    description = "Ensures Docker containers are running, starting them if needed"
-    dependsOn("checkDockerStatus")
+    while (Instant.now().isBefore(endTime) && !serverReady) {
+        attempts++
+        try {
+            val connection = statusUrl.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 2000
+            connection.readTimeout = 2000
 
-    doLast {
-        if (!project.ext.has("containersRunning") || !project.ext.get("containersRunning").toString().toBoolean()) {
-            exec {
-                commandLine("docker", "compose", "rm", "-fsv", "db")
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                serverReady = true
+                println("Admin Server is ready! (Attempt $attempts)")
+            } else {
+                println("Admin Server not ready yet (Attempt $attempts, Status: $responseCode). Waiting ${pollIntervalMs}ms...")
+                Thread.sleep(pollIntervalMs)
             }
-            exec {
-                commandLine("docker", "compose", "up", "-d", "db")
-            }
+            connection.disconnect()
+        } catch (e: Exception) {
+            println("Admin Server not reachable yet (Attempt $attempts, Error: ${e.message}). Waiting ${pollIntervalMs}ms...")
+            Thread.sleep(pollIntervalMs)
         }
-        waitForDatabase()
-        project.ext.set("containersRunning", true)
     }
-}
 
-subprojects {
-    tasks.matching { it.name == "build" }.configureEach {
-        dependsOn(rootProject.tasks.named("dockerEnsureRunning"))
-
-        doFirst {
-            if (!rootProject.ext.has("containersRunning") || !rootProject.ext.get("containersRunning").toString()
-                    .toBoolean()
-            ) {
-                throw GradleException("Docker containers are not running. Please run './gradlew dockerEnsureRunning' first.")
-            }
-        }
+    if (!serverReady) {
+        val duration = Duration.between(startTime, Instant.now()).seconds
+        throw GradleException("Admin Server failed to become ready at $statusUrl within ${duration} seconds.")
     }
 }

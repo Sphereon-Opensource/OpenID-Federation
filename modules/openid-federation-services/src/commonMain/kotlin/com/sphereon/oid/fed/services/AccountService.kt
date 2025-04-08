@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
+import com.sphereon.oid.fed.common.exceptions.BadRequestException
 import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
 import com.sphereon.oid.fed.common.exceptions.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
@@ -24,6 +25,7 @@ class AccountService(
      * Tagged specifically as "AccountService" to differentiate logs originating from this class.
      */
     private val logger = Logger.tag("AccountService")
+
     /**
      * A private field providing access to account-specific persistence queries.
      * It interfaces with the underlying database to perform operations related
@@ -49,6 +51,15 @@ class AccountService(
             logger.error("Account creation failed: Account with username ${account.username} already exists")
             throw EntityAlreadyExistsException(Constants.ACCOUNT_ALREADY_EXISTS)
         }
+
+        // Validate identifier format if it's not null
+        account.identifier?.let { identifier ->
+            if (!identifier.startsWith("https://")) {
+                logger.error("Account creation failed: Identifier must start with https:// - Provided: $identifier")
+                throw BadRequestException("Identifier must start with https://")
+            }
+        }
+
         val createdAccount = accountQueries.create(
             username = account.username,
             identifier = account.identifier
@@ -141,7 +152,7 @@ class AccountService(
     private fun assertNonRootAccount(account: Account) {
         if (account.username == Constants.DEFAULT_ROOT_USERNAME) {
             logger.error("Account deletion failed: Attempted to delete root account")
-            throw NotFoundException(Constants.ROOT_ACCOUNT_CANNOT_BE_DELETED)
+            throw BadRequestException(Constants.ROOT_ACCOUNT_CANNOT_BE_DELETED)
         }
     }
 }

@@ -3,7 +3,20 @@ package com.sphereon.oid.fed.server.admin.config
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.*
+import com.sphereon.oid.fed.services.AccountService
+import com.sphereon.oid.fed.services.AuthorityHintService
+import com.sphereon.oid.fed.services.CriticalClaimService
+import com.sphereon.oid.fed.services.EntityConfigurationStatementService
+import com.sphereon.oid.fed.services.JwkService
+import com.sphereon.oid.fed.services.KmsService
+import com.sphereon.oid.fed.services.KmsType
+import com.sphereon.oid.fed.services.LogService
+import com.sphereon.oid.fed.services.MetadataPolicyService
+import com.sphereon.oid.fed.services.MetadataService
+import com.sphereon.oid.fed.services.ReceivedTrustMarkService
+import com.sphereon.oid.fed.services.ResolutionService
+import com.sphereon.oid.fed.services.SubordinateService
+import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -20,15 +33,15 @@ open class ServiceConfig {
         )
     }
 
-   /* @OptIn(ExperimentalSerializationApi::class)
-    @Bean
-    fun messageConverter(): KotlinSerializationJsonHttpMessageConverter {
-        return KotlinSerializationJsonHttpMessageConverter(Json {
-            ignoreUnknownKeys = true
-            explicitNulls = false
-            encodeDefaults = true
-        })
-    }*/
+    /* @OptIn(ExperimentalSerializationApi::class)
+     @Bean
+     fun messageConverter(): KotlinSerializationJsonHttpMessageConverter {
+         return KotlinSerializationJsonHttpMessageConverter(Json {
+             ignoreUnknownKeys = true
+             explicitNulls = false
+             encodeDefaults = true
+         })
+     }*/
 
     @Bean
     open fun logService(): LogService {
@@ -36,8 +49,13 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun entityConfigurationMetadataService(): MetadataService {
+    open fun metadataService(): MetadataService {
         return MetadataService()
+    }
+
+    @Bean
+    open fun metadataPolicyService(): MetadataPolicyService {
+        return MetadataPolicyService()
     }
 
     @Bean
@@ -49,7 +67,6 @@ open class ServiceConfig {
     open fun accountService(accountServiceConfig: AccountServiceConfig): AccountService {
         return AccountService(accountServiceConfig)
     }
-
 
 
     @Bean
@@ -65,7 +82,10 @@ open class ServiceConfig {
             KmsType.AWS -> {
                 try {
                     KmsService.createAwsKms(
-                        applicationId = environment.getProperty("sphereon.federation.aws.application-id", "sphereon-federation-aws"),
+                        applicationId = environment.getProperty(
+                            "sphereon.federation.aws.application-id",
+                            "sphereon-federation-aws"
+                        ),
                         region = environment.getRequiredProperty("sphereon.federation.aws.region"),
                         accessKeyId = environment.getRequiredProperty("sphereon.federation.aws.access-key-id"),
                         secretAccessKey = environment.getRequiredProperty("sphereon.federation.aws.secret-access-key"),

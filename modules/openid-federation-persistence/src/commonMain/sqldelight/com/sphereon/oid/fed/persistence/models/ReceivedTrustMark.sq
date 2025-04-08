@@ -1,7 +1,7 @@
 create:
 INSERT INTO ReceivedTrustMark (
     account_id,
-    trust_mark_type_identifier,
+    trust_mark_id,
     jwt
 ) VALUES (?, ?, ?) RETURNING *;
 

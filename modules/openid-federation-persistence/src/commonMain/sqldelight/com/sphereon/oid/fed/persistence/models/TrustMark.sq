@@ -7,7 +7,7 @@ AND deleted_at IS NULL;
 create:
 INSERT INTO TrustMark (
     account_id,
-    trust_mark_type_identifier,
+    trust_mark_id,
     sub,
     trust_mark_value,
     iat,
@@ -32,7 +32,7 @@ findByAccountIdAndAndSubAndTrustMarkTypeIdentifier:
 SELECT *
 FROM TrustMark
 WHERE account_id = ?
-AND trust_mark_type_identifier = ?
+AND trust_mark_id = ?
 AND sub = ?
 AND deleted_at IS NULL
 AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
@@ -41,7 +41,7 @@ findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifierAndSub:
 SELECT sub
 FROM TrustMark
 WHERE account_id = ?
-  AND trust_mark_type_identifier = ?
+  AND trust_mark_id = ?
   AND sub = ?
   AND deleted_at IS NULL
   AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
@@ -51,7 +51,7 @@ findAllDistinctSubsByAccountIdAndTrustMarkTypeIdentifier:
 SELECT sub
 FROM TrustMark
 WHERE account_id = ?
-  AND trust_mark_type_identifier = ?
+  AND trust_mark_id = ?
   AND deleted_at IS NULL
   AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT));
 
@@ -59,7 +59,7 @@ getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub:
 SELECT *
 FROM TrustMark
 WHERE account_id = ?
-  AND trust_mark_type_identifier = ?
+  AND trust_mark_id = ?
   AND sub = ?
   AND deleted_at IS NULL
   AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))

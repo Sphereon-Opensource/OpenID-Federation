@@ -5,11 +5,9 @@ import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
 import com.sphereon.oid.fed.persistence.models.Jwk
-
 import com.sphereon.oid.fed.persistence.models.JwkQueries
-import com.sphereon.oid.fed.services.mappers.toDTO
 import com.sphereon.oid.fed.services.mappers.jsonSerialization
-
+import com.sphereon.oid.fed.services.mappers.toDTO
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -19,7 +17,6 @@ import io.mockk.verify
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import java.lang.IllegalStateException
 import java.time.LocalDateTime
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -121,7 +118,17 @@ class JwkServiceTest {
                 null,
                 null,
             ),
-            Jwk(Uuid.random().toString(), testAccount.id, "kid2", TEST_KEY.replace("test-kid", "kid2"), "memory", TEST_KEY.replace("test-kid", "kid2"), FIXED_TIMESTAMP, null, null)
+            Jwk(
+                Uuid.random().toString(),
+                testAccount.id,
+                "kid2",
+                TEST_KEY.replace("test-kid", "kid2"),
+                "memory",
+                TEST_KEY.replace("test-kid", "kid2"),
+                FIXED_TIMESTAMP,
+                null,
+                null
+            )
         )
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
@@ -150,7 +157,7 @@ class JwkServiceTest {
         )
 
         every { jwkQueries.findById(keyId) } returns mockk {
-            every { executeAsOne() } returns jwk
+            every { executeAsOneOrNull() } returns jwk
         }
         every { jwkQueries.revoke(reason, keyId) } returns mockk {
             every { executeAsOne() } returns jwk
@@ -181,7 +188,7 @@ class JwkServiceTest {
         )
 
         every { jwkQueries.findById(keyId) } returns mockk {
-            every { executeAsOne() } returns jwk
+            every { executeAsOneOrNull() } returns jwk
         }
 
         assertFailsWith<NotFoundException> {

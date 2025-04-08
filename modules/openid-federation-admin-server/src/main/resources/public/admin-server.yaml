@@ -1583,13 +1583,13 @@ components:
             type: object
             required:
               - sub
-              - trust_mark_type_identifier
+              - trust_mark_id
             properties:
               sub:
                 type: string
                 description: 'The entity the Trust Mark applies to.'
                 example: http://localhost:8080/trust-mark-holder
-              trust_mark_type_identifier:
+              trust_mark_id:
                 type: string
                 description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
                 example: http://localhost:8080/trust-mark-types/exampleType
@@ -1874,7 +1874,7 @@ components:
     CreateReceivedTrustMark:
       type: object
       properties:
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -1883,7 +1883,7 @@ components:
           description: The received Trust Mark JWT.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required:
-        - trust_mark_type_identifier
+        - trust_mark_id
         - jwt
 
     CreateSubordinate:
@@ -1901,13 +1901,13 @@ components:
       description: Data Transfer Object for creating a Trust Mark.
       required:
         - sub
-        - trust_mark_type_identifier
+        - trust_mark_id
       properties:
         sub:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
           example: https://trustframework.example.com/marks/12345
@@ -2354,7 +2354,7 @@ components:
           format: uuid
           description: The account ID of the Trust Mark holder.
           example: "123e4567-e89b-12d3-a456-426614174000"
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: The Trust Mark type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"

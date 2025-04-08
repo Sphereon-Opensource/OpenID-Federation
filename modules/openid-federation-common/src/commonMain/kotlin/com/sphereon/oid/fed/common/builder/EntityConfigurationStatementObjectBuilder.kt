@@ -1,6 +1,9 @@
 package com.sphereon.oid.fed.common.builder
 
-import com.sphereon.oid.fed.openapi.models.*
+import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
+import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.models.TrustMark
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationStatementObjectBuilder {
@@ -9,6 +12,7 @@ class EntityConfigurationStatementObjectBuilder {
     private var iat: Int? = null
     private lateinit var jwks: List<Jwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
+    private var metadataPolicy: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
@@ -19,9 +23,12 @@ class EntityConfigurationStatementObjectBuilder {
     fun iat(iat: Int) = apply { this.iat = iat }
     fun jwks(jwks: List<Jwk>) = apply { this.jwks = jwks }
 
-
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
+    }
+
+    fun metadataPolicy(policy: Pair<String, JsonObject>) = apply {
+        this.metadataPolicy[policy.first] = policy.second
     }
 
     fun authorityHint(hint: String) = apply {
@@ -52,6 +59,7 @@ class EntityConfigurationStatementObjectBuilder {
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
+            metadataPolicy = JsonObject(metadataPolicy),
             authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
             crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
             trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap(),

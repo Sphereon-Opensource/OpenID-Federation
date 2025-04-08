@@ -347,6 +347,113 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+  '/metadata-policy':
+    get:
+      tags:
+        - metadata-policy
+      summary: Get entity configuration metadata policies
+      operationId: getEntityMetadataPolicies
+      description: Retrieve metadata policy entries for a specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved metadata policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicyResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - metadata-policy
+      summary: Create entity configuration metadata policy
+      operationId: createEntityMetadataPolicy
+      description: Add a new metadata policy entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Metadata policy creation data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetadataPolicy'
+      responses:
+        '201':
+          description: Metadata policy created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicy'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  '/metadata-policy/{id}':
+    delete:
+      tags:
+        - metadata-policy
+      summary: Delete account metadata policy
+      operationId: deleteEntityMetadataPolicy
+      description: Deletes a specific metadata policy entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the metadata policy entry to be deleted.
+      responses:
+        '200':
+          description: Metadata policy deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicy'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Metadata policy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
   '/authority-hints':
     get:
       tags:
@@ -577,7 +684,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{id}':
+  '/subordinates/{subordinateId}':
     delete:
       tags:
         - subordinates
@@ -616,7 +723,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/subordinates/{id}/jwks':
+  '/subordinates/{subordinateId}/jwks':
     get:
       summary: Get subordinate JWKs
       operationId: listJwksBySubordinateId
@@ -695,7 +802,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/subordinates/{id}/jwks/{jwkId}':
+  '/subordinates/{subordinateId}/jwks/{jwkId}':
     delete:
       tags:
         - subordinates
@@ -817,7 +924,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{subordinateId}/metadata/{id}':
+  '/subordinates/{subordinateIdbordinateId}/metadata/{id}':
     delete:
       tags:
         - subordinates
@@ -860,7 +967,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{id}/statement':
+  '/subordinates/{subordinateId}/statement':
     get:
       tags:
         - subordinates
@@ -1158,23 +1265,15 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  trustMarkId:
-                    type: string
-                    format: uuid
-                    description: The identifier of the created or updated Trust Mark.
+                type: string
+                description: A message indicating the result of the operation.
         '201':
           description: Trust Mark created or updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  trustMarkId:
-                    type: string
-                    format: uuid
-                    description: The identifier of the created or updated Trust Mark.
+                type: string
+                description: A message indicating the result of the operation.
         '400':
           description: Invalid request
           content:
@@ -1583,16 +1682,20 @@ components:
             type: object
             required:
               - sub
-              - trust_mark_type_identifier
+              - trust_mark_id
             properties:
               sub:
                 type: string
                 description: 'The entity the Trust Mark applies to.'
                 example: http://localhost:8080/trust-mark-holder
-              trust_mark_type_identifier:
+                minLength: 10
+                maxLength: 2048
+              trust_mark_id:
                 type: string
                 description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
                 example: http://localhost:8080/trust-mark-types/exampleType
+                minLength: 10
+                maxLength: 2048
               logo_uri:
                 type: string
                 format: uri
@@ -1608,7 +1711,14 @@ components:
               delegation:
                 type: string
                 description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark
-
+              dryRun:
+                type: boolean
+                description: 'If true, the request will be executed but not persisted.'
+                example: false
+              iat:
+                type: integer
+                format: int32
+                description: The time for the trust mark was issued.
   schemas:
     AccountsResponse:
       type: object
@@ -1784,6 +1894,8 @@ components:
                 $ref: '#/components/schemas/Jwk'
         metadata:
           additionalProperties: true
+        metadata_policy:
+          additionalProperties: true
         crit:
           type: array
           items:
@@ -1795,6 +1907,8 @@ components:
           type: string
           description: The username of the account.
           example: acmeco
+          minLength: 1
+          maxLength: 32
         identifier:
           type: string
           description: The identifier of the tenant account.
@@ -1808,6 +1922,8 @@ components:
         identifier:
           type: string
           description: The identifier of the authority hint.
+          minLength: 10
+          maxLength: 2048
       required:
         - identifier
 
@@ -1871,10 +1987,24 @@ components:
         - key
         - metadata
 
+    CreateMetadataPolicy:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The metadata policy key.
+          example: openid_relying_party
+        policy:
+          additionalProperties: true
+          description: The metadata policy object.
+      required:
+        - key
+        - policy
+
     CreateReceivedTrustMark:
       type: object
       properties:
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -1883,7 +2013,7 @@ components:
           description: The received Trust Mark JWT.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required:
-        - trust_mark_type_identifier
+        - trust_mark_id
         - jwt
 
     CreateSubordinate:
@@ -1901,13 +2031,13 @@ components:
       description: Data Transfer Object for creating a Trust Mark.
       required:
         - sub
-        - trust_mark_type_identifier
+        - trust_mark_id
       properties:
         sub:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
           example: https://trustframework.example.com/marks/12345
@@ -1927,6 +2057,46 @@ components:
           type: string
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    CreateTrustMarkResult:
+      type: object
+      required:
+        - jwt
+        - account_id
+        - trust_mark_id
+        - sub
+        - trust_mark_value
+        - iat
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique ID of the Trust Mark.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        account_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark owner account.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        trust_mark_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark type.
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_value:
+          type: string
+          description: The JWT of the Trust Mark.
+        iat:
+          type: integer
+          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+        exp:
+          type: integer
+          description:
+
+
 
     TrustMarksResponse:
       type: object
@@ -2092,6 +2262,8 @@ components:
         - type: object
           x-tags:
             - federation
+          required:
+            - id
           properties:
             id:
               type: string
@@ -2285,6 +2457,48 @@ components:
           example: '2024-08-06T12:34:56Z'
           nullable: true
 
+    MetadataPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier for the Metadata Policy record.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        accountId:
+          type: string
+          format: uuid
+          description: The ID of the account associated with this Metadata Policy.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        key:
+          type: string
+          description: The key of the Metadata Policy.
+          example: openid_relying_party
+        policy:
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata Policy was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+        deletedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata Policy was deleted.
+          example: '2024-08-06T12:34:56Z'
+          nullable: true
+
+    MetadataPolicyResponse:
+      type: object
+      required:
+        - metadataPolicies
+      properties:
+        metadataPolicies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetadataPolicy'
+
     PublishStatementRequest:
       type: object
       properties:
@@ -2298,9 +2512,8 @@ components:
           example: "1234"
         dryRun:
           type: boolean
-          description: 'If true, the request will be validated but not persisted.'
+          description: 'If true, the request will be executed but not persisted.'
           example: false
-
 
     ReceivedTrustMarksResponse:
       type: object
@@ -2311,21 +2524,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReceivedTrustMark'
-    #            type: object
-    #            properties:
-    #              trustMarkId:
-    #                type: string
-    #                description: The unique identifier of the received Trust Mark.
-    #              trustMark:
-    #                type: string
-    #                description: The JWT representing the received Trust Mark.
-    #              issuedJwt:
-    #                type: string
-    #                description: The JWT representing the received Trust Mark.
-    #              receivedAt:
-    #                type: string
-    #                format: date-time
-    #                description: The timestamp when the Trust Mark was received.
+
     CreateReceivedTrustMarkResponse:
       type: object
       properties:
@@ -2340,7 +2539,6 @@ components:
         - trustMarkTypeId
         - jwt
 
-
     ReceivedTrustMark:
       type: object
       properties:
@@ -2354,7 +2552,7 @@ components:
           format: uuid
           description: The account ID of the Trust Mark holder.
           example: "123e4567-e89b-12d3-a456-426614174000"
-        trust_mark_type_identifier:
+        trust_mark_id:
           type: string
           description: The Trust Mark type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"

@@ -18,6 +18,7 @@ class ReceivedTrustMarkService {
      * It is initialized with a unique tag to identify logs related to this service.
      */
     private val logger = Logger.tag("ReceivedTrustMarkService")
+
     /**
      * Provides access to persistence operations related to received trust marks.
      * Used to perform database queries for managing trust marks within the service.
@@ -40,7 +41,7 @@ class ReceivedTrustMarkService {
         logger.info("Creating trust mark for account: $username")
         val createdTrustMark = receivedTrustMarkQueries.create(
             account_id = account.id,
-            trust_mark_type_identifier = createRequest.trustMarkTypeIdentifier,
+            trust_mark_id = createRequest.trustMarkId,
             jwt = createRequest.jwt,
         ).executeAsOne()
         logger.info("Successfully created trust mark with ID: ${createdTrustMark.id}")
