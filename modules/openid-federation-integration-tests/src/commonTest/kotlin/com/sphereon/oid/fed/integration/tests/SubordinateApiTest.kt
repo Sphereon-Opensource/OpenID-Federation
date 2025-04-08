@@ -113,15 +113,9 @@ class SubordinateApiTest {
                 "Created subordinate JWK not found"
             )
 
-//            // Step 6: Get the subordinate statement
-//            val subordinateStatement = getSubordinateStatement(testSubordinateId!!)
-//            assertNotNull(subordinateStatement, "Subordinate statement retrieval failed")
-//            // Basic check: Statement should not be empty. More specific checks can be added.
-//            assertTrue(
-//                    subordinateStatement.statement.isNotBlank(),
-//                    "Subordinate statement is blank"
-//            )
-//            println("Retrieved subordinate statement: ${subordinateStatement.statement}")
+            // Step 6: Get the subordinate statement
+            val subordinateStatement = getSubordinateStatement(testSubordinateId!!)
+            println("Retrieved subordinate statement: $subordinateStatement")
 
             // Step 7: Publish the subordinate statement (dry run)
             val publishResult = publishSubordinateStatement(testSubordinateId!!)
