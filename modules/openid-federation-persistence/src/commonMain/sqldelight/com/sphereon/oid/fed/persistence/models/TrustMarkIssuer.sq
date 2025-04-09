@@ -6,7 +6,7 @@ RETURNING *;
 delete:
 UPDATE TrustMarkIssuer
 SET deleted_at = CURRENT_TIMESTAMP
-WHERE trust_mark_type_id = :trust_mark_type_id AND issuer_identifier = :issuer_identifier AND deleted_at IS NULL
+WHERE trust_mark_type_id = :trust_mark_type_id AND id = :id AND deleted_at IS NULL
 RETURNING *;
 
 findByTrustMarkTypeId:

@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.java.models.CreateSubordinate
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.oid.fed.openapi.models.Subordinate
@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import com.sphereon.oid.fed.openapi.models.CreateSubordinate as CreateSubordinateKotlin
 
 @RestController
 @RequestMapping("/subordinates")
@@ -53,7 +54,12 @@ class SubordinateController(
         }
 
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(subordinateService.createSubordinate(getAccountFromRequest(request), subordinate))
+            .body(
+                subordinateService.createSubordinate(
+                    getAccountFromRequest(request),
+                    CreateSubordinateKotlin(identifier = subordinate.identifier)
+                )
+            )
     }
 
     @DeleteMapping("/{subordinateId}")

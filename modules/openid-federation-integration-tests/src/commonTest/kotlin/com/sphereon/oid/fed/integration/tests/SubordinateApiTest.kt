@@ -25,6 +25,21 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
+/**
+ * Integration tests for the Subordinate API endpoints.
+ *
+ * This test class verifies that subordinate entity management works correctly in an OpenID Federation context.
+ * Subordinates are entities that exist in a hierarchical trust relationship within a federation.
+ *
+ * The tests demonstrate a full management flow from creation to deletion:
+ * - Creating subordinate entities under an account
+ * - Managing keys for subordinates
+ * - Retrieving trust statements for subordinates
+ * - Publishing subordinate statements to federation
+ * - Proper cleanup and validation of API responses
+ *
+ * Each test uses a unique account to ensure proper isolation and cleanup.
+ */
 class SubordinateApiTest {
 
     private lateinit var client: HttpClient
@@ -40,16 +55,19 @@ class SubordinateApiTest {
         encodeDefaults = true // Important for potentially null fields in Jwk
     }
 
-    // Sample JWK for testing - Replace with actual valid JWK structure if needed
+    // Sample JWK for testing
     private val sampleJwk =
         Jwk(
             kty = "RSA",
             e = "AQAB",
-            n = "unique-modulus-for-${System.currentTimeMillis()}", // Ensure uniqueness
-            // for test runs
+            n = "unique-modulus-for-${System.currentTimeMillis()}", // Ensure uniqueness for test runs
             kid = "test-subordinate-jwk-${System.currentTimeMillis()}"
         )
 
+    /**
+     * Setup for each test.
+     * Creates a new HTTP client and generates a unique test username for each test.
+     */
     @BeforeTest
     fun setup() {
         baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
@@ -57,6 +75,13 @@ class SubordinateApiTest {
         testUsername = "subordinate-test-${System.currentTimeMillis()}"
     }
 
+    /**
+     * Cleanup after each test.
+     * Deletes resources in reverse order of creation to ensure proper cleanup:
+     * 1. Subordinate JWK (if created)
+     * 2. Subordinate entity (if created)
+     * 3. Test account
+     */
     @AfterTest
     fun tearDown() = runTest {
         // Clean up resources in reverse order of creation
@@ -81,6 +106,19 @@ class SubordinateApiTest {
         }
     }
 
+    /**
+     * The main test case that tests the complete subordinate management flow.
+     * This test demonstrates the full lifecycle of a subordinate entity:
+     * 1. Create an account
+     * 2. Create a subordinate under that account
+     * 3. Verify the subordinate exists
+     * 4. Create a JWK for the subordinate
+     * 5. Verify the JWK exists
+     * 6. Get the subordinate statement
+     * 7. Perform a dry run of publishing the statement
+     * 8. Delete the subordinate JWK
+     * 9. Delete the subordinate
+     */
     @Test
     fun `Full subordinate management flow test`() = runTest {
         try {
@@ -120,7 +158,7 @@ class SubordinateApiTest {
             // Step 7: Publish the subordinate statement (dry run)
             val publishResult = publishSubordinateStatement(testSubordinateId!!)
             assertNotNull(publishResult, "Subordinate statement publishing (dry run) failed")
-            // Basic check: Result should not be empty. More specific checks can be added.
+            // Basic check: Result should not be empty
             assertTrue(publishResult.isNotBlank(), "Publish dry run result is blank")
             println("Publish dry run result: $publishResult")
 
@@ -147,6 +185,12 @@ class SubordinateApiTest {
 
     // --- Helper Functions ---
 
+    /**
+     * Creates a test account with a unique identifier.
+     * Also creates a key for the account which is required for federation operations.
+     *
+     * @return The response body text
+     */
     private suspend fun createTestAccount(): String {
         val response =
             client.post("$baseUrl/accounts") {
@@ -176,6 +220,9 @@ class SubordinateApiTest {
         return response.bodyAsText()
     }
 
+    /**
+     * Deletes the test account that was created for this test.
+     */
     private suspend fun deleteTestAccount() {
         val response =
             client.delete("$baseUrl/accounts") {
@@ -189,6 +236,11 @@ class SubordinateApiTest {
         println("Deleted test account: $testUsername")
     }
 
+    /**
+     * Creates a subordinate entity under the test account.
+     *
+     * @return The created Subordinate object
+     */
     private suspend fun createSubordinate(): Subordinate {
         val subordinateIdentifier = "https://sub.test.com/${System.currentTimeMillis()}"
         println(
@@ -210,6 +262,11 @@ class SubordinateApiTest {
         return subordinate
     }
 
+    /**
+     * Retrieves all subordinates for the test account.
+     *
+     * @return The SubordinatesResponse containing all subordinates
+     */
     private suspend fun getSubordinates(): SubordinatesResponse {
         println("Getting subordinates for account $testUsername")
         val response =
@@ -224,6 +281,12 @@ class SubordinateApiTest {
         return response.body()
     }
 
+    /**
+     * Creates a JWK (JSON Web Key) for a specific subordinate.
+     *
+     * @param subordinateId The ID of the subordinate to create the JWK for
+     * @return The created SubordinateJwk object
+     */
     private suspend fun createSubordinateJwk(subordinateId: String): SubordinateJwk {
         println("Creating JWK for subordinate $subordinateId (Account: $testUsername)")
         val response =
@@ -242,6 +305,12 @@ class SubordinateApiTest {
         return subordinateJwk
     }
 
+    /**
+     * Retrieves all JWKs for a specific subordinate.
+     *
+     * @param subordinateId The ID of the subordinate to get JWKs for
+     * @return The SubordinateJwksResponse containing all JWKs
+     */
     private suspend fun getSubordinateJwks(subordinateId: String): SubordinateJwksResponse {
         println("Getting JWKs for subordinate $subordinateId (Account: $testUsername)")
         val response =
@@ -256,6 +325,13 @@ class SubordinateApiTest {
         return response.body()
     }
 
+    /**
+     * Deletes a specific JWK from a subordinate.
+     *
+     * @param subordinateId The ID of the subordinate containing the JWK
+     * @param jwkId The ID of the JWK to delete
+     * @return The deleted SubordinateJwk object
+     */
     private suspend fun deleteSubordinateJwk(subordinateId: String, jwkId: String): SubordinateJwk {
         println("Deleting JWK $jwkId for subordinate $subordinateId (Account: $testUsername)")
         val response =
@@ -271,6 +347,12 @@ class SubordinateApiTest {
         return response.body()
     }
 
+    /**
+     * Retrieves the federation statement for a subordinate.
+     *
+     * @param subordinateId The ID of the subordinate to get the statement for
+     * @return The SubordinateStatement object
+     */
     private suspend fun getSubordinateStatement(
         subordinateId: String
     ): com.sphereon.oid.fed.openapi.models.SubordinateStatement {
@@ -287,6 +369,13 @@ class SubordinateApiTest {
         return response.body()
     }
 
+    /**
+     * Attempts to publish the federation statement for a subordinate.
+     * Uses the dry run mode to simulate publication without actually publishing.
+     *
+     * @param subordinateId The ID of the subordinate to publish the statement for
+     * @return The response body text containing the publish result
+     */
     private suspend fun publishSubordinateStatement(subordinateId: String): String {
         println(
             "Publishing statement (dry run) for subordinate $subordinateId (Account: $testUsername)"
@@ -299,7 +388,6 @@ class SubordinateApiTest {
                     PublishStatementRequest( // Use actual request body
                         dryRun = true
                         // kid and kmsKeyRef are optional, let service decide default
-                        // for test
                     )
                 )
             }
@@ -312,6 +400,12 @@ class SubordinateApiTest {
         return response.bodyAsText()
     }
 
+    /**
+     * Deletes a subordinate entity.
+     *
+     * @param subordinateId The ID of the subordinate to delete
+     * @return The deleted Subordinate object
+     */
     private suspend fun deleteSubordinate(subordinateId: String): Subordinate {
         println("Deleting subordinate $subordinateId (Account: $testUsername)")
         val response =

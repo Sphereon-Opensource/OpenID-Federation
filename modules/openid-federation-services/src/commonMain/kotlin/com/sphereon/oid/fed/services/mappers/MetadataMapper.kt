@@ -11,7 +11,7 @@ fun MetadataEntity.toDTO(): Metadata {
         id = this.id,
         key = this.key,
         metadata = Json.parseToJsonElement(this.metadata).jsonObject,
-        createdAt = this.created_at?.toString(),
+        createdAt = this.created_at.toString(),
         accountId = this.account_id
     )
 }

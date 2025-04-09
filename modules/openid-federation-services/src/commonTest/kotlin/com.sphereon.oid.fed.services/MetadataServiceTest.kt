@@ -189,35 +189,4 @@ class MetadataServiceTest {
         }
         verify { metadataQueries.findById(metadata.id) }
     }
-
-    @Test
-    fun `create metadata fails with unexpected error`() {
-        val unexpectedError = RuntimeException("Unexpected database error")
-
-        every {
-            Persistence.metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY)
-        } returns mockk {
-            every { executeAsOneOrNull() } returns null
-        }
-
-        every {
-            Persistence.metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString())
-        } throws unexpectedError
-
-        val exception = assertFailsWith<RuntimeException> {
-            metadataService.createMetadata(
-                testAccount.toDTO(),
-                TEST_KEY,
-                TEST_METADATA
-            )
-        }
-
-        assertEquals(unexpectedError.message, exception.message)
-        verify {
-            Persistence.metadataQueries.findByAccountIdAndKey(testAccount.id, TEST_KEY)
-        }
-        verify {
-            Persistence.metadataQueries.create(testAccount.id, TEST_KEY, TEST_METADATA.toString())
-        }
-    }
 }

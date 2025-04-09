@@ -1,12 +1,11 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.AddTrustMarkIssuerResponse
-import com.sphereon.oid.fed.openapi.models.CreateTrustMarkTypeIssuer
-import com.sphereon.oid.fed.openapi.models.TrustMarkTypeIssuersResponse
-import com.sphereon.oid.fed.persistence.models.TrustMarkIssuer
+import com.sphereon.oid.fed.openapi.java.models.CreateTrustMarkTypeIssuerRequest
+import com.sphereon.oid.fed.openapi.models.TrustMarkIssuer
+import com.sphereon.oid.fed.openapi.models.TrustMarkIssuersResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.TrustMarkService
-import com.sphereon.oid.fed.services.mappers.toAddTrustMarkIssuerResponse
+import com.sphereon.oid.fed.services.mappers.toDTO
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -30,21 +29,20 @@ class TrustMarkIssuerController(
     fun getIssuersForTrustMarkType(
         request: HttpServletRequest,
         @PathVariable id: String
-    ): ResponseEntity<TrustMarkTypeIssuersResponse> {
-        return TrustMarkTypeIssuersResponse(
-            trustMarkService.getIssuersForTrustMarkType(getAccountFromRequest(request), id).toTypedArray()
-        ).let {
-            ResponseEntity.ok(it)
-        }
+    ): ResponseEntity<TrustMarkIssuersResponse> {
+        val issuers = trustMarkService.getIssuersForTrustMarkType(getAccountFromRequest(request), id).map {
+            it.toDTO()
+        }.toTypedArray()
+        return ResponseEntity.ok(TrustMarkIssuersResponse(issuers))
     }
 
     @PostMapping
     fun addIssuerToTrustMarkType(
         request: HttpServletRequest,
         @PathVariable id: String,
-        @Valid @RequestBody body: CreateTrustMarkTypeIssuer,
+        @Valid @RequestBody body: CreateTrustMarkTypeIssuerRequest,
         bindingResult: BindingResult
-    ): ResponseEntity<AddTrustMarkIssuerResponse> {
+    ): ResponseEntity<TrustMarkIssuer> {
         if (bindingResult.hasErrors()) {
             throw BindException(bindingResult)
         }
@@ -54,22 +52,22 @@ class TrustMarkIssuerController(
                 getAccountFromRequest(request),
                 id,
                 body.identifier
-            ).toAddTrustMarkIssuerResponse()
+            ).toDTO()
         )
     }
 
-    @DeleteMapping("/{issuerIdentifier}")
+    @DeleteMapping("/{issuerId}")
     fun removeIssuerFromTrustMarkType(
         request: HttpServletRequest,
         @PathVariable id: String,
-        @PathVariable issuerIdentifier: String
+        @PathVariable issuerId: String
     ): ResponseEntity<TrustMarkIssuer> {
         return trustMarkService.removeIssuerFromTrustMarkType(
             getAccountFromRequest(request),
             id,
-            issuerIdentifier
+            issuerId
         ).let {
-            ResponseEntity.ok(it)
+            ResponseEntity.ok(it.toDTO())
         }
     }
 }

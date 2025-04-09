@@ -1,8 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.java.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.oid.fed.openapi.models.SubordinateMetadataResponse
+import com.sphereon.oid.fed.server.admin.mappers.toJsonElement
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.mappers.toSubordinateMetadataResponse
@@ -54,7 +55,7 @@ class SubordinateMetadataController(
                 getAccountFromRequest(request),
                 subordinateId,
                 body.key,
-                body.metadata
+                body.metadata.toJsonElement()
             )
         )
     }

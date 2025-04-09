@@ -22,12 +22,31 @@ import kotlin.test.fail
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * Integration tests for the TrustMarkType API endpoints.
+ *
+ * This test class verifies the functionality of creating, retrieving, and deleting trust mark types.
+ * Trust mark types define the structure and semantics of trust marks within a federation.
+ *
+ * The tests ensure that:
+ * - Trust mark types can be created for an account
+ * - Trust mark types can be retrieved for an account
+ * - Trust mark types can be retrieved by ID
+ * - Trust mark types can be deleted when no longer needed
+ * - The API properly handles error cases such as non-existent accounts or invalid IDs
+ *
+ * Each test uses a unique account to ensure proper isolation and cleanup.
+ */
 class TrustMarkTypeApiTest {
 
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
     private var testUsername: String? = null
 
+    /**
+     * Setup for each test.
+     * Creates a new HTTP client, configures JSON serialization, and creates a test account.
+     */
     @BeforeTest
     fun setup() {
         baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
@@ -48,6 +67,10 @@ class TrustMarkTypeApiTest {
         runTest { createTestAccount() }
     }
 
+    /**
+     * Cleanup after each test.
+     * Deletes the test account created in setup to ensure a clean test environment.
+     */
     @AfterTest
     fun tearDown() {
         // Clean up by deleting the test account if it was created
@@ -65,6 +88,9 @@ class TrustMarkTypeApiTest {
         client.close()
     }
 
+    /**
+     * Helper method to create a test account for trust mark type operations.
+     */
     private suspend fun createTestAccount(): String {
         try {
             val response =
@@ -89,6 +115,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Helper method to create a sample trust mark type.
+     */
     private suspend fun createSampleTrustMarkType(
         identifier: String = "https://sample-tmt.org/${System.currentTimeMillis()}"
     ): TrustMarkType {
@@ -106,6 +135,9 @@ class TrustMarkTypeApiTest {
         return response.body<TrustMarkType>()
     }
 
+    /**
+     * Tests that the GET /trust-mark-types endpoint returns all trust mark types for an account.
+     */
     @Test
     fun `GET trust-mark-types should return all types for account`() = runTest {
         try {
@@ -130,6 +162,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the POST /trust-mark-types endpoint creates a new trust mark type.
+     */
     @Test
     fun `POST trust-mark-types with valid data should create type`() = runTest {
         try {
@@ -157,6 +192,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the GET /trust-mark-types/{id} endpoint returns a specific trust mark type by ID.
+     */
     @Test
     fun `GET trust-mark-types by ID should return specific type`() = runTest {
         try {
@@ -180,6 +218,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the DELETE /trust-mark-types/{id} endpoint deletes a trust mark type.
+     */
     @Test
     fun `DELETE trust-mark-types should remove type entry`() = runTest {
         try {
@@ -217,6 +258,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the POST /trust-mark-types endpoint fails with a non-existent account.
+     */
     @Test
     fun `POST trust-mark-types with non-existent account should fail`() = runTest {
         try {
@@ -241,6 +285,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the GET /trust-mark-types/{id} endpoint fails with a non-existent ID.
+     */
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun `GET trust-mark-types with non-existent ID should fail`() = runTest {
@@ -260,6 +307,9 @@ class TrustMarkTypeApiTest {
         }
     }
 
+    /**
+     * Tests that the DELETE /trust-mark-types/{id} endpoint fails with a non-existent ID.
+     */
     @OptIn(ExperimentalUuidApi::class)
     @Test
     fun `DELETE trust-mark-types with non-existent ID should fail`() = runTest {

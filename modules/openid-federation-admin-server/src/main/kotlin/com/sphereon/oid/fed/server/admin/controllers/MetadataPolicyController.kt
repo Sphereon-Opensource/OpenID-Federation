@@ -1,15 +1,13 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateMetadataPolicy
+import com.sphereon.oid.fed.openapi.java.models.CreateMetadataPolicy
 import com.sphereon.oid.fed.openapi.models.MetadataPolicy
 import com.sphereon.oid.fed.openapi.models.MetadataPolicyResponse
+import com.sphereon.oid.fed.server.admin.mappers.toJsonElement
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.MetadataPolicyService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
@@ -49,7 +47,7 @@ class MetadataPolicyController(
         return metadataPolicyService.createPolicy(
             getAccountFromRequest(request),
             body.key,
-            Json.encodeToJsonElement(body.policy).jsonObject
+            body.policy.toJsonElement()
         ).let { ResponseEntity.status(HttpStatus.CREATED).body(it) }
     }
 

@@ -2,7 +2,11 @@ package com.sphereon.oid.fed.integration.tests
 
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.openapi.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.models.CreateSubordinate
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadata
+import com.sphereon.oid.fed.openapi.models.SubordinateMetadataResponse
 import io.ktor.client.*
+import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -18,31 +22,34 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
 import kotlin.test.fail
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
- * Integration tests for the Metadata API endpoints.
+ * Integration tests for the Subordinate Metadata API endpoints.
  *
- * This test class verifies that the metadata management functionality works correctly,
- * including creating, retrieving, and deleting metadata for an OpenID Federation entity.
+ * This test class verifies that the subordinate metadata management functionality works correctly,
+ * including creating, retrieving, and deleting metadata for a subordinate entity.
  * The tests ensure that:
- * - Metadata can be created for an account
- * - Metadata can be retrieved for an account
- * - Metadata can be deleted when needed
- * - The API properly handles error cases such as invalid JSON or non-existent accounts
+ * - Subordinate metadata can be created for an account
+ * - Subordinate metadata can be retrieved for an account
+ * - Subordinate metadata can be deleted when needed
+ * - The API properly handles error cases such as invalid JSON or non-existent accounts/subordinates
  *
- * Each test uses a unique account to ensure proper isolation and cleanup.
+ * Each test uses a unique account and subordinate to ensure proper isolation and cleanup.
  */
-class MetadataApiTest {
+class SubordinateMetadataApiTest {
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
     private var testUsername: String? = null
+    private var testSubordinateId: String? = null
 
     /**
      * Setup for each test.
      * Creates a new HTTP client with proper configuration and generates a unique test username
-     * for each test to ensure test isolation. Also creates a test account.
+     * and subordinate for each test to ensure test isolation. Also creates a test account and subordinate.
      */
     @BeforeTest
     fun setup() {
@@ -56,10 +63,11 @@ class MetadataApiTest {
                 })
             }
         }
-        testUsername = "metadata-test-${System.currentTimeMillis()}"
-        // Create a test account to be used in metadata tests
+        testUsername = "sub-metadata-test-${System.currentTimeMillis()}"
+        // Create a test account to be used in subordinate metadata tests
         runTest {
             createTestAccount()
+            createTestSubordinate()
         }
     }
 
@@ -87,7 +95,7 @@ class MetadataApiTest {
     }
 
     /**
-     * Helper method to create a test account for metadata operations.
+     * Helper method to create a test account for subordinate metadata operations.
      * Creates an account with the generated test username and a default identifier.
      */
     private suspend fun createTestAccount() {
@@ -113,17 +121,50 @@ class MetadataApiTest {
     }
 
     /**
-     * Tests that the GET /metadata endpoint returns all metadata for an account.
+     * Helper method to create a test subordinate for subordinate metadata operations.
+     * Creates a subordinate with a unique identifier.
+     */
+    private suspend fun createTestSubordinate() {
+        try {
+            val response = client.post("$baseUrl/subordinates") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+                setBody(
+                    CreateSubordinate(
+                        identifier = "https://test-subordinate.com/$testUsername"
+                    )
+                )
+            }
+
+            assertEquals(
+                HttpStatusCode.Created,
+                response.status,
+                "Subordinate creation failed with status: ${response.status}"
+            )
+
+            val responseBody = response.bodyAsText()
+            val responseJson = Json.parseToJsonElement(responseBody).jsonObject
+            testSubordinateId = responseJson["id"]?.toString()?.trim('"')
+                ?: fail("Failed to get subordinate ID from response")
+        } catch (e: Exception) {
+            fail("Failed to create test subordinate: ${e.message}")
+        }
+    }
+
+    /**
+     * Tests that the GET /subordinates/{subordinateId}/metadata endpoint returns all metadata for a subordinate.
      * First creates sample metadata, then verifies it can be retrieved correctly.
      */
     @Test
-    fun `GET metadata should return all metadata for account`() = runTest {
+    fun `GET subordinate metadata should return all metadata for subordinate`() = runTest {
         try {
-            // First, create some metadata for this account
-            createSampleMetadata()
+            // First, create some metadata for this subordinate
+            createSampleSubordinateMetadata()
 
             // Now get all metadata
-            val response = client.get("$baseUrl/metadata") {
+            val response = client.get("$baseUrl/subordinates/$testSubordinateId/metadata") {
                 headers {
                     append("X-Account-Username", testUsername!!)
                 }
@@ -133,18 +174,19 @@ class MetadataApiTest {
             println("Response body: ${response.bodyAsText()}")
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertTrue(response.bodyAsText().contains("metadata"), "Response should contain metadata")
+            val metadataResponse = response.body<SubordinateMetadataResponse>()
+            assertNotNull(metadataResponse.subordinateMetadata, "Response should contain metadata")
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")
         }
     }
 
     /**
-     * Tests that the POST /metadata endpoint creates new metadata for an account.
+     * Tests that the POST /subordinates/{subordinateId}/metadata endpoint creates new metadata for a subordinate.
      * Verifies that metadata for an OpenID Provider can be created successfully.
      */
     @Test
-    fun `POST metadata with valid data should create metadata`() = runTest {
+    fun `POST subordinate metadata with valid data should create metadata`() = runTest {
         try {
             val metadataKey = "openid_provider"
             val metadataJson = buildJsonObject {
@@ -157,7 +199,7 @@ class MetadataApiTest {
                 }
             }
 
-            val response = client.post("$baseUrl/metadata") {
+            val response = client.post("$baseUrl/subordinates/$testSubordinateId/metadata") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -174,18 +216,19 @@ class MetadataApiTest {
             println("Response body: ${response.bodyAsText()}")
 
             assertEquals(HttpStatusCode.Created, response.status)
-            assertTrue(response.bodyAsText().contains(metadataKey), "Response should contain the metadata key")
+            val createdMetadata = response.body<SubordinateMetadata>()
+            assertEquals(metadataKey, createdMetadata.key)
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")
         }
     }
 
     /**
-     * Tests that the DELETE /metadata endpoint removes metadata for an account.
+     * Tests that the DELETE /subordinates/{subordinateId}/metadata/{id} endpoint removes metadata for a subordinate.
      * Creates test metadata, then deletes it and verifies the deletion was successful.
      */
     @Test
-    fun `DELETE metadata should remove metadata entry`() = runTest {
+    fun `DELETE subordinate metadata should remove metadata entry`() = runTest {
         try {
             // First, create metadata to delete
             val metadataKey = "openid_provider_to_delete"
@@ -193,7 +236,7 @@ class MetadataApiTest {
                 put("issuer", JsonPrimitive("https://delete-test.com/$testUsername"))
             }
 
-            var response = client.post("$baseUrl/metadata") {
+            var response = client.post("$baseUrl/subordinates/$testSubordinateId/metadata") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -206,6 +249,9 @@ class MetadataApiTest {
                 )
             }
 
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
             assertEquals(HttpStatusCode.Created, response.status, "Failed to create test metadata")
 
             val responseBody = response.bodyAsText()
@@ -216,7 +262,7 @@ class MetadataApiTest {
             println("Extracted metadata ID: $metadataId")
 
             // Now delete that metadata
-            response = client.delete("$baseUrl/metadata/$metadataId") {
+            response = client.delete("$baseUrl/subordinates/$testSubordinateId/metadata/$metadataId") {
                 headers {
                     append("X-Account-Username", testUsername!!)
                 }
@@ -226,20 +272,22 @@ class MetadataApiTest {
             println("Response body: ${response.bodyAsText()}")
 
             assertEquals(HttpStatusCode.OK, response.status)
-            assertTrue(response.bodyAsText().contains(metadataKey), "Response should contain the deleted metadata key")
+            val deletedMetadata = response.body<SubordinateMetadata>()
+            assertEquals(metadataId, deletedMetadata.id)
+            assertEquals(metadataKey, deletedMetadata.key)
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")
         }
     }
 
     /**
-     * Tests that the POST /metadata endpoint properly handles invalid JSON.
+     * Tests that the POST /subordinates/{subordinateId}/metadata endpoint properly handles invalid JSON.
      * Verifies that the endpoint responds with HTTP 400 Bad Request when invalid JSON is provided.
      */
     @Test
-    fun `POST metadata with invalid JSON should fail`() = runTest {
+    fun `POST subordinate metadata with invalid JSON should fail`() = runTest {
         try {
-            val response = client.post("$baseUrl/metadata") {
+            val response = client.post("$baseUrl/subordinates/$testSubordinateId/metadata") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -257,18 +305,18 @@ class MetadataApiTest {
     }
 
     /**
-     * Tests that the POST /metadata endpoint properly handles non-existent accounts.
+     * Tests that the POST /subordinates/{subordinateId}/metadata endpoint properly handles non-existent accounts.
      * Verifies that the endpoint responds with HTTP 404 Not Found when a non-existent username is provided.
      */
     @Test
-    fun `POST metadata with non-existent account should fail`() = runTest {
+    fun `POST subordinate metadata with non-existent account should fail`() = runTest {
         try {
             val nonExistentUsername = "non-existent-user-${System.currentTimeMillis()}"
             val metadataJson = buildJsonObject {
                 put("issuer", JsonPrimitive("https://test.com"))
             }
 
-            val response = client.post("$baseUrl/metadata") {
+            val response = client.post("$baseUrl/subordinates/$testSubordinateId/metadata") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", nonExistentUsername)
@@ -291,17 +339,52 @@ class MetadataApiTest {
     }
 
     /**
+     * Tests that the POST /subordinates/{subordinateId}/metadata endpoint properly handles non-existent subordinates.
+     * Verifies that the endpoint responds with HTTP 404 Not Found when a non-existent subordinateId is provided.
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    @Test
+    fun `POST subordinate metadata with non-existent subordinate should fail`() = runTest {
+        try {
+            val nonExistentSubordinateId = Uuid.random().toString()
+            val metadataJson = buildJsonObject {
+                put("issuer", JsonPrimitive("https://test.com"))
+            }
+
+            val response = client.post("$baseUrl/subordinates/$nonExistentSubordinateId/metadata") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("X-Account-Username", testUsername!!)
+                }
+                setBody(
+                    CreateMetadata(
+                        key = "openid_provider",
+                        metadata = metadataJson
+                    )
+                )
+            }
+
+            println("Status code: ${response.status}")
+            println("Response body: ${response.bodyAsText()}")
+
+            assertEquals(HttpStatusCode.NotFound, response.status)
+        } catch (e: Exception) {
+            fail("Request failed: ${e.message}")
+        }
+    }
+
+    /**
      * Helper method to create sample metadata for testing.
      * Creates a basic OpenID Provider metadata entry to be used in tests.
      */
-    private suspend fun createSampleMetadata() {
+    private suspend fun createSampleSubordinateMetadata() {
         val metadataKey = "openid_provider"
         val metadataJson = buildJsonObject {
             put("issuer", JsonPrimitive("https://sample-issuer.com/$testUsername"))
             put("authorization_endpoint", JsonPrimitive("https://sample-issuer.com/$testUsername/authorize"))
         }
 
-        val response = client.post("$baseUrl/metadata") {
+        val response = client.post("$baseUrl/subordinates/$testSubordinateId/metadata") {
             contentType(ContentType.Application.Json)
             headers {
                 append("X-Account-Username", testUsername!!)

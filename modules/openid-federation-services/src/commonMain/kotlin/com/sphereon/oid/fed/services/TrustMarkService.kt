@@ -151,12 +151,11 @@ class TrustMarkService(
      * @return A list containing the identifiers of issuers associated with the specified trust mark type.
      * @throws NotFoundException If the specified trust mark type is not found for the provided account.
      */
-    fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): List<String> {
+    fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): Array<TrustMarkIssuer> {
         logger.debug("Getting issuers for trust mark type ID: $trustMarkTypeId, account ID: ${account.id}")
         assertTrustMarkTypePresent(account, trustMarkTypeId)
         val issuers = trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId)
-            .executeAsList()
-            .map { it.issuer_identifier }
+            .executeAsList().toTypedArray()
         logger.debug("Found ${issuers.size} issuers")
         return issuers
     }
@@ -203,23 +202,23 @@ class TrustMarkService(
     fun removeIssuerFromTrustMarkType(
         account: Account,
         trustMarkTypeId: String,
-        issuerIdentifier: String
+        issuerId: String
     ): TrustMarkIssuer {
-        logger.info("Removing issuer $issuerIdentifier from trust mark type ID: $trustMarkTypeId")
+        logger.info("Removing issuer $issuerId from trust mark type ID: $trustMarkTypeId")
         assertTrustMarkTypePresent(account, trustMarkTypeId)
         trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId)
             .executeAsList()
-            .find { it.issuer_identifier == issuerIdentifier }
+            .find { it.id == issuerId }
             ?: run {
-                logger.error("Issuer $issuerIdentifier not found for trust mark type ID: $trustMarkTypeId")
-                throw NotFoundException("Issuer $issuerIdentifier is not associated with the trust mark definition.")
+                logger.error("Issuer $issuerId not found for trust mark type ID: $trustMarkTypeId")
+                throw NotFoundException("Issuer $issuerId is not associated with the trust mark type.")
             }
 
         val removed = trustMarkIssuerQueries.delete(
             trust_mark_type_id = trustMarkTypeId,
-            issuer_identifier = issuerIdentifier
+            id = issuerId
         ).executeAsOne()
-        logger.info("Successfully removed issuer $issuerIdentifier")
+        logger.info("Successfully removed issuer $issuerId")
         return removed
     }
 
