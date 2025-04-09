@@ -21,11 +21,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
+/**
+ * Integration tests for the Metadata Policy API endpoints.
+ *
+ * This test class verifies that the metadata policy management functionality works correctly,
+ * including creating, retrieving, and deleting metadata policies for OpenID Federation entities.
+ * Metadata policies specify how metadata should be processed and enforced in a federation context.
+ *
+ * The tests ensure that:
+ * - Metadata policies can be created for an account
+ * - Metadata policies can be retrieved for an account
+ * - Metadata policies can be deleted when no longer needed
+ * - The API properly handles error cases such as invalid JSON or non-existent accounts
+ *
+ * Each test uses a unique account to ensure proper isolation and cleanup.
+ */
 class MetadataPolicyApiTest {
     private lateinit var client: HttpClient
     private lateinit var baseUrl: String
     private var testUsername: String? = null
 
+    /**
+     * Setup for each test.
+     * Creates a new HTTP client with proper configuration and generates a unique test username
+     * for each test to ensure test isolation. Also creates a test account.
+     */
     @BeforeTest
     fun setup() {
         baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
@@ -45,6 +65,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Cleanup after each test.
+     * Deletes the test account created in setup to ensure a clean test environment.
+     */
     @AfterTest
     fun tearDown() {
         runTest {
@@ -63,6 +87,10 @@ class MetadataPolicyApiTest {
         client.close()
     }
 
+    /**
+     * Helper method to create a test account for metadata policy operations.
+     * Creates an account with the generated test username and a default identifier.
+     */
     private suspend fun createTestAccount() {
         try {
             val response = client.post("$baseUrl/accounts") {
@@ -85,6 +113,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Tests that the POST /metadata-policy endpoint creates a new metadata policy.
+     * Verifies that a policy with both 'scope' and 'contacts' values can be created successfully.
+     */
     @Test
     fun `POST metadata-policies with valid data should create policy`() = runTest {
         try {
@@ -120,6 +152,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Tests that the GET /metadata-policy endpoint returns all policies for an account.
+     * First creates a sample policy, then verifies all policies can be retrieved.
+     */
     @Test
     fun `GET metadata-policies should return all policies for account`() = runTest {
         try {
@@ -144,6 +180,10 @@ class MetadataPolicyApiTest {
     }
 
 
+    /**
+     * Tests that the DELETE /metadata-policy/{id} endpoint removes a policy.
+     * First creates a policy, then deletes it and verifies it's no longer accessible.
+     */
     @Test
     fun `DELETE metadata-policies should remove policy entry`() = runTest {
         try {
@@ -174,6 +214,7 @@ class MetadataPolicyApiTest {
             val policyId = createdPolicy.id
             println("Extracted policy ID: $policyId")
 
+            // Now delete the policy by its ID
             response = client.delete("$baseUrl/metadata-policy/$policyId") {
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -185,6 +226,7 @@ class MetadataPolicyApiTest {
             assertEquals(policyId, deletedPolicyResponse.id)
             assertEquals(policyKey, deletedPolicyResponse.key)
 
+            // Verify the policy is no longer in the list
             val getResponse = client.get("$baseUrl/metadata-policy") {
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -199,6 +241,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Tests that the POST /metadata-policies endpoint properly handles invalid JSON.
+     * Verifies that the endpoint responds with HTTP 400 Bad Request when invalid JSON is provided.
+     */
     @Test
     fun `POST metadata-policies with invalid JSON should fail`() = runTest {
         try {
@@ -216,6 +262,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Tests that the POST /metadata-policies endpoint properly handles non-existent accounts.
+     * Verifies that the endpoint responds with HTTP 404 Not Found when a non-existent username is provided.
+     */
     @Test
     fun `POST metadata-policies with non-existent account should fail`() = runTest {
         try {
@@ -243,6 +293,10 @@ class MetadataPolicyApiTest {
         }
     }
 
+    /**
+     * Helper method to create a sample metadata policy for testing.
+     * Creates a basic policy for an OpenID Relying Party to be used in tests.
+     */
     private suspend fun createSamplePolicy() {
         val policyKey = "openid_relying_party"
         val policyJson = buildJsonObject {

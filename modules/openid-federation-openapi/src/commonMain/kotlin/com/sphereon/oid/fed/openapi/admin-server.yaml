@@ -1146,7 +1146,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrustMarkTypeIssuersResponse'
+                $ref: '#/components/schemas/TrustMarkIssuersResponse'
         '404':
           description: Account or Trust Mark Type not found.
     post:
@@ -1171,31 +1171,23 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                identifier:
-                  type: string
-                  description: Identifier of the issuer.
-            examples:
-              request:
-                description: "Example request"
-                value:
-                  identifier: "https://issuer.example.com"
+              $ref: '#/components/schemas/CreateTrustMarkTypeIssuerRequest'
       responses:
         '201':
           description: Issuer successfully added to the Trust Mark Type.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddTrustMarkIssuerResponse'
+                $ref: '#/components/schemas/TrustMarkIssuer'
               examples:
                 response:
                   description: Issuer added to trustmark
                   value:
                     id: "123e4567-e89b-12d3-a456-426614174000"
-                    issuer: "https://issuer.example.com"
-                    trustMarkTypeId: 1
-                    createdAt: "2024-12-01T12:00:00Z"
+                    issuer_identifier: "https://issuer.example.com"
+                    trust_mark_type_id: "bf7d6c8b-c25b-4f14-917d-1f8109c9e4e4"
+                    created_at: "2024-12-01T12:00:00Z"
+                    deleted_at: "2024-12-01T12:00:00Z"
 
         '404':
           description: Account or Trust Mark Type not found.
@@ -1206,7 +1198,6 @@ paths:
       tags:
         - trust-marks
       summary: Remove Issuer from Trust Mark Type
-
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
@@ -1259,21 +1250,20 @@ paths:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         $ref: '#/components/requestBodies/CreateTrustMarkRequest'
+
       responses:
         '200':
           description: Trust Mark dryRun successful
           content:
             application/json:
               schema:
-                type: string
-                description: A message indicating the result of the operation.
+                $ref: '#/components/schemas/CreateTrustMarkResult'
         '201':
           description: Trust Mark created or updated successfully
           content:
             application/json:
               schema:
-                type: string
-                description: A message indicating the result of the operation.
+                $ref: '#/components/schemas/CreateTrustMarkResult'
         '400':
           description: Invalid request
           content:
@@ -2127,7 +2117,7 @@ components:
       required:
         - identifier
 
-    CreateTrustMarkTypeIssuer:
+    CreateTrustMarkTypeIssuerRequest:
       type: object
       properties:
         identifier:
@@ -2805,7 +2795,8 @@ components:
       required:
         - id
         - trust_mark
-    TrustMarkTypeIssuersResponse:
+
+    TrustMarkIssuersResponse:
       type: object
       required:
         - issuers
@@ -2813,9 +2804,9 @@ components:
         issuers:
           type: array
           items:
-            type: string
-            example: https://issuer.example.com
-    AddTrustMarkIssuerResponse:
+            $ref: '#/components/schemas/TrustMarkIssuer'
+
+    TrustMarkIssuer:
       type: object
       properties:
         id:
@@ -2837,6 +2828,10 @@ components:
           format: date-time
           description: The timestamp when the Trust Mark Type was created.
           example: "2024-12-01T12:00:00Z"
+        deletedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was deleted.
 
     TrustMarkIssuers:
       type: object
@@ -2854,7 +2849,6 @@ components:
           - 'https://example-issuer2.com'
         'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
           - 'https://swamid.se'
-
 
     TrustMarkOwners:
       type: object

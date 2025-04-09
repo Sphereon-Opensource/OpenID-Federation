@@ -54,7 +54,7 @@ Before running the deployment, ensure the following environment variables are pr
 1. Create required directories for persistent storage:
 
 ```bash
-sudo mkdir -p /mnt/openid-federation/volumes/{postgres,local-kms}
+sudo mkdir -p /mnt/openid-federation/volumes/{postgres}
 ```
 
 2. Copy deployment files to target system:

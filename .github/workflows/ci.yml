@@ -42,9 +42,6 @@ jobs:
           POSTGRES_USER: ${{ secrets.DATASOURCE_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
           POSTGRES_DB: "openid-federation-db"
-          LOCAL_KMS_DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
-          LOCAL_KMS_DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
-          LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -144,12 +141,12 @@ jobs:
         id: meta-federation
         uses: docker/metadata-action@v5
         with:
-          images: sphereon/openid-federation-server
+          images: sphereon/federation-server
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
 
-      - name: Build and push openid-federation-server
+      - name: Build and push federation-server
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -160,15 +157,15 @@ jobs:
           cache-from: |
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server:latest
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest
-      - name: Extract metadata (openid-federation-admin-server)
+      - name: Extract metadata (federation-admin-server)
         id: meta-admin
         uses: docker/metadata-action@v5
         with:
-          images: sphereon/openid-federation-admin-server
+          images: sphereon/federation-admin-server
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
-      - name: Build and push openid-federation-admin-server
+      - name: Build and push federation-admin-server
         uses: docker/build-push-action@v5
         with:
           context: .

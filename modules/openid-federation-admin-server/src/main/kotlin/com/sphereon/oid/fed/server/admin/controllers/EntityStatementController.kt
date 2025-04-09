@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
+import com.sphereon.oid.fed.openapi.java.models.PublishStatementRequest
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.EntityConfigurationStatementService
 import jakarta.servlet.http.HttpServletRequest

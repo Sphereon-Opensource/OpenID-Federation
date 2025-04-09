@@ -2,7 +2,6 @@ services:
   db:
     image: postgres:latest
     container_name: openid-federation-datastore
-    user: postgres
     security_opt:
       - no-new-privileges:true
     env_file:
@@ -33,7 +32,7 @@ services:
       retries: 20
 
   openid-federation-server:
-    image: sphereon/openid-federation-server:latest
+    image: sphereon/federation-server:latest
     build:
       context: .
       dockerfile: ./.docker/openid-federation-server/Dockerfile
@@ -52,8 +51,6 @@ services:
         required: false
       - path: .env.local
         required: false
-      - path: .env.docker
-        required: false
     environment:
       - DATASOURCE_URL
         DATASOURCE_USER
@@ -63,13 +60,6 @@ services:
         ROOT_IDENTIFIER
         DEV_MODE
         LOGGER_SEVERITY
-    #    environment:
-    #      DATASOURCE_URL: ${DATASOURCE_URL}
-    #      DATASOURCE_USER: ${DATASOURCE_USER}
-    #      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
-    #      APP_KEY: ${APP_KEY}
-    #      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
-    #      LOGGER_SEVERITY: ${LOGGER_SEVERITY}
     depends_on:
       db:
         condition: service_healthy
@@ -81,14 +71,11 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-server:/tmp/logs
-    user: root
-    entrypoint: >
-      /bin/sh -c "java -jar /app/openid-federation-server.jar"
     networks:
       - openid_network
 
   openid-federation-admin-server:
-    image: sphereon/openid-federation-admin-server:latest
+    image: sphereon/federation-admin-server:latest
     build:
       context: .
       dockerfile: ./.docker/openid-federation-admin-server/Dockerfile
@@ -106,8 +93,6 @@ services:
       - path: .env
         required: false
       - path: .env.local
-        required: false
-      - path: .env.docker
         required: false
     environment:
       - DATASOURCE_URL
@@ -132,9 +117,6 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-admin-server:/tmp/logs
-    user: root
-    entrypoint: >
-      /bin/sh -c "java -jar /app/openid-federation-admin-server.jar"
 
   keycloak:
     image: keycloak/keycloak:26.0

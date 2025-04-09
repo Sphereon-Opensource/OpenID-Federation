@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
+import com.sphereon.oid.fed.openapi.java.models.CreateTrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkType
 import com.sphereon.oid.fed.openapi.models.TrustMarkTypesResponse
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType as CreateTrustMarkTypeKotlin
 
 @RestController
 @RequestMapping("/trust-mark-types")
@@ -45,9 +46,13 @@ class TrustMarkTypeController(
             throw BindException(bindingResult)
         }
         val account = getAccountFromRequest(request)
-        return trustMarkService.createTrustMarkType(account, createDto).let {
-            ResponseEntity.status(HttpStatus.CREATED).body(it)
-        }
+        return trustMarkService.createTrustMarkType(
+            account,
+            CreateTrustMarkTypeKotlin(identifier = createDto.identifier)
+        )
+            .let {
+                ResponseEntity.status(HttpStatus.CREATED).body(it)
+            }
     }
 
     @GetMapping("/{id}")

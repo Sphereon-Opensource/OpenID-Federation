@@ -13,6 +13,7 @@ import com.sphereon.oid.fed.services.mappers.toDTOs
 import com.sphereon.oid.fed.services.mappers.toJsonString
 import com.sphereon.oid.fed.services.mappers.toJwk
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import com.sphereon.oid.fed.persistence.models.Subordinate as SubordinateEntity
@@ -242,7 +243,13 @@ class SubordinateService(
      * @throws IllegalArgumentException If no keys are found for the account.
      * @throws Exception If an error occurs during the subordinate statement publishing process.
      */
-    suspend fun publishSubordinateStatement(account: Account, id: String, dryRun: Boolean? = false, kmsKeyRef: String? = null, kid: String? = null): String {
+    suspend fun publishSubordinateStatement(
+        account: Account,
+        id: String,
+        dryRun: Boolean? = false,
+        kmsKeyRef: String? = null,
+        kid: String? = null
+    ): String {
         logger.info("Publishing subordinate statement for ID: $id, account: ${account.username} (dryRun: $dryRun)")
         try {
             logger.debug("Using account with ID: ${account.id}")
@@ -250,7 +257,8 @@ class SubordinateService(
             val subordinateStatement = getSubordinateStatement(account, id)
             logger.debug("Generated subordinate statement with subject: ${subordinateStatement.sub}")
 
-            val keys = jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
+            val keys =
+                jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
             val key = keys[0]
             logger.debug("Using key with key ref: ${key.kmsKeyRef} and ID: ${key.kid}")
 
@@ -460,7 +468,7 @@ class SubordinateService(
         account: Account,
         subordinateId: String,
         key: String,
-        metadata: JsonObject
+        metadata: JsonElement
     ): SubordinateMetadata {
         logger.info("Creating metadata for subordinate ID: $subordinateId, account: ${account.username}, key: $key")
         try {

@@ -1,6 +1,5 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-
 import com.sphereon.oid.fed.openapi.java.models.CreateKey
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.AccountJwksResponse

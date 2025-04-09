@@ -8,6 +8,7 @@ import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.MetadataPolicy
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.mappers.toDTO
+import kotlinx.serialization.json.JsonElement
 
 /**
  * The MetadataPolicyService class provides operations for managing metadata policy configurations
@@ -40,7 +41,7 @@ class MetadataPolicyService {
     fun createPolicy(
         account: Account,
         key: String,
-        policy: Map<String, Any>
+        policy: JsonElement
     ): MetadataPolicy {
         logger.info(
             "Creating entity configuration metadata policy for account: ${account.username}, key: $key"

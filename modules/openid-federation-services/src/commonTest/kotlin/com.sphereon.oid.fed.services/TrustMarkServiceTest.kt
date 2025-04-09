@@ -280,8 +280,8 @@ class TrustMarkServiceTest {
 
         assertNotNull(result)
         assertEquals(2, result.size)
-        assertTrue(result.contains("issuer1"))
-        assertTrue(result.contains("issuer2"))
+        assertTrue(result.any { it.issuer_identifier == "issuer1" })
+        assertTrue(result.any { it.issuer_identifier == "issuer2" })
     }
 
     @Test
@@ -393,14 +393,14 @@ class TrustMarkServiceTest {
         every {
             trustMarkIssuerQueries.delete(
                 trust_mark_type_id = trustMarkType.id,
-                issuer_identifier = issuerIdentifier
+                id = existingIssuer.id
             ).executeAsOne()
         } returns existingIssuer
 
         val result = trustMarkService.removeIssuerFromTrustMarkType(
             testAccount.toDTO(),
             trustMarkType.id,
-            issuerIdentifier
+            existingIssuer.id
         )
 
         assertNotNull(result)

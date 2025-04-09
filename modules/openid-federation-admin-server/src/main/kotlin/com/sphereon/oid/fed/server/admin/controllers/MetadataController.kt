@@ -1,8 +1,9 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateMetadata
+import com.sphereon.oid.fed.openapi.java.models.CreateMetadata
 import com.sphereon.oid.fed.openapi.models.Metadata
 import com.sphereon.oid.fed.openapi.models.MetadataResponse
+import com.sphereon.oid.fed.server.admin.mappers.toJsonElement
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.MetadataService
 import com.sphereon.oid.fed.services.mappers.toMetadataResponse
@@ -45,7 +46,7 @@ class MetadataController(
         return metadataService.createMetadata(
             getAccountFromRequest(request),
             body.key,
-            body.metadata
+            body.metadata.toJsonElement()
         ).let { ResponseEntity.status(HttpStatus.CREATED).body(it) }
     }
 

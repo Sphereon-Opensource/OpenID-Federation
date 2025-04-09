@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
-import com.sphereon.oid.fed.openapi.models.CreateCrit
+import com.sphereon.oid.fed.openapi.java.models.CreateCrit
 import com.sphereon.oid.fed.persistence.models.Crit
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.CriticalClaimService
