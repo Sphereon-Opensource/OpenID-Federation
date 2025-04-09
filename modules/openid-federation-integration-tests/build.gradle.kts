@@ -112,5 +112,5 @@ tasks.register("integrationTests") {
     group = "verification"
     description = "Runs the integration tests by triggering the jvmTest task."
 
-    dependsOn(tasks.named("jvmTest"))
+    finalizedBy(tasks.named("jvmTest"))
 }

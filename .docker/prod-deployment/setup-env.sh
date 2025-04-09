@@ -24,8 +24,8 @@ DOCKER_REGISTRY="${DOCKER_REGISTRY:-sphereonregistry.azurecr.io}"
 FED_VERSION=$(get_version "${MODULES_PATH}/build.gradle.kts") || exit 1
 
 # Image names
-FED_IMAGE="openid-federation-server"
-ADMIN_IMAGE="openid-federation-admin-server"
+FED_IMAGE="federation-server"
+ADMIN_IMAGE="federation-admin-server"
 
 # Export variables
 export FED_VERSION

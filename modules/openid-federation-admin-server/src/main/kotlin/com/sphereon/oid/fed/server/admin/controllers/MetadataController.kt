@@ -9,7 +9,6 @@ import com.sphereon.oid.fed.services.MetadataService
 import com.sphereon.oid.fed.services.mappers.toMetadataResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.validation.Valid
-import kotlinx.serialization.json.JsonElement
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.BindException
@@ -43,7 +42,7 @@ class MetadataController(
         if (bindingResult.hasErrors()) {
             throw BindException(bindingResult)
         }
-        JsonElement.Companion
+
         return metadataService.createMetadata(
             getAccountFromRequest(request),
             body.key,

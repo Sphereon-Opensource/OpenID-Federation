@@ -23,6 +23,7 @@ captures
 /.temp/
 /.run/*
 kotlin-js-store/
+.env
 .env.local
 /.docker/keycloak-dev/
 /modules/openid-federation-admin-server/logs/
