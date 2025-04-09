@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   openid-federation-server:
-    image: sphereonregistry.azurecr.io/federation-server:latest
+    image: sphereonregistry.azurecr.io/openid-federation-server:latest
     container_name: openid-federation-server
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}
@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
 
   openid-federation-admin-server:
-    image: sphereonregistry.azurecr.io/federation-admin-server:latest
+    image: sphereonregistry.azurecr.io/openid-federation-admin-server:latest
     container_name: openid-federation-server-admin
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}

@@ -32,7 +32,7 @@ services:
       retries: 20
 
   openid-federation-server:
-    image: sphereon/federation-server:latest
+    image: sphereon/openid-federation-server:latest
     build:
       context: .
       dockerfile: ./.docker/openid-federation-server/Dockerfile
@@ -75,7 +75,7 @@ services:
       - openid_network
 
   openid-federation-admin-server:
-    image: sphereon/federation-admin-server:latest
+    image: sphereon/openid-federation-admin-server:latest
     build:
       context: .
       dockerfile: ./.docker/openid-federation-admin-server/Dockerfile
