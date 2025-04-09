@@ -42,9 +42,6 @@ jobs:
           POSTGRES_USER: ${{ secrets.DATASOURCE_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
           POSTGRES_DB: "openid-federation-db"
-          LOCAL_KMS_DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
-          LOCAL_KMS_DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
-          LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
