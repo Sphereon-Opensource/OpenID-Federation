@@ -11,6 +11,7 @@ androidx-core-ktx = "1.13.1"
 androidx-espresso-core = "3.5.1"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.1.5"
+bom = "1.0.0.Final"
 compose-plugin = "1.6.10"
 hikari = "6.2.1"
 junit = "4.13.2"
@@ -19,14 +20,16 @@ kotlin = "2.1.20"
 ktor = "3.1.1"
 kotlinxCoroutines = "1.9.0"
 kotlinxDatetime = "0.6.2"
-kotlinxSerialization = "1.8.0"
+kotlinxSerialization = "1.8.1"
 kover = "0.9.1"
 mockk = "1.13.17"
 nimbusJoseJwt = "9.40"
+node-gradle = "7.1.0"
 npmPublish = "3.5.3"
 openapi = "7.12.0"
 sphereonKmp = "0.2.4"
 springboot = "3.4.3"
+springsecurity = "6.4.4"
 springdoc = "2.8.5"
 springDependencyManagement = "1.1.7"
 kermitLogging = "2.0.5"
@@ -84,6 +87,7 @@ sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-m
 sphereon-kmp-crypto-kms-ecdsa = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-ecdsa-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-aws = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-aws-multiplatform", version.ref = "sphereonKmp" }
+spring-security-test = { group = "org.springframework.security", name = "spring-security-test", version.ref = "springsecurity" }
 springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator", version.ref = "springboot" }
 springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security", version.ref = "springboot" }
 springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server", version.ref = "springboot" }
@@ -93,16 +97,18 @@ springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot
 springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
 springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
 springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
-springdoc-starter-webmvc-ui = { group = "org.springdoc", name="springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc"}
+springboot-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation", version.ref = "springboot" }
+springdoc-starter-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
 testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
 whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
 [plugins]
-changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref="changelog" }
+changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "changelog" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
+bom-generator = { id = "io.github.gradlebom.generator-plugin", version.ref = "bom" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -114,3 +120,4 @@ openapiGenerator = { id = "org.openapi.generator", version.ref = "openapi" }
 npmPublish = { id = "dev.petuska.npm.publish", version.ref = "npmPublish" }
 springboot = { id = "org.springframework.boot", version.ref = "springboot" }
 springDependencyManagement = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle" }

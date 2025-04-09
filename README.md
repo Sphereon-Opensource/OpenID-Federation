@@ -15,31 +15,39 @@
 
 # OpenID Federation multiplatform Server and client
 
-Welcome to the OpenID Federation project. This repository implements a Kotlin Multiplatform solution, enabling shared code across multiple platforms (such as the JVM, JS, and
-Native). Whether you are a developer familiar with Kotlin or new to multiplatform projects, this guide will help you understand the core concepts, architecture, and deployment
+Welcome to the OpenID Federation project. This repository implements a Kotlin Multiplatform solution, enabling shared
+code across multiple platforms (such as the JVM, JS, and
+Native). Whether you are a developer familiar with Kotlin or new to multiplatform projects, this guide will help you
+understand the core concepts, architecture, and deployment
 instructions for the project.
 
 ---
 
 ## Background
 
-OpenID Federation is a framework designed to facilitate secure and interoperable interactions among entities within a federation. It utilizes JSON Web Tokens (JWTs) to securely
+OpenID Federation is a framework designed to facilitate secure and interoperable interactions among entities within a
+federation. It utilizes JSON Web Tokens (JWTs) to securely
 represent and transmit necessary metadata, ensuring trust and security across various organizations and systems.
 
 ---
 
 ## Key Concepts
 
-- **Federation**: A group of organizations that agree to interoperate under a common set of rules defined in a federation policy.
-- **Entity Statements**: JSON objects containing metadata about entities (such as Identity Providers and Relying Parties) along with their federation relationships.
-- **Trust Chains**: Mechanisms by which entities verify one another's trustworthiness by following a chain of entity statements back to a trusted authority.
-- **Federation API**: Standardized interfaces to exchange information and perform operations crucial for federation management.
+- **Federation**: A group of organizations that agree to interoperate under a common set of rules defined in a
+  federation policy.
+- **Entity Statements**: JSON objects containing metadata about entities (such as Identity Providers and Relying
+  Parties) along with their federation relationships.
+- **Trust Chains**: Mechanisms by which entities verify one another's trustworthiness by following a chain of entity
+  statements back to a trusted authority.
+- **Federation API**: Standardized interfaces to exchange information and perform operations crucial for federation
+  management.
 
 ---
 
 ## Core Components
 
-- **Federation Operator**: The central authority in the federation responsible for policy management and trust chain verification.
+- **Federation Operator**: The central authority in the federation responsible for policy management and trust chain
+  verification.
 - **Identity Providers (IdPs)**: Entities that authenticate users and issue identity assertions to relying parties.
 - **Relying Parties (RPs)**: Entities that rely on the received identity assertions to provide services to users.
 
@@ -48,18 +56,23 @@ represent and transmit necessary metadata, ensuring trust and security across va
 ## Technical Features
 
 - **JSON Web Tokens (JWT)**: Employed to create verifiable entity statements and security assertions.
-- **JSON Object Signing and Encryption (JOSE)**: Standards used for signing and encrypting JSON objects to ensure integrity and confidentiality.
+- **JSON Object Signing and Encryption (JOSE)**: Standards used for signing and encrypting JSON objects to ensure
+  integrity and confidentiality.
 
 ---
 
 ## Kotlin Multiplatform
 
-This project is developed as a Kotlin Multiplatform project. The goal of this approach is to maximize code reuse and maintain consistency across different platforms:
+This project is developed as a Kotlin Multiplatform project. The goal of this approach is to maximize code reuse and
+maintain consistency across different platforms:
 
 - **Common Code**: Shared modules include the business logic and core functionality, written in pure Kotlin.
-- **Platform-Specific Implementations**: Platform-dependent modules exist for code that needs to interact with specific operating system or ecosystem features.
-- **Supported Platforms**: Typically, the project targets the JVM, JavaScript, and native environments. Consult the project’s build configuration for platform-specific details.
-- **Development Setup**: Ensure you have the latest version of Kotlin and the appropriate SDKs installed for the platforms you intend to target.
+- **Platform-Specific Implementations**: Platform-dependent modules exist for code that needs to interact with specific
+  operating system or ecosystem features.
+- **Supported Platforms**: Typically, the project targets the JVM, JavaScript, and native environments. Consult the
+  project’s build configuration for platform-specific details.
+- **Development Setup**: Ensure you have the latest version of Kotlin and the appropriate SDKs installed for the
+  platforms you intend to target.
 
 ---
 
@@ -76,14 +89,17 @@ For complete API details, please refer to the following resources:
 
 ### Environment variables
 
-We are using environment variables to configure certain components, like for instance the key management system. This is independent of the deployment you choose, like using the
-docker compose, or running the API servers directly on a JVM. In the root folder you will find the [.env.example](.env.example) file. Copy this file to `.env` or `.env.local`.
+We are using environment variables to configure certain components, like for instance the key management system. This is
+independent of the deployment you choose, like using the
+docker compose, or running the API servers directly on a JVM. In the root folder you will find
+the [.env.example](.env.example) file. Copy this file to `.env` or `.env.local`.
 
 The docker compose method should automatically pick up the environment variables you put in there.
 
 ### Docker Setup
 
-For seamless deployment of the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an efficient and straightforward deployment and orchestration
+For seamless deployment of the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an
+efficient and straightforward deployment and orchestration
 environment.
 
 ### Essential Commands
@@ -113,7 +129,7 @@ environment.
 - `docker compose up db -d`  
   Start only the database container in detached mode.
 
-- `docker compose up federation-server -d`  
+- `docker compose up openid-federation-server -d`  
   Start only the Federation Server in detached mode.
 
 ### API Endpoints (via Docker)
@@ -131,7 +147,8 @@ variables, the root entity, and necessary dependencies. Follow the steps outline
 
 ### Publishing Updates
 
-Any changes affecting Entity Statements or Subordinate Statements must be explicitly published to take effect. This includes:
+Any changes affecting Entity Statements or Subordinate Statements must be explicitly published to take effect. This
+includes:
 
 - Metadata changes
 - Trust Mark modifications
@@ -153,9 +170,12 @@ configurations specific to the root entity.
 
 ## Postman collection
 
-This README show the steps to interact with the API down below. You can use a tool like CURL or use the Swagger UI to interact with the API. We have also
-included [a postman collection](./resources/OIDF.postman_collection.json) you can import into Postman. It contains examples for most endpoints and also at the toplevel has an
-OAUth2 integration. So you can get an access token from the toplevel folder and then use that token automatically in subsequent calls.
+This README show the steps to interact with the API down below. You can use a tool like CURL or use the Swagger UI to
+interact with the API. We have also
+included [a postman collection](./resources/OIDF.postman_collection.json) you can import into Postman. It contains
+examples for most endpoints and also at the toplevel has an
+OAUth2 integration. So you can get an access token from the toplevel folder and then use that token automatically in
+subsequent calls.
 
 ## Step 1: Configure Environment Variables
 
@@ -203,12 +223,14 @@ KMS_PROVIDER=memory
 # When set to 'memory', the service uses a local in-memory key store for encryption and decryption.
 ```
 
-**Note:** The memory KMS is not storing any private keys!. It is in memory, which means they will be gone after a reboot. This was done on purpose, as you should use an external
+**Note:** The memory KMS is not storing any private keys!. It is in memory, which means they will be gone after a
+reboot. This was done on purpose, as you should use an external
 KMS system with proper protection like Azure Keyvault or AWS KMS.
 
 #### AWS KMS Example
 
-When configured like below, AWS Key Management Service will be used. You need to provide your AWS region, and you will also need to provide an access key id and secret.
+When configured like below, AWS Key Management Service will be used. You need to provide your AWS region, and you will
+also need to provide an access key id and secret.
 
 **Creating an AWS Access Key and Secret Access Key**
 
@@ -223,15 +245,23 @@ When configured like below, AWS Key Management Service will be used. You need to
     - Otherwise, to create a new user:
         - Click on **Add User**.
         - Enter a username.
-        - Under **Select AWS Access Type**, check **Programmatic access** (this is needed to generate an access key and secret key).
+        - Under **Select AWS Access Type**, check **Programmatic access** (this is needed to generate an access key and
+          secret key).
 
 4. **Set Permissions**
-    - For initial testing, you could attach existing policies like **AWSKeyManagementServicePowerUser** to ensure the user has permission to work with AWS KMS.
-    - For production environments, it’s best to follow the principle of least privilege and attach only the necessary permissions.
+    * For initial testing of key management tasks, you could attach existing policies like *
+      *AWSKeyManagementServicePowerUser*. This policy grants broad administrative permissions for KMS,
+      allowing the creation and management of keys.
+    * **Important:** The `AWSKeyManagementServicePowerUser` policy **does not** grant permissions to perform
+      cryptographic signing operations. To enable signing operation, you must explicitly grant the `kms:Sign`
+      permission.
+    * For production environments, always follow the principle of least privilege, granting only the necessary
+      permissions for the required tasks.
 
 5. **Review and Create User**
     - Complete the steps and on the final screen, AWS will display an **Access Key ID** and **Secret Access Key**.
-    - **Important:** Save your secret access key securely as it is shown only once. You can download the credentials as a CSV file.
+    - **Important:** Save your secret access key securely as it is shown only once. You can download the credentials as
+      a CSV file.
 
 Use the values from step 5 to set the Environment variables:
 
@@ -320,7 +350,8 @@ OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/openid-federat
 1. Replace default values (e.g., `admin`, `localhost`, `password`) with secure values for production environments.
 2. Ensure the `ROOT_IDENTIFIER` is a publicly accessible URL if deploying in a live environment.
 3. Select the appropriate KMS provider based on your environment:
-    - For development or testing, the in-memory KMS is sufficient. Note: Keys are ephemeral and thus will be gone after a restart/reboot
+    - For development or testing, the in-memory KMS is sufficient. Note: Keys are ephemeral and thus will be gone after
+      a restart/reboot
     - For production, use AWS KMS or Azure Key Vault to ensure robust security for key management.
 4. Never commit sensitive credentials (such as AWS or Azure secrets) into version control.
 
@@ -442,10 +473,13 @@ To delete a tenant account, follow these steps:
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-You can use the param kms_key_ref to assign a name to the key. This value will not end up in the JWK itself, but you can use it for selecting which key to sign with. The kid value
-could also be used, but that is typically not known upfront as in most cases it is generated as the SHA1 thumbprint of the JWK.
+You can use the param kms_key_ref to assign a name to the key. This value will not end up in the JWK itself, but you can
+use it for selecting which key to sign with. The kid value
+could also be used, but that is typically not known upfront as in most cases it is generated as the SHA1 thumbprint of
+the JWK.
 
-You can also provide a JOSE/JWA signature algorithm provided the KMS configured supports it. Typical values are ES256, ES384, ES512
+You can also provide a JOSE/JWA signature algorithm provided the KMS configured supports it. Typical values are ES256,
+ES384, ES512
 
  ```json
 {
@@ -703,9 +737,11 @@ Remember to publish your entity configuration after making changes to authority 
    POST http://localhost:8081/subordinates/{id}/statement
    X-Account-Username: {username}  # Optional, defaults to root
    ```
-2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid` if both are supplied. If none are specified the first key
+2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
+   if both are supplied. If none are specified the first key
    available will be used
-3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1 thumbprint of the key, and generated by the underlying KMS. Opposed
+3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1
+   thumbprint of the key, and generated by the underlying KMS. Opposed
    to the kmsKeyRef which you choose yourself .
 
 4. Optionally include a `dryRun` parameter in the request body to test the statement publication without making
@@ -738,9 +774,11 @@ Remember to publish your entity configuration after making changes to authority 
    POST http://localhost:8081/entity-statement
    X-Account-Username: {username}  # Optional, defaults to root
    ```
-2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid` if both are supplied. If none are specified the first key
+2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
+   if both are supplied. If none are specified the first key
    available will be used
-3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1 thumbprint of the key, and generated by the underlying KMS. Opposed
+3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1
+   thumbprint of the key, and generated by the underlying KMS. Opposed
    to the kmsKeyRef which you choose yourself.
 4. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
    changes:
@@ -844,7 +882,7 @@ Content-Type: application/json
 
 {
     "sub": "http://localhost:8080/trust-mark-holder",
-    "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType"
+    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType"
 }
 ```
 
@@ -870,7 +908,7 @@ Content-Type: application/json
 X-Account-Username: trust-mark-holder
 
 {
-    "trust_mark_type_identifier": "http://localhost:8080/trust-mark-types/exampleType",
+    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType",
     "jwt": "eyJ..." # Replace with JWT token issued in step 4
 }
 

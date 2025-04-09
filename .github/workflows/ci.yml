@@ -42,16 +42,13 @@ jobs:
           POSTGRES_USER: ${{ secrets.DATASOURCE_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
           POSTGRES_DB: "openid-federation-db"
-          LOCAL_KMS_DATASOURCE_USER: ${{ secrets.LOCAL_KMS_DATASOURCE_USER }}
-          LOCAL_KMS_DATASOURCE_PASSWORD: ${{ secrets.LOCAL_KMS_DATASOURCE_PASSWORD }}
-          LOCAL_KMS_DATASOURCE_URL: ${{ secrets.LOCAL_KMS_DATASOURCE_URL }}
           NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
           NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           KMS_PROVIDER: memory
         run: |
           ./gradlew build
-          ./gradlew :modules:openapi:jsPublicPackageJson
+          ./gradlew :modules:openid-federation-openapi:jsPublicPackageJson
           ./gradlew :modules:openid-federation-common:jsPublicPackageJson
           ./gradlew publishJsPackageToNpmjsRegistry
           ./gradlew publishAllPublicationsToSphereon-opensourceRepository
@@ -61,8 +58,8 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            modules/federation-server/build/libs/federation-server-*.jar
-            modules/admin-server/build/libs/admin-server-*.jar
+            modules/openid-federation-server/build/libs/openid-federation-server-*.jar
+            modules/openid-federation-admin-server/build/libs/openid-federation-admin-server-*.jar
   docker-publish:
     needs: gradle
     runs-on: ubuntu-latest
@@ -124,12 +121,12 @@ jobs:
 
       - name: Create directory structure and move artifacts
         run: |
-          mkdir -p modules/federation-server/build/libs/
-          mkdir -p modules/admin-server/build/libs/
-          mv ./federation-server/build/libs/federation-server-*.jar modules/federation-server/build/libs/
-          mv ./admin-server/build/libs/admin-server-*.jar modules/admin-server/build/libs/
-          chmod 644 modules/federation-server/build/libs/*.jar
-          chmod 644 modules/admin-server/build/libs/*.jar
+          mkdir -p modules/openid-federation-server/build/libs/
+          mkdir -p modules/openid-federation-admin-server/build/libs/
+          mv ./openid-federation-server/build/libs/openid-federation-server-*.jar modules/openid-federation-server/build/libs/
+          mv ./openid-federation-admin-server/build/libs/openid-federation-admin-server-*.jar modules/openid-federation-admin-server/build/libs/
+          chmod 644 modules/openid-federation-server/build/libs/*.jar
+          chmod 644 modules/openid-federation-admin-server/build/libs/*.jar
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -140,7 +137,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Extract metadata (federation-server)
+      - name: Extract metadata (openid-federation-server)
         id: meta-federation
         uses: docker/metadata-action@v5
         with:
@@ -149,18 +146,18 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
 
-      - name: Build and push federation-server
+      - name: Build and push openid-federation-server
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./.docker/federation-server/Dockerfile
+          file: ./.docker/openid-federation-server/Dockerfile
           push: true
           tags: ${{ steps.meta-federation.outputs.tags }}
           labels: ${{ steps.meta-federation.outputs.labels }}
           cache-from: |
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-server:latest
             type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/openid-federation-base:latest
-      - name: Extract metadata (admin-server)
+      - name: Extract metadata (openid-federation-admin-server)
         id: meta-admin
         uses: docker/metadata-action@v5
         with:
@@ -168,11 +165,11 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}},value=${{ steps.get_version_info.outputs.new_version }}
-      - name: Build and push admin-server
+      - name: Build and push openid-federation-admin-server
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./.docker/admin-server/Dockerfile
+          file: ./.docker/openid-federation-admin-server/Dockerfile
           push: true
           tags: ${{ steps.meta-admin.outputs.tags }}
           labels: ${{ steps.meta-admin.outputs.labels }}

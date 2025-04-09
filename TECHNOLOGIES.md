@@ -84,8 +84,8 @@
 
 ### Server Modules
 
-- **admin-server**: Administration interface
-- **federation-server**: Federation protocol implementation
+- **openid-federation-admin-server**: Administration interface
+- **openid-federation-server**: Federation protocol implementation
 
 ## Publishing & Distribution
 

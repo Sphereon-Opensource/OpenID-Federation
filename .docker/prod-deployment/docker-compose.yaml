@@ -19,8 +19,8 @@ services:
       retries: 20
     restart: unless-stopped
 
-  federation-server:
-    image: sphereonregistry.azurecr.io/federation-server:latest
+  openid-federation-server:
+    image: sphereonregistry.azurecr.io/openid-federation-server:latest
     container_name: openid-federation-server
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}
@@ -28,15 +28,11 @@ services:
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
       KMS_PROVIDER: ${KMS_PROVIDER}
-      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
-      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
     volumes:
-      - ./config/federation-server/application.properties:/app/application.properties
+      - ./config/openid-federation-server/application.properties:/app/application.properties
     depends_on:
-      admin-server:
+      openid-federation-admin-server:
         condition: service_started
       db:
         condition: service_healthy
@@ -46,15 +42,15 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=frontend"
-      - "traefik.http.routers.federation-server.entrypoints=websecure"
-      - "traefik.http.routers.federation-server.rule=${FEDERATION_HOSTS}"
-      - "traefik.http.routers.federation-server.tls.certresolver=acmeresolver"
-      - "traefik.http.services.federation-server.loadbalancer.server.port=8080"
-      - "traefik.http.services.federation-server.loadbalancer.server.scheme=http"
+      - "traefik.http.routers.openid-federation-server.entrypoints=websecure"
+      - "traefik.http.routers.openid-federation-server.rule=${FEDERATION_HOSTS}"
+      - "traefik.http.routers.openid-federation-server.tls.certresolver=acmeresolver"
+      - "traefik.http.services.openid-federation-server.loadbalancer.server.port=8080"
+      - "traefik.http.services.openid-federation-server.loadbalancer.server.scheme=http"
     restart: unless-stopped
 
-  admin-server:
-    image: sphereonregistry.azurecr.io/federation-admin-server:latest
+  openid-federation-admin-server:
+    image: sphereonregistry.azurecr.io/openid-federation-admin-server:latest
     container_name: openid-federation-server-admin
     environment:
       DATASOURCE_URL: ${DATASOURCE_URL}
@@ -62,13 +58,9 @@ services:
       DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD}
       APP_KEY: ${APP_KEY}
       KMS_PROVIDER: ${KMS_PROVIDER}
-      LOCAL_KMS_DATASOURCE_URL: ${LOCAL_KMS_DATASOURCE_URL}
-      LOCAL_KMS_DATASOURCE_USER: ${LOCAL_KMS_DATASOURCE_USER}
-      LOCAL_KMS_DATASOURCE_PASSWORD: ${LOCAL_KMS_DATASOURCE_PASSWORD}
-      LOCAL_KMS_DATASOURCE_DB: ${LOCAL_KMS_DATASOURCE_DB}
       ROOT_IDENTIFIER: ${ROOT_IDENTIFIER}
     volumes:
-      - ./config/admin-server/application.properties:/app/application.properties
+      - ./config/openid-federation-admin-server/application.properties:/app/application.properties
     depends_on:
       db:
         condition: service_healthy
@@ -78,13 +70,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=frontend"
-      - "traefik.http.routers.federation-admin.entrypoints=websecure"
-      - "traefik.http.routers.federation-admin.rule=${FEDERATION_ADMIN_HOSTS}"
-      - "traefik.http.routers.federation-admin.tls.certresolver=acmeresolver"
-      - "traefik.http.services.federation-admin.loadbalancer.server.port=8080"
-      - "traefik.http.services.federation-admin.loadbalancer.server.scheme=http"
+      - "traefik.http.routers.openid-federation-admin-server.entrypoints=websecure"
+      - "traefik.http.routers.openid-federation-admin-server.rule=${FEDERATION_ADMIN_HOSTS}"
+      - "traefik.http.routers.openid-federation-admin-server.tls.certresolver=acmeresolver"
+      - "traefik.http.services.openid-federation-admin-server.loadbalancer.server.port=8080"
+      - "traefik.http.services.openid-federation-admin-server.loadbalancer.server.scheme=http"
       # IP Whitelist middleware
-      - "traefik.http.routers.federation-admin.middlewares=admin-whitelist-sourceip"
+      - "traefik.http.routers.openid-federation-admin-server.middlewares=admin-whitelist-sourceip"
       - "traefik.http.middlewares.admin-whitelist-sourceip.ipwhitelist.sourcerange=${ADMIN_IP_WHITELIST}"
     restart: unless-stopped
 

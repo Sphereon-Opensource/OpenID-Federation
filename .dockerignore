@@ -1,0 +1,39 @@
+# Version control
+.git/
+.github/
+.gitattributes
+
+# Build outputs
+build/
+**/build/
+.gradle/
+
+# Logs
+logs/
+
+# IDE files
+.idea/
+.vscode/
+.fleet/
+
+# Docker files themselves
+.docker/*/target/
+
+# Environment files
+.env*
+!.env.example
+
+# Temporary files
+**/tmp/
+**/temp/
+
+# Node modules if any
+node_modules/
+
+# Kotlin cache
+.kotlin/
+
+# Other unnecessary files
+README.md
+LICENSE
+CHANGELOG.md
