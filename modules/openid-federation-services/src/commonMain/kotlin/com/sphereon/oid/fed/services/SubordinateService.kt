@@ -265,7 +265,7 @@ class SubordinateService(
             val jwtService = JwtService(kmsProvider)
             val jwt = jwtService.signSerializable(
                 payload = subordinateStatement,
-                header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid),
+                header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg),
                 kid = key.kid,
                 kmsKeyRef = key.kmsKeyRef,
             )

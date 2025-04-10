@@ -61,7 +61,9 @@ class SubordinateApiTest {
             kty = "RSA",
             e = "AQAB",
             n = "unique-modulus-for-${System.currentTimeMillis()}", // Ensure uniqueness for test runs
-            kid = "test-subordinate-jwk-${System.currentTimeMillis()}"
+            kid = "test-subordinate-jwk-${System.currentTimeMillis()}",
+            use = "sig",
+            alg = "RS256"
         )
 
     /**

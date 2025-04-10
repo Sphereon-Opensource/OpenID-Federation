@@ -105,6 +105,7 @@ allprojects {
         }
     }
 
+
     // Common repository configuration for all projects
     repositories {
         mavenLocal()

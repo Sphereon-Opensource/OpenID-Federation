@@ -272,8 +272,8 @@ class TrustMarkService(
             throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
         }
 
-        val kid = keys[0].kid
-        logger.debug("Using key with KID: $kid")
+        val key = keys[0]
+        logger.debug("Using key with KID: $key.kid")
 
         val iat = body.iat ?: (currentTimeMillis / 1000).toInt()
 
@@ -294,8 +294,8 @@ class TrustMarkService(
         val jwtService = JwtService(keyManagementSystem)
         val jwt = jwtService.signSerializable(
             trustMark.build(),
-            JwtHeader(typ = "trust-mark+jwt", kid = kid!!),
-            kid
+            JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg),
+            key.kid
         )
         logger.debug("Successfully signed trust mark")
 

@@ -1,13 +1,14 @@
 package com.sphereon.oid.fed.server.admin.controllers
 
 import com.sphereon.oid.fed.openapi.java.models.CreateSubordinate
-import com.sphereon.oid.fed.openapi.models.Jwk
+import com.sphereon.oid.fed.openapi.java.models.Jwk
 import com.sphereon.oid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.oid.fed.openapi.models.Subordinate
 import com.sphereon.oid.fed.openapi.models.SubordinateJwk
 import com.sphereon.oid.fed.openapi.models.SubordinateJwksResponse
 import com.sphereon.oid.fed.openapi.models.SubordinateStatement
 import com.sphereon.oid.fed.openapi.models.SubordinatesResponse
+import com.sphereon.oid.fed.server.admin.mappers.toKotlin
 import com.sphereon.oid.fed.server.admin.middlewares.getAccountFromRequest
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.mappers.toSubordinateJwksResponse
@@ -72,7 +73,7 @@ class SubordinateController(
         }
     }
 
-    @PostMapping("/{subordinateId}/jwks")
+    @PostMapping("/{subordinateId}/keys")
     @ResponseStatus(HttpStatus.CREATED)
     fun createSubordinateJwk(
         request: HttpServletRequest,
@@ -84,12 +85,13 @@ class SubordinateController(
             throw BindException(bindingResult)
         }
 
-        return subordinateService.createSubordinateJwk(getAccountFromRequest(request), subordinateId, jwk).let {
-            ResponseEntity.status(HttpStatus.CREATED).body(it)
-        }
+        return subordinateService.createSubordinateJwk(getAccountFromRequest(request), subordinateId, jwk.toKotlin())
+            .let {
+                ResponseEntity.status(HttpStatus.CREATED).body(it)
+            }
     }
 
-    @GetMapping("/{subordinateId}/jwks")
+    @GetMapping("/{subordinateId}/keys")
     fun getSubordinateJwks(
         request: HttpServletRequest,
         @PathVariable subordinateId: String
@@ -101,7 +103,7 @@ class SubordinateController(
             }
     }
 
-    @DeleteMapping("/{subordinateId}/jwks/{jwkId}")
+    @DeleteMapping("/{subordinateId}/keys/{jwkId}")
     fun deleteSubordinateJwk(
         request: HttpServletRequest,
         @PathVariable subordinateId: String,

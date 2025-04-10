@@ -3,6 +3,7 @@ import kotlin.String;
 CREATE TABLE Jwk (
     id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
     account_id UUID AS kotlin.String NOT NULL,
+    alg VARCHAR(255),
     kid VARCHAR(255),
     kms VARCHAR(255) NOT NULL DEFAULT 'memory',
     kms_key_ref VARCHAR(255) NOT NULL,

@@ -21,7 +21,7 @@ fun JwkEntity.toDTO(): AccountJwk {
         x = key.x,
         y = key.y,
         n = key.n,
-        alg = key.getSignatureAlgorithm()?.jose?.value,
+        alg = key.getSignatureAlgorithm()?.jose?.value!!,
         crv = key.crv?.value,
         kid = key.getKidAsString(false)!!,
         kty = key.getKty().jose.value,
@@ -43,7 +43,7 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
         x = key.x,
         y = key.y,
         n = key.n,
-        alg = key.getSignatureAlgorithm()?.jose?.value,
+        alg = key.getSignatureAlgorithm()?.jose?.value!!,
         crv = key.crv?.value,
         kid = key.getKidAsString(false)!!,
         kty = key.getKty().jose.value,
@@ -77,4 +77,4 @@ fun AccountJwk.toJwk(): JwkDto {
     )
 }
 
-fun  Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this)
+fun Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this)

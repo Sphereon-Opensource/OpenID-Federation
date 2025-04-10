@@ -723,7 +723,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/subordinates/{subordinateId}/jwks':
+  '/subordinates/{subordinateId}/keys':
     get:
       summary: Get subordinate JWKs
       operationId: listJwksBySubordinateId
@@ -802,7 +802,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  '/subordinates/{subordinateId}/jwks/{jwkId}':
+  '/subordinates/{subordinateId}/keys/{keyId}':
     delete:
       tags:
         - subordinates
@@ -819,7 +819,7 @@ paths:
             type: string
             format: uuid
           description: The ID of the subordinate.
-        - name: jwkId
+        - name: keyId
           in: path
           required: true
           schema:
@@ -1782,6 +1782,7 @@ components:
       required:
         - kty
         - kid
+        - alg
       properties:
         kty:
           type: string
@@ -1820,7 +1821,6 @@ components:
           type: string
           description: The algorithm associated with the key.
           example: ES256
-          nullable: true
         use:
           type: string
           description: 'The intended use of the key (e.g., sig, enc).'
@@ -2357,6 +2357,8 @@ components:
       type: object
       required:
         - kid
+        - alg
+        - typ
       properties:
         alg:
           type: string
