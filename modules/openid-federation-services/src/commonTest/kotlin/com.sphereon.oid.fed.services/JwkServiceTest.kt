@@ -1,6 +1,7 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.crypto.jose.JwaAlgorithm
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.JwkWithPrivateKey
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
@@ -43,7 +44,7 @@ class JwkServiceTest {
 
     companion object {
         private val FIXED_TIMESTAMP: LocalDateTime = LocalDateTime.parse("2025-01-13T12:00:00")
-        private const val TEST_KEY = """{"kid":"test-kid","kty":"EC","use":"sig","crv":"P-256"}"""
+        private const val TEST_KEY = """{"kid":"test-kid","alg":"ES256","kty":"EC","use":"sig","crv":"P-256"}"""
     }
 
     @BeforeTest
@@ -77,6 +78,7 @@ class JwkServiceTest {
         val jwkWithPrivateKey = JwkWithPrivateKey(
             kid = generatedKid,
             kty = "EC",
+            alg = JwaAlgorithm.ES256.value,
             use = "sig"
         )
 
@@ -84,6 +86,7 @@ class JwkServiceTest {
             id = Uuid.random().toString(),
             account_id = testAccount.id,
             kid = generatedKid,
+            alg = JwaAlgorithm.ES256.value,
             kms = "memory",
             kms_key_ref = generatedKid,
             key = TEST_KEY.replace("test-kid", generatedKid),
@@ -93,7 +96,7 @@ class JwkServiceTest {
         )
 
         // Mock JwkQueries.create to return a valid Jwk
-        every { jwkQueries.create(any(), any(), any(), any(), any()) } returns mockk {
+        every { jwkQueries.create(any(), any(), any(), any(), any(), any()) } returns mockk {
             every { executeAsOne() } returns returnedJwk
         }
 
@@ -101,35 +104,26 @@ class JwkServiceTest {
 
         assertNotNull(result)
         assertEquals(generatedKid, result.kid)
-        verify { jwkQueries.create(testAccount.id, any(), any(), any(), any()) }
+        verify { jwkQueries.create(testAccount.id, any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `get keys returns all keys for account`() {
-        val jwks = listOf(
+        val jwks = (1..2).map { index ->
+            val kid = if (index == 1) generatedKid else "kid$index"
             Jwk(
-                Uuid.random().toString(),
-                testAccount.id,
-                generatedKid,
-                TEST_KEY.replace("test-kid", generatedKid),
-                "memory",
-                TEST_KEY.replace("test-kid", generatedKid),
-                FIXED_TIMESTAMP,
-                null,
-                null,
-            ),
-            Jwk(
-                Uuid.random().toString(),
-                testAccount.id,
-                "kid2",
-                TEST_KEY.replace("test-kid", "kid2"),
-                "memory",
-                TEST_KEY.replace("test-kid", "kid2"),
-                FIXED_TIMESTAMP,
-                null,
-                null
+                id = Uuid.random().toString(),
+                account_id = testAccount.id,
+                alg = "ES256",
+                kid = kid,
+                key = TEST_KEY.replace("test-kid", kid),
+                kms = "memory",
+                kms_key_ref = kid,
+                created_at = FIXED_TIMESTAMP,
+                revoked_at = null,
+                revoked_reason = null
             )
-        )
+        }
 
         every { jwkQueries.findByAccountId(testAccount.id).executeAsList() } returns jwks
 
@@ -153,7 +147,8 @@ class JwkServiceTest {
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = FIXED_TIMESTAMP,
-            revoked_reason = reason
+            revoked_reason = reason,
+            alg = JwaAlgorithm.ES256.value,
         )
 
         every { jwkQueries.findById(keyId) } returns mockk {
@@ -184,7 +179,8 @@ class JwkServiceTest {
             key = TEST_KEY.replace("test-kid", generatedKid),
             created_at = FIXED_TIMESTAMP,
             revoked_at = null,
-            revoked_reason = null
+            revoked_reason = null,
+            alg = JwaAlgorithm.ES256.value,
         )
 
         every { jwkQueries.findById(keyId) } returns mockk {
@@ -208,6 +204,7 @@ class JwkServiceTest {
         val jwk = Jwk(
             id = Uuid.random().toString(),
             account_id = testAccount.id,
+            alg = JwaAlgorithm.ES256.value,
             kid = generatedKid,
             kms = "memory",
             kms_key_ref = generatedKid,

@@ -1,18 +1,20 @@
-package com.sphereon.oid.fed.server.federation.controllers
+package com.sphereon.oid.fed.server.controllers
 
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.federation.NotFoundException
 import com.sphereon.oid.fed.openapi.models.ResolveResponse
 import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusResponse
 import com.sphereon.oid.fed.persistence.Persistence
+import com.sphereon.oid.fed.server.services.FetchService
 import com.sphereon.oid.fed.services.AccountService
 import com.sphereon.oid.fed.services.JwkService
 import com.sphereon.oid.fed.services.ResolutionService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.mappers.toDTO
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -29,7 +31,8 @@ class FederationController(
     private val subordinateService: SubordinateService,
     private val trustMarkService: TrustMarkService,
     private val jwkService: JwkService,
-    private val resolutionService: ResolutionService
+    private val resolutionService: ResolutionService,
+    private val fetchService: FetchService
 ) {
     private val accountQueries = Persistence.accountQueries
     private val entityConfigurationStatementQueries = Persistence.entityConfigurationStatementQueries
@@ -73,17 +76,18 @@ class FederationController(
     }
 
     @GetMapping("/fetch", produces = ["application/entity-statement+jwt"])
-    fun getRootSubordinateStatement(@RequestParam("sub") sub: String): String {
-        val account = getAccountOrThrow("root")
-        val accountIss = accountService.getAccountIdentifierByAccount(account.toDTO())
-        return subordinateService.fetchSubordinateStatement(accountIss, sub)
+    fun getRootSubordinateStatement(@RequestParam("sub") sub: String): ResponseEntity<String> {
+        val accountIss = accountService.getAccountIdentifierByAccount(getAccountOrThrow("root").toDTO())
+        return fetchService.fetchSubordinateStatement(accountIss, sub)
     }
 
     @GetMapping("/{username}/fetch", produces = ["application/entity-statement+jwt"])
-    fun getSubordinateStatement(@PathVariable username: String, @RequestParam("sub") sub: String): String {
-        val account = getAccountOrThrow(username)
-        val accountIss = accountService.getAccountIdentifierByAccount(account.toDTO())
-        return subordinateService.fetchSubordinateStatement(accountIss, sub)
+    fun getSubordinateStatement(
+        @PathVariable username: String,
+        @RequestParam("sub") sub: String
+    ): ResponseEntity<String> {
+        val accountIss = accountService.getAccountIdentifierByAccount(getAccountOrThrow(username).toDTO())
+        return fetchService.fetchSubordinateStatement(accountIss, sub)
     }
 
     @PostMapping("/trust-mark-status", produces = ["application/json"])

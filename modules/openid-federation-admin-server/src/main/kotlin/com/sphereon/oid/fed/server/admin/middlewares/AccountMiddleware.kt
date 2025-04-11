@@ -1,7 +1,7 @@
 package com.sphereon.oid.fed.server.admin.middlewares
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.services.AccountService
 import jakarta.servlet.FilterChain

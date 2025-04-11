@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.BaseStatementJwks
@@ -195,6 +196,7 @@ class ResolutionServiceTest {
                     Jwk(
                         kid = "test-kid",
                         kty = "EC",
+                        alg = JwaAlgorithm.ES256.value,
                         use = "sig",
                         crv = "P-256"
                     )

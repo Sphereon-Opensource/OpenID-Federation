@@ -3,10 +3,10 @@ package com.sphereon.oid.fed.server.admin.handlers
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import com.fasterxml.jackson.databind.exc.MismatchedInputException
-import com.sphereon.oid.fed.common.exceptions.ApplicationException
-import com.sphereon.oid.fed.common.exceptions.BadRequestException
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.ApplicationException
+import com.sphereon.oid.fed.common.exceptions.admin.BadRequestException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import jakarta.servlet.ServletException
 import org.springframework.http.HttpStatus

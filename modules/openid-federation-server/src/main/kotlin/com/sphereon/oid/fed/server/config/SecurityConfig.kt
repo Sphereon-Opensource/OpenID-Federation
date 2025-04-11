@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.federation.config
+package com.sphereon.oid.fed.server.config
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean

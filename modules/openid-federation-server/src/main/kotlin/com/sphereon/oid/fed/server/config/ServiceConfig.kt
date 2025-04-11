@@ -1,6 +1,5 @@
-package com.sphereon.oid.fed.server.federation.config
+package com.sphereon.oid.fed.server.config
 
-import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.services.AccountService

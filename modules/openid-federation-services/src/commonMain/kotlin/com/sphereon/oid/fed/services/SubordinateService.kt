@@ -3,8 +3,8 @@ package com.sphereon.oid.fed.services
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.SubordinateStatementObjectBuilder
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.*
 import com.sphereon.oid.fed.persistence.Persistence
@@ -411,15 +411,10 @@ class SubordinateService(
      */
     fun fetchSubordinateStatement(iss: String, sub: String): String {
         logger.info("Fetching subordinate statement for issuer: $iss, subject: $sub")
-        try {
-            val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
-                ?: throw NotFoundException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
-            logger.debug("Found subordinate statement")
-            return statement.statement
-        } catch (e: Exception) {
-            logger.error("Failed to fetch subordinate statement for issuer: $iss, subject: $sub", e)
-            throw e
-        }
+        val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
+            ?: throw NotFoundException(Constants.SUBORDINATE_STATEMENT_NOT_FOUND)
+        logger.debug("Found subordinate statement")
+        return statement.statement
     }
 
     /**

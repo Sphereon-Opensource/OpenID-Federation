@@ -332,7 +332,7 @@ components:
         - federation
       required:
         - error
-        - message
+        - error_description
       properties:
         status:
           type: integer
@@ -340,7 +340,7 @@ components:
             id: joax1cgth4uzd
         error:
           type: string
-        message:
+        error_description:
           type: string
           description: A human-readable short text describing the error.
         timestamp:
