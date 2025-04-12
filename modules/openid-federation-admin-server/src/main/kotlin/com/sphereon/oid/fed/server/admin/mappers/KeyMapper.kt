@@ -17,7 +17,7 @@ fun Jwk.toKotlin(): com.sphereon.oid.fed.openapi.models.Jwk {
         n = this.n,
         crv = this.crv,
         use = this.use,
-        x5c = this.x5c?.toTypedArray(),
+        x5c = this.x5c,
         x5t = this.x5t,
         x5u = this.x5t,
         x5tS256 = this.x5tS256

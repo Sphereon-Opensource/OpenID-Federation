@@ -1,7 +1,6 @@
 package com.sphereon.oid.fed.server.controllers
 
 import com.sphereon.oid.fed.common.exceptions.federation.NotFoundException
-import com.sphereon.oid.fed.openapi.models.ResolveResponse
 import com.sphereon.oid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.TrustMarkStatusRequest
@@ -14,6 +13,7 @@ import com.sphereon.oid.fed.services.ResolutionService
 import com.sphereon.oid.fed.services.SubordinateService
 import com.sphereon.oid.fed.services.TrustMarkService
 import com.sphereon.oid.fed.services.mappers.toDTO
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -157,10 +157,15 @@ class FederationController(
         @RequestParam("sub") sub: String,
         @RequestParam("trust_anchor") trustAnchor: String,
         @RequestParam("entity_type", required = false) entityTypes: Array<String>?
-    ): ResolveResponse {
-        val account = getAccountOrThrow("root")
-        // Additional logic for resolution should go here before returning the response
-        return resolutionService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
+    ): ResponseEntity<String> {
+        return ResponseEntity.ok().body(
+            resolutionService.getSignedResolveResponseJwt(
+                account = getAccountOrThrow("root").toDTO(),
+                sub = sub,
+                trustAnchor = trustAnchor,
+                entityTypes = entityTypes
+            )
+        )
     }
 
     @GetMapping("/{username}/resolve", produces = ["application/resolve-response+jwt"])
@@ -169,9 +174,14 @@ class FederationController(
         @RequestParam("sub") sub: String,
         @RequestParam("trust_anchor") trustAnchor: String,
         @RequestParam("entity_type", required = false) entityTypes: Array<String>?
-    ): ResolveResponse {
-        val account = getAccountOrThrow(username)
-        // Additional logic for resolution should go here before returning the response
-        return resolutionService.resolveEntity(account.toDTO(), sub, trustAnchor, entityTypes)
+    ): ResponseEntity<String> {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(
+            resolutionService.getSignedResolveResponseJwt(
+                account = getAccountOrThrow(username).toDTO(),
+                sub = sub,
+                trustAnchor = trustAnchor,
+                entityTypes = entityTypes
+            )
+        )
     }
 }

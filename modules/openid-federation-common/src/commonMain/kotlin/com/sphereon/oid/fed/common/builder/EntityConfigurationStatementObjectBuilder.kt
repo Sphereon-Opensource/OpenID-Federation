@@ -43,7 +43,7 @@ class EntityConfigurationStatementObjectBuilder {
     }
 
     private fun createJwks(jwks: List<Jwk>): BaseStatementJwks {
-        return BaseStatementJwks(jwks.toTypedArray())
+        return BaseStatementJwks(jwks)
     }
 
     fun build(): EntityConfigurationStatement {
@@ -54,10 +54,10 @@ class EntityConfigurationStatementObjectBuilder {
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
-            authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
-            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
-            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap(),
-            trustMarks = trustMarks.toTypedArray()
+            authorityHints = if (authorityHints.isNotEmpty()) authorityHints else null,
+            crit = if (crit.isNotEmpty()) crit else null,
+            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v }.toMap(),
+            trustMarks = trustMarks
         )
     }
 }

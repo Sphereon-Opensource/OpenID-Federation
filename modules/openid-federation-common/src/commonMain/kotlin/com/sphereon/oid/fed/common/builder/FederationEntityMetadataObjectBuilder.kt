@@ -14,7 +14,8 @@ class FederationEntityMetadataObjectBuilder {
             federationTrustMarkStatusEndpoint = "${identifier}/trust-mark-status",
             federationTrustMarkListEndpoint = "${identifier}/trust-mark-list",
             federationTrustMarkEndpoint = "${identifier}/trust-mark",
-            federationHistoricalKeysEndpoint = "${identifier}/historical-keys"
+            federationHistoricalKeysEndpoint = "${identifier}/historical-keys",
+            federationResolveEndpoint = "${identifier}/resolve"
         )
     }
 }

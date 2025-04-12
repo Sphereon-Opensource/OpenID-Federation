@@ -17,7 +17,28 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-// Configure the HTTP client for making requests.
+
+private const val baseUrl = "http://localhost:8081"
+
+private val trustAnchor = Entity(
+    username = "root"
+)
+private val intermediaryEntity = Entity(
+    username = "intermediate"
+)
+private val leafEntity = Entity(
+    username = "leaf"
+)
+
+data class Entity(
+    var id: String? = null,
+    var identifier: String? = null,
+    var jwk: AccountJwk? = null,
+    val username: String,
+    var subordinates: MutableList<Entity> = mutableListOf(),
+    var authorities: MutableList<Entity> = mutableListOf()
+)
+
 private val client = HttpClient(CIO) {
     install(ContentNegotiation) {
         json(Json {
@@ -27,25 +48,6 @@ private val client = HttpClient(CIO) {
         })
     }
 }
-
-// Data class to hold subordinate account attributes.
-data class SubordinateAttr(
-    var id: String? = null,
-    var subordinateId: String? = null,
-    var identifier: String? = null,
-    var jwk: AccountJwk? = null,
-    val username: String,
-)
-
-private const val baseUrl = "http://localhost:8081" // Base URL for the admin server.
-private val subordinate1 = SubordinateAttr(
-    username = "subordinate1"
-)
-private val subordinate2 = SubordinateAttr(
-    username = "subordinate2"
-)
-
-private var trustAnchorIdentifier: String? = null
 
 class SetupConformanceTest {
     companion object {
@@ -57,265 +59,188 @@ class SetupConformanceTest {
 }
 
 fun setupConformanceTest() {
+    println("--------------------------------------------------------------------------------")
     println("Setting up conformance test data structure")
+    configClient()
+
+    trustAnchor
+        .updateIdentifier()
+        .createKey()
+    intermediaryEntity
+        .createAccount()
+        .updateIdentifier()
+        .createKey()
+    leafEntity
+        .createAccount()
+        .updateIdentifier()
+        .createKey()
+
+    intermediaryEntity.addAuthority(trustAnchor)
+    leafEntity.addAuthority(intermediaryEntity)
+
+    trustAnchor.addSubordinate(intermediaryEntity)
+    intermediaryEntity.addSubordinate(leafEntity)
+
+    trustAnchor.publishEntityStatement()
+    intermediaryEntity.publishEntityStatement()
+    leafEntity.publishEntityStatement()
+    println("--------------------------------------------------------------------------------")
+}
+
+private fun configClient() {
     client.config {
         install(ContentNegotiation) {
-            json(Json { // Reconfigure the client with JSON settings.
+            json(Json {
                 prettyPrint = true
                 isLenient = true
                 ignoreUnknownKeys = true
             })
         }
     }
+}
 
-    // Get the Trust Anchor identifier
-    val entityStatement = runBlocking {
-        client.get("$baseUrl/entity-statement").body<EntityConfigurationStatement>()
+fun Entity.createAccount(): Entity {
+    val username = this.username
+    println("Creating account for: $username")
+
+    val account: Account = runBlocking {
+        client.post("$baseUrl/accounts") {
+            contentType(ContentType.Application.Json)
+            setBody(buildJsonObject {
+                put("username", username)
+            })
+        }.body<Account>()
+    }
+    println("Account created: $account")
+    this.id = account.id
+
+    return this
+}
+
+fun Entity.updateIdentifier(): Entity {
+    println("Updating identifier for: ${this.username}")
+    val username = this.username
+
+    val entityConfigurationStatement: EntityConfigurationStatement = runBlocking {
+        client.get("$baseUrl/entity-statement") {
+            contentType(ContentType.Application.Json)
+            headers {
+                append("X-Account-Username", username)
+            }
+        }.body<EntityConfigurationStatement>()
     }
 
-    trustAnchorIdentifier = entityStatement.iss
+    println("Identifier updated: ${entityConfigurationStatement.iss}")
+    this.identifier = entityConfigurationStatement.iss
 
+    return this
+}
 
-    // Create a key for the Trust Anchor (root) Account.
+fun Entity.createKey(): Entity {
+    println("Creating key for: ${this.username}")
+    val username = this.username
+
     val key = runBlocking {
         client.post("$baseUrl/keys") {
             contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("use", "sig")
-                put("alg", "ECDSA_SHA256")
-            })
-        }.body<String>()
-    }
-    println("Created key for root account: $key")
-
-    // Create Subordinate Accounts.
-    val subordinate1Account: Account = runBlocking {
-        client.post("$baseUrl/accounts") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("username", subordinate1.username)
-            })
-        }.body()
-    }
-    println("Created subordinate 1 account: ${subordinate1Account}")
-
-    subordinate1.id = subordinate1Account.id
-
-    val subordinate2Account: Account = runBlocking {
-        client.post("$baseUrl/accounts") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("username", subordinate2.username)
-            })
-        }.body()
-    }
-    println("Created subordinate 2 account: ${subordinate2Account}")
-    subordinate2.id = subordinate2Account.id
-
-    // Get the subordinate1 identifier from the Entity Statement.
-    runBlocking {
-        client.get("$baseUrl/entity-statement") {
-            contentType(ContentType.Application.Json)
-            headers {
-                append("X-Account-Username", subordinate1.username)
-            }
-        }.body<EntityConfigurationStatement>().let {
-            subordinate1.identifier = it.iss
-        }
-    }
-
-    // Get the subordinate2 identifier from the Entity Statement.
-    runBlocking {
-        client.get("$baseUrl/entity-statement") {
-            contentType(ContentType.Application.Json)
-            headers {
-                append("X-Account-Username", subordinate2.username)
-            }
-        }.body<EntityConfigurationStatement>().let {
-            subordinate2.identifier = it.iss
-        }
-    }
-
-
-    // Add the subordinates identifiers as subordinates to the trust anchor.
-    val subordinate1Relationship: Subordinate = runBlocking {
-        client.post("$baseUrl/subordinates") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("identifier", subordinate1.identifier)
-            })
-        }.body<Subordinate>()
-            .also {
-                subordinate1.subordinateId = it.id
-            }
-    }
-
-    subordinate1.subordinateId = subordinate1Relationship.id
-    println("Created subordinate 1 relationship: $subordinate1Relationship")
-
-    val subordinate2Relationship: Subordinate = runBlocking {
-        client.post("$baseUrl/subordinates") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("identifier", subordinate2.identifier)
-            })
-        }.body<Subordinate>()
-            .also {
-                subordinate2.subordinateId = it.id
-            }
-    }
-
-    subordinate2.subordinateId = subordinate2Relationship.id
-    println("Created subordinate 2 relationship: $subordinate2Relationship")
-
-    // Create Keys for Subordinates.
-    runBlocking {
-        client.post("$baseUrl/keys") {
-            contentType(ContentType.Application.Json)
 
             setBody(buildJsonObject {
                 put("use", "sig")
                 put("alg", "ECDSA_SHA256")
             })
             headers {
-                append("X-Account-Username", subordinate1.username)
+                append("X-Account-Username", username)
             }
         }.body<AccountJwk>()
-            .also {
-                println("Created key for subordinate 1: $it")
-                subordinate1.jwk = it
-            }
     }
+    println("Key created: $key")
+    this.jwk = key
 
-    runBlocking {
-        client.post("$baseUrl/keys") {
+    return this
+}
+
+fun Entity.addSubordinate(subordinate: Entity): Entity {
+    println("Adding subordinate: ${subordinate.username} to: ${this.username}")
+
+    val username = this.username
+
+    val subordinateRelationship = runBlocking {
+        client.post("$baseUrl/subordinates") {
             contentType(ContentType.Application.Json)
 
             setBody(buildJsonObject {
-                put("use", "sig")
-                put("alg", "ECDSA_SHA256")
+                put("identifier", subordinate.identifier)
             })
             headers {
-                append("X-Account-Username", subordinate2.username)
+                append("X-Account-Username", username)
             }
-        }.body<AccountJwk>()
-            .also {
-                println("Created key for subordinate 2: $it")
-                subordinate2.jwk = it
-            }
+        }.body<Subordinate>()
     }
+    println("Subordinate relationship created: $subordinateRelationship")
 
-    // Add Trust Anchor Identifier as Authority Hint to Subordinates.
     runBlocking {
-        client.post("$baseUrl/authority-hints") {
+        client.post("$baseUrl/subordinates/${subordinateRelationship.id}/keys") {
             contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("identifier", trustAnchorIdentifier)
-            })
+            setBody(subordinate.jwk)
             headers {
-                append("X-Account-Username", subordinate1.username)
+                append("X-Account-Username", username)
             }
-        }.body<String>()
-            .also {
-                println("Added authority hint to subordinate 1: $it")
-            }
-    }
 
-    runBlocking {
-        client.post("$baseUrl/authority-hints") {
-            contentType(ContentType.Application.Json)
-            setBody(buildJsonObject {
-                put("identifier", trustAnchorIdentifier)
-            })
-            headers {
-                append("X-Account-Username", subordinate2.username)
-            }
-        }.body<String>()
-            .also {
-                println("Added authority hint to subordinate 2: $it")
-            }
-    }
-
-    // Publish Entity Statements for Subordinates.
-    runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate1.subordinateId}/statement") {
-            contentType(ContentType.Application.Json)
-        }.body<String>()
-            .also {
-                println("Published entity statement for subordinate 1: $it")
-            }
-    }
-
-    runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate2.subordinateId}/statement") {
-            contentType(ContentType.Application.Json)
-        }.body<String>()
-            .also {
-                println("Published entity statement for subordinate 2: $it")
-            }
-    }
-
-    // Add subordinate keys to subordinates.
-    runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate1.subordinateId}/keys") {
-            contentType(ContentType.Application.Json)
-            setBody(subordinate1.jwk)
         }.also {
             println(it.bodyAsText())
-            println("Added key to subordinate 1: $it")
-        }
+            println("Added key to subordinate: $it")
+        }.bodyAsText()
     }
 
     runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate2.subordinateId}/keys") {
+        client.post("$baseUrl/subordinates/${subordinateRelationship.id}/statement") {
             contentType(ContentType.Application.Json)
-            setBody(subordinate2.jwk)
+            headers {
+                append("X-Account-Username", username)
+            }
         }.also {
-            println("Added key to subordinate 2: $it")
-        }
+            println("Published statement for subordinate: $it")
+        }.bodyAsText()
     }
 
-    // Publish subordinate statements.
+    return this
+}
+
+fun Entity.addAuthority(authority: Entity): Entity {
+    println("Adding authority: ${authority.username} to: ${this.username}")
+
+    val username = this.username
+
     runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate1.subordinateId}/statement") {
+        client.post("$baseUrl/authority-hints") {
             contentType(ContentType.Application.Json)
-        }.also {
-            println("Published statement for subordinate 1: $it")
-        }
+
+            setBody(buildJsonObject {
+                put("identifier", authority.identifier)
+            })
+            headers {
+                append("X-Account-Username", username)
+            }
+        }.bodyAsText()
+        println("Authority added: ${authority.username} to: ${username}")
     }
 
-    runBlocking {
-        client.post("$baseUrl/subordinates/${subordinate2.subordinateId}/statement") {
-            contentType(ContentType.Application.Json)
-        }.also {
-            println("Published statement for subordinate 2: $it")
-        }
-    }
+    return this
+}
 
-    // Publish the Trust Anchor entity statement.
-    runBlocking {
-        client.post("$baseUrl/entity-statement") {
-            contentType(ContentType.Application.Json)
-        }
-    }
+fun Entity.publishEntityStatement(): Entity {
+    println("Publishing entity statement for: ${this.username}")
+    val username = this.username
 
-    // Publish the subordinate1 entity statement
     runBlocking {
         client.post("$baseUrl/entity-statement") {
             contentType(ContentType.Application.Json)
             headers {
-                append("X-Account-Username", subordinate1.username)
+                append("X-Account-Username", username)
             }
-        }
+        }.bodyAsText()
+        println("Entity statement published for: ${username}")
     }
 
-    // Publish the subordinate2 entity statement
-    runBlocking {
-        client.post("$baseUrl/entity-statement") {
-            contentType(ContentType.Application.Json)
-            headers {
-                append("X-Account-Username", subordinate2.username)
-            }
-        }
-    }
+    return this
 }

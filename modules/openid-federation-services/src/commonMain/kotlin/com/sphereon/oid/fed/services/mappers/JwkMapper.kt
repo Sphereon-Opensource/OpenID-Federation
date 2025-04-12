@@ -26,7 +26,7 @@ fun JwkEntity.toDTO(): AccountJwk {
         kid = key.getKidAsString(false)!!,
         kty = key.getKty().jose.value,
         use = key.use,
-        x5c = key.x5c,
+        x5c = key.x5c?.asList(),
         x5t = key.x5t,
         x5u = key.x5u,
         x5tS256 = key.x5t_S256,
@@ -48,7 +48,7 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
         kid = key.getKidAsString(false)!!,
         kty = key.getKty().jose.value,
         use = key.use,
-        x5c = key.x5c,
+        x5c = key.x5c?.asList(),
         x5t = key.x5t,
         x5u = key.x5u,
         x5tS256 = key.x5t_S256,
@@ -77,4 +77,4 @@ fun AccountJwk.toJwk(): JwkDto {
     )
 }
 
-fun Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this)
+fun Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this.toList())

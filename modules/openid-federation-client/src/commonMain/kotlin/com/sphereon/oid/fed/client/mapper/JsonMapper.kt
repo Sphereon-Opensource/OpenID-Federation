@@ -4,13 +4,12 @@ import com.sphereon.oid.fed.openapi.models.Jwt
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.serializer
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.reflect.KClass
 
 
-val jsonSerialization = Json {
+val json = Json {
     ignoreUnknownKeys = true
     explicitNulls = false
     encodeDefaults = true
@@ -21,9 +20,9 @@ val jsonSerialization = Json {
  * Used for mapping JWT token to EntityStatement object
  */
 @OptIn(InternalSerializationApi::class)
-fun <T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
+inline fun <reified T : Any> mapEntityStatement(jwtToken: String, targetType: KClass<T>): T? {
     val payload: JsonObject = decodeJWTComponents(jwtToken).payload
-    return jsonSerialization.decodeFromJsonElement(targetType.serializer(), payload)
+    return json.decodeFromString(payload.toString())
 }
 
 /*
@@ -41,7 +40,7 @@ fun decodeJWTComponents(jwtToken: String): Jwt {
 
     return try {
         Jwt(
-            jsonSerialization.decodeFromString(headerJson), Json.decodeFromString(payloadJson), parts[2]
+            json.decodeFromString(headerJson), json.decodeFromString(payloadJson), parts[2]
         )
     } catch (e: Exception) {
         throw JwtDecodingException("Error decoding JWT components", e)

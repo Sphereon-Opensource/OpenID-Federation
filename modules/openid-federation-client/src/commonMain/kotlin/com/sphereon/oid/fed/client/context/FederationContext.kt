@@ -15,7 +15,11 @@ import kotlinx.serialization.json.Json
 
 class FederationContext private constructor(
     val cryptoService: ICryptoService,
-    val json: Json,
+    val json: Json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        isLenient = true
+    },
     val logger: Logger = Logger.tag("sphereon:oidf:client:context"),
     val httpResolver: HttpResolver<String>
 ) {

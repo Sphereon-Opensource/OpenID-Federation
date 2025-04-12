@@ -244,11 +244,11 @@ class JwkService(
      * @param account The account for which the historical federation keys are being retrieved.
      * @return An array of historical keys associated with the given account.
      */
-    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
+    private fun getFederationHistoricalKeys(account: Account): List<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: ${account.username}")
         val records = jwkQueries.findByAccountId(account.id).executeAsList()
         logger.debug("Found ${records.size} keys for account ID: ${account.id}")
-        return records.map { it.toHistoricalKey() }.toTypedArray()
+        return records.map { it.toHistoricalKey() }
     }
 }
 

@@ -21,4 +21,4 @@ fun SubordinateJwkEntity.toJwk(): Jwk {
 
 fun Jwk.toJsonString(): String = jsonSerialization.encodeToString(this)
 
-fun Array<SubordinateJwk>.toSubordinateJwksResponse() = SubordinateJwksResponse(this)
+fun Array<SubordinateJwk>.toSubordinateJwksResponse() = SubordinateJwksResponse(this.toList())

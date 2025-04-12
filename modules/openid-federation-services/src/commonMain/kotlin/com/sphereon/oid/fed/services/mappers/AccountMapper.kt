@@ -12,4 +12,4 @@ fun AccountEntity.toDTO(): Account {
     )
 }
 
-fun List<Account>.toAccountsResponse(): AccountsResponse = AccountsResponse(this.toTypedArray())
+fun List<Account>.toAccountsResponse(): AccountsResponse = AccountsResponse(this)

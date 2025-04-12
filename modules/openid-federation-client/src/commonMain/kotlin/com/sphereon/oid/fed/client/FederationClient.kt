@@ -15,7 +15,6 @@ import com.sphereon.oid.fed.openapi.models.TrustMarkValidationResponse
 import com.sphereon.oid.fed.openapi.models.VerifyTrustChainResponse
 import io.ktor.client.*
 import io.ktor.client.plugins.*
-import kotlinx.serialization.json.Json
 
 /**
  * Federation client for reading and validating statements and trust chains.
@@ -29,7 +28,6 @@ class FederationClient(
             install(HttpTimeout)
         },
         cryptoService = cryptoServiceCallback ?: cryptoService(),
-        json = Json { ignoreUnknownKeys = true },
         cache = InMemoryCache(),
         httpResolverConfig = DefaultHttpResolverConfig()
     )

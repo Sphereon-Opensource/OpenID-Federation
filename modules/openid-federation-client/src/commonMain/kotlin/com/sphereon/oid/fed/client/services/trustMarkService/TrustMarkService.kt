@@ -116,12 +116,11 @@ class TrustMarkService(
         val ownerJwks = ownerClaims.jwks
             ?: return TrustMarkValidationResponse(false, "No JWKS found for Trust Mark owner")
 
-
         val decodedDelegation = decodeJWTComponents(delegation)
 
         val delegationKey = findKeyInJwks(
-            ownerJwks,
-            decodedDelegation.header.kid, context.json
+            ownerJwks.toTypedArray(),
+            decodedDelegation.header.kid
         ) ?: return TrustMarkValidationResponse(false, "Delegation signing key not found in owner's JWKS")
 
         if (!context.cryptoService.verify(delegation, delegationKey)) {
@@ -141,7 +140,7 @@ class TrustMarkService(
 
     private fun validateWithTrustMarkIssuers(
         trustMarkId: String,
-        trustMarkIssuers: Map<String, Array<String>>,
+        trustMarkIssuers: Map<String, List<String>>,
         decodedTrustMark: Jwt
     ): TrustMarkValidationResponse {
         val issuerClaims = trustMarkIssuers[trustMarkId]
