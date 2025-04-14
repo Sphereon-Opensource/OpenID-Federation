@@ -1,10 +1,11 @@
 package com.sphereon.oid.fed.services
 
 import app.cash.sqldelight.Query
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkType
@@ -452,6 +453,7 @@ class TrustMarkServiceTest {
         val keys = arrayOf(
             AccountJwk(
                 id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
+                alg = JwaAlgorithm.ES256.value,
                 kid = key.kid ?: key.kmsKeyRef,
                 kty = key.jose.publicJwk.kty.toString(),
                 use = key.jose.publicJwk.use
@@ -890,6 +892,7 @@ class TrustMarkServiceTest {
             AccountJwk(
                 id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
                 kid = key.kid ?: key.kmsKeyRef,
+                alg = JwaAlgorithm.ES256.value,
                 kty = key.jose.publicJwk.kty.toString(),
                 use = key.jose.publicJwk.use
             )

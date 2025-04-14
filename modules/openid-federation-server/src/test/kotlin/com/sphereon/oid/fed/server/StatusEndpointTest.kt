@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.server.federation
+package com.sphereon.oid.fed.server
 
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

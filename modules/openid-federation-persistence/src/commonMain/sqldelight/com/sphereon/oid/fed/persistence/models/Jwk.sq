@@ -1,11 +1,12 @@
 create:
 INSERT INTO Jwk (
     account_id,
+    alg,
     kid,
     kms,
     kms_key_ref,
     key
-) VALUES (?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?)
 RETURNING *;
 
 revoke:

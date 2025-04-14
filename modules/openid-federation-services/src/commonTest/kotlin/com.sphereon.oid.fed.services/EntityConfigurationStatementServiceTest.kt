@@ -1,10 +1,11 @@
 package com.sphereon.oid.fed.services
 
 
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account
@@ -128,7 +129,13 @@ class EntityConfigurationStatementServiceTest {
     @Test
     fun `test find by account`() {
         val testKey =
-            AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
+            AccountJwk(
+                kid = TEST_KEY_ID,
+                kty = "RSA",
+                use = "sig",
+                alg = JwaAlgorithm.RS256.value,
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
+            )
         every { jwkService.getKeys(testAccount.toDTO(), any()) } returns arrayOf(testKey)
 
         val result = statementService.findByAccount(testAccount.toDTO())
@@ -149,6 +156,7 @@ class EntityConfigurationStatementServiceTest {
             kid = key.kid ?: key.kmsKeyRef,
             kty = "EC",
             use = "sig",
+            alg = JwaAlgorithm.ES256.value,
             id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
         )
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
@@ -180,6 +188,7 @@ class EntityConfigurationStatementServiceTest {
             id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
             kid = key.kid ?: key.kmsKeyRef,
             kty = key.jose.publicJwk.kty.toString(),
+            alg = JwaAlgorithm.ES256.value,
             use = key.jose.publicJwk.use
         )
 
@@ -229,7 +238,10 @@ class EntityConfigurationStatementServiceTest {
         every { accountService.getAccountIdentifierByAccount(testAccount.toDTO()) } returns TEST_IDENTIFIER
 
         val testKey =
-            AccountJwk(kid = TEST_KEY_ID, kty = "RSA", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
+            AccountJwk(
+                kid = TEST_KEY_ID, kty = "RSA", use = "sig", alg = JwaAlgorithm.RS256.value,
+                id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
+            )
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testMetadata = listOf(
@@ -261,7 +273,10 @@ class EntityConfigurationStatementServiceTest {
         val trustMarkTypeId = Uuid.random().toString()
 
         val testKey =
-            AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
+            AccountJwk(
+                kid = TEST_KEY_ID, kty = "EC", alg = JwaAlgorithm.ES256.value,
+                use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
+            )
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testTrustMarkType = mockk<com.sphereon.oid.fed.persistence.models.TrustMarkType> {
@@ -303,7 +318,10 @@ class EntityConfigurationStatementServiceTest {
 
         val trustMarkTypeId = Uuid.random().toString()
         val testKey =
-            AccountJwk(kid = TEST_KEY_ID, kty = "EC", use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca")
+            AccountJwk(
+                kid = TEST_KEY_ID, kty = "EC", alg = JwaAlgorithm.ES256.value,
+                use = "sig", id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca"
+            )
         every { jwkService.getKeys(testAccount.toDTO()) } returns arrayOf(testKey)
 
         val testReceivedTrustMark = mockk<com.sphereon.oid.fed.persistence.models.ReceivedTrustMark> {

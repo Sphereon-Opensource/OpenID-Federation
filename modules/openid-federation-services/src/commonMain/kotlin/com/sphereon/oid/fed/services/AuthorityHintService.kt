@@ -1,8 +1,8 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AuthorityHint
@@ -40,7 +40,10 @@ class AuthorityHintService {
 
         if (existingAuthorityHint != null) {
             val exception = EntityAlreadyExistsException(Constants.AUTHORITY_HINT_ALREADY_EXISTS)
-            logger.error("Authority hint already exists for account: ${account.username}, identifier: $identifier", exception)
+            logger.error(
+                "Authority hint already exists for account: ${account.username}, identifier: $identifier",
+                exception
+            )
             throw exception
         }
 
@@ -49,7 +52,10 @@ class AuthorityHintService {
                 ?.also { logger.info("Successfully created authority hint for account: ${account.username} with identifier: $identifier") }
                 ?: throw IllegalStateException(Constants.FAILED_TO_CREATE_AUTHORITY_HINT)
         } catch (e: IllegalStateException) {
-            logger.error("Failed to create authority hint for account: ${account.username} with identifier: $identifier", e)
+            logger.error(
+                "Failed to create authority hint for account: ${account.username} with identifier: $identifier",
+                e
+            )
             throw e
         }
     }

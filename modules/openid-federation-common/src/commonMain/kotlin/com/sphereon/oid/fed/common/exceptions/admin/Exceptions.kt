@@ -1,4 +1,4 @@
-package com.sphereon.oid.fed.common.exceptions
+package com.sphereon.oid.fed.common.exceptions.admin
 
 open class ApplicationException(message: String) : RuntimeException(message)
 

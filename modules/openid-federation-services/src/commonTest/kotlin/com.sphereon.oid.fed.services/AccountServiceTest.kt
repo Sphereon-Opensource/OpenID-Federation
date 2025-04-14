@@ -1,9 +1,9 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.common.exceptions.BadRequestException
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.BadRequestException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.CreateAccount
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account

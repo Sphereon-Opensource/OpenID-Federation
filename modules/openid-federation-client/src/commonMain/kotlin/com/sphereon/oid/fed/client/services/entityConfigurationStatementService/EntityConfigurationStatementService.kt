@@ -32,8 +32,7 @@ class EntityConfigurationStatementService(
 
         return try {
             logger.debug("Decoding JWT payload into EntityConfigurationStatement")
-            val result =
-                context.json.decodeFromJsonElement(EntityConfigurationStatement.serializer(), decodedJwt.payload)
+            val result: EntityConfigurationStatement = context.json.decodeFromString(decodedJwt.payload.toString())
             logger.info("Successfully resolved entity configuration for: $entityIdentifier")
             result
         } catch (e: Exception) {
@@ -77,7 +76,7 @@ class EntityConfigurationStatementService(
     /**
      * Retrieves the historical keys from the federation entity's historical keys endpoint.
      */
-    suspend fun getHistoricalKeys(statement: EntityConfigurationStatement): Array<HistoricalKey> {
+    suspend fun getHistoricalKeys(statement: EntityConfigurationStatement): List<HistoricalKey> {
         logger.debug("Retrieving historical keys")
         val historicalKeysJwt = fetchHistoricalKeysJwt(statement)
         val verifiedJwt = verifyHistoricalKeysJwt(statement, historicalKeysJwt)
@@ -126,7 +125,7 @@ class EntityConfigurationStatementService(
     /**
      * Decodes the JWT payload into an array of historical keys
      */
-    private fun decodeHistoricalKeys(jwt: String): Array<HistoricalKey> {
+    private fun decodeHistoricalKeys(jwt: String): List<HistoricalKey> {
         return try {
             val decodedJwt = decodeJWTComponents(jwt)
             val historicalKeysResponse = context.json.decodeFromJsonElement(

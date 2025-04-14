@@ -8,4 +8,4 @@ INSERT INTO SubordinateStatement (
 ) VALUES (?, ?, ?, ?, ?) RETURNING *;
 
 findByIssAndSub:
-SELECT * FROM SubordinateStatement WHERE iss = ? AND sub = ?  ORDER BY id DESC LIMIT 1;
+SELECT * FROM SubordinateStatement WHERE iss = ? AND sub = ?  ORDER BY created_at DESC LIMIT 1;

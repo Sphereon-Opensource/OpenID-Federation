@@ -18,7 +18,7 @@ junit = "4.13.2"
 kache = "2.1.1"
 kotlin = "2.1.20"
 ktor = "3.1.1"
-kotlinxCoroutines = "1.9.0"
+kotlinxCoroutines = "1.10.2"
 kotlinxDatetime = "0.6.2"
 kotlinxSerialization = "1.8.1"
 kover = "0.9.1"
@@ -28,7 +28,7 @@ node-gradle = "7.1.0"
 npmPublish = "3.5.3"
 openapi = "7.12.0"
 sphereonKmp = "0.2.4"
-springboot = "3.4.3"
+springboot = "3.4.4"
 springsecurity = "6.4.4"
 springdoc = "2.8.5"
 springDependencyManagement = "1.1.7"
@@ -71,6 +71,7 @@ ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "k
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+ktor-serialization-jackson = { module = "io.ktor:ktor-serialization-jackson", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 ktor-client-mock-js = { module = "io.ktor:ktor-client-mock-js", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }

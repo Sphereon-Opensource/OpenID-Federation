@@ -13,4 +13,4 @@ fun AuthorityHintEntity.toDTO(): AuthorityHint {
 }
 
 
-fun List<AuthorityHint>.toAuthorityHintsResponse() = AuthorityHintsResponse(this.toTypedArray())
+fun List<AuthorityHint>.toAuthorityHintsResponse() = AuthorityHintsResponse(this)

@@ -1,6 +1,6 @@
 package com.sphereon.oid.fed.services
 
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.oid.fed.persistence.Persistence
 import com.sphereon.oid.fed.persistence.models.Account

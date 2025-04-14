@@ -29,6 +29,6 @@ fun ReceivedTrustMark.toTrustMark(): TrustMark {
     )
 }
 
-fun List<TrustMark>.toTrustMarksResponse() = TrustMarksResponse(this.toTypedArray())
+fun List<TrustMark>.toTrustMarksResponse() = TrustMarksResponse(this)
 
-fun List<TrustMarkType>.toTrustMarkTypesResponse() = TrustMarkTypesResponse(this.toTypedArray())
+fun List<TrustMarkType>.toTrustMarkTypesResponse() = TrustMarkTypesResponse(this)

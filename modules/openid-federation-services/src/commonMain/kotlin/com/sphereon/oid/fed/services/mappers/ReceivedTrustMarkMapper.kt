@@ -15,4 +15,4 @@ fun ReceivedTrustMarkEntity.toDTO(): ReceivedTrustMark {
 }
 
 
-fun Array<ReceivedTrustMark>.toReceivedTrustMarksResponse() = ReceivedTrustMarksResponse(this)
+fun Array<ReceivedTrustMark>.toReceivedTrustMarksResponse() = ReceivedTrustMarksResponse(this.toList())
