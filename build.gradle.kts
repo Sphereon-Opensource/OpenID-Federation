@@ -96,7 +96,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.20.4-SNAPSHOT"
+    version = "0.20.6-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -116,7 +116,7 @@ allprojects {
 
 subprojects {
     tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
-        compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_COMMONJS)
+        compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_ES)
     }
 
     plugins.withType<MavenPublishPlugin> {
