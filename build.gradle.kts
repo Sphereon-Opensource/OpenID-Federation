@@ -115,6 +115,10 @@ allprojects {
 }
 
 subprojects {
+    tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
+        compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_COMMONJS)
+    }
+
     plugins.withType<MavenPublishPlugin> {
         configure<PublishingExtension> {
             repositories {
