@@ -190,9 +190,9 @@ kotlin {
         nodejs {
             useEsModules()
         }
-        browser {
+       /* browser {
             useEsModules()
-        }
+        }*/
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-open-api"

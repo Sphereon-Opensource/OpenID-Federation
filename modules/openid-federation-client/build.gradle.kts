@@ -24,14 +24,14 @@ kotlin {
     jvm()
 
     js(IR) {
-        browser {
+        /*browser {
             commonWebpackConfig {
                 devServer = KotlinWebpackConfig.DevServer().apply {
                     port = 8083
                 }
             }
             useEsModules()
-        }
+        }*/
         nodejs {
             testTask {
            /*     useMocha {
