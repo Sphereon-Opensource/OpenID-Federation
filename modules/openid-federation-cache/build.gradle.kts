@@ -21,18 +21,12 @@ kotlin {
     jvm()
 
     js(IR) {
-        browser {
-            commonWebpackConfig {
-                devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8083
-                }
-            }
-        }
         nodejs {
+            useEsModules()
             testTask {
-                useMocha {
+                /*useMocha {
                     timeout = "5000"
-                }
+                }*/
             }
         }
         binaries.library()
