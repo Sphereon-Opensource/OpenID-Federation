@@ -34,12 +34,13 @@ kotlin {
         }*/
         nodejs {
             testTask {
-           /*     useMocha {
-                    timeout = "5000"
-                }*/
+                /*     useMocha {
+                         timeout = "5000"
+                     }*/
             }
             useEsModules()
         }
+        useEsModules()
         binaries.library()
         generateTypeScriptDefinitions()
         compilations["main"].packageJson {
@@ -49,6 +50,7 @@ kotlin {
             customField("description", "OpenID Federation Client Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+            customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -61,8 +63,6 @@ kotlin {
                     "access" to "public"
                 )
             )
-
-            types = "./index.d.ts"
         }
     }
 

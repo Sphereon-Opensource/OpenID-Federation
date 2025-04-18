@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
@@ -96,7 +97,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.20.8-SNAPSHOT"
+    version = "0.20.9-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -115,6 +116,11 @@ allprojects {
 }
 
 subprojects {
+    tasks.withType<KotlinJsCompile>().configureEach {
+        kotlinOptions {
+            target = "es2015"
+        }
+    }
     tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
         compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_ES)
     }

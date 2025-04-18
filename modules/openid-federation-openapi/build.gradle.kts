@@ -201,6 +201,7 @@ kotlin {
             customField("description", "OpenID Federation OpenAPI Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -212,7 +213,7 @@ kotlin {
                     "access" to "public"
                 )
             )
-            types = "./index.d.ts"
+            
         }
     }
 

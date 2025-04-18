@@ -21,14 +21,14 @@ kotlin {
     jvm()
 
     js(IR) {
-       /* browser {
-            useEsModules()
-            commonWebpackConfig {
-                devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8083
-                }
-            }
-        }*/
+        /* browser {
+             useEsModules()
+             commonWebpackConfig {
+                 devServer = KotlinWebpackConfig.DevServer().apply {
+                     port = 8083
+                 }
+             }
+         }*/
         nodejs {
             useEsModules()
             testTask {
@@ -46,6 +46,7 @@ kotlin {
             customField("description", "OpenID Federation HTTP Resolver Module")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+            customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -59,7 +60,7 @@ kotlin {
                 )
             )
 
-            types = "./index.d.ts"
+
         }
     }
 

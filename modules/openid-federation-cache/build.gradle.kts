@@ -22,7 +22,7 @@ kotlin {
 
     js(IR) {
         nodejs {
-            useEsModules()
+            useCommonJs()
             testTask {
                 /*useMocha {
                     timeout = "5000"
@@ -38,6 +38,7 @@ kotlin {
             customField("description", "OpenID Federation Cache Module")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+            customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -50,8 +51,6 @@ kotlin {
                     "access" to "public"
                 )
             )
-
-            types = "./index.d.ts"
         }
     }
 
