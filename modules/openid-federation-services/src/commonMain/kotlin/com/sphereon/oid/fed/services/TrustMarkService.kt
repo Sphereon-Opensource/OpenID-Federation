@@ -295,7 +295,8 @@ class TrustMarkService(
         val jwt = jwtService.signSerializable(
             trustMark.build(),
             JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg),
-            key.kid
+            key.kid,
+            key.kmsKeyRef
         )
         logger.debug("Successfully signed trust mark")
 

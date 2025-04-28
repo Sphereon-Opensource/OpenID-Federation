@@ -217,7 +217,7 @@ class JwkService(
 
             val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg)
             val jwtService = JwtService(keyManagementSystem)
-            val jwt = jwtService.signSerializable(federationKeysResponse, header, key.kid)
+            val jwt = jwtService.signSerializable(federationKeysResponse, header, key.kid, key.kmsKeyRef)
             logger.verbose("Successfully built federation historical keys JWT for username: ${account.username}")
             logger.debug("JWT: $jwt")
             jwt

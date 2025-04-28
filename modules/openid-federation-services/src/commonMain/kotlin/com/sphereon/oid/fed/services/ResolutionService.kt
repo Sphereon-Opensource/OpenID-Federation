@@ -144,7 +144,7 @@ class ResolutionService(
             typ = "application/resolve-response+jwt"
         )
 
-        val jwt = jwtService.signSerializable(response, header = jwtHeader, kid = key.id)
+        val jwt = jwtService.signSerializable(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef)
 
         return jwt
     }

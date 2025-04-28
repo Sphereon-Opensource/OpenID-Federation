@@ -294,7 +294,8 @@ class EntityConfigurationStatementService(
         return jwtService.signSerializable(
             statement,
             header,
-            key.kid
+            key.kid,
+            key.kmsKeyRef
         )
     }
 
