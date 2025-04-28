@@ -27,7 +27,7 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      * @param kmsKeyRef The key reference of the KMS. This is the internal name. Defaults to kid value
      * @return The signed JWT
      */
-    suspend fun sign(payload: JsonObject, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
+    suspend fun sign(payload: JsonObject, header: JwtHeader, kid: String, kmsKeyRef: String?): String {
         logger.debug("Signing payload with key: $kid")
         val (headerB64, payloadB64) = prepareSigningInput(header, payload)
         val signingInput = "$headerB64.$payloadB64"
@@ -58,7 +58,7 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      * @param kmsKeyRef The internal KMS Key name/id
      * @return The signed JWT
      */
-    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
+    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, kid: String, kmsKeyRef: String?): String {
         val payloadJson = Json.encodeToJsonElement(Json.serializersModule.serializer(), payload).jsonObject
         return sign(payloadJson, header, kid, kmsKeyRef)
     }
