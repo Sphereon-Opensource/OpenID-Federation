@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.invoke
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -66,14 +66,29 @@ class SecurityConfig {
 
     @Bean
     fun jwtAuthenticationConverter(): JwtAuthenticationConverter {
-        val grantedAuthoritiesConverter = JwtGrantedAuthoritiesConverter().apply {
-            setAuthoritiesClaimName("roles") // Matches the claim name in Keycloak
-            setAuthorityPrefix("ROLE_")      // Prefix to align with Spring Security expectations
+        return JwtAuthenticationConverter().apply {
+            setJwtGrantedAuthoritiesConverter { jwt ->
+                val authorities = mutableListOf<SimpleGrantedAuthority>()
+
+                // Extract realm roles
+                val realmRoles = jwt.claims["realm_access"]?.let {
+                    (it as Map<*, *>)["roles"] as? List<*>
+                } ?: listOf<String>()
+
+                // Extract client roles
+                val resourceAccess = jwt.claims["resource_access"] as? Map<*, *>
+                val clientRoles = resourceAccess?.get("openid-client")?.let {
+                    (it as Map<*, *>)["roles"] as? List<*>
+                } ?: listOf<String>()
+
+                // Add all roles with ROLE_ prefix
+                (realmRoles + clientRoles).forEach { role ->
+                    authorities.add(SimpleGrantedAuthority("ROLE_${role}"))
+                }
+
+                authorities
+            }
         }
-        val jwtAuthenticationConverter = JwtAuthenticationConverter().apply {
-            setJwtGrantedAuthoritiesConverter(grantedAuthoritiesConverter)
-        }
-        return jwtAuthenticationConverter
     }
 
     @Bean

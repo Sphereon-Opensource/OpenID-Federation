@@ -7,7 +7,7 @@ COPY . /app
 RUN chmod +x ./gradlew
 RUN rm .env*
 
-RUN ./gradlew :modules:openid-federation-admin-server:bootJar -x test -x allTests -x jsBrowserTest -x integrationTests --no-daemon -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
+RUN ./gradlew :modules:openid-federation-admin-server:bootJar -x test -x allTests -x jvmTest -x integrationTests --no-daemon -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
 
 FROM openjdk:21-jdk
 RUN microdnf install curl
