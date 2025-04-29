@@ -1,9 +1,10 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.CreateSubordinate
 import com.sphereon.oid.fed.openapi.models.Jwk
@@ -242,7 +243,7 @@ class SubordinateServiceTest {
             SubordinateJwk(
                 Uuid.random().toString(),
                 subordinate.id,
-                """{"kid":"kid1", "kty":"EC"}""",
+                """{"kid":"kid1", "alg": "ES256", "kty":"EC"}""",
                 FIXED_TIMESTAMP,
                 null
             )
@@ -287,6 +288,7 @@ class SubordinateServiceTest {
         val keys = arrayOf(
             AccountJwk(
                 id = "c83e83e7-ed9e-4dda-85f7-d43b51065cca",
+                alg = JwaAlgorithm.ES256.value,
                 kid = generatedKey.kid ?: generatedKey.kmsKeyRef,
                 kty = generatedKey.jose.publicJwk.kty.toString(),
                 use = generatedKey.jose.publicJwk.use
@@ -370,7 +372,10 @@ class SubordinateServiceTest {
             deleted_at = null
         )
 
-        val testJwk = Jwk(kid = "test-kid", kty = "EC")
+        val testJwk = Jwk(
+            kid = "test-kid", alg = JwaAlgorithm.ES256.value,
+            kty = "EC"
+        )
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
         every {
@@ -403,7 +408,11 @@ class SubordinateServiceTest {
             deleted_at = null
         )
 
-        val testJwk = Jwk(kid = "test-kid", kty = "EC")
+        val testJwk = Jwk(
+            kid = "test-kid",
+            alg = JwaAlgorithm.ES256.value,
+            kty = "EC"
+        )
 
         every { subordinateQueries.findById(subordinate.id).executeAsOneOrNull() } returns subordinate
 
@@ -426,14 +435,14 @@ class SubordinateServiceTest {
             SubordinateJwk(
                 Uuid.random().toString(),
                 subordinate.id,
-                "{\"kid\":\"kid1\", \"kty\":\"EC\"}",
+                "{\"kid\":\"kid1\", \"alg\": \"ES256\", \"kty\":\"EC\"}",
                 FIXED_TIMESTAMP,
                 null
             ),
             SubordinateJwk(
                 Uuid.random().toString(),
                 subordinate.id,
-                "{\"kid\":\"kid2\", \"kty\":\"EC\"}",
+                "{\"kid\":\"kid2\", \"alg\": \"ES256\", \"kty\":\"EC\"}",
                 FIXED_TIMESTAMP,
                 null
             )
@@ -476,7 +485,7 @@ class SubordinateServiceTest {
         val subordinateJwk = SubordinateJwk(
             id = jwkId,
             subordinate_id = subordinate.id,
-            key = "{\"kid\":\"test-kid\", \"kty\":\"EC\"}",
+            key = "{\"kid\":\"test-kid\", \"alg\":\"ES256\", \"kty\":\"EC\"}",
             created_at = FIXED_TIMESTAMP,
             deleted_at = null
         )

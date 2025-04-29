@@ -1,9 +1,11 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.openapi.models.ResolveResponse
 import com.sphereon.oid.fed.openapi.models.TrustMark
 import kotlinx.serialization.json.JsonObject
@@ -19,13 +21,17 @@ import kotlinx.serialization.json.jsonObject
  */
 class ResolutionService(
     private val accountService: AccountService,
+    private val jwkService: JwkService,
+    private val keyManagementSystem: IKeyManagementSystem
 ) {
+
     /**
      * Logger instance configured with a specific tag for the ResolutionService class.
      * Used to log messages and events related to the operations and functionality
      * of the resolution process in the service.
      */
     private val logger = Logger.tag("ResolutionService")
+
     /**
      * Instance of the FederationClient used to interact with OpenID Federation
      * services and perform operations such as resolving trust chains, verifying
@@ -35,6 +41,7 @@ class ResolutionService(
      * in the context of the ResolutionService.
      */
     private val client = FederationClient()
+
     /**
      * Represents the number of seconds in one day.
      * This constant is used for time calculations where a daily interval is required.
@@ -89,13 +96,58 @@ class ResolutionService(
             val currentTime = System.currentTimeMillis() / 1000
             logger.debug("Building resolve response with current time: $currentTime")
 
-            val response = buildResolveResponse(currentTime, account, sub, filteredMetadata, trustMarks, trustChainResolution.trustChain)
+            val response = buildResolveResponse(
+                currentTime,
+                account,
+                sub,
+                filteredMetadata,
+                trustMarks,
+                trustChainResolution.trustChain?.toTypedArray()
+            )
             logger.debug("Successfully built resolve response")
+
             return response
         } catch (e: Exception) {
             logger.error("Failed to resolve entity for subject: $sub", e)
             throw e
         }
+    }
+
+    suspend fun getSignedResolveResponseJwt(
+        account: Account,
+        sub: String,
+        trustAnchor: String,
+        entityTypes: Array<String>?
+    ): String {
+        val response = resolveEntity(
+            account = account,
+            sub = sub,
+            trustAnchor = trustAnchor,
+            entityTypes = entityTypes
+        )
+
+        logger.debug("Successfully built resolve response")
+
+        val jwtService = JwtService(keyManagementSystem)
+
+        val keys = jwkService.getKeys(account)
+        if (keys.isEmpty()) {
+            logger.error("No keys found for account: ${account.username}")
+            throw IllegalStateException("The system is in an invalid state: no keys for account.")
+        }
+
+        val key = keys[0]
+        logger.debug("Using key with key: $key")
+
+        val jwtHeader: JwtHeader = JwtHeader(
+            kid = key.kid,
+            alg = key.alg,
+            typ = "application/resolve-response+jwt"
+        )
+
+        val jwt = jwtService.signSerializable(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef)
+
+        return jwt
     }
 
     /**
@@ -120,11 +172,11 @@ class ResolutionService(
         return ResolveResponse(
             iss = accountService.getAccountIdentifierByAccount(account),
             sub = sub,
-            iat = currentTime.toString(),
-            exp = (currentTime + ONE_DAY_IN_SEC).toString(),
+            iat = currentTime.toInt(),
+            exp = (currentTime + ONE_DAY_IN_SEC).toInt(),
             metadata = metadata,
-            trustMarks = trustMarks,
-            trustChain = trustChain
+            trustMarks = trustMarks.toList(),
+            trustChain = trustChain?.toList()
         )
     }
 

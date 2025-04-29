@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.crypto.KeyInfo
+import com.sphereon.crypto.generic.SignatureAlgorithm
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.jose.Jwk
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.logger.Logger
@@ -27,14 +29,15 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      * @param kmsKeyRef The key reference of the KMS. This is the internal name. Defaults to kid value
      * @return The signed JWT
      */
-    suspend fun sign(payload: JsonObject, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
+    suspend fun sign(payload: JsonObject, header: JwtHeader, kid: String, kmsKeyRef: String?): String {
         logger.debug("Signing payload with key: $kid")
         val (headerB64, payloadB64) = prepareSigningInput(header, payload)
         val signingInput = "$headerB64.$payloadB64"
 
         val keyInfo = KeyInfo<Jwk>(
             kid = kid,
-            kmsKeyRef = kmsKeyRef
+            kmsKeyRef = kmsKeyRef,
+            signatureAlgorithm = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(header.alg))
         )
 
         // Sign the properly formatted input
@@ -58,7 +61,7 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
      * @param kmsKeyRef The internal KMS Key name/id
      * @return The signed JWT
      */
-    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, kid: String, kmsKeyRef: String? = kid): String {
+    suspend inline fun <reified T> signSerializable(payload: T, header: JwtHeader, kid: String, kmsKeyRef: String?): String {
         val payloadJson = Json.encodeToJsonElement(Json.serializersModule.serializer(), payload).jsonObject
         return sign(payloadJson, header, kid, kmsKeyRef)
     }

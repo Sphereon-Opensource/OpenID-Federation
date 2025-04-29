@@ -43,8 +43,10 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",
-            "collectionType" to "array",
-            "sourceFolder" to "src/commonMain/kotlin"
+            "collectionType" to "list",
+            "sourceFolder" to "src/commonMain/kotlin",
+//            "serializationLibrary" to "kotlinx_serialization",
+            "serializableModel" to "false"
         )
     )
 

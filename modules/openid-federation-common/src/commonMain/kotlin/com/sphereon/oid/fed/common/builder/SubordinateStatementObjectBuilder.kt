@@ -53,9 +53,9 @@ class SubordinateStatementObjectBuilder {
             exp = exp ?: throw IllegalArgumentException("exp must be provided"),
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = BaseStatementJwks(
-                propertyKeys = jwks.toTypedArray()
+                propertyKeys = jwks
             ),
-            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
+            crit = if (crit.isNotEmpty()) crit else null,
             metadata = JsonObject(metadata),
             metadataPolicy = JsonObject(metadata_policy),
             metadataPolicyCrit = JsonObject(metadata_policy_crit),

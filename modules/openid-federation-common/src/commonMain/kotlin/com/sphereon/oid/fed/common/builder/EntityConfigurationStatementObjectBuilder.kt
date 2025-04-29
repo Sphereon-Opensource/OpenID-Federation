@@ -12,7 +12,6 @@ class EntityConfigurationStatementObjectBuilder {
     private var iat: Int? = null
     private lateinit var jwks: List<Jwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
-    private var metadataPolicy: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
@@ -25,10 +24,6 @@ class EntityConfigurationStatementObjectBuilder {
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
-    }
-
-    fun metadataPolicy(policy: Pair<String, JsonObject>) = apply {
-        this.metadataPolicy[policy.first] = policy.second
     }
 
     fun authorityHint(hint: String) = apply {
@@ -48,7 +43,7 @@ class EntityConfigurationStatementObjectBuilder {
     }
 
     private fun createJwks(jwks: List<Jwk>): BaseStatementJwks {
-        return BaseStatementJwks(jwks.toTypedArray())
+        return BaseStatementJwks(jwks)
     }
 
     fun build(): EntityConfigurationStatement {
@@ -59,11 +54,10 @@ class EntityConfigurationStatementObjectBuilder {
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
-            metadataPolicy = JsonObject(metadataPolicy),
-            authorityHints = if (authorityHints.isNotEmpty()) authorityHints.toTypedArray() else null,
-            crit = if (crit.isNotEmpty()) crit.toTypedArray() else null,
-            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v.toTypedArray() }.toMap(),
-            trustMarks = trustMarks.toTypedArray()
+            authorityHints = if (authorityHints.isNotEmpty()) authorityHints else null,
+            crit = if (crit.isNotEmpty()) crit else null,
+            trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v }.toMap(),
+            trustMarks = trustMarks
         )
     }
 }

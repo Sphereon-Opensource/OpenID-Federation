@@ -16,4 +16,4 @@ fun MetadataEntity.toDTO(): Metadata {
     )
 }
 
-fun List<Metadata>.toMetadataResponse() = MetadataResponse(this.toTypedArray())
+fun List<Metadata>.toMetadataResponse() = MetadataResponse(this)

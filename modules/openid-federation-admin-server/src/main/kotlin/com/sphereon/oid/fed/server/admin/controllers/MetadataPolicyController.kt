@@ -29,7 +29,7 @@ class MetadataPolicyController(
     @GetMapping
     fun getMetadataPolicies(request: HttpServletRequest): ResponseEntity<MetadataPolicyResponse> {
         return metadataPolicyService.findByAccount(getAccountFromRequest(request)).let {
-            ResponseEntity.ok(MetadataPolicyResponse(it.toTypedArray()))
+            ResponseEntity.ok(MetadataPolicyResponse(it))
         }
     }
 

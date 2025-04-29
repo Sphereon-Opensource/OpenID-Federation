@@ -196,9 +196,13 @@ open class ServiceConfig {
     @Bean
     open fun resolveService(
         accountService: AccountService,
+        jwkService: JwkService,
+        keyManagementSystem: IKeyManagementSystem
     ): ResolutionService {
         return ResolutionService(
-            accountService
+            accountService,
+            jwkService,
+            keyManagementSystem
         )
     }
 }

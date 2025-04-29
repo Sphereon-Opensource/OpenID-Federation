@@ -7,6 +7,7 @@ import com.sphereon.oid.fed.server.admin.handlers.logger.DatabaseLoggerHandler
 import com.sphereon.oid.fed.server.admin.handlers.logger.FileLoggerHandler
 import com.sphereon.oid.fed.services.LogService
 import jakarta.annotation.PostConstruct
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.core.env.Environment
@@ -22,6 +23,9 @@ class Application(
     private val logService: LogService,
     private val environment: Environment,
 ) {
+    @Value("\${sphereon.logger.severity:Info}")
+    private var severity: String = Logger.Severity.Info.name
+
     @PostConstruct
     fun configureLogger() {
         val logDir = File("/tmp/logs").apply { mkdirs() }
@@ -29,12 +33,10 @@ class Application(
             File(logDir, "federation-${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))}.log")
 
         // Read severity from properties
-        val severityStr = environment.getProperty("sphereon.logger.severity", "Info")
-        println("Read severity from environment: '$severityStr'")
         val severity = try {
-            Logger.Severity.valueOf(severityStr)
+            Logger.Severity.valueOf(severity)
         } catch (e: IllegalArgumentException) {
-            println("Failed to parse severity '$severityStr', defaulting to Verbose. Error: ${e.message}")
+            println("Failed to parse severity '$severity', defaulting to Verbose. Error: ${e.message}")
             Logger.Severity.Verbose
         }
 

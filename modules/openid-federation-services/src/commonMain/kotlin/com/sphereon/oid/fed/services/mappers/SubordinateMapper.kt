@@ -16,5 +16,5 @@ fun SubordinateEntity.toDTO(): Subordinate {
 
 
 fun Array<SubordinateEntity>.toDTOs(): Array<Subordinate> = this.map { it.toDTO() }.toTypedArray()
-fun Array<Subordinate>.toSubordinatesResponse() = SubordinatesResponse(this)
+fun Array<Subordinate>.toSubordinatesResponse() = SubordinatesResponse(this.toList())
 

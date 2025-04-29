@@ -32,7 +32,7 @@ class TrustMarkIssuerController(
     ): ResponseEntity<TrustMarkIssuersResponse> {
         val issuers = trustMarkService.getIssuersForTrustMarkType(getAccountFromRequest(request), id).map {
             it.toDTO()
-        }.toTypedArray()
+        }
         return ResponseEntity.ok(TrustMarkIssuersResponse(issuers))
     }
 

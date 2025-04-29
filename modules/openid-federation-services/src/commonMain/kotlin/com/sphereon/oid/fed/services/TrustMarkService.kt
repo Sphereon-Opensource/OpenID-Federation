@@ -3,8 +3,8 @@ package com.sphereon.oid.fed.services
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.common.Constants
 import com.sphereon.oid.fed.common.builder.TrustMarkObjectBuilder
-import com.sphereon.oid.fed.common.exceptions.EntityAlreadyExistsException
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.EntityAlreadyExistsException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.CreateTrustMarkRequest
@@ -272,8 +272,8 @@ class TrustMarkService(
             throw IllegalArgumentException(Constants.NO_KEYS_FOUND)
         }
 
-        val kid = keys[0].kid
-        logger.debug("Using key with KID: $kid")
+        val key = keys[0]
+        logger.debug("Using key with KID: $key.kid")
 
         val iat = body.iat ?: (currentTimeMillis / 1000).toInt()
 
@@ -294,8 +294,9 @@ class TrustMarkService(
         val jwtService = JwtService(keyManagementSystem)
         val jwt = jwtService.signSerializable(
             trustMark.build(),
-            JwtHeader(typ = "trust-mark+jwt", kid = kid!!),
-            kid
+            JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg),
+            key.kid,
+            key.kmsKeyRef
         )
         logger.debug("Successfully signed trust mark")
 

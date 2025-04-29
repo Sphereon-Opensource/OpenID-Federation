@@ -5,6 +5,7 @@ import com.sphereon.oid.fed.common.builder.EntityConfigurationStatementObjectBui
 import com.sphereon.oid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
+import com.sphereon.oid.fed.openapi.models.AccountJwk
 import com.sphereon.oid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.oid.fed.openapi.models.Jwk
 import com.sphereon.oid.fed.openapi.models.JwtHeader
@@ -86,7 +87,7 @@ class EntityConfigurationStatementService(
         val entityConfigurationStatement = findByAccount(account)
         val keys =
             jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
-        val key = keys[0].kid ?: throw IllegalArgumentException("First key must have a kid")
+        val key = keys[0]
 
         val jwt = createSignedJwt(entityConfigurationStatement, key)
 
@@ -161,7 +162,6 @@ class EntityConfigurationStatementService(
     ) {
         addFederationEntityMetadata(account, builder, identifier)
         addMetadata(account, builder)
-        addMetadataPolicy(account, builder)
         addAuthorityHints(account, builder)
         addCrits(account, builder)
         addTrustMarkIssuers(account, builder)
@@ -228,22 +228,6 @@ class EntityConfigurationStatementService(
     }
 
     /**
-     * Adds metadata policies associated with a given account to the specified entity configuration statement builder.
-     * It retrieves metadata policies linked to the account ID, parses the policy string as JSON,
-     * and adds each policy as a key-value pair (key, policy JSON) to the builder's metadata section.
-     *
-     * @param account The account whose metadata policies need to be added.
-     * @param builder The builder to which the metadata policies will be added (as metadata).
-     */
-    private fun addMetadataPolicy(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.metadataPolicyQueries.findByAccountId(account.id)
-            .executeAsList()
-            .forEach {
-                builder.metadataPolicy(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
-            }
-    }
-
-    /**
      * Adds critical claims associated with the given account to the provided builder.
      *
      * @param account The account whose associated critical claims are retrieved.
@@ -303,14 +287,15 @@ class EntityConfigurationStatementService(
      * @param keyId The unique identifier of the key to use for signing the JWT.
      * @return A signed JWT as a string.
      */
-    private suspend fun createSignedJwt(statement: EntityConfigurationStatementEntity, keyId: String): String {
+    private suspend fun createSignedJwt(statement: EntityConfigurationStatementEntity, key: AccountJwk): String {
         val jwtService = JwtService(keyManagementSystem)
-        val header = JwtHeader(typ = "entity-statement+jwt", kid = keyId)
+        val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg)
 
         return jwtService.signSerializable(
             statement,
             header,
-            keyId
+            key.kid,
+            key.kmsKeyRef
         )
     }
 

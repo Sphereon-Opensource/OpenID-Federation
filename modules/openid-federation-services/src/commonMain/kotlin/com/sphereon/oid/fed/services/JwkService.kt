@@ -5,7 +5,7 @@ import com.sphereon.crypto.generic.SignatureAlgorithm
 import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.jose.JwkUse
 import com.sphereon.oid.fed.common.Constants
-import com.sphereon.oid.fed.common.exceptions.NotFoundException
+import com.sphereon.oid.fed.common.exceptions.admin.NotFoundException
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
 import com.sphereon.oid.fed.openapi.models.AccountJwk
@@ -94,6 +94,7 @@ class JwkService(
                     kid = generatedJwk.kid,
                     kms_key_ref = generatedJwk.kmsKeyRef,
                     kms = kms,
+                    alg = generatedJwk.jose.publicJwk.alg?.value,
                     key = generatedJwk.jose.publicJwk.toJsonString()
                 ).executeAsOne()
 
@@ -212,11 +213,11 @@ class JwkService(
                 throw IllegalStateException("The system is in an invalid state: no keys for account.")
             }
             // If the key's kid value is not set, explicitly throw an exception.
-            val kid = keys.firstOrNull()?.kid ?: throw IllegalStateException("Primary key has a null identifier.")
+            val key = keys.first()
 
-            val header = JwtHeader(typ = JWT_TYPE, kid = kid)
+            val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg)
             val jwtService = JwtService(keyManagementSystem)
-            val jwt = jwtService.signSerializable(federationKeysResponse, header, kid)
+            val jwt = jwtService.signSerializable(federationKeysResponse, header, key.kid, key.kmsKeyRef)
             logger.verbose("Successfully built federation historical keys JWT for username: ${account.username}")
             logger.debug("JWT: $jwt")
             jwt
@@ -243,11 +244,11 @@ class JwkService(
      * @param account The account for which the historical federation keys are being retrieved.
      * @return An array of historical keys associated with the given account.
      */
-    private fun getFederationHistoricalKeys(account: Account): Array<HistoricalKey> {
+    private fun getFederationHistoricalKeys(account: Account): List<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: ${account.username}")
         val records = jwkQueries.findByAccountId(account.id).executeAsList()
         logger.debug("Found ${records.size} keys for account ID: ${account.id}")
-        return records.map { it.toHistoricalKey() }.toTypedArray()
+        return records.map { it.toHistoricalKey() }
     }
 }
 
