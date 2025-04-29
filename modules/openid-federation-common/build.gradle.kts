@@ -24,20 +24,23 @@ kotlin {
     jvm()
 
     js(IR) {
-        browser {
-            commonWebpackConfig {
-                devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8083
-                }
-            }
-        }
+        /*browser {
+             useEsModules()
+             commonWebpackConfig {
+                 devServer = KotlinWebpackConfig.DevServer().apply {
+                     port = 8083
+                 }
+             }
+         }*/
         nodejs {
+            useEsModules()
             testTask {
-                useMocha {
-                    timeout = "5000"
-                }
+                /*     useMocha {
+                         timeout = "5000"
+                     }*/
             }
         }
+
         binaries.library()
         generateTypeScriptDefinitions()
 
@@ -48,6 +51,7 @@ kotlin {
             customField("description", "OpenID Federation Common Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+            customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -60,8 +64,6 @@ kotlin {
                     "access" to "public"
                 )
             )
-
-            types = "./index.d.ts"
         }
     }
 

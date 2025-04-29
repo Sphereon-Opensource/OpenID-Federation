@@ -17,8 +17,16 @@ kotlin {
     jvm()
 
     js(IR) {
-        browser()
-        nodejs()
+        nodejs {
+            useEsModules()
+            testTask {
+                /*useMocha {
+                    timeout = "5000"
+                }*/
+            }
+        }
+        binaries.library()
+        generateTypeScriptDefinitions()
     }
 
     sourceSets {

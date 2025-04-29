@@ -130,6 +130,19 @@ kotlin {
         }
         filter { line: String ->
             line.replace(
+                regex = Regex("(package com.*)"),
+                replacement = "$1\nimport kotlin.js.ExperimentalJsExport\nimport kotlin.js.JsExport"
+            )
+        }
+
+        filter { line: String ->
+            line.replace(
+                regex = Regex("(data class (\\w+).*)"),
+                replacement = "@OptIn(ExperimentalJsExport::class)\n@JsExport\n$1"
+            )
+        }
+        filter { line: String ->
+            line.replace(
                 regex = Regex("(import kotlinx\\.serialization\\.\\*)"),
                 replacement = "$1 \nimport kotlin.js.JsName"
             )
@@ -176,7 +189,12 @@ kotlin {
         }
         binaries.library()
         generateTypeScriptDefinitions()
-        nodejs()
+        nodejs {
+            useEsModules()
+        }
+       /* browser {
+            useEsModules()
+        }*/
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-open-api"
@@ -185,6 +203,7 @@ kotlin {
             customField("description", "OpenID Federation OpenAPI Library")
             customField("license", "Apache-2.0")
             customField("author", "Sphereon International")
+customField("type", "module")
             customField(
                 "repository", mapOf(
                     "type" to "git",
@@ -196,7 +215,7 @@ kotlin {
                     "access" to "public"
                 )
             )
-            types = "./index.d.ts"
+            
         }
     }
 
