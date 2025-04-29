@@ -1,20 +1,9 @@
 package com.sphereon.oid.fed.server.config
 
 import com.sphereon.crypto.kms.IKeyManagementSystem
+import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.persistence.Persistence
-import com.sphereon.oid.fed.services.AccountService
-import com.sphereon.oid.fed.services.AuthorityHintService
-import com.sphereon.oid.fed.services.CriticalClaimService
-import com.sphereon.oid.fed.services.EntityConfigurationStatementService
-import com.sphereon.oid.fed.services.JwkService
-import com.sphereon.oid.fed.services.JwtService
-import com.sphereon.oid.fed.services.KmsService
-import com.sphereon.oid.fed.services.LogService
-import com.sphereon.oid.fed.services.MetadataService
-import com.sphereon.oid.fed.services.ReceivedTrustMarkService
-import com.sphereon.oid.fed.services.ResolutionService
-import com.sphereon.oid.fed.services.SubordinateService
-import com.sphereon.oid.fed.services.TrustMarkService
+import com.sphereon.oid.fed.services.*
 import com.sphereon.oid.fed.services.config.AccountServiceConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -22,6 +11,9 @@ import org.springframework.core.env.Environment
 
 @Configuration
 open class ServiceConfig {
+
+    val logger = Logger.tag("FederationServerServiceConfig")
+
     @Bean
     open fun accountConfig(environment: Environment): AccountServiceConfig {
         return AccountServiceConfig(
@@ -50,8 +42,74 @@ open class ServiceConfig {
     }
 
     @Bean
-    open fun kmsService(): KmsService {
-        return KmsService.createMemoryKms()
+    open fun kmsService(environment: Environment): KmsService {
+        val providerType = environment.getProperty("sphereon.federation.service.kms.provider", "memory")
+
+        return when (KmsType.fromString(providerType)) {
+            KmsType.AWS -> {
+                try {
+                    KmsService.createAwsKms(
+                        applicationId = environment.getProperty(
+                            "sphereon.federation.aws.application-id",
+                            "sphereon-federation-aws"
+                        ),
+                        region = environment.getRequiredProperty("sphereon.federation.aws.region"),
+                        accessKeyId = environment.getRequiredProperty("sphereon.federation.aws.access-key-id"),
+                        secretAccessKey = environment.getRequiredProperty("sphereon.federation.aws.secret-access-key"),
+                        maxRetries = environment.getProperty(
+                            "sphereon.federation.aws.max-retries",
+                            Int::class.java,
+                            10
+                        ),
+                        baseDelayInMS = environment.getProperty(
+                            "sphereon.federation.aws.base-delay",
+                            Long::class.java,
+                            500L
+                        ),
+                        maxDelayInMS = environment.getProperty(
+                            "sphereon.federation.aws.max-delay",
+                            Long::class.java,
+                            15000L
+                        )
+                    )
+                } catch (e: Exception) {
+                    logger.error("Error initializing AWS KMS provider: ${e.message}")
+                    throw e
+                }
+            }
+
+            KmsType.AZURE -> {
+                try {
+                    KmsService.createAzureKms(
+                        applicationId = environment.getRequiredProperty("sphereon.federation.azure.application-id"),
+                        keyvaultUrl = environment.getRequiredProperty("sphereon.federation.azure.keyvault-url"),
+                        tenantId = environment.getRequiredProperty("sphereon.federation.azure.tenant-id"),
+                        clientId = environment.getRequiredProperty("sphereon.federation.azure.client-id"),
+                        clientSecret = environment.getRequiredProperty("sphereon.federation.azure.client-secret"),
+                        maxRetries = environment.getProperty(
+                            "sphereon.federation.azure.max-retries",
+                            Int::class.java,
+                            10
+                        ),
+                        baseDelayInMS = environment.getProperty(
+                            "sphereon.federation.azure.base-delay",
+                            Long::class.java,
+                            500L
+                        ),
+                        maxDelayInMS = environment.getProperty(
+                            "sphereon.federation.azure.max-delay",
+                            Long::class.java,
+                            15000L
+                        )
+                    )
+                } catch (e: Exception) {
+                    logger.error("Error initializing Azure KMS provider: ${e.message}")
+                    throw e
+                }
+            }
+
+            else -> KmsService.createMemoryKms()
+        }
     }
 
 
@@ -111,12 +169,12 @@ open class ServiceConfig {
     open fun resolveService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsService: KmsService
+        keyManagementSystem: IKeyManagementSystem
     ): ResolutionService {
         return ResolutionService(
             accountService,
             jwkService,
-            kmsService
+            keyManagementSystem
         )
     }
 }

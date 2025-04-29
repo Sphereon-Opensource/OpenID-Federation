@@ -197,12 +197,12 @@ open class ServiceConfig {
     open fun resolveService(
         accountService: AccountService,
         jwkService: JwkService,
-        kmsService: KmsService
+        keyManagementSystem: IKeyManagementSystem
     ): ResolutionService {
         return ResolutionService(
             accountService,
             jwkService,
-            kmsService
+            keyManagementSystem
         )
     }
 }

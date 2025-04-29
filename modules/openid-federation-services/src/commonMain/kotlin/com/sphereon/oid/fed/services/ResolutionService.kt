@@ -1,5 +1,6 @@
 package com.sphereon.oid.fed.services
 
+import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.client.FederationClient
 import com.sphereon.oid.fed.logger.Logger
 import com.sphereon.oid.fed.openapi.models.Account
@@ -21,9 +22,8 @@ import kotlinx.serialization.json.jsonObject
 class ResolutionService(
     private val accountService: AccountService,
     private val jwkService: JwkService,
-    private val kmsService: KmsService
+    private val keyManagementSystem: IKeyManagementSystem
 ) {
-    private val keyManagementSystem = kmsService.getKmsProvider()
 
     /**
      * Logger instance configured with a specific tag for the ResolutionService class.
@@ -136,7 +136,8 @@ class ResolutionService(
             throw IllegalStateException("The system is in an invalid state: no keys for account.")
         }
 
-        val key = keys.first()
+        val key = keys[0]
+        logger.debug("Using key with key: $key")
 
         val jwtHeader: JwtHeader = JwtHeader(
             kid = key.kid,
@@ -171,8 +172,8 @@ class ResolutionService(
         return ResolveResponse(
             iss = accountService.getAccountIdentifierByAccount(account),
             sub = sub,
-            iat = currentTime.toString(),
-            exp = (currentTime + ONE_DAY_IN_SEC).toString(),
+            iat = currentTime.toInt(),
+            exp = (currentTime + ONE_DAY_IN_SEC).toInt(),
             metadata = metadata,
             trustMarks = trustMarks.toList(),
             trustChain = trustChain?.toList()

@@ -216,7 +216,7 @@ class SubordinateService(
             .sub(subordinate.identifier)
             .iat(currentTimeSeconds)
             .exp(expirationTime)
-            .sourceEndpoint("$accountIdentifier/fetch?sub=${subordinate.identifier}")
+            .sourceEndpoint("$accountIdentifier/fetch")
 
         subordinateJwks.forEach {
             logger.debug("Adding JWK to statement")

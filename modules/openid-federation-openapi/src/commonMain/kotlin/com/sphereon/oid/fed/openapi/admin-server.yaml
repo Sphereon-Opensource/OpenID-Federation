@@ -2588,13 +2588,13 @@ components:
           format: date-time
           description: Entity Identifier of the subject of the resolve response.
         iat:
-          type: string
-          format: date-time
-          description: Time when this resolution was issued. This is expressed as Seconds Since the Epoch.
+          type: integer
+          description: The time whem this resolution was issued.
+          example: 1706031234
         exp:
-          type: string
-          format: date-time
+          type: integer
           description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+          example: 1706031234
         metadata:
           type: object
           description: Additional contextual information

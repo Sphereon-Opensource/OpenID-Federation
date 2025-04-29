@@ -1,6 +1,8 @@
 package com.sphereon.oid.fed.services
 
 import com.sphereon.crypto.KeyInfo
+import com.sphereon.crypto.generic.SignatureAlgorithm
+import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.jose.Jwk
 import com.sphereon.crypto.kms.IKeyManagementSystem
 import com.sphereon.oid.fed.logger.Logger
@@ -34,7 +36,8 @@ class JwtService(private val keyManagementSystem: IKeyManagementSystem) {
 
         val keyInfo = KeyInfo<Jwk>(
             kid = kid,
-            kmsKeyRef = kmsKeyRef
+            kmsKeyRef = kmsKeyRef,
+            signatureAlgorithm = SignatureAlgorithm.Static.fromJose(JwaAlgorithm.Static.fromValue(header.alg))
         )
 
         // Sign the properly formatted input
