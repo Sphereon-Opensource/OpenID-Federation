@@ -24,9 +24,9 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.20.12-d42
+  version: 0.20.13-d42
 servers:
-  - url: http://localhost:8081
+  - url: /
     description: Admin Server
 security:
   - oAuth2: [ ]
@@ -2084,9 +2084,7 @@ components:
           description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
         exp:
           type: integer
-          description:
-
-
+          description: The time the Trust Mark will expire.
 
     TrustMarksResponse:
       type: object
