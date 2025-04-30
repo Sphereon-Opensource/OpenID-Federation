@@ -104,6 +104,15 @@ environment.
 
 ### Essential Commands
 
+#### Docker Hub Images
+
+The following Docker Hub images are available for the OpenID Federation project:
+
+-   **OpenID Federation Admin Server:** [https://hub.docker.com/r/sphereon/openid-federation-admin-server](https://hub.docker.com/r/sphereon/openid-federation-admin-server)
+-   **OpenID Federation Server:** [https://hub.docker.com/r/sphereon/openid-federation-server](https://hub.docker.com/r/sphereon/openid-federation-server)
+
+These images can be used to quickly deploy the services in a containerized environment. You can use the `docker compose` file to pull these images, or you can pull them directly using `docker pull`.
+
 #### Build Docker Images
 
 - `docker compose build`  
