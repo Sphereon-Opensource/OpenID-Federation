@@ -24,7 +24,7 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.12.0-d41
+  version: 0.20.12-d42
 servers:
   - url: http://localhost:8081
     description: Admin Server
@@ -53,13 +53,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - accounts
@@ -87,13 +87,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '409':
           description: 'Conflict (e.g., account already exists)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     delete:
       tags:
         - accounts
@@ -115,13 +115,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
   '/keys':
     get:
@@ -145,19 +145,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Account not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - keys
@@ -186,13 +186,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/keys/{keyId}':
     delete:
       tags:
@@ -228,19 +228,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Key or account not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/metadata':
     get:
       tags:
@@ -263,13 +263,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - metadata
@@ -298,13 +298,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/metadata/{id}':
     delete:
       tags:
@@ -334,19 +334,126 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Metadata not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
+
+  '/metadata-policy':
+    get:
+      tags:
+        - metadata-policy
+      summary: Get entity configuration metadata policies
+      operationId: getEntityMetadataPolicies
+      description: Retrieve metadata policy entries for a specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved metadata policies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicyResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+    post:
+      tags:
+        - metadata-policy
+      summary: Create entity configuration metadata policy
+      operationId: createEntityMetadataPolicy
+      description: Add a new metadata policy entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Metadata policy creation data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetadataPolicy'
+      responses:
+        '201':
+          description: Metadata policy created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicy'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+
+  '/metadata-policy/{id}':
+    delete:
+      tags:
+        - metadata-policy
+      summary: Delete account metadata policy
+      operationId: deleteEntityMetadataPolicy
+      description: Deletes a specific metadata policy entry for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the metadata policy entry to be deleted.
+      responses:
+        '200':
+          description: Metadata policy deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetadataPolicy'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Metadata policy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+
+
   '/authority-hints':
     get:
       tags:
@@ -369,13 +476,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - authority-hints
@@ -404,13 +511,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/authority-hints/{id}':
     delete:
       tags:
@@ -440,13 +547,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/entity-statement':
     get:
       tags:
@@ -469,13 +576,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - entity-statements
@@ -505,13 +612,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
   '/subordinates':
     get:
@@ -535,13 +642,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - subordinates
@@ -570,14 +677,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{id}':
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/subordinates/{subordinateId}':
     delete:
       tags:
         - subordinates
@@ -602,21 +709,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Subordinate not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
-  '/subordinates/{id}/jwks':
+  '/subordinates/{subordinateId}/keys':
     get:
       summary: Get subordinate JWKs
       operationId: listJwksBySubordinateId
@@ -645,13 +752,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - subordinates
@@ -687,15 +794,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
-  '/subordinates/{id}/jwks/{jwkId}':
+  '/subordinates/{subordinateId}/keys/{keyId}':
     delete:
       tags:
         - subordinates
@@ -712,7 +819,7 @@ paths:
             type: string
             format: uuid
           description: The ID of the subordinate.
-        - name: jwkId
+        - name: keyId
           in: path
           required: true
           schema:
@@ -731,13 +838,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
   '/subordinates/{subordinateId}/metadata':
     get:
@@ -768,13 +875,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - subordinates
@@ -810,14 +917,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{subordinateId}/metadata/{id}':
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/subordinates/{subordinateIdbordinateId}/metadata/{id}':
     delete:
       tags:
         - subordinates
@@ -853,14 +960,14 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  '/subordinates/{id}/statement':
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/subordinates/{subordinateId}/statement':
     get:
       tags:
         - subordinates
@@ -889,13 +996,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     post:
       tags:
         - subordinates
@@ -931,13 +1038,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/trust-mark-types':
     get:
       tags:
@@ -1064,31 +1171,23 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                identifier:
-                  type: string
-                  description: Identifier of the issuer.
-            examples:
-              request:
-                description: "Example request"
-                value:
-                  identifier: "https://issuer.example.com"
+              $ref: '#/components/schemas/CreateTrustMarkTypeIssuerRequest'
       responses:
         '201':
           description: Issuer successfully added to the Trust Mark Type.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddTrustMarkIssuerResponse'
+                $ref: '#/components/schemas/TrustMarkIssuer'
               examples:
                 response:
                   description: Issuer added to trustmark
                   value:
                     id: "123e4567-e89b-12d3-a456-426614174000"
-                    issuer: "https://issuer.example.com"
-                    trustMarkTypeId: 1
-                    createdAt: "2024-12-01T12:00:00Z"
+                    issuer_identifier: "https://issuer.example.com"
+                    trust_mark_type_id: "bf7d6c8b-c25b-4f14-917d-1f8109c9e4e4"
+                    created_at: "2024-12-01T12:00:00Z"
+                    deleted_at: "2024-12-01T12:00:00Z"
 
         '404':
           description: Account or Trust Mark Type not found.
@@ -1099,7 +1198,6 @@ paths:
       tags:
         - trust-marks
       summary: Remove Issuer from Trust Mark Type
-
       description: Remove an issuer from the specified Trust Mark Type.
       operationId: removeIssuerFromTrustMarkType
       parameters:
@@ -1152,41 +1250,32 @@ paths:
         - $ref: '#/components/parameters/AccountUsername'
       requestBody:
         $ref: '#/components/requestBodies/CreateTrustMarkRequest'
+
       responses:
         '200':
           description: Trust Mark dryRun successful
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  trustMarkId:
-                    type: string
-                    format: uuid
-                    description: The identifier of the created or updated Trust Mark.
+                $ref: '#/components/schemas/CreateTrustMarkResult'
         '201':
           description: Trust Mark created or updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  trustMarkId:
-                    type: string
-                    format: uuid
-                    description: The identifier of the created or updated Trust Mark.
+                $ref: '#/components/schemas/CreateTrustMarkResult'
         '400':
           description: Invalid request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     get:
       tags:
         - trust-marks
@@ -1208,13 +1297,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/trust-marks/{trustMarkId}':
     delete:
       tags:
@@ -1249,19 +1338,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Trust Mark not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/received-trust-marks':
     post:
       tags:
@@ -1296,13 +1385,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
     get:
       tags:
         - trust-marks
@@ -1324,13 +1413,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
   '/received-trust-marks/{receivedTrustMarkId}':
     delete:
@@ -1365,19 +1454,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Received Trust Mark not found.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
         '500':
           description: Server error.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/AdminErrorResponse'
 
   /status:
     get:
@@ -1550,31 +1639,31 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/AdminErrorResponse'
     UnauthorizedError:
       description: Authentication information is missing or invalid
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/AdminErrorResponse'
     ForbiddenError:
       description: The user does not have permission to perform the requested operation
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/AdminErrorResponse'
     ServerError:
       description: Internal server error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/AdminErrorResponse'
     NotFoundError:
       description: The requested resource was not found
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/AdminErrorResponse'
   requestBodies:
     CreateTrustMarkRequest:
       content:
@@ -1589,10 +1678,14 @@ components:
                 type: string
                 description: 'The entity the Trust Mark applies to.'
                 example: http://localhost:8080/trust-mark-holder
+                minLength: 10
+                maxLength: 2048
               trust_mark_id:
                 type: string
                 description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
                 example: http://localhost:8080/trust-mark-types/exampleType
+                minLength: 10
+                maxLength: 2048
               logo_uri:
                 type: string
                 format: uri
@@ -1608,7 +1701,14 @@ components:
               delegation:
                 type: string
                 description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark
-
+              dryRun:
+                type: boolean
+                description: 'If true, the request will be executed but not persisted.'
+                example: false
+              iat:
+                type: integer
+                format: int32
+                description: The time for the trust mark was issued.
   schemas:
     AccountsResponse:
       type: object
@@ -1682,6 +1782,7 @@ components:
       required:
         - kty
         - kid
+        - alg
       properties:
         kty:
           type: string
@@ -1720,7 +1821,6 @@ components:
           type: string
           description: The algorithm associated with the key.
           example: ES256
-          nullable: true
         use:
           type: string
           description: 'The intended use of the key (e.g., sig, enc).'
@@ -1784,6 +1884,8 @@ components:
                 $ref: '#/components/schemas/Jwk'
         metadata:
           additionalProperties: true
+        metadata_policy:
+          additionalProperties: true
         crit:
           type: array
           items:
@@ -1795,6 +1897,8 @@ components:
           type: string
           description: The username of the account.
           example: acmeco
+          minLength: 1
+          maxLength: 32
         identifier:
           type: string
           description: The identifier of the tenant account.
@@ -1808,6 +1912,8 @@ components:
         identifier:
           type: string
           description: The identifier of the authority hint.
+          minLength: 10
+          maxLength: 2048
       required:
         - identifier
 
@@ -1871,6 +1977,20 @@ components:
         - key
         - metadata
 
+    CreateMetadataPolicy:
+      type: object
+      properties:
+        key:
+          type: string
+          description: The metadata policy key.
+          example: openid_relying_party
+        policy:
+          additionalProperties: true
+          description: The metadata policy object.
+      required:
+        - key
+        - policy
+
     CreateReceivedTrustMark:
       type: object
       properties:
@@ -1928,6 +2048,46 @@ components:
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
+    CreateTrustMarkResult:
+      type: object
+      required:
+        - jwt
+        - account_id
+        - trust_mark_id
+        - sub
+        - trust_mark_value
+        - iat
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique ID of the Trust Mark.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        account_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark owner account.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        trust_mark_id:
+          type: string
+          format: uuid
+          description: The id of the trustmark type.
+        sub:
+          type: string
+          description: The entity the Trust Mark applies to.
+          example: https://entity.example.com
+        trust_mark_value:
+          type: string
+          description: The JWT of the Trust Mark.
+        iat:
+          type: integer
+          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+        exp:
+          type: integer
+          description:
+
+
+
     TrustMarksResponse:
       type: object
       properties:
@@ -1957,7 +2117,7 @@ components:
       required:
         - identifier
 
-    CreateTrustMarkTypeIssuer:
+    CreateTrustMarkTypeIssuerRequest:
       type: object
       properties:
         identifier:
@@ -1988,7 +2148,7 @@ components:
               $ref: '#/components/schemas/TrustMarkOwners'
 
 
-    ErrorResponse:
+    AdminErrorResponse:
       type: object
       required:
         - error
@@ -2007,6 +2167,18 @@ components:
           type: integer
           x-stoplight:
             id: qtn6mqbzpjctv
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - error_description
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
+          description: A human-readable short text describing the error.
 
     FederationEntityMetadata:
       type: object
@@ -2092,6 +2264,8 @@ components:
         - type: object
           x-tags:
             - federation
+          required:
+            - id
           properties:
             id:
               type: string
@@ -2195,6 +2369,8 @@ components:
       type: object
       required:
         - kid
+        - alg
+        - typ
       properties:
         alg:
           type: string
@@ -2285,6 +2461,48 @@ components:
           example: '2024-08-06T12:34:56Z'
           nullable: true
 
+    MetadataPolicy:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier for the Metadata Policy record.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        accountId:
+          type: string
+          format: uuid
+          description: The ID of the account associated with this Metadata Policy.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        key:
+          type: string
+          description: The key of the Metadata Policy.
+          example: openid_relying_party
+        policy:
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata Policy was created.
+          example: '2024-08-06T12:34:56Z'
+          nullable: false
+        deletedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Metadata Policy was deleted.
+          example: '2024-08-06T12:34:56Z'
+          nullable: true
+
+    MetadataPolicyResponse:
+      type: object
+      required:
+        - metadataPolicies
+      properties:
+        metadataPolicies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetadataPolicy'
+
     PublishStatementRequest:
       type: object
       properties:
@@ -2298,9 +2516,8 @@ components:
           example: "1234"
         dryRun:
           type: boolean
-          description: 'If true, the request will be validated but not persisted.'
+          description: 'If true, the request will be executed but not persisted.'
           example: false
-
 
     ReceivedTrustMarksResponse:
       type: object
@@ -2311,21 +2528,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReceivedTrustMark'
-    #            type: object
-    #            properties:
-    #              trustMarkId:
-    #                type: string
-    #                description: The unique identifier of the received Trust Mark.
-    #              trustMark:
-    #                type: string
-    #                description: The JWT representing the received Trust Mark.
-    #              issuedJwt:
-    #                type: string
-    #                description: The JWT representing the received Trust Mark.
-    #              receivedAt:
-    #                type: string
-    #                format: date-time
-    #                description: The timestamp when the Trust Mark was received.
+
     CreateReceivedTrustMarkResponse:
       type: object
       properties:
@@ -2339,7 +2542,6 @@ components:
       required:
         - trustMarkTypeId
         - jwt
-
 
     ReceivedTrustMark:
       type: object
@@ -2386,13 +2588,13 @@ components:
           format: date-time
           description: Entity Identifier of the subject of the resolve response.
         iat:
-          type: string
-          format: date-time
-          description: Time when this resolution was issued. This is expressed as Seconds Since the Epoch.
+          type: integer
+          description: The time whem this resolution was issued.
+          example: 1706031234
         exp:
-          type: string
-          format: date-time
+          type: integer
           description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+          example: 1706031234
         metadata:
           type: object
           description: Additional contextual information
@@ -2607,6 +2809,7 @@ components:
       required:
         - id
         - trust_mark
+
     TrustMarkIssuersResponse:
       type: object
       required:
@@ -2615,9 +2818,9 @@ components:
         issuers:
           type: array
           items:
-            type: string
-            example: https://issuer.example.com
-    AddTrustMarkIssuerResponse:
+            $ref: '#/components/schemas/TrustMarkIssuer'
+
+    TrustMarkIssuer:
       type: object
       properties:
         id:
@@ -2639,6 +2842,10 @@ components:
           format: date-time
           description: The timestamp when the Trust Mark Type was created.
           example: "2024-12-01T12:00:00Z"
+        deletedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the Trust Mark Type was deleted.
 
     TrustMarkIssuers:
       type: object
@@ -2656,7 +2863,6 @@ components:
           - 'https://example-issuer2.com'
         'https://refeds.org/wp-content/uploads/2016/01/Sirtfi-1.0.pdf':
           - 'https://swamid.se'
-
 
     TrustMarkOwners:
       type: object
