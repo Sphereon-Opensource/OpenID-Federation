@@ -82,6 +82,7 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 projectreactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version.ref = "projectreactor" }
+sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto = { module = "com.sphereon.kmp:sphereon-kmp-crypto-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
 sphereon-kmp-crypto-kms-ecdsa = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-ecdsa-multiplatform", version.ref = "sphereonKmp" }
