@@ -108,7 +108,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.21.2-SNAPSHOT"
+    version = "0.22.0-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -128,6 +128,34 @@ subprojects {
     }
     tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
         compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_ES)
+    }
+
+    // TODO: Move to publication plugin once ready
+    plugins.withType<MavenPublishPlugin> {
+        configure<PublishingExtension> {
+            repositories {
+                maven {
+                    name = "sphereon-opensource"
+                    val snapshotsUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-snapshots/"
+                    val releasesUrl = "https://nexus.sphereon.com/repository/sphereon-opensource-releases/"
+                    url = uri(if (version.toString().endsWith("SNAPSHOT")) snapshotsUrl else releasesUrl)
+                    credentials {
+                        username = System.getenv("NEXUS_USERNAME")
+                        password = System.getenv("NEXUS_PASSWORD")
+                    }
+                }
+            }
+
+            // Ensure unique coordinates for different publication types
+            publications.withType<MavenPublication> {
+                val publicationName = name
+                if (publicationName == "kotlinMultiplatform") {
+                    artifactId = "${project.name}-multiplatform"
+                } else if (publicationName == "mavenKotlin") {
+                    artifactId = "${project.name}-jvm"
+                }
+            }
+        }
     }
 }
 
