@@ -1,17 +1,9 @@
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.kover)
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-repositories {
-    mavenCentral()
-}
 
 kotlin {
     jvm()
@@ -33,8 +25,8 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kermit.logging)
-                implementation(libs.kotlinx.datetime)
-                implementation(libs.kotlinx.serialization.json)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
             }
         }
 
@@ -43,8 +35,8 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(libs.ktor.client.mock)
-                implementation(libs.kotlinx.coroutines.test)
+                implementation(surelib.io.ktor.client.mock)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
 

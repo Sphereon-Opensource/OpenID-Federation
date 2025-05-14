@@ -29,6 +29,19 @@ plugins {
 }
 
 dependencyResolutionManagement {
+    versionCatalogs {
+        create("sureplug") {
+            from("tech.4sure.gradle:gradle-plugin-bom:0.0.4-SNAPSHOT@toml")
+        }
+        create("surelib") {
+            from("tech.4sure.gradle:library-bom:0.0.4-SNAPSHOT@toml")
+        }
+        // TODO: Move aws sdk to our bom
+        create("awssdk") {
+            from("aws.sdk.kotlin:version-catalog:1.4.31")
+        }
+
+    }
     repositories {
         mavenLocal()
         google {

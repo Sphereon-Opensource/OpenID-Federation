@@ -1,24 +1,11 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.npmPublish)
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
 
-repositories {
-    mavenCentral()
-    mavenLocal()
-    google()
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
 
 kotlin {
     jvm()
@@ -75,21 +62,21 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                implementation(libs.kache)
-                implementation(libs.kache.file)
+                implementation(surelib.com.mayakapps.kache.kache)
+                implementation(surelib.com.mayakapps.kache.file.kache)
                 api(projects.modules.openidFederationCache)
                 api(projects.modules.openidFederationHttpResolver)
                 api(projects.modules.openidFederationOpenapi)
                 api(projects.modules.openidFederationLogger)
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.logging)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.ktor.client.auth)
-                implementation(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlinx.serialization.core)
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.datetime)
+                implementation(surelib.io.ktor.client.core)
+                implementation(surelib.io.ktor.client.logging)
+                implementation(surelib.io.ktor.client.content.negotiation)
+                implementation(surelib.io.ktor.client.auth)
+                implementation(surelib.io.ktor.serialization.kotlinx.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.core)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
             }
         }
         val commonTest by getting {
@@ -97,8 +84,8 @@ kotlin {
                 implementation(libs.kotlin.test)
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(libs.ktor.client.mock)
-                implementation(libs.kotlinx.coroutines.test)
+                implementation(surelib.io.ktor.client.mock)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
 

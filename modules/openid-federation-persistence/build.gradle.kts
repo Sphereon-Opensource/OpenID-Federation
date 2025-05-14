@@ -3,28 +3,9 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
     id("app.cash.sqldelight") version "2.0.2"
     id("maven-publish")
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-kotlin {
-    compilerOptions {
-        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
-        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_1)
-        jvmToolchain { languageVersion.set(JavaLanguageVersion.of(21)) }
-    }
-}
-repositories {
-    google()
-    mavenCentral()
-    mavenLocal()
 }
 
 sqldelight {
@@ -51,7 +32,7 @@ kotlin {
             dependencies {
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(libs.kotlinx.datetime)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
             }
         }
 
