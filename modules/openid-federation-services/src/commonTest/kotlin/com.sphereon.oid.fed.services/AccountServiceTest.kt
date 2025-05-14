@@ -27,7 +27,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @ExperimentalUuidApi
-class AccountServiceTest {
+class  AccountServiceTest {
     private lateinit var accountService: AccountService
     private lateinit var config: AccountServiceConfig
     private lateinit var accountQueries: AccountQueries
