@@ -4,11 +4,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.openapiGenerator)
     id("maven-publish")
-    alias(libs.plugins.npmPublish)
+    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
 }
 
 val openApiSpecPath = "$projectDir/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/admin-server.yaml"
@@ -249,10 +249,10 @@ customField("type", "module")
 
             kotlin.srcDir("$projectDir/build/copy/src/commonMain/kotlin")
             dependencies {
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.kotlinx.serialization.json)
+                implementation(surelib.io.ktor.client.core)
+                implementation(surelib.io.ktor.client.content.negotiation)
+                implementation(surelib.io.ktor.serialization.kotlinx.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
             }
         }
     }

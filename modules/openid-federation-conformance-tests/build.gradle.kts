@@ -1,32 +1,9 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
     id("maven-publish")
 }
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-    google()
-
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
-    }
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
-    }
-    maven {
-        url = uri("https://jitpack.io")
-    }
-}
-
 
 kotlin {
     jvm {
@@ -47,11 +24,11 @@ kotlin {
                 api(projects.modules.openidFederationOpenapi)
                 api(projects.modules.openidFederationPersistence)
                 api(projects.modules.openidFederationCommon)
-                implementation(libs.kotlin.stdlib)
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.kotlinx.datetime)
+                implementation(surelib.org.jetbrains.kotlin.stdlib)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(surelib.io.ktor.serialization.kotlinx.json)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
                 implementation(libs.ktor.client.cio)
                 implementation(libs.sphereon.kmp.cbor)
                 implementation(libs.sphereon.kmp.crypto)
@@ -59,13 +36,13 @@ kotlin {
                 implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
                 implementation(libs.sphereon.kmp.crypto.kms.azure)
                 implementation(libs.sphereon.kmp.crypto.kms.aws)
-                implementation(libs.whyoleg.cryptography.core)
+                implementation(surelib.dev.whyoleg.cryptography.core)
                 implementation(projects.modules.openidFederationLogger)
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationPersistence)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.kotlinx.coroutines.test)
+                implementation(surelib.io.ktor.client.content.negotiation)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
                 implementation(libs.mockk)
             }
         }

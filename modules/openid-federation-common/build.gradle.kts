@@ -1,25 +1,11 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
-    alias(libs.plugins.npmPublish)
+    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-    google()
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
 kotlin {
     jvm()
 
@@ -71,27 +57,27 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationOpenapi)
-                implementation(libs.ktor.client.core)
-                implementation(libs.ktor.client.logging)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.ktor.client.auth)
-                implementation(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlinx.serialization.core)
+                implementation(surelib.io.ktor.client.core)
+                implementation(surelib.io.ktor.client.logging)
+                implementation(surelib.io.ktor.client.content.negotiation)
+                implementation(surelib.io.ktor.client.auth)
+                implementation(surelib.io.ktor.serialization.kotlinx.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.core)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(libs.ktor.client.mock)
-                implementation(libs.kotlinx.coroutines.test)
+                implementation(surelib.io.ktor.client.mock)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation(libs.ktor.client.core.jvm)
-                runtimeOnly(libs.ktor.client.cio.jvm)
+                implementation(surelib.io.ktor.client.core.jvm)
+                runtimeOnly(surelib.io.ktor.client.cio.jvm)
                 implementation(libs.nimbus.jose.jwt)
             }
         }
@@ -103,10 +89,10 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly(libs.ktor.client.core.js)
-                runtimeOnly(libs.ktor.client.js)
+                runtimeOnly(surelib.io.ktor.client.core.js)
+                runtimeOnly(surelib.io.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
-                implementation(libs.kotlinx.serialization.json)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
                 implementation(libs.kotlinx.coroutines.core.js)
             }
         }

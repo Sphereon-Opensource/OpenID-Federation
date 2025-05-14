@@ -1,21 +1,9 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-repositories {
-    mavenCentral()
-    mavenLocal()
-    google()
-    maven("https://jitpack.io")
-}
+
 
 kotlin {
     jvm()
@@ -57,11 +45,11 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlin.stdlib)
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.datetime)
-                implementation(libs.kache)
-                implementation(libs.kache.file)
+                implementation(surelib.org.jetbrains.kotlin.stdlib)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
+                implementation(surelib.com.mayakapps.kache.kache)
+                implementation(surelib.com.mayakapps.kache.file.kache)
             }
         }
 
@@ -70,8 +58,8 @@ kotlin {
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(libs.kotlinx.coroutines.test)
-                implementation(libs.kotlin.stdlib)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(surelib.org.jetbrains.kotlin.stdlib)
             }
         }
     }
