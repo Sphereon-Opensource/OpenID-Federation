@@ -1,32 +1,11 @@
 plugins {
-    alias(libs.plugins.kotlinJvm)
+    alias(sureplug.plugins.org.jetbrains.kotlin.jvm)
     alias(libs.plugins.springboot)
     alias(libs.plugins.kotlinPluginSpring)
-    alias(libs.plugins.kotlinSerialization)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.springDependencyManagement)
     id("maven-publish")
     application
-}
-
-repositories {
-    mavenCentral()
-    mavenLocal()
-
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
-    }
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
-    }
-    maven {
-        url = uri("https://jitpack.io")
-    }
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
 }
 
 dependencies {
@@ -39,18 +18,18 @@ dependencies {
     implementation(libs.sphereon.kmp.crypto)
     implementation(libs.sphereon.kmp.crypto.kms)
     implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
-    implementation(libs.whyoleg.cryptography.core)
-    implementation(libs.kotlin.stdlib)
-    implementation(libs.kotlinx.coroutines.core)
+    implementation(surelib.dev.whyoleg.cryptography.core)
+    implementation(surelib.org.jetbrains.kotlin.stdlib)
+    implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.reactor)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+    implementation(surelib.io.ktor.serialization.kotlinx.json)
     implementation(libs.springboot.actuator)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.springboot.security)
     implementation(libs.springboot.oauth2.resource.server)
-    implementation(libs.kotlin.reflect)
+    implementation(surelib.org.jetbrains.kotlin.reflect)
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
     testImplementation(libs.springboot.testcontainer)

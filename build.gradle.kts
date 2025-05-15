@@ -58,18 +58,29 @@ gradle.projectsEvaluated {
     }
 }
 
+
 plugins {
+    alias(sureplug.plugins.com.android.library) apply false
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform) apply false
+    alias(sureplug.plugins.org.jetbrains.kotlin.jvm) apply false
+    alias(sureplug.plugins.com.vanniktech.maven.publish) apply false
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization) apply false
+    alias(sureplug.plugins.io.kotest.multiplatform.io.kotest.multiplatform.gradle.plugin) apply false
+    alias(sureplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin) apply false
+    alias(sureplug.plugins.org.jetbrains.kotlin.android) apply false
+    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin) apply false
+    alias(sureplug.plugins.sure.gradle.plugin.conventions) apply false
+    alias(sureplug.plugins.sure.gradle.plugin.integration.tests) apply false
+    alias(sureplug.plugins.sure.gradle.plugin.project.publication) apply false
+
+    // TODO update to sureplugs
     alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.androidLibrary) apply false
     alias(libs.plugins.jetbrainsCompose) apply false
     alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.kotlinJvm) apply false
-    alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.springboot) apply false
     alias(libs.plugins.springDependencyManagement) apply false
     alias(libs.plugins.kotlinPluginSpring) apply false
     alias(libs.plugins.node.gradle) apply false
-    id("maven-publish")
 }
 
 fun getNpmVersion(): String {
@@ -97,7 +108,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.oid.fed"
-    version = "0.22.0"
+    version = "0.22.3-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -105,17 +116,11 @@ allprojects {
             exclude(group = "org.slf4j", module = "slf4j-simple")
         }
     }
-
-    // Common repository configuration for all projects
-    repositories {
-        mavenLocal()
-        mavenCentral()
-        gradlePluginPortal()
-        google()
-    }
 }
 
 subprojects {
+    apply(plugin = "tech.4sure.gradle.plugin.conventions")
+
     tasks.withType<KotlinJsCompile>().configureEach {
         kotlinOptions {
             target = "es2015"
@@ -125,6 +130,7 @@ subprojects {
         compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_ES)
     }
 
+    // TODO: Move to publication plugin once ready
     plugins.withType<MavenPublishPlugin> {
         configure<PublishingExtension> {
             repositories {

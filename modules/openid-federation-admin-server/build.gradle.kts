@@ -3,7 +3,7 @@ import com.android.build.gradle.internal.tasks.factory.dependsOn
 plugins {
     alias(libs.plugins.springboot)
     alias(libs.plugins.springDependencyManagement)
-    alias(libs.plugins.kotlinJvm)
+    alias(sureplug.plugins.org.jetbrains.kotlin.jvm)
     alias(libs.plugins.kotlinPluginSpring)
     id("maven-publish")
     application
@@ -16,20 +16,6 @@ tasks.register<Copy>("copyOpenAPI") {
 
 tasks.processResources.dependsOn(":modules:openid-federation-admin-server:copyOpenAPI")
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
-    }
-    maven {
-        url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
-    }
-    maven {
-        url = uri("https://jitpack.io")
-    }
-}
-
 sourceSets {
     main {
         java {
@@ -39,11 +25,7 @@ sourceSets {
 }
 
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
+
 
 dependencies {
     api(projects.modules.openidFederationOpenapi)
@@ -58,19 +40,20 @@ dependencies {
     implementation(libs.springboot.security)
     implementation(libs.springboot.oauth2.resource.server)
     implementation(libs.kotlinx.coroutines.reactor)
-    implementation(libs.kotlinx.datetime)
-    implementation(libs.kotlinx.serialization.json)
+
+    implementation(surelib.org.jetbrains.kotlinx.datetime)
+    implementation(surelib.org.jetbrains.kotlinx.serialization.json)
     implementation(libs.projectreactor.kotlin.extensions)
     implementation(libs.sphereon.kmp.cbor)
     implementation(libs.sphereon.kmp.crypto)
     implementation(libs.sphereon.kmp.crypto.kms)
     implementation(libs.sphereon.kmp.crypto.kms.azure)
-    implementation(libs.kotlin.stdlib)
+    implementation(surelib.org.jetbrains.kotlin.stdlib)
     implementation(libs.springboot.web)
     implementation(libs.springboot.data.jdbc)
     implementation(libs.springboot.validation)
-    implementation(libs.kotlin.reflect)
-    implementation(libs.whyoleg.cryptography.core)
+    implementation(surelib.org.jetbrains.kotlin.reflect)
+    implementation(surelib.dev.whyoleg.cryptography.core)
     implementation(libs.springdoc.starter.webmvc.ui)
     testImplementation(libs.springboot.test)
     testImplementation(libs.testcontainer.junit)
@@ -79,7 +62,7 @@ dependencies {
     testImplementation(libs.spring.security.test)
     runtimeOnly(libs.postgresql)
     runtimeOnly(libs.springboot.devtools)
-    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(surelib.io.ktor.serialization.kotlinx.json)
 }
 
 kotlin {
