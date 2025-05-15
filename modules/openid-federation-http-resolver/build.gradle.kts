@@ -1,21 +1,9 @@
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
-
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-repositories {
-    mavenCentral()
-    mavenLocal()
-    google()
-    maven("https://jitpack.io")
-}
+
 
 kotlin {
     jvm()
@@ -67,10 +55,10 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                implementation(libs.kotlinx.datetime)
-                implementation(libs.kotlinx.coroutines.core)
-                implementation(libs.kotlinx.serialization.json)
-                implementation(libs.ktor.client.core)
+                implementation(surelib.org.jetbrains.kotlinx.datetime)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(surelib.io.ktor.client.core)
                 api(projects.modules.openidFederationCache)
                 api(projects.modules.openidFederationLogger)
             }
@@ -79,8 +67,8 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(libs.kotlinx.coroutines.test)
-                implementation(libs.ktor.client.mock)
+                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(surelib.io.ktor.client.mock)
             }
         }
         val jvmMain by getting {
