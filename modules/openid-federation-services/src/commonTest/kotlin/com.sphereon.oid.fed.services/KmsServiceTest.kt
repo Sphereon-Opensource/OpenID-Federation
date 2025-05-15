@@ -1,11 +1,5 @@
 package com.sphereon.oid.fed.services
 
-
-import com.sphereon.crypto.IManagedKeyInfo
-import com.sphereon.crypto.KeyEncoding
-import com.sphereon.crypto.KeyInfo
-import com.sphereon.crypto.KeyVisibility
-import com.sphereon.crypto.jose.Jwk
 import com.sphereon.crypto.jose.JwaAlgorithm
 import com.sphereon.crypto.kms.aws.AwsKmsCryptoProvider
 import com.sphereon.crypto.kms.azure.AzureKeyVaultCryptoProvider
@@ -13,6 +7,7 @@ import com.sphereon.crypto.kms.ecdsa.EcDSACryptoProvider
 import com.sphereon.oid.fed.client.crypto.cryptoService
 import com.sphereon.oid.fed.openapi.models.JwtHeader
 import com.sphereon.oid.fed.services.mappers.jsonSerialization
+import com.sphereon.oid.fed.services.mappers.toJsonString
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -144,6 +139,12 @@ class KmsServiceTest {
         val jwkJson = generatedKey.jose.publicJwk.toJsonString()
         val jwk: com.sphereon.oid.fed.openapi.models.Jwk = jsonSerialization.decodeFromString(jwkJson)
         val isValid = cryptoSvc.verify(jwt, jwk)
+        if (!isValid) {
+            // Let's print the JWK and JWT for easy debugging in case it is not valid
+            println("JWK:\n${jwk.toJsonString()}\n\n")
+            println("JWT: $jwt")
+        }
+
         assertTrue(isValid, "JWT signature should be valid")
 
         // Verify the Jwk model properties
