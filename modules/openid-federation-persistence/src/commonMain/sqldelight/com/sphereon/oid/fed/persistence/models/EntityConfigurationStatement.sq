@@ -10,5 +10,5 @@ findLatestByAccountId:
 SELECT *
 FROM EntityConfigurationStatement
 WHERE account_id = ?
-ORDER BY id DESC
+ORDER BY created_at DESC
 LIMIT 1;
