@@ -80,8 +80,8 @@ maintain consistency across different platforms:
 
 For complete API details, please refer to the following resources:
 
-- [Admin Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationAdminServer/0.1.0-d41)
-- [Federation Server API Reference](https://app.swaggerhub.com/apis-docs/SphereonInt/OpenIDFederationServer/0.1.0-d41)
+- [Admin Server API Reference](https://app.swaggerhub.com/apis/4Sure/OpenIDFederationAdminServer/0.20.0-d41)
+- [Federation Server API Reference](https://app.swaggerhub.com/apis/4Sure/OpenIDFederationServer/0.20.0-d41)
 
 ---
 
