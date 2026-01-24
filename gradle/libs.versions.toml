@@ -1,5 +1,12 @@
 [versions]
 changelog = "3.0.6"
+
+# IDK (Identity Development Kit) dependencies
+idk = "0.14.0-SNAPSHOT"
+kotlinInject = "0.8.1-SNAPSHOT"
+anvil = "0.1.6"
+appPlatform = "0.0.9-SNAPSHOT"
+ksp = "2.1.20-1.0.29"
 agp = "8.9.0"
 android-compileSdk = "34"
 android-minSdk = "24"
@@ -27,11 +34,8 @@ nimbusJoseJwt = "9.40"
 node-gradle = "7.1.0"
 npmPublish = "3.5.3"
 openapi = "7.12.0"
-sphereonKmp = "0.2.24-SNAPSHOT"
-springboot = "3.4.4"
-springsecurity = "6.4.4"
-springdoc = "2.8.5"
-springDependencyManagement = "1.1.7"
+# sphereonKmp version replaced by idk version
+# Spring Boot dependencies removed - migrated to Ktor
 kermitLogging = "2.0.5"
 sqldelight = "2.0.2"
 postgresql = "42.7.3"
@@ -64,6 +68,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-coroutines-test-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test-js", version.ref = "kotlinxCoroutines" }
 kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-core-jvm = { module = "io.ktor:ktor-client-core-jvm", version.ref = "ktor" }
 ktor-client-core-js = { module = "io.ktor:ktor-client-core-js", version.ref = "ktor" }
@@ -78,35 +83,76 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-cio-jvm = { module = "io.ktor:ktor-client-cio-jvm", version.ref = "ktor" }
 ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
+
+# Ktor server dependencies
+ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
+ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
 postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
 projectreactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version.ref = "projectreactor" }
-sphereon-kmp-cbor = { module = "com.sphereon.kmp:sphereon-kmp-cbor-multiplatform", version.ref = "sphereonKmp" }
-sphereon-kmp-crypto = { module = "com.sphereon.kmp:sphereon-kmp-crypto-multiplatform", version.ref = "sphereonKmp" }
-sphereon-kmp-crypto-kms = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-multiplatform", version.ref = "sphereonKmp" }
-sphereon-kmp-crypto-kms-ecdsa = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-ecdsa-multiplatform", version.ref = "sphereonKmp" }
-sphereon-kmp-crypto-kms-azure = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-azure-multiplatform", version.ref = "sphereonKmp" }
-sphereon-kmp-crypto-kms-aws = { module = "com.sphereon.kmp:sphereon-kmp-crypto-kms-aws-multiplatform", version.ref = "sphereonKmp" }
-spring-security-test = { group = "org.springframework.security", name = "spring-security-test", version.ref = "springsecurity" }
-springboot-actuator = { group = "org.springframework.boot", name = "spring-boot-starter-actuator", version.ref = "springboot" }
-springboot-security = { group = "org.springframework.boot", name = "spring-boot-starter-security", version.ref = "springboot" }
-springboot-oauth2-resource-server = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-resource-server", version.ref = "springboot" }
-springboot-oauth2-client = { group = "org.springframework.boot", name = "spring-boot-starter-oauth2-client", version.ref = "springboot" }
-springboot-web = { group = "org.springframework.boot", name = "spring-boot-starter-web", version.ref = "springboot" }
-springboot-data-jdbc = { group = "org.springframework.boot", name = "spring-boot-starter-data-jdbc", version.ref = "springboot" }
-springboot-devtools = { group = "org.springframework.boot", name = "spring-boot-devtools", version.ref = "springboot" }
-springboot-test = { group = "org.springframework.boot", name = "spring-boot-starter-test", version.ref = "springboot" }
-springboot-testcontainer = { group = "org.springframework.boot", name = "spring-boot-testcontainers", version.ref = "springboot" }
-springboot-validation = { group = "org.springframework.boot", name = "spring-boot-starter-validation", version.ref = "springboot" }
-springdoc-starter-webmvc-ui = { group = "org.springdoc", name = "springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+
+# IDK (Identity Development Kit) libraries
+idk-bom = { module = "com.sphereon.idk:idk-bom", version.ref = "idk" }
+idk-core-api-public = { module = "com.sphereon.idk:lib-core-api-public", version.ref = "idk" }
+idk-core-api-default = { module = "com.sphereon.idk:lib-core-api-default", version.ref = "idk" }
+idk-crypto-core-public = { module = "com.sphereon.idk:lib-crypto-core-public", version.ref = "idk" }
+idk-crypto-core-impl = { module = "com.sphereon.idk:lib-crypto-core-impl", version.ref = "idk" }
+idk-crypto-kms-provider-software = { module = "com.sphereon.idk:lib-crypto-kms-provider-software", version.ref = "idk" }
+idk-crypto-kms-provider-aws = { module = "com.sphereon.idk:lib-crypto-kms-provider-aws", version.ref = "idk" }
+idk-crypto-kms-provider-azure = { module = "com.sphereon.idk:lib-crypto-kms-provider-azure", version.ref = "idk" }
+idk-conf-settings = { module = "com.sphereon.idk:lib-conf-settings", version.ref = "idk" }
+idk-data-link-http-client-public = { module = "com.sphereon.idk:lib-data-link-http-client-public", version.ref = "idk" }
+idk-data-link-http-client-impl = { module = "com.sphereon.idk:lib-data-link-http-client-impl", version.ref = "idk" }
+
+# IDK Ktor server integration
+idk-ktor-server-kotlin-inject = { module = "com.sphereon.idk:ktor-server-kotlin-inject", version.ref = "idk" }
+
+# kotlin-inject for DI
+kotlin-inject-runtime = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlinInject" }
+kotlin-inject-runtime-kmp = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInject" }
+kotlin-inject-compiler-ksp = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInject" }
+
+# Amazon App Platform / Anvil DI extensions
+anvil-runtime = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime", version.ref = "anvil" }
+anvil-runtime-optional = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime-optional", version.ref = "anvil" }
+anvil-compiler-ksp = { module = "software.amazon.lastmile.kotlin.inject.anvil:compiler", version.ref = "anvil" }
+amz-kotlin-inject-public = { module = "software.amazon.app.platform:kotlin-inject-public", version.ref = "appPlatform" }
+amz-kotlin-inject-impl = { module = "software.amazon.app.platform:kotlin-inject-impl", version.ref = "appPlatform" }
+amz-kotlin-scope-public = { module = "software.amazon.app.platform:scope-public", version.ref = "appPlatform" }
+amz-di-common-public = { module = "software.amazon.app.platform:di-common-public", version.ref = "appPlatform" }
+amz-kotlin-inject-contribute-public = { module = "software.amazon.app.platform:kotlin-inject-contribute-public", version.ref = "appPlatform" }
+amz-kotlin-inject-contribute-code-generators = { module = "software.amazon.app.platform:kotlin-inject-contribute-impl-code-generators", version.ref = "appPlatform" }
+
+# Spring Boot libraries removed - migrated to Ktor
 sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
 testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
 testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
 whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
 
+[bundles]
+kotlin-inject = [
+    "amz-kotlin-inject-public",
+    "amz-kotlin-inject-impl",
+    "amz-kotlin-inject-contribute-public",
+    "amz-di-common-public",
+    "anvil-runtime",
+    "anvil-runtime-optional",
+    "kotlin-inject-runtime-kmp",
+    "amz-kotlin-scope-public"
+]
+
 [plugins]
 changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "changelog" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 bom-generator = { id = "io.github.gradlebom.generator-plugin", version.ref = "bom" }
@@ -114,11 +160,9 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinPluginSpring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 openapiGenerator = { id = "org.openapi.generator", version.ref = "openapi" }
 npmPublish = { id = "dev.petuska.npm.publish", version.ref = "npmPublish" }
-springboot = { id = "org.springframework.boot", version.ref = "springboot" }
-springDependencyManagement = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+# Spring Boot plugins removed - migrated to Ktor
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle" }

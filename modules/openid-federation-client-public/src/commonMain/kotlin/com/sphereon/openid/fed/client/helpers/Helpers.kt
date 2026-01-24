@@ -1,0 +1,31 @@
+package com.sphereon.openid.fed.client.helpers
+
+import com.sphereon.openid.fed.openapi.models.Jwk
+import kotlinx.datetime.Clock
+
+fun getEntityConfigurationEndpoint(iss: String): String {
+    return "${if (iss.endsWith("/")) iss.dropLast(1) else iss}/.well-known/openid-federation"
+}
+
+fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String {
+    return "${fetchEndpoint}?sub=$sub"
+}
+
+fun findKeyInJwks(keys: Array<Jwk>, kid: String): Jwk? {
+    val key = keys.firstOrNull { it.kid.trim() == kid.trim() }
+
+    return key
+}
+
+fun checkKidInJwks(keys: List<Jwk>, kid: String): Boolean {
+    for (key in keys) {
+        if (key.kid == kid) {
+            return true
+        }
+    }
+    return false
+}
+
+fun getCurrentEpochTimeSeconds(): Long {
+    return Clock.System.now().epochSeconds
+}

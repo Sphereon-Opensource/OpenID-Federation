@@ -1,30 +1,28 @@
+/**
+ * Facade module for backward compatibility.
+ *
+ * This module re-exports both openid-federation-client-public and openid-federation-client-impl,
+ * providing a single dependency for consumers who want all client functionality.
+ *
+ * New code should prefer depending on:
+ * - openid-federation-client-public: For interfaces only (minimal dependencies)
+ * - openid-federation-client-impl: For implementations with DI support
+ *
+ * This facade ensures backward compatibility for existing consumers.
+ */
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
-
 
 kotlin {
     jvm()
 
     js(IR) {
-        /*browser {
-            commonWebpackConfig {
-                devServer = KotlinWebpackConfig.DevServer().apply {
-                    port = 8083
-                }
-            }
-            useEsModules()
-        }*/
         nodejs {
-            testTask {
-                /*     useMocha {
-                         timeout = "5000"
-                     }*/
-            }
             useEsModules()
         }
         useEsModules()
@@ -44,7 +42,6 @@ kotlin {
                     "url" to "https://github.com/Sphereon-Opensource/openid-federation"
                 )
             )
-
             customField(
                 "publishConfig", mapOf(
                     "access" to "public"
@@ -62,37 +59,22 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                implementation(surelib.com.mayakapps.kache.kache)
-                implementation(surelib.com.mayakapps.kache.file.kache)
-                api(projects.modules.openidFederationCache)
-                api(projects.modules.openidFederationHttpResolver)
-                api(projects.modules.openidFederationOpenapi)
-                api(projects.modules.openidFederationLogger)
-                implementation(surelib.io.ktor.client.core)
-                implementation(surelib.io.ktor.client.logging)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.io.ktor.client.auth)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.core)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
-                implementation(surelib.org.jetbrains.kotlinx.datetime)
+                // Re-export both public interfaces and implementations
+                api(projects.modules.openidFederationClientPublic)
+                api(projects.modules.openidFederationClientImpl)
             }
         }
+
         val commonTest by getting {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(surelib.io.ktor.client.mock)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
 
         val jvmMain by getting {
             dependencies {
-                implementation(libs.ktor.client.java)
-                implementation(libs.nimbus.jose.jwt)
             }
         }
 
@@ -104,17 +86,12 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                implementation(libs.ktor.client.js)
-                implementation(libs.kotlinx.coroutines.core.js)
-                implementation(npm("jose", "5.9.4"))
             }
         }
 
         val jsTest by getting {
             dependencies {
                 implementation(kotlin("test-js"))
-                implementation(libs.kotlinx.coroutines.test.js)
-                implementation(libs.ktor.client.mock.js)
             }
         }
     }
@@ -135,6 +112,24 @@ npmPublish {
             }
             scope.set("@sphereon")
             packageName.set("openid-federation-client")
+        }
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            pom {
+                name.set("OpenID Federation Client")
+                description.set("OpenID Federation Client Library (facade)")
+                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
         }
     }
 }

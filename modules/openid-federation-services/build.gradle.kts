@@ -1,50 +1,27 @@
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
+
+/**
+ * This is a wrapper module that re-exports both the service interfaces (-public)
+ * and service implementations (-impl) for backward compatibility.
+ *
+ * New code should depend on:
+ * - openid-federation-services-public for interfaces only
+ * - openid-federation-services-impl for implementations with DI
+ */
 kotlin {
     jvm()
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api(projects.modules.openidFederationClient)
-                api(projects.modules.openidFederationLogger)
-                api(projects.modules.openidFederationOpenapi)
-                api(projects.modules.openidFederationPersistence)
-                api(projects.modules.openidFederationCommon)
-                implementation(surelib.org.jetbrains.kotlin.stdlib)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.datetime)
-                implementation(libs.ktor.client.cio)
-                implementation(libs.sphereon.kmp.cbor)
-                implementation(libs.sphereon.kmp.crypto)
-                implementation(libs.sphereon.kmp.crypto.kms)
-                implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
-                implementation(libs.sphereon.kmp.crypto.kms.azure)
-                implementation(libs.sphereon.kmp.crypto.kms.aws)
-                implementation(surelib.dev.whyoleg.cryptography.core)
-            }
-        }
-
-        val commonTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(projects.modules.openidFederationLogger)
-                implementation(projects.modules.openidFederationOpenapi)
-                implementation(projects.modules.openidFederationPersistence)
-                implementation(projects.modules.openidFederationCommon)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
-                implementation(libs.mockk)
-            }
-        }
-
-        val jvmTest by getting {
-            dependencies {
-                implementation(kotlin("test-junit"))
+                // Re-export both public interfaces and implementations
+                api(projects.modules.openidFederationServicesPublic)
+                api(projects.modules.openidFederationServicesImpl)
             }
         }
     }

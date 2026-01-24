@@ -4,22 +4,18 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(libs.plugins.openapiGenerator)
     id("maven-publish")
-    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
 }
 
-val openApiSpecPath = "$projectDir/src/commonMain/kotlin/com/sphereon/oid/fed/openapi/admin-server.yaml"
+val openApiSpecPath = "$projectDir/src/commonMain/kotlin/com/sphereon/openid/fed/openapi/admin-server.yaml"
 val kotlinOutputDir = "$projectDir/build/generated"
-val javaOutputDir = "$projectDir/build/generated-java"
-val basePackage = "com.sphereon.oid.fed.openapi"
+val basePackage = "com.sphereon.openid.fed.openapi"
 val kotlinApiPackage = "$basePackage.api"
 val kotlinModelPackage = "$basePackage.models"
-val javaPackage = "$basePackage.java"
-val javaApiPackage = "$javaPackage.api"
-val javaModelPackage = "$javaPackage.models"
 
 project.extra.set("openApiPackage", basePackage)
 
@@ -68,47 +64,7 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
     }
 }
 
-tasks.register<GenerateTask>("openApiGenerateJavaSpring") {
-    dependsOn(":modules:openid-federation-integration-tests:compileTestKotlinJvm")
-    group = "openapi tools"
-    description = "Generates Java Spring code with Jakarta validations from OpenAPI specification."
-    generatorName.set("kotlin-spring")
-    inputSpec.set(openApiSpecPath)
-    outputDir.set(javaOutputDir)
-    packageName.set(javaPackage)
-    apiPackage.set(javaApiPackage)
-    modelPackage.set(javaModelPackage)
-    configOptions.set(
-        mapOf(
-            "delegatePattern" to "false",
-            "interfaceOnly" to "false",
-            "useSpringBoot3" to "true",
-            "useJakartaEe" to "true",
-            "useBeanValidation" to "true",
-            "performBeanValidation" to "true",
-            "dateLibrary" to "java8",
-//            "serializationLibrary" to "jackson",
-            "sourceFolder" to "src/main/java"
-        )
-    )
-
-    if (isModelsOnlyProfile) {
-        globalProperties.set(
-            mapOf(
-                "models" to "",
-                "supportingFiles" to ""
-            )
-        )
-    } else {
-        globalProperties.set(
-            mapOf(
-                "models" to "",
-                "apis" to ""
-
-            )
-        )
-    }
-}
+// Java Spring generation removed - migrated to Ktor
 
 kotlin {
     tasks.register<Copy>("fixOpenApiKotlinIssues") {
@@ -249,10 +205,10 @@ customField("type", "module")
 
             kotlin.srcDir("$projectDir/build/copy/src/commonMain/kotlin")
             dependencies {
-                implementation(surelib.io.ktor.client.core)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.io.ktor.client.core)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
             }
         }
     }
@@ -277,36 +233,4 @@ npmPublish {
     }
 }
 
-tasks.register<Delete>("cleanGeneratedJava") {
-    group = "build"
-    delete(javaOutputDir)
-}
-
-tasks.named("clean") {
-    dependsOn("cleanGeneratedJava")
-}
-
-tasks.register<Copy>("fixOpenApiJavaIssues") {
-    dependsOn("openApiGenerateJavaSpring")
-    from(javaOutputDir)
-    into("$projectDir/build/fixed-java")
-
-
-//    filter { line: String ->
-//        line.replace(
-//            "kotlin.collections.Map<kotlin.String, kotlin.Any>",
-//            "kotlin.collections.Map<kotlin.String, kotlinx.serialization.json.JsonElement>",
-//        )
-//    }
-}
-
-tasks.register<Copy>("copyFixedJavaToOutput") {
-    dependsOn("fixOpenApiJavaIssues")
-    from("$projectDir/build/fixed-java")
-    into(javaOutputDir)
-}
-
-// Ensure that openApiGenerateJavaSpring task includes our fixes
-tasks.named("openApiGenerateJavaSpring").configure {
-    finalizedBy("fixOpenApiJavaIssues", "copyFixedJavaToOutput")
-}
+// Java Spring generation tasks removed - migrated to Ktor

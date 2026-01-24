@@ -3,7 +3,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     id("app.cash.sqldelight") version "2.0.2"
     id("maven-publish")
 }
@@ -11,7 +11,7 @@ plugins {
 sqldelight {
     databases {
         create("Database") {
-            packageName = "com.sphereon.oid.fed.persistence"
+            packageName = "com.sphereon.openid.fed.persistence"
             dialect("app.cash.sqldelight:postgresql-dialect:2.0.2")
             schemaOutputDirectory = file("src/commonMain/resources/db/migration")
             migrationOutputDirectory = file("src/commonMain/resources/db/migration")
@@ -32,7 +32,9 @@ kotlin {
             dependencies {
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(surelib.org.jetbrains.kotlinx.datetime)
+                // Core module for OidfConfigKeys
+                implementation(projects.modules.openidFederationCorePublic)
+                implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
             }
         }
 

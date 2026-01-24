@@ -1,8 +1,8 @@
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
-    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
@@ -57,27 +57,29 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationOpenapi)
-                implementation(surelib.io.ktor.client.core)
-                implementation(surelib.io.ktor.client.logging)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.io.ktor.client.auth)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.core)
+                // Core module for OidfConfigKeys used by LegacyEnvMappingPropertySource
+                api(projects.modules.openidFederationCorePublic)
+                implementation(sphereonlib.io.ktor.client.core)
+                implementation(sphereonlib.io.ktor.client.logging)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.io.ktor.client.auth)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.core)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(surelib.io.ktor.client.mock)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(sphereonlib.io.ktor.client.mock)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation(surelib.io.ktor.client.core.jvm)
-                runtimeOnly(surelib.io.ktor.client.cio.jvm)
+                implementation(sphereonlib.io.ktor.client.core.jvm)
+                runtimeOnly(sphereonlib.io.ktor.client.cio.jvm)
                 implementation(libs.nimbus.jose.jwt)
             }
         }
@@ -89,10 +91,10 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly(surelib.io.ktor.client.core.js)
-                runtimeOnly(surelib.io.ktor.client.js)
+                runtimeOnly(sphereonlib.io.ktor.client.core.js)
+                runtimeOnly(sphereonlib.io.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 implementation(libs.kotlinx.coroutines.core.js)
             }
         }

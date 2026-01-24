@@ -60,26 +60,24 @@ gradle.projectsEvaluated {
 
 
 plugins {
-    alias(sureplug.plugins.com.android.library) apply false
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform) apply false
-    alias(sureplug.plugins.org.jetbrains.kotlin.jvm) apply false
-    alias(sureplug.plugins.com.vanniktech.maven.publish) apply false
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization) apply false
-    alias(sureplug.plugins.io.kotest.multiplatform.io.kotest.multiplatform.gradle.plugin) apply false
-    alias(sureplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin) apply false
-    alias(sureplug.plugins.org.jetbrains.kotlin.android) apply false
-    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin) apply false
-    alias(sureplug.plugins.sure.gradle.plugin.conventions) apply false
-    alias(sureplug.plugins.sure.gradle.plugin.integration.tests) apply false
-    alias(sureplug.plugins.sure.gradle.plugin.project.publication) apply false
+    alias(sphereonplug.plugins.com.android.library) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.jvm) apply false
+    alias(sphereonplug.plugins.com.vanniktech.maven.publish) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization) apply false
+    alias(sphereonplug.plugins.io.kotest.io.kotest.gradle.plugin) apply false
+    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.android) apply false
+    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin) apply false
+    alias(sphereonplug.plugins.com.sphereon.gradle.plugin.conventions) apply false
+    alias(sphereonplug.plugins.com.sphereon.gradle.plugin.integration.tests) apply false
+    alias(sphereonplug.plugins.com.sphereon.gradle.plugin.project.publication) apply false
 
-    // TODO update to sureplugs
+    // TODO update to sphereonplugs
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.jetbrainsCompose) apply false
     alias(libs.plugins.compose.compiler) apply false
-    alias(libs.plugins.springboot) apply false
-    alias(libs.plugins.springDependencyManagement) apply false
-    alias(libs.plugins.kotlinPluginSpring) apply false
+    // Spring Boot plugins removed - migrated to Ktor
     alias(libs.plugins.node.gradle) apply false
 }
 
@@ -107,8 +105,8 @@ fun getNpmVersion(): String {
 }
 
 allprojects {
-    group = "com.sphereon.oid.fed"
-    version = "0.23.2-SNAPSHOT"
+    group = "com.sphereon.openid.fed"
+    version = "0.25.0-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -119,11 +117,11 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "tech.4sure.gradle.plugin.conventions")
+    apply(plugin = "com.sphereon.gradle.plugin.conventions")
 
     tasks.withType<KotlinJsCompile>().configureEach {
-        kotlinOptions {
-            target = "es2015"
+        compilerOptions {
+            target.set("es2015")
         }
     }
     tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
