@@ -87,7 +87,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
 
             val key = keys.first()
             val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg ?: "RS256")
-            val jwtResult = jwtService.signPayload(federationKeysResponse, header, key.kid, key.kmsKeyRef)
+            val jwtResult = jwtService.signPayload(federationKeysResponse, header, key.kid, key.kmsKeyRef, key.kms)
 
             if (jwtResult.isErr) {
                 logger.error("Failed to sign federation historical keys JWT")

@@ -284,6 +284,7 @@ class PublishSubordinateStatementCommandImpl(
                 header = header,
                 kid = key.kid,
                 kmsKeyRef = key.kmsKeyRef,
+                kmsProviderId = key.kms,
             )
 
             if (jwtResult.isErr) {

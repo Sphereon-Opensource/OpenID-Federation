@@ -86,7 +86,7 @@ class GetSignedResolveResponseJwtCommandImpl(
                         typ = "application/resolve-response+jwt"
                     )
 
-                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef)
+                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
                 } catch (e: Exception) {
                     logger.error("Failed to sign resolve response JWT", e)
                     IdkResult.err(ServerError("Failed to sign resolve response", e.message, e))

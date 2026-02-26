@@ -20,3 +20,5 @@ fun SubordinateMetadataEntity.toDTO(): SubordinateMetadata {
 
 
 fun Array<SubordinateMetadata>.toSubordinateMetadataResponse() = SubordinateMetadataResponse(this.toList())
+
+fun List<SubordinateMetadata>.toSubordinateMetadataResponse() = SubordinateMetadataResponse(this)

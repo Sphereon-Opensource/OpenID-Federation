@@ -23,7 +23,7 @@ class AccountApiTest {
 
     @BeforeTest
     fun setup() {
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
+        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
         client = HttpClient {
             install(ContentNegotiation) {
                 json(Json {
@@ -178,8 +178,8 @@ class AccountApiTest {
             println("Status code: ${response.status}")
             println("Response body: ${response.bodyAsText()}")
 
-            // Verify bad request status for protected account
-            assertEquals(HttpStatusCode.BadRequest, response.status)
+            // Verify forbidden status for protected account
+            assertEquals(HttpStatusCode.Forbidden, response.status)
             assertTrue(response.bodyAsText().contains("Root account cannot be deleted"))
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")

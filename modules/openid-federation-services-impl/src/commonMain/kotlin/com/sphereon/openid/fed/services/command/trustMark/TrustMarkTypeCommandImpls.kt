@@ -45,7 +45,7 @@ class CreateTrustMarkTypeCommandImpl(
         }
 
         return try {
-            val created = trustMarkTypeQueries.create(account.id, createDto.identifier).executeAsOne()
+            val created = trustMarkTypeQueries.create(createDto.identifier, account.id).executeAsOne()
             logger.info("Successfully created trust mark type with ID: ${created.id}")
             IdkResult.ok(created.toDTO())
         } catch (e: Exception) {

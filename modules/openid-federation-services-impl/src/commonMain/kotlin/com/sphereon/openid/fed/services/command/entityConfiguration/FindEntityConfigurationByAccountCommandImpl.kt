@@ -115,6 +115,7 @@ class FindEntityConfigurationByAccountCommandImpl(
     ) {
         addFederationEntityMetadata(account, builder, identifier)
         addMetadata(account, builder)
+        addMetadataPolicy(account, builder)
         addAuthorityHints(account, builder)
         addCrits(account, builder)
         addTrustMarkIssuers(account, builder)
@@ -155,6 +156,14 @@ class FindEntityConfigurationByAccountCommandImpl(
             .executeAsList()
             .forEach {
                 builder.metadata(Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject))
+            }
+    }
+
+    private fun addMetadataPolicy(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.metadataPolicyQueries.findByAccountId(account.id)
+            .executeAsList()
+            .forEach {
+                builder.metadataPolicy(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
             }
     }
 

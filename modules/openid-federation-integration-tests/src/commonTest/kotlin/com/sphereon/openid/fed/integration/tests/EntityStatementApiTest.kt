@@ -53,7 +53,7 @@ class EntityStatementApiTest {
     @BeforeTest
     fun setup() {
         // Configure base URL from environment variable or use default localhost
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
+        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
 
         // Initialize HTTP client with JSON content negotiation
         client = HttpClient {

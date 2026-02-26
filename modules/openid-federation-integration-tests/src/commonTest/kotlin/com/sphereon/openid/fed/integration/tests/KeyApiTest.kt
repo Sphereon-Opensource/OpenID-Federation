@@ -51,7 +51,7 @@ class KeyApiTest {
         @BeforeAll
         @JvmStatic
         fun setupClass() {
-            baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8080"
+            baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
             setupClient = HttpClient {
                 install(ContentNegotiation) {
                     json(jsonConfig)

@@ -108,7 +108,7 @@ class PublishEntityConfigurationCommandImpl(
     ): IdkResult<String, FederationError> {
         return try {
             val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef)
+            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms)
         } catch (e: Exception) {
             logger.error("Failed to create signed JWT", e)
             IdkResult.err(ServerError("Failed to sign entity configuration", e.message, e))

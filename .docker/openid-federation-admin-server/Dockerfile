@@ -1,25 +1,26 @@
-FROM openjdk:21-jdk AS builder
-RUN microdnf install findutils
+FROM eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
 
 COPY . /app
 RUN chmod +x ./gradlew
-RUN rm .env*
+RUN rm -f .env*
 
-RUN ./gradlew :modules:openid-federation-admin-server:bootJar -x test -x allTests -x integrationTests --no-daemon -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
+# Build the Ktor-based admin server
+RUN ./gradlew :modules:openid-federation-admin-server-ktor:installDist -x test -x allTests -x integrationTests --no-daemon -Dorg.gradle.jvmargs="-Xmx2g -XX:MaxMetaspaceSize=512m"
 
-FROM openjdk:21-jdk
-RUN microdnf install curl
+FROM eclipse-temurin:21-jre
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY --from=builder /app/modules/openid-federation-admin-server/build/libs/openid-federation-admin-server-*.jar ./openid-federation-admin-server.jar
-HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/status || exit 1
+# Copy the installDist output (includes jars and start scripts)
+COPY --from=builder /app/modules/openid-federation-admin-server-ktor/build/install/openid-federation-admin-server-ktor ./
+HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/health || exit 1
 
 # Create non-root user
 RUN useradd -r -u 1002 -g root admin-server
 USER admin-server
 
-ENTRYPOINT ["java"]
-CMD ["-XX:MaxRAMPercentage=75.0", "-XX:InitialRAMPercentage=50.0", "-XX:+UseG1GC", "-jar", "openid-federation-admin-server.jar"]
+ENTRYPOINT ["./bin/openid-federation-admin-server-ktor"]
+CMD []

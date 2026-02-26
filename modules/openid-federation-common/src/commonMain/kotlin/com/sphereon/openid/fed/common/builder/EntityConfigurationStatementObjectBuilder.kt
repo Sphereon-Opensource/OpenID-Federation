@@ -12,6 +12,7 @@ class EntityConfigurationStatementObjectBuilder {
     private var iat: Int? = null
     private lateinit var jwks: List<Jwk>
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
+    private var metadataPolicy: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
@@ -24,6 +25,10 @@ class EntityConfigurationStatementObjectBuilder {
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second
+    }
+
+    fun metadataPolicy(metadataPolicy: Pair<String, JsonObject>) = apply {
+        this.metadataPolicy[metadataPolicy.first] = metadataPolicy.second
     }
 
     fun authorityHint(hint: String) = apply {
@@ -54,6 +59,7 @@ class EntityConfigurationStatementObjectBuilder {
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             jwks = createJwks(jwks),
             metadata = JsonObject(metadata),
+            metadataPolicy = if (metadataPolicy.isNotEmpty()) JsonObject(metadataPolicy) else null,
             authorityHints = if (authorityHints.isNotEmpty()) authorityHints else null,
             crit = if (crit.isNotEmpty()) crit else null,
             trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v }.toMap(),

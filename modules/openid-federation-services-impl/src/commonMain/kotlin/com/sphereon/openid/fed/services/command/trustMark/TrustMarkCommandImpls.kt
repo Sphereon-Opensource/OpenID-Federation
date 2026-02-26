@@ -101,7 +101,7 @@ class CreateTrustMarkCommandImpl(
             if (request.exp != null) trustMark.exp(request.exp)
 
             val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef)
+            val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms)
             if (jwtResult.isErr) return jwtResult.error.asErrorResult()
             val jwt = jwtResult.value
 

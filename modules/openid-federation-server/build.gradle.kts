@@ -1,97 +1,23 @@
-@file:OptIn(KspExperimental::class)
-
-import com.google.devtools.ksp.KspExperimental
-
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.jvm)
-    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
     id("maven-publish")
     application
 }
 
+// Backwards compatibility shim module
+// Re-exports both API and Ktor modules for consumers of the original module
 dependencies {
-    api(projects.modules.openidFederationOpenapi)
-    api(projects.modules.openidFederationCommon)
-    api(projects.modules.openidFederationPersistence)
-    api(projects.modules.openidFederationServices)
-    // IDK-compatible caching infrastructure
-    api(projects.modules.openidFederationCorePublic)
-    api(projects.modules.openidFederationCoreImpl)
-    api(projects.modules.openidFederationClient)
-
-    // IDK crypto libraries
-    implementation(libs.idk.crypto.core.public)
-    implementation(libs.idk.crypto.core.impl)
-    implementation(libs.idk.crypto.kms.provider.software)
-    implementation(libs.idk.crypto.kms.provider.aws)
-    implementation(libs.idk.crypto.kms.provider.azure)
-    implementation(libs.idk.core.api.public)
-    implementation(libs.idk.core.api.default)
-    implementation(libs.idk.data.link.http.client.public)
-    implementation(libs.idk.data.link.http.client.impl)
-    implementation(sphereonlib.dev.whyoleg.cryptography.core)
-
-    // IDK Ktor server support
-    implementation(libs.idk.ktor.server.kotlin.inject)
-
-    // Kotlin
-    implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
-    implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
-    implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
-    implementation(sphereonlib.org.jetbrains.kotlin.reflect)
-
-    // Ktor Server
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.status.pages)
-    implementation(libs.ktor.server.call.logging)
-    implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
-
-    // kotlin-inject DI with Amazon App Platform / Anvil
-    implementation(libs.bundles.kotlin.inject)
-
-    // Testing
-    testImplementation(libs.kotlin.test)
-    testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.amz.kotlin.inject.impl)
-}
-
-// KSP configuration for kotlin-inject with Anvil
-ksp {
-    useKsp2.set(true)
-    // Use Amazon App Platform binding processor instead of Anvil's
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-// Configure KSP processors
-dependencies {
-    ksp(libs.kotlin.inject.compiler.ksp)
-    ksp(libs.amz.kotlin.inject.contribute.public)
-    ksp(libs.amz.kotlin.inject.contribute.code.generators)
-    ksp(libs.anvil.compiler.ksp)
-}
-
-kotlin {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict")
-    }
+    // Re-export both modules for backwards compatibility
+    api(projects.modules.openidFederationPublicServerApi)
+    api(projects.modules.openidFederationPublicServerKtor)
 }
 
 application {
-    mainClass.set("com.sphereon.openid.fed.server.ApplicationKt")
+    mainClass.set("com.sphereon.openid.fed.server.federation.ktor.ApplicationKt")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    testLogging {
-        setExceptionFormat("full")
-        events("started", "skipped", "passed", "failed")
-        showStandardStreams = true
-    }
 }
 
 publishing {
@@ -101,7 +27,7 @@ publishing {
 
             pom {
                 name.set("OpenID Federation Server")
-                description.set("Server for OpenID Federation")
+                description.set("Server for OpenID Federation (backwards compatibility shim)")
                 url.set("https://github.com/Sphereon-Opensource/OpenID-Federation")
                 licenses {
                     license {

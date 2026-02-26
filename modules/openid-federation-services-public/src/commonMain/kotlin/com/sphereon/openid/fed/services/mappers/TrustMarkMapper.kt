@@ -22,6 +22,18 @@ fun TrustMarkEntity.toDTO(): TrustMark {
     )
 }
 
+fun TrustMarkEntity.toCreateTrustMarkResult(): CreateTrustMarkResult {
+    return CreateTrustMarkResult(
+        id = this.id,
+        accountId = this.account_id,
+        trustMarkId = this.trust_mark_id,
+        sub = this.sub,
+        trustMarkValue = this.trust_mark_value,
+        iat = this.iat.toInt(),
+        exp = this.exp?.toInt()
+    )
+}
+
 fun ReceivedTrustMark.toTrustMark(): TrustMark {
     return TrustMark(
         id = this.trust_mark_id,
