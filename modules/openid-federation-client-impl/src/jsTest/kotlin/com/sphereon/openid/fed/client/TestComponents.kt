@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.client
 
 import com.sphereon.core.defaults.app.DefaultRootScopeProvider
 import com.sphereon.di.app.AbstractAppComponent
+import com.sphereon.core.api.cache.CacheBackend
 import com.sphereon.openid.fed.core.cache.CacheManager
 import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import me.tatarka.inject.annotations.Component
@@ -22,7 +23,10 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 interface TestCacheManagerComponent {
     @Provides
     @SingleIn(AppScope::class)
-    fun provideCacheManager(): CacheManager = DefaultCacheManager()
+    fun provideCacheManager(backends: Set<CacheBackend>): CacheManager {
+        val backend = backends.firstOrNull { it.capabilities.isLocal } ?: backends.first()
+        return DefaultCacheManager(backend)
+    }
 }
 
 

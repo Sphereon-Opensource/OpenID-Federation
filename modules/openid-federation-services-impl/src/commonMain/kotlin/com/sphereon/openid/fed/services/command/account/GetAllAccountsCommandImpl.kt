@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -29,11 +28,10 @@ class GetAllAccountsCommandImpl(
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun getAllAccounts(): IdkResult<List<Account>, FederationError> =
-        execute(Unit, execution.sessionContext)
+        execute(Unit)
 
     override suspend fun doExecute(
         args: Unit,
-        sessionContext: SessionContext,
         applyDuring: (Unit) -> Unit
     ): IdkResult<List<Account>, FederationError> {
         applyDuring(args)

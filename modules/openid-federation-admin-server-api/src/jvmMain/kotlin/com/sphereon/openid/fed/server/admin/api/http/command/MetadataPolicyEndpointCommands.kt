@@ -9,7 +9,6 @@ import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.openapi.models.CreateMetadataPolicy
 import com.sphereon.openid.fed.openapi.models.MetadataPolicyResponse
@@ -39,7 +38,6 @@ class ListMetadataPoliciesEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -77,7 +75,6 @@ class CreateMetadataPolicyEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -130,7 +127,6 @@ class DeleteMetadataPolicyEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

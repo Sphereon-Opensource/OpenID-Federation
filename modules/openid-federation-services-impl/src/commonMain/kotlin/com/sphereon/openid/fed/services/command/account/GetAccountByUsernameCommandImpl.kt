@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.AccountNotFoundError
 import com.sphereon.openid.fed.core.error.FederationError
@@ -30,11 +29,10 @@ class GetAccountByUsernameCommandImpl(
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun getAccountByUsername(username: String): IdkResult<Account, FederationError> =
-        execute(GetAccountByUsernameArgs(username), execution.sessionContext)
+        execute(GetAccountByUsernameArgs(username))
 
     override suspend fun doExecute(
         args: GetAccountByUsernameArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetAccountByUsernameArgs) -> GetAccountByUsernameArgs
     ): IdkResult<Account, FederationError> {
         val request = applyDuring(args)

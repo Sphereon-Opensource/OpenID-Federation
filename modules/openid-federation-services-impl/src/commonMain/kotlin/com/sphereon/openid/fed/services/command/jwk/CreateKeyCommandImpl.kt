@@ -6,7 +6,6 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.core.kms.KeyManagerService
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -41,12 +40,11 @@ class CreateKeyCommandImpl(
     private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun createKey(account: Account, opts: CreateKeyArgs): IdkResult<AccountJwk, FederationError> {
-        return execute(CreateKeyCommandArgs(account, opts), execution.sessionContext)
+        return execute(CreateKeyCommandArgs(account, opts))
     }
 
     override suspend fun doExecute(
         args: CreateKeyCommandArgs,
-        sessionContext: SessionContext,
         applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
     ): IdkResult<AccountJwk, FederationError> = withContext(Dispatchers.IO) {
         val (account, opts) = applyDuring(args)

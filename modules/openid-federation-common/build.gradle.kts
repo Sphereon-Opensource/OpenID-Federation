@@ -1,8 +1,10 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
@@ -53,12 +55,21 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationOpenapi)
                 // Core module for OidfConfigKeys used by LegacyEnvMappingPropertySource
                 api(projects.modules.openidFederationCorePublic)
+                // IDK compat annotations for @JsExportCompat
+                api(idklib.sphereon.idk.lib.core.compat)
                 implementation(sphereonlib.io.ktor.client.core)
                 implementation(sphereonlib.io.ktor.client.logging)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)
@@ -80,7 +91,7 @@ kotlin {
             dependencies {
                 implementation(sphereonlib.io.ktor.client.core.jvm)
                 runtimeOnly(sphereonlib.io.ktor.client.cio.jvm)
-                implementation(libs.nimbus.jose.jwt)
+                // nimbus-jose-jwt removed - no longer used in source code
             }
         }
         val jvmTest by getting {
@@ -95,7 +106,7 @@ kotlin {
                 runtimeOnly(sphereonlib.io.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
-                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core.js)
             }
         }
 
@@ -126,5 +137,12 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-common")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }

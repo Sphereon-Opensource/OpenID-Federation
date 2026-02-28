@@ -10,10 +10,12 @@
  *
  * This facade ensures backward compatibility for existing consumers.
  */
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
@@ -50,9 +52,15 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         all {
-            languageSettings.optIn("kotlin.js.ExperimentalJsExport")
             languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
             languageSettings.optIn("kotlin.ExperimentalUnsignedTypes")
         }
@@ -67,7 +75,7 @@ kotlin {
 
         val commonTest by getting {
             dependencies {
-                implementation(libs.kotlin.test)
+                implementation(sphereonlib.org.jetbrains.kotlin.test)
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
             }
@@ -80,7 +88,7 @@ kotlin {
 
         val jvmTest by getting {
             dependencies {
-                implementation(libs.kotlin.test.junit)
+                implementation(sphereonlib.org.jetbrains.kotlin.test.junit)
             }
         }
 
@@ -113,6 +121,13 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-client")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }
 

@@ -25,20 +25,20 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
                 implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
-                implementation(libs.ktor.client.cio)
+                implementation(sphereonlib.io.ktor.client.cio)
 
                 // IDK crypto libraries
-                implementation(libs.idk.crypto.core.public)
-                implementation(libs.idk.crypto.core.impl)
-                implementation(libs.idk.crypto.kms.provider.software)
-                implementation(libs.idk.crypto.kms.provider.azure)
-                implementation(libs.idk.crypto.kms.provider.aws)
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+                implementation(idklib.sphereon.idk.lib.crypto.core.impl)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.azure)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
                 implementation(sphereonlib.dev.whyoleg.cryptography.core)
 
                 // kotlin-inject for DI
-                implementation(libs.kotlin.inject.runtime)
-                implementation(libs.anvil.runtime)
-                implementation(libs.anvil.runtime.optional)
+                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
+                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
+                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
             }
         }
 
@@ -46,7 +46,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
-                implementation(libs.mockk)
+                implementation(sphereonlib.io.mockk.mockk)
             }
         }
 
@@ -72,10 +72,10 @@ ksp {
 }
 
 dependencies {
-    add("kspJvm", libs.kotlin.inject.compiler.ksp)
-    add("kspJvm", libs.amz.kotlin.inject.contribute.public)
-    add("kspJvm", libs.amz.kotlin.inject.contribute.code.generators)
-    add("kspJvm", libs.anvil.compiler.ksp)
+    add("kspJvm", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators)
+    add("kspJvm", sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler)
 }
 
 publishing {

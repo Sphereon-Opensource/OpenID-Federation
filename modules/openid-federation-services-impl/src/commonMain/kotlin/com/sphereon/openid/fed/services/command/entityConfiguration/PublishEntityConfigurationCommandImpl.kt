@@ -6,7 +6,6 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -47,12 +46,11 @@ class PublishEntityConfigurationCommandImpl(
         kmsKeyRef: String?,
         kid: String?
     ): IdkResult<String, FederationError> {
-        return execute(PublishEntityConfigurationArgs(account, dryRun, kmsKeyRef, kid), execution.sessionContext)
+        return execute(PublishEntityConfigurationArgs(account, dryRun, kmsKeyRef, kid))
     }
 
     override suspend fun doExecute(
         args: PublishEntityConfigurationArgs,
-        sessionContext: SessionContext,
         applyDuring: (PublishEntityConfigurationArgs) -> PublishEntityConfigurationArgs
     ): IdkResult<String, FederationError> {
         val (account, dryRun, kmsKeyRef, kid) = applyDuring(args)

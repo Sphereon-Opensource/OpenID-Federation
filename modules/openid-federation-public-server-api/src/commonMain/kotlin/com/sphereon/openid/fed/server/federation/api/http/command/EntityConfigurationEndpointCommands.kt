@@ -12,7 +12,6 @@ import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.http.errorResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.persistence.Persistence
@@ -58,7 +57,6 @@ class GetEntityConfigurationEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -112,7 +110,6 @@ class GetAccountEntityConfigurationEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

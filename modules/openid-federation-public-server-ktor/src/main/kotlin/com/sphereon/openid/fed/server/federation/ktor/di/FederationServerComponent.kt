@@ -8,6 +8,7 @@ import com.sphereon.di.app.AbstractAppComponent
 import com.sphereon.di.context.UserScope
 import com.sphereon.di.session.SessionScope
 import com.sphereon.core.api.log.Log
+import com.sphereon.core.api.cache.CacheBackend
 import com.sphereon.openid.fed.core.cache.CacheManager
 import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
@@ -144,9 +145,10 @@ abstract class FederationServerAppComponent(
      */
     @Provides
     @SingleIn(AppScope::class)
-    fun provideCacheManager(): CacheManager {
-        logger.info("Initializing CacheManager for federation server")
-        return DefaultCacheManager()
+    fun provideCacheManager(backends: Set<CacheBackend>): CacheManager {
+        val backend = backends.firstOrNull { it.capabilities.isLocal } ?: backends.first()
+        logger.info("Initializing CacheManager for federation server with ${backend.id} backend")
+        return DefaultCacheManager(backend)
     }
 
     /**

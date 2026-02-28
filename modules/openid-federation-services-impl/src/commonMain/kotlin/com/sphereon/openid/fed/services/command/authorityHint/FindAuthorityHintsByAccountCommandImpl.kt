@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -34,12 +33,11 @@ class FindAuthorityHintsByAccountCommandImpl(
     private val authorityHintQueries = Persistence.authorityHintQueries
 
     override suspend fun findByAccount(account: Account): IdkResult<List<AuthorityHint>, FederationError> {
-        return execute(FindAuthorityHintsByAccountArgs(account), execution.sessionContext)
+        return execute(FindAuthorityHintsByAccountArgs(account))
     }
 
     override suspend fun doExecute(
         args: FindAuthorityHintsByAccountArgs,
-        sessionContext: SessionContext,
         applyDuring: (FindAuthorityHintsByAccountArgs) -> FindAuthorityHintsByAccountArgs
     ): IdkResult<List<AuthorityHint>, FederationError> {
         val (account) = applyDuring(args)

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
@@ -16,9 +18,15 @@ kotlin {
         generateTypeScriptDefinitions()
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         all {
-            languageSettings.optIn("kotlin.js.ExperimentalJsExport")
             languageSettings.optIn("kotlinx.serialization.ExperimentalSerializationApi")
             languageSettings.optIn("kotlin.ExperimentalUnsignedTypes")
         }
@@ -35,10 +43,10 @@ kotlin {
                 api(projects.modules.openidFederationHttpResolver)
 
                 // IDK core API (for Command interface and logging)
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
 
                 // IDK crypto libraries (for JwtService interface)
-                api(libs.idk.crypto.core.public)
+                api(idklib.sphereon.idk.lib.crypto.core.public)
 
                 // Standard library
                 implementation(sphereonlib.org.jetbrains.kotlin.stdlib)

@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -33,12 +32,11 @@ class FindCriticalClaimsByAccountCommandImpl(
     private val critQueries = Persistence.critQueries
 
     override suspend fun findByAccount(account: Account): IdkResult<Array<CritEntity>, FederationError> {
-        return execute(FindCriticalClaimsByAccountArgs(account), execution.sessionContext)
+        return execute(FindCriticalClaimsByAccountArgs(account))
     }
 
     override suspend fun doExecute(
         args: FindCriticalClaimsByAccountArgs,
-        sessionContext: SessionContext,
         applyDuring: (FindCriticalClaimsByAccountArgs) -> FindCriticalClaimsByAccountArgs
     ): IdkResult<Array<CritEntity>, FederationError> {
         val (account) = applyDuring(args)

@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
 import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
@@ -6,9 +7,9 @@ import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(libs.plugins.openapiGenerator)
+    alias(sphereonplug.plugins.org.openapi.generator)
     id("maven-publish")
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
 }
 
 val openApiSpecPath = "$projectDir/src/commonMain/kotlin/com/sphereon/openid/fed/openapi/admin-server.yaml"
@@ -23,6 +24,7 @@ val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyLi
 val isModelsOnlyProfile = profiles.contains("models-only")
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -87,14 +89,14 @@ kotlin {
         filter { line: String ->
             line.replace(
                 regex = Regex("(package com.*)"),
-                replacement = "$1\nimport kotlin.js.ExperimentalJsExport\nimport kotlin.js.JsExport"
+                replacement = "$1\nimport com.sphereon.core.compat.JsExportCompat"
             )
         }
 
         filter { line: String ->
             line.replace(
                 regex = Regex("(data class (\\w+).*)"),
-                replacement = "@OptIn(ExperimentalJsExport::class)\n@JsExport\n$1"
+                replacement = "@JsExportCompat\n$1"
             )
         }
         filter { line: String ->
@@ -175,36 +177,55 @@ customField("type", "module")
         }
     }
 
-    iosX64 {
-        tasks.named("compileKotlinIosX64") {
-            dependsOn("fixOpenApiKotlinIssues")
+    // iOS targets require macOS for compilation (Kotlin/Native toolchain)
+    if (System.getProperty("os.name").lowercase().contains("mac")) {
+        iosX64 {
+            tasks.named("compileKotlinIosX64") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
+            tasks.named("iosX64SourcesJar") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
         }
-        tasks.named("iosX64SourcesJar") {
-            dependsOn("fixOpenApiKotlinIssues")
+        iosArm64 {
+            tasks.named("compileKotlinIosArm64") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
+            tasks.named("iosArm64SourcesJar") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
         }
-    }
-    iosArm64 {
-        tasks.named("compileKotlinIosArm64") {
-            dependsOn("fixOpenApiKotlinIssues")
-        }
-        tasks.named("iosArm64SourcesJar") {
-            dependsOn("fixOpenApiKotlinIssues")
-        }
-    }
-    iosSimulatorArm64 {
-        tasks.named("compileKotlinIosSimulatorArm64") {
-            dependsOn("fixOpenApiKotlinIssues")
-        }
-        tasks.named("iosSimulatorArm64SourcesJar") {
-            dependsOn("fixOpenApiKotlinIssues")
+        iosSimulatorArm64 {
+            tasks.named("compileKotlinIosSimulatorArm64") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
+            tasks.named("iosSimulatorArm64SourcesJar") {
+                dependsOn("fixOpenApiKotlinIssues")
+            }
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        tasks.named("compileKotlinWasmJs") {
+            dependsOn("fixOpenApiKotlinIssues")
+        }
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
+        all {
+            languageSettings.optIn("kotlin.io.encoding.ExperimentalEncodingApi")
+            languageSettings.optIn("kotlin.ExperimentalStdlibApi")
+        }
         val commonMain by getting {
 
             kotlin.srcDir("$projectDir/build/copy/src/commonMain/kotlin")
             dependencies {
+                // IDK compat annotations for @JsExportCompat
+                api(idklib.sphereon.idk.lib.core.compat)
                 implementation(sphereonlib.io.ktor.client.core)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)
                 implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
@@ -230,6 +251,13 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-openapi")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }
 

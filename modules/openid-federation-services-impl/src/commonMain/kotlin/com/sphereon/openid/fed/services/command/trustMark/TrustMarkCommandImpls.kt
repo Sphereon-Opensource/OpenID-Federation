@@ -6,7 +6,6 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.TrustMarkObjectBuilder
 import com.sphereon.openid.fed.core.error.FederationError
@@ -44,9 +43,9 @@ class GetTrustMarksForAccountCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun getTrustMarksForAccount(account: Account): IdkResult<List<TrustMark>, FederationError> =
-        execute(GetTrustMarksForAccountArgs(account), execution.sessionContext)
+        execute(GetTrustMarksForAccountArgs(account))
 
-    override suspend fun doExecute(args: GetTrustMarksForAccountArgs, sessionContext: SessionContext, applyDuring: (GetTrustMarksForAccountArgs) -> GetTrustMarksForAccountArgs): IdkResult<List<TrustMark>, FederationError> {
+    override suspend fun doExecute(args: GetTrustMarksForAccountArgs, applyDuring: (GetTrustMarksForAccountArgs) -> GetTrustMarksForAccountArgs): IdkResult<List<TrustMark>, FederationError> {
         val (account) = applyDuring(args)
         return try {
             IdkResult.ok(trustMarkQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() })
@@ -73,9 +72,9 @@ class CreateTrustMarkCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun createTrustMark(account: Account, body: CreateTrustMarkRequest, currentTimeMillis: Long): IdkResult<CreateTrustMarkResult, FederationError> =
-        execute(CreateTrustMarkArgs(account, body, currentTimeMillis), execution.sessionContext)
+        execute(CreateTrustMarkArgs(account, body, currentTimeMillis))
 
-    override suspend fun doExecute(args: CreateTrustMarkArgs, sessionContext: SessionContext, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
+    override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
         val (account, request, currentTimeMillis) = applyDuring(args)
         val keysResult = jwkService.getKeys(account, includeRevoked = false)
         if (keysResult.isErr) return keysResult.error.asErrorResult()
@@ -131,9 +130,9 @@ class DeleteTrustMarkCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun deleteTrustMark(account: Account, id: String): IdkResult<TrustMarkEntity, FederationError> =
-        execute(DeleteTrustMarkArgs(account, id), execution.sessionContext)
+        execute(DeleteTrustMarkArgs(account, id))
 
-    override suspend fun doExecute(args: DeleteTrustMarkArgs, sessionContext: SessionContext, applyDuring: (DeleteTrustMarkArgs) -> DeleteTrustMarkArgs): IdkResult<TrustMarkEntity, FederationError> {
+    override suspend fun doExecute(args: DeleteTrustMarkArgs, applyDuring: (DeleteTrustMarkArgs) -> DeleteTrustMarkArgs): IdkResult<TrustMarkEntity, FederationError> {
         val (account, trustMarkId) = applyDuring(args)
         trustMarkQueries.findByAccountIdAndId(account.id, trustMarkId).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkNotFoundError(trustMarkId))
@@ -159,9 +158,9 @@ class GetTrustMarkStatusCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun getTrustMarkStatus(account: Account, request: TrustMarkStatusRequest): IdkResult<Boolean, FederationError> =
-        execute(GetTrustMarkStatusArgs(account, request), execution.sessionContext)
+        execute(GetTrustMarkStatusArgs(account, request))
 
-    override suspend fun doExecute(args: GetTrustMarkStatusArgs, sessionContext: SessionContext, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, FederationError> {
+    override suspend fun doExecute(args: GetTrustMarkStatusArgs, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, FederationError> {
         val (account, statusRequest) = applyDuring(args)
         return try {
             val trustMarks = trustMarkQueries.findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(account.id, statusRequest.trustMarkId, statusRequest.sub).executeAsList()
@@ -190,9 +189,9 @@ class GetTrustMarkedSubsCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun getTrustMarkedSubs(account: Account, request: TrustMarkListRequest): IdkResult<Array<String>, FederationError> =
-        execute(GetTrustMarkedSubsArgs(account, request), execution.sessionContext)
+        execute(GetTrustMarkedSubsArgs(account, request))
 
-    override suspend fun doExecute(args: GetTrustMarkedSubsArgs, sessionContext: SessionContext, applyDuring: (GetTrustMarkedSubsArgs) -> GetTrustMarkedSubsArgs): IdkResult<Array<String>, FederationError> {
+    override suspend fun doExecute(args: GetTrustMarkedSubsArgs, applyDuring: (GetTrustMarkedSubsArgs) -> GetTrustMarkedSubsArgs): IdkResult<Array<String>, FederationError> {
         val (account, listRequest) = applyDuring(args)
         return try {
             val subs = if (listRequest.sub != null) {
@@ -220,9 +219,9 @@ class GetTrustMarkCommandImpl(
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun getTrustMark(account: Account, request: TrustMarkRequest): IdkResult<String, FederationError> =
-        execute(GetTrustMarkArgs(account, request), execution.sessionContext)
+        execute(GetTrustMarkArgs(account, request))
 
-    override suspend fun doExecute(args: GetTrustMarkArgs, sessionContext: SessionContext, applyDuring: (GetTrustMarkArgs) -> GetTrustMarkArgs): IdkResult<String, FederationError> {
+    override suspend fun doExecute(args: GetTrustMarkArgs, applyDuring: (GetTrustMarkArgs) -> GetTrustMarkArgs): IdkResult<String, FederationError> {
         val (account, request) = applyDuring(args)
         val trustMark = trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(account.id, request.trustMarkId, request.sub).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkNotFoundError("${request.trustMarkId}:${request.sub}"))

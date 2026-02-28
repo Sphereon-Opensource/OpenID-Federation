@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -34,12 +33,11 @@ class ListReceivedTrustMarksCommandImpl(
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
     override suspend fun listReceivedTrustMarks(account: Account): IdkResult<Array<ReceivedTrustMark>, FederationError> {
-        return execute(ListReceivedTrustMarksArgs(account), execution.sessionContext)
+        return execute(ListReceivedTrustMarksArgs(account))
     }
 
     override suspend fun doExecute(
         args: ListReceivedTrustMarksArgs,
-        sessionContext: SessionContext,
         applyDuring: (ListReceivedTrustMarksArgs) -> ListReceivedTrustMarksArgs
     ): IdkResult<Array<ReceivedTrustMark>, FederationError> {
         val (account) = applyDuring(args)

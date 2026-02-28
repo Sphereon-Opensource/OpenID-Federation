@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -39,12 +38,11 @@ class InsertLogCommandImpl(
         throwable: Throwable?,
         metadata: Map<String, String>
     ): IdkResult<Unit, FederationError> {
-        return execute(InsertLogArgs(level, message, tag, timestamp, throwable, metadata), execution.sessionContext)
+        return execute(InsertLogArgs(level, message, tag, timestamp, throwable, metadata))
     }
 
     override suspend fun doExecute(
         args: InsertLogArgs,
-        sessionContext: SessionContext,
         applyDuring: (InsertLogArgs) -> InsertLogArgs
     ): IdkResult<Unit, FederationError> {
         val (level, message, tag, timestamp, throwable, metadata) = applyDuring(args)

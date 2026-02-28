@@ -13,7 +13,6 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.openapi.models.CreateCrit
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
@@ -77,7 +76,6 @@ class ListCriticalClaimsEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -131,7 +129,6 @@ class CreateCriticalClaimEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -195,7 +192,6 @@ class DeleteCriticalClaimEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

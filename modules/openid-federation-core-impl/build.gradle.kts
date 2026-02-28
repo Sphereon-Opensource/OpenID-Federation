@@ -1,9 +1,11 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
     id("maven-publish")
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
@@ -43,6 +45,13 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -50,8 +59,9 @@ kotlin {
                 api(projects.modules.openidFederationCorePublic)
 
                 // IDK core API for logging, sessions, etc.
-                api(libs.idk.core.api.public)
-                implementation(libs.idk.core.api.default)
+                api(idklib.sphereon.idk.lib.core.api.public)
+                // IDK cache infrastructure (provides KacheCacheBackend on non-wasm, MapCacheBackend on wasmJs)
+                api(idklib.sphereon.idk.lib.core.api.default)
 
                 // Serialization
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
@@ -61,10 +71,7 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
 
                 // kotlin-inject runtime
-                implementation(libs.kotlin.inject.runtime)
-
-                // Kache for in-memory caching
-                implementation(sphereonlib.com.mayakapps.kache.kache)
+                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
 
                 // DateTime for cache TTL
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
@@ -90,7 +97,7 @@ kotlin {
         val jsMain by getting {
             dependencies {
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
-                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core.js)
             }
         }
 
@@ -100,14 +107,26 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
             }
         }
+
+        val wasmJsMain by getting {
+            dependencies {
+            }
+        }
+
+        val wasmJsTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
     }
 }
 
 // KSP configuration for kotlin-inject
 dependencies {
-    add("kspCommonMainMetadata", libs.kotlin.inject.compiler.ksp)
-    add("kspJvm", libs.kotlin.inject.compiler.ksp)
-    add("kspJs", libs.kotlin.inject.compiler.ksp)
+    add("kspCommonMainMetadata", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    add("kspJvm", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    add("kspJs", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    add("kspWasmJs", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
 }
 
 // Configure KSP for all targets
@@ -133,5 +152,12 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-core-impl")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }

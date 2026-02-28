@@ -13,7 +13,6 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.openid.fed.services.EntityConfigurationStatementService
@@ -56,7 +55,6 @@ class GetEntityStatementEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -109,7 +107,6 @@ class PublishEntityStatementEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -33,12 +32,11 @@ class SearchLogsCommandImpl(
     private val logQueries = Persistence.logQueries
 
     override suspend fun searchLogs(searchTerm: String, limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(SearchLogsArgs(searchTerm, limit), execution.sessionContext)
+        return execute(SearchLogsArgs(searchTerm, limit))
     }
 
     override suspend fun doExecute(
         args: SearchLogsArgs,
-        sessionContext: SessionContext,
         applyDuring: (SearchLogsArgs) -> SearchLogsArgs
     ): IdkResult<List<LogDTO>, FederationError> {
         val (searchTerm, limit) = applyDuring(args)

@@ -6,7 +6,6 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.common.builder.SubordinateStatementObjectBuilder
@@ -47,9 +46,9 @@ class FindSubordinatesByAccountCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun findSubordinatesByAccount(account: Account): IdkResult<Array<Subordinate>, FederationError> =
-        execute(FindSubordinatesByAccountArgs(account), execution.sessionContext)
+        execute(FindSubordinatesByAccountArgs(account))
 
-    override suspend fun doExecute(args: FindSubordinatesByAccountArgs, sessionContext: SessionContext, applyDuring: (FindSubordinatesByAccountArgs) -> FindSubordinatesByAccountArgs): IdkResult<Array<Subordinate>, FederationError> {
+    override suspend fun doExecute(args: FindSubordinatesByAccountArgs, applyDuring: (FindSubordinatesByAccountArgs) -> FindSubordinatesByAccountArgs): IdkResult<Array<Subordinate>, FederationError> {
         val (account) = applyDuring(args)
         return try {
             val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
@@ -74,9 +73,9 @@ class FindSubordinatesByAccountAsArrayCommandImpl(
 ), FindSubordinatesByAccountAsArrayCommand {
 
     override suspend fun findSubordinatesByAccountAsArray(account: Account): IdkResult<Array<String>, FederationError> =
-        execute(FindSubordinatesByAccountAsArrayArgs(account), execution.sessionContext)
+        execute(FindSubordinatesByAccountAsArrayArgs(account))
 
-    override suspend fun doExecute(args: FindSubordinatesByAccountAsArrayArgs, sessionContext: SessionContext, applyDuring: (FindSubordinatesByAccountAsArrayArgs) -> FindSubordinatesByAccountAsArrayArgs): IdkResult<Array<String>, FederationError> {
+    override suspend fun doExecute(args: FindSubordinatesByAccountAsArrayArgs, applyDuring: (FindSubordinatesByAccountAsArrayArgs) -> FindSubordinatesByAccountAsArrayArgs): IdkResult<Array<String>, FederationError> {
         val (account) = applyDuring(args)
         val result = findSubordinatesByAccountCommand.findSubordinatesByAccount(account)
         return result.map { subordinates -> subordinates.map { it.identifier }.toTypedArray() }
@@ -96,9 +95,9 @@ class DeleteSubordinateCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun deleteSubordinate(account: Account, id: String): IdkResult<Subordinate, FederationError> =
-        execute(DeleteSubordinateArgs(account, id), execution.sessionContext)
+        execute(DeleteSubordinateArgs(account, id))
 
-    override suspend fun doExecute(args: DeleteSubordinateArgs, sessionContext: SessionContext, applyDuring: (DeleteSubordinateArgs) -> DeleteSubordinateArgs): IdkResult<Subordinate, FederationError> {
+    override suspend fun doExecute(args: DeleteSubordinateArgs, applyDuring: (DeleteSubordinateArgs) -> DeleteSubordinateArgs): IdkResult<Subordinate, FederationError> {
         val (account, subordinateId) = applyDuring(args)
         logger.info("Attempting to delete subordinate ID: $subordinateId for account: ${account.username}")
 
@@ -137,9 +136,9 @@ class CreateSubordinateCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): IdkResult<Subordinate, FederationError> =
-        execute(CreateSubordinateArgs(account, subordinateDTO), execution.sessionContext)
+        execute(CreateSubordinateArgs(account, subordinateDTO))
 
-    override suspend fun doExecute(args: CreateSubordinateArgs, sessionContext: SessionContext, applyDuring: (CreateSubordinateArgs) -> CreateSubordinateArgs): IdkResult<Subordinate, FederationError> {
+    override suspend fun doExecute(args: CreateSubordinateArgs, applyDuring: (CreateSubordinateArgs) -> CreateSubordinateArgs): IdkResult<Subordinate, FederationError> {
         val (account, createRequest) = applyDuring(args)
         logger.info("Creating new subordinate for account: ${account.username}")
 
@@ -178,9 +177,9 @@ class GetSubordinateStatementCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun getSubordinateStatement(account: Account, id: String): IdkResult<SubordinateStatement, FederationError> =
-        execute(GetSubordinateStatementArgs(account, id), execution.sessionContext)
+        execute(GetSubordinateStatementArgs(account, id))
 
-    override suspend fun doExecute(args: GetSubordinateStatementArgs, sessionContext: SessionContext, applyDuring: (GetSubordinateStatementArgs) -> GetSubordinateStatementArgs): IdkResult<SubordinateStatement, FederationError> {
+    override suspend fun doExecute(args: GetSubordinateStatementArgs, applyDuring: (GetSubordinateStatementArgs) -> GetSubordinateStatementArgs): IdkResult<SubordinateStatement, FederationError> {
         val (account, subordinateId) = applyDuring(args)
         logger.info("Generating subordinate statement for ID: $subordinateId, account: ${account.username}")
 
@@ -262,9 +261,9 @@ class PublishSubordinateStatementCommandImpl(
         kmsKeyRef: String?,
         kid: String?
     ): IdkResult<String, FederationError> =
-        execute(PublishSubordinateStatementArgs(account, id, dryRun, kmsKeyRef, kid), execution.sessionContext)
+        execute(PublishSubordinateStatementArgs(account, id, dryRun, kmsKeyRef, kid))
 
-    override suspend fun doExecute(args: PublishSubordinateStatementArgs, sessionContext: SessionContext, applyDuring: (PublishSubordinateStatementArgs) -> PublishSubordinateStatementArgs): IdkResult<String, FederationError> {
+    override suspend fun doExecute(args: PublishSubordinateStatementArgs, applyDuring: (PublishSubordinateStatementArgs) -> PublishSubordinateStatementArgs): IdkResult<String, FederationError> {
         val (account, subordinateId, dryRun, kmsKeyRef, kid) = applyDuring(args)
         logger.info("Publishing subordinate statement for ID: $subordinateId, account: ${account.username} (dryRun: $dryRun)")
 
@@ -327,9 +326,9 @@ class FetchSubordinateStatementCommandImpl(
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun fetchSubordinateStatement(iss: String, sub: String): IdkResult<String, FederationError> =
-        execute(FetchSubordinateStatementArgs(iss, sub), execution.sessionContext)
+        execute(FetchSubordinateStatementArgs(iss, sub))
 
-    override suspend fun doExecute(args: FetchSubordinateStatementArgs, sessionContext: SessionContext, applyDuring: (FetchSubordinateStatementArgs) -> FetchSubordinateStatementArgs): IdkResult<String, FederationError> {
+    override suspend fun doExecute(args: FetchSubordinateStatementArgs, applyDuring: (FetchSubordinateStatementArgs) -> FetchSubordinateStatementArgs): IdkResult<String, FederationError> {
         val (iss, sub) = applyDuring(args)
         val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
             ?: return IdkResult.err(InvalidRequestError(Constants.SUBORDINATE_STATEMENT_NOT_FOUND))

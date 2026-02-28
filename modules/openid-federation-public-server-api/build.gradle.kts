@@ -34,7 +34,7 @@ kotlin {
                 api(projects.modules.openidFederationCommon)
 
                 // IDK core APIs (KMP-compatible)
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
 
                 // Standard library
                 implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
@@ -43,7 +43,13 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
 
                 // kotlin-inject (KMP-compatible)
-                implementation(libs.bundles.kotlin.inject)
+                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
+                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+                implementation(sphereonlib.software.amazon.app.platform.di.common.public)
+                implementation(sphereonlib.software.amazon.app.platform.scope.public)
+                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
+                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
+                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
             }
         }
 
@@ -62,10 +68,10 @@ ksp {
 }
 
 dependencies {
-    add("kspJvm", libs.kotlin.inject.compiler.ksp)
-    add("kspJvm", libs.amz.kotlin.inject.contribute.public)
-    add("kspJvm", libs.amz.kotlin.inject.contribute.code.generators)
-    add("kspJvm", libs.anvil.compiler.ksp)
+    add("kspJvm", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators)
+    add("kspJvm", sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler)
 }
 
 publishing {

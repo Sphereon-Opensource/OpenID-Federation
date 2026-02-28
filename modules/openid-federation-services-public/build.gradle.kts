@@ -20,11 +20,11 @@ kotlin {
                 api(projects.modules.openidFederationPersistence)
 
                 // IDK logging API (for LogLevel in LogService)
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
 
                 // IDK crypto libraries (for mappers)
-                implementation(libs.idk.crypto.core.public)
-                implementation(libs.idk.crypto.core.impl)
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+                implementation(idklib.sphereon.idk.lib.crypto.core.impl)
 
                 // Standard library
                 implementation(sphereonlib.org.jetbrains.kotlin.stdlib)

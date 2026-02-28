@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidRequestError
@@ -33,9 +32,9 @@ class CreateTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun createTrustMarkType(account: Account, createDto: CreateTrustMarkType): IdkResult<TrustMarkType, FederationError> =
-        execute(CreateTrustMarkTypeArgs(account, createDto), execution.sessionContext)
+        execute(CreateTrustMarkTypeArgs(account, createDto))
 
-    override suspend fun doExecute(args: CreateTrustMarkTypeArgs, sessionContext: SessionContext, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
+    override suspend fun doExecute(args: CreateTrustMarkTypeArgs, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
         val (account, createDto) = applyDuring(args)
         logger.info("Creating trust mark type ${createDto.identifier} for username: ${account.username}")
 
@@ -68,9 +67,9 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun findAllByAccount(account: Account): IdkResult<List<TrustMarkType>, FederationError> =
-        execute(FindAllTrustMarkTypesByAccountArgs(account), execution.sessionContext)
+        execute(FindAllTrustMarkTypesByAccountArgs(account))
 
-    override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, sessionContext: SessionContext, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, FederationError> {
+    override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, FederationError> {
         val (account) = applyDuring(args)
         return try {
             IdkResult.ok(trustMarkTypeQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() })
@@ -93,9 +92,9 @@ class FindTrustMarkTypeByIdCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun findById(account: Account, id: String): IdkResult<TrustMarkType, FederationError> =
-        execute(FindTrustMarkTypeByIdArgs(account, id), execution.sessionContext)
+        execute(FindTrustMarkTypeByIdArgs(account, id))
 
-    override suspend fun doExecute(args: FindTrustMarkTypeByIdArgs, sessionContext: SessionContext, applyDuring: (FindTrustMarkTypeByIdArgs) -> FindTrustMarkTypeByIdArgs): IdkResult<TrustMarkType, FederationError> {
+    override suspend fun doExecute(args: FindTrustMarkTypeByIdArgs, applyDuring: (FindTrustMarkTypeByIdArgs) -> FindTrustMarkTypeByIdArgs): IdkResult<TrustMarkType, FederationError> {
         val (account, id) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
         return if (type == null) IdkResult.err(TrustMarkTypeNotFoundError(id)) else IdkResult.ok(type.toDTO())
@@ -115,9 +114,9 @@ class DeleteTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun deleteTrustMarkType(account: Account, id: String): IdkResult<TrustMarkType, FederationError> =
-        execute(DeleteTrustMarkTypeArgs(account, id), execution.sessionContext)
+        execute(DeleteTrustMarkTypeArgs(account, id))
 
-    override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, sessionContext: SessionContext, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
+    override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
         val (account, id) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkTypeNotFoundError(id))
@@ -144,9 +143,9 @@ class GetIssuersForTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): IdkResult<Array<TrustMarkIssuer>, FederationError> =
-        execute(GetIssuersForTrustMarkTypeArgs(account, trustMarkTypeId), execution.sessionContext)
+        execute(GetIssuersForTrustMarkTypeArgs(account, trustMarkTypeId))
 
-    override suspend fun doExecute(args: GetIssuersForTrustMarkTypeArgs, sessionContext: SessionContext, applyDuring: (GetIssuersForTrustMarkTypeArgs) -> GetIssuersForTrustMarkTypeArgs): IdkResult<Array<TrustMarkIssuer>, FederationError> {
+    override suspend fun doExecute(args: GetIssuersForTrustMarkTypeArgs, applyDuring: (GetIssuersForTrustMarkTypeArgs) -> GetIssuersForTrustMarkTypeArgs): IdkResult<Array<TrustMarkIssuer>, FederationError> {
         val (account, trustMarkTypeId) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkTypeNotFoundError(trustMarkTypeId))
@@ -168,9 +167,9 @@ class AddIssuerToTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun addIssuerToTrustMarkType(account: Account, trustMarkTypeId: String, issuerIdentifier: String): IdkResult<TrustMarkIssuer, FederationError> =
-        execute(AddIssuerToTrustMarkTypeArgs(account, trustMarkTypeId, issuerIdentifier), execution.sessionContext)
+        execute(AddIssuerToTrustMarkTypeArgs(account, trustMarkTypeId, issuerIdentifier))
 
-    override suspend fun doExecute(args: AddIssuerToTrustMarkTypeArgs, sessionContext: SessionContext, applyDuring: (AddIssuerToTrustMarkTypeArgs) -> AddIssuerToTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
+    override suspend fun doExecute(args: AddIssuerToTrustMarkTypeArgs, applyDuring: (AddIssuerToTrustMarkTypeArgs) -> AddIssuerToTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
         val (account, trustMarkTypeId, issuerIdentifier) = applyDuring(args)
         trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkTypeNotFoundError(trustMarkTypeId))
@@ -202,9 +201,9 @@ class RemoveIssuerFromTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun removeIssuerFromTrustMarkType(account: Account, trustMarkTypeId: String, issuerId: String): IdkResult<TrustMarkIssuer, FederationError> =
-        execute(RemoveIssuerFromTrustMarkTypeArgs(account, trustMarkTypeId, issuerId), execution.sessionContext)
+        execute(RemoveIssuerFromTrustMarkTypeArgs(account, trustMarkTypeId, issuerId))
 
-    override suspend fun doExecute(args: RemoveIssuerFromTrustMarkTypeArgs, sessionContext: SessionContext, applyDuring: (RemoveIssuerFromTrustMarkTypeArgs) -> RemoveIssuerFromTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
+    override suspend fun doExecute(args: RemoveIssuerFromTrustMarkTypeArgs, applyDuring: (RemoveIssuerFromTrustMarkTypeArgs) -> RemoveIssuerFromTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
         val (account, trustMarkTypeId, issuerId) = applyDuring(args)
         trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
             ?: return IdkResult.err(TrustMarkTypeNotFoundError(trustMarkTypeId))

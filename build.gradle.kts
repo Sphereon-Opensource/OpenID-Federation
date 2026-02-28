@@ -68,15 +68,15 @@ plugins {
     alias(sphereonplug.plugins.io.kotest.io.kotest.gradle.plugin) apply false
     alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin) apply false
     alias(sphereonplug.plugins.org.jetbrains.kotlin.android) apply false
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin) apply false
     alias(sphereonplug.plugins.com.sphereon.gradle.plugin.conventions) apply false
     alias(sphereonplug.plugins.com.sphereon.gradle.plugin.integration.tests) apply false
     alias(sphereonplug.plugins.com.sphereon.gradle.plugin.project.publication) apply false
 
     // TODO update to sphereonplugs
-    alias(libs.plugins.androidApplication) apply false
-    alias(libs.plugins.jetbrainsCompose) apply false
-    alias(libs.plugins.compose.compiler) apply false
+    alias(sphereonplug.plugins.com.android.application) apply false
+    alias(sphereonplug.plugins.org.jetbrains.compose) apply false
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.compose) apply false
     // Spring Boot plugins removed - migrated to Ktor
     alias(libs.plugins.node.gradle) apply false
 }
@@ -106,7 +106,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.openid.fed"
-    version = "0.25.1-SNAPSHOT"
+    version = "0.25.2-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -118,6 +118,13 @@ allprojects {
 
 subprojects {
     apply(plugin = "com.sphereon.gradle.plugin.conventions")
+
+    // Enable suspend function exporting for JS/WasmJS targets (Kotlin 2.3.20-RC+)
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+        compilerOptions {
+            freeCompilerArgs.add("-Xenable-suspend-function-exporting")
+        }
+    }
 
     tasks.withType<KotlinJsCompile>().configureEach {
         compilerOptions {

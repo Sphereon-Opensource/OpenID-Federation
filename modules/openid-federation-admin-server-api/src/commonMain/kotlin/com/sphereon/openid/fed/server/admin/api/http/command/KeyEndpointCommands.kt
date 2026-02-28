@@ -13,7 +13,6 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.services.CreateKeyArgs
@@ -58,7 +57,6 @@ class ListKeysEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -112,7 +110,6 @@ class CreateKeyEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -178,7 +175,6 @@ class RevokeKeyEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

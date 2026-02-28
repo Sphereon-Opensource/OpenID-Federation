@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -29,11 +28,10 @@ class GetAccountIdentifierCommandImpl(
     private val logger = Log.app().withTag("GetAccountIdentifierCommand")
 
     override suspend fun getAccountIdentifierByAccount(account: Account): IdkResult<String, FederationError> =
-        execute(GetAccountIdentifierArgs(account), execution.sessionContext)
+        execute(GetAccountIdentifierArgs(account))
 
     override suspend fun doExecute(
         args: GetAccountIdentifierArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetAccountIdentifierArgs) -> GetAccountIdentifierArgs
     ): IdkResult<String, FederationError> {
         val request = applyDuring(args)

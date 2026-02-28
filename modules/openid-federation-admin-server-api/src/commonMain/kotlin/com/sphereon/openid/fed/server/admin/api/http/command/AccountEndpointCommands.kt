@@ -13,7 +13,6 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
-import com.sphereon.di.session.SessionContext
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.services.AccountService
 import com.sphereon.openid.fed.services.mappers.toAccountsResponse
@@ -56,7 +55,6 @@ class ListAccountsEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -106,7 +104,6 @@ class CreateAccountEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
@@ -166,7 +163,6 @@ class DeleteAccountEndpointCommandImpl(
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
-        sessionContext: SessionContext,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)

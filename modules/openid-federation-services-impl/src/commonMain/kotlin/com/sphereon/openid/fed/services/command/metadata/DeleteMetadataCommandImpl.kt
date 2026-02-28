@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -36,12 +35,11 @@ class DeleteMetadataCommandImpl(
     private val metadataQueries = Persistence.metadataQueries
 
     override suspend fun deleteMetadata(account: Account, id: String): IdkResult<Metadata, FederationError> {
-        return execute(DeleteMetadataArgs(account, id), execution.sessionContext)
+        return execute(DeleteMetadataArgs(account, id))
     }
 
     override suspend fun doExecute(
         args: DeleteMetadataArgs,
-        sessionContext: SessionContext,
         applyDuring: (DeleteMetadataArgs) -> DeleteMetadataArgs
     ): IdkResult<Metadata, FederationError> {
         val (account, id) = applyDuring(args)

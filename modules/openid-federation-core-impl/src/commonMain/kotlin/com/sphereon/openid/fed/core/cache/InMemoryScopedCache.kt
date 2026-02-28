@@ -1,43 +1,42 @@
 package com.sphereon.openid.fed.core.cache
 
-import com.mayakapps.kache.InMemoryKache
-import com.mayakapps.kache.KacheStrategy
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import com.sphereon.core.api.cache.CacheBackend
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.time.Duration
 
 /**
- * In-memory implementation of ScopedCache using Kache as the underlying storage.
+ * In-memory implementation of ScopedCache using IDK's CacheBackend for TTL
+ * management and eviction, with a side map for type-safe value storage.
  *
- * This implementation maintains separate Kache instances for each scope:
- * - One cache for APP scope
- * - One cache per tenant (lazily created)
- * - One cache per principal (lazily created)
+ * The CacheBackend (provided by IDK's lib-core-api-default) handles:
+ * - TTL-based expiration
+ * - LRU eviction when max size is reached
+ * - Pattern-based key deletion for scope clearing
  *
- * ## Lifecycle Management
+ * The side map (valueStore) holds the actual typed values since CacheBackend
+ * operates on byte arrays and we want to avoid serialization overhead for
+ * in-memory caching.
  *
- * This cache manages an internal CoroutineScope for background operations.
- * **You must call [close] when you're done using the cache** to release resources
- * and prevent memory leaks.
+ * This implementation maintains separate key prefixes for each scope:
+ * - `{namespace}::APP::{key}` for APP scope
+ * - `{namespace}::TENANT::{tenantId}::{key}` for TENANT scope
+ * - `{namespace}::PRINCIPAL::{principalId}::{key}` for PRINCIPAL scope
  *
  * @param K The type of cache keys
  * @param V The type of cached values
+ * @param namespace The cache namespace for key partitioning
+ * @param backend The IDK CacheBackend for TTL and eviction management
+ * @param ttlConfig TTL configuration per scope level
  */
 class InMemoryScopedCache<K : Any, V : Any>(
     override val namespace: String,
-    private val maxSize: Long = 1000,
-    private val ttlConfig: CacheTtlConfig = CacheTtlConfig.DEFAULT,
-    parentScope: CoroutineScope? = null
+    private val backend: CacheBackend,
+    private val ttlConfig: CacheTtlConfig = CacheTtlConfig.DEFAULT
 ) : ScopedCache<K, V> {
 
-    // Create a managed scope with SupervisorJob for lifecycle control
-    private val job: Job = SupervisorJob(parentScope?.coroutineContext?.get(Job))
-    private val scope: CoroutineScope = parentScope ?: CoroutineScope(job + Dispatchers.Default)
+    // Type-safe value storage (backend only stores markers for TTL tracking)
+    private val valueStore = mutableMapOf<String, V>()
+    private val valueLock = Mutex()
 
     // Statistics counters
     private var hits: Long = 0
@@ -45,206 +44,168 @@ class InMemoryScopedCache<K : Any, V : Any>(
     private var evictions: Long = 0
     private val statsLock = Mutex()
 
-    // APP scope cache
-    private val appCache: InMemoryKache<K, V> = createKache(ttlConfig.app)
+    // Marker bytes stored in CacheBackend for TTL tracking
+    private val MARKER = ByteArray(1) { 1 }
 
-    // TENANT scope caches (keyed by tenant ID)
-    private val tenantCaches = mutableMapOf<String, InMemoryKache<ScopedKey<K>, V>>()
-    private val tenantCachesLock = Mutex()
+    // ========== Key construction ==========
 
-    // PRINCIPAL scope caches (keyed by principal ID)
-    private val principalCaches = mutableMapOf<String, InMemoryKache<ScopedKey<K>, V>>()
-    private val principalCachesLock = Mutex()
-
-    private fun createKache(ttl: Duration): InMemoryKache<K, V> = InMemoryKache(maxSize) {
-        creationScope = scope
-        strategy = KacheStrategy.LRU
-        expireAfterWriteDuration = ttl
-        maxSize = this@InMemoryScopedCache.maxSize
-    }
-
-    private fun createScopedKache(ttl: Duration): InMemoryKache<ScopedKey<K>, V> = InMemoryKache(maxSize) {
-        creationScope = scope
-        strategy = KacheStrategy.LRU
-        expireAfterWriteDuration = ttl
-        maxSize = this@InMemoryScopedCache.maxSize
-    }
-
-    private suspend fun getOrCreateTenantCache(tenantId: String): InMemoryKache<ScopedKey<K>, V> {
-        return tenantCachesLock.withLock {
-            tenantCaches.getOrPut(tenantId) {
-                createScopedKache(ttlConfig.tenant)
-            }
-        }
-    }
-
-    private suspend fun getOrCreatePrincipalCache(principalId: String): InMemoryKache<ScopedKey<K>, V> {
-        return principalCachesLock.withLock {
-            principalCaches.getOrPut(principalId) {
-                createScopedKache(ttlConfig.principal)
-            }
-        }
-    }
+    private fun appKey(key: K): String = "$namespace::APP::$key"
+    private fun tenantKey(tenantId: String, key: K): String = "$namespace::TENANT::$tenantId::$key"
+    private fun principalKey(principalId: String, key: K): String = "$namespace::PRINCIPAL::$principalId::$key"
 
     private suspend fun recordHit() = statsLock.withLock { hits++ }
     private suspend fun recordMiss() = statsLock.withLock { misses++ }
 
-    // ========== APP-scoped operations ==========
+    // ========== Internal operations ==========
 
-    override suspend fun getApp(key: K): V? {
-        val result = appCache.get(key)
-        if (result != null) recordHit() else recordMiss()
-        return result
+    private suspend fun internalGet(cacheKey: String): V? {
+        // Check if backend still has the key (handles TTL expiry and LRU eviction)
+        if (backend.exists(cacheKey)) {
+            val value = valueLock.withLock { valueStore[cacheKey] }
+            if (value != null) {
+                recordHit()
+                return value
+            }
+        }
+        // Key expired/evicted in backend or missing from value store — clean up
+        valueLock.withLock { valueStore.remove(cacheKey) }
+        recordMiss()
+        return null
     }
 
-    override suspend fun putApp(key: K, value: V): V? {
-        return appCache.put(key, value)
+    private suspend fun internalPut(cacheKey: String, value: V, ttlMs: Long): V? {
+        val previous = valueLock.withLock { valueStore[cacheKey] }
+        backend.set(cacheKey, MARKER, ttlMs)
+        valueLock.withLock { valueStore[cacheKey] = value }
+        return previous
     }
 
-    override suspend fun removeApp(key: K): V? {
-        return appCache.remove(key)
+    private suspend fun internalRemove(cacheKey: String): V? {
+        val previous = valueLock.withLock { valueStore.remove(cacheKey) }
+        backend.delete(cacheKey)
+        return previous
     }
 
-    override suspend fun getOrPutApp(key: K, compute: suspend () -> V?): V? {
-        val existing = appCache.getIfAvailable(key)
-        if (existing != null) {
-            recordHit()
-            return existing
+    private suspend fun internalGetOrPut(cacheKey: String, ttlMs: Long, compute: suspend () -> V?): V? {
+        // Check existing
+        if (backend.exists(cacheKey)) {
+            val existing = valueLock.withLock { valueStore[cacheKey] }
+            if (existing != null) {
+                recordHit()
+                return existing
+            }
         }
 
+        // Compute new value
         val computed = compute()
         if (computed != null) {
-            appCache.put(key, computed)
+            backend.set(cacheKey, MARKER, ttlMs)
+            valueLock.withLock { valueStore[cacheKey] = computed }
         }
         recordMiss()
         return computed
     }
+
+    // ========== APP-scoped operations ==========
+
+    override suspend fun getApp(key: K): V? = internalGet(appKey(key))
+
+    override suspend fun putApp(key: K, value: V): V? =
+        internalPut(appKey(key), value, ttlConfig.app.inWholeMilliseconds)
+
+    override suspend fun removeApp(key: K): V? = internalRemove(appKey(key))
+
+    override suspend fun getOrPutApp(key: K, compute: suspend () -> V?): V? =
+        internalGetOrPut(appKey(key), ttlConfig.app.inWholeMilliseconds, compute)
 
     // ========== TENANT-scoped operations ==========
 
-    override suspend fun getTenant(tenantId: String, key: K): V? {
-        val cache = getOrCreateTenantCache(tenantId)
-        val result = cache.get(ScopedKey(tenantId, key))
-        if (result != null) recordHit() else recordMiss()
-        return result
-    }
+    override suspend fun getTenant(tenantId: String, key: K): V? =
+        internalGet(tenantKey(tenantId, key))
 
-    override suspend fun putTenant(tenantId: String, key: K, value: V): V? {
-        val cache = getOrCreateTenantCache(tenantId)
-        return cache.put(ScopedKey(tenantId, key), value)
-    }
+    override suspend fun putTenant(tenantId: String, key: K, value: V): V? =
+        internalPut(tenantKey(tenantId, key), value, ttlConfig.tenant.inWholeMilliseconds)
 
-    override suspend fun removeTenant(tenantId: String, key: K): V? {
-        val cache = getOrCreateTenantCache(tenantId)
-        return cache.remove(ScopedKey(tenantId, key))
-    }
+    override suspend fun removeTenant(tenantId: String, key: K): V? =
+        internalRemove(tenantKey(tenantId, key))
 
-    override suspend fun getOrPutTenant(tenantId: String, key: K, compute: suspend () -> V?): V? {
-        val cache = getOrCreateTenantCache(tenantId)
-        val scopedKey = ScopedKey(tenantId, key)
-
-        val existing = cache.getIfAvailable(scopedKey)
-        if (existing != null) {
-            recordHit()
-            return existing
-        }
-
-        val computed = compute()
-        if (computed != null) {
-            cache.put(scopedKey, computed)
-        }
-        recordMiss()
-        return computed
-    }
+    override suspend fun getOrPutTenant(tenantId: String, key: K, compute: suspend () -> V?): V? =
+        internalGetOrPut(tenantKey(tenantId, key), ttlConfig.tenant.inWholeMilliseconds, compute)
 
     // ========== PRINCIPAL-scoped operations ==========
 
-    override suspend fun getPrincipal(principalId: String, key: K): V? {
-        val cache = getOrCreatePrincipalCache(principalId)
-        val result = cache.get(ScopedKey(principalId, key))
-        if (result != null) recordHit() else recordMiss()
-        return result
-    }
+    override suspend fun getPrincipal(principalId: String, key: K): V? =
+        internalGet(principalKey(principalId, key))
 
-    override suspend fun putPrincipal(principalId: String, key: K, value: V): V? {
-        val cache = getOrCreatePrincipalCache(principalId)
-        return cache.put(ScopedKey(principalId, key), value)
-    }
+    override suspend fun putPrincipal(principalId: String, key: K, value: V): V? =
+        internalPut(principalKey(principalId, key), value, ttlConfig.principal.inWholeMilliseconds)
 
-    override suspend fun removePrincipal(principalId: String, key: K): V? {
-        val cache = getOrCreatePrincipalCache(principalId)
-        return cache.remove(ScopedKey(principalId, key))
-    }
+    override suspend fun removePrincipal(principalId: String, key: K): V? =
+        internalRemove(principalKey(principalId, key))
 
-    override suspend fun getOrPutPrincipal(principalId: String, key: K, compute: suspend () -> V?): V? {
-        val cache = getOrCreatePrincipalCache(principalId)
-        val scopedKey = ScopedKey(principalId, key)
-
-        val existing = cache.getIfAvailable(scopedKey)
-        if (existing != null) {
-            recordHit()
-            return existing
-        }
-
-        val computed = compute()
-        if (computed != null) {
-            cache.put(scopedKey, computed)
-        }
-        recordMiss()
-        return computed
-    }
+    override suspend fun getOrPutPrincipal(principalId: String, key: K, compute: suspend () -> V?): V? =
+        internalGetOrPut(principalKey(principalId, key), ttlConfig.principal.inWholeMilliseconds, compute)
 
     // ========== Maintenance operations ==========
 
     override suspend fun clear() {
-        clearApp()
-        tenantCachesLock.withLock {
-            tenantCaches.values.forEach { it.clear() }
-            tenantCaches.clear()
-        }
-        principalCachesLock.withLock {
-            principalCaches.values.forEach { it.clear() }
-            principalCaches.clear()
-        }
+        val pattern = "$namespace::*"
+        evictions += backend.deleteByPattern(pattern)
+        valueLock.withLock { valueStore.clear() }
     }
 
     override suspend fun clearApp() {
-        appCache.clear()
+        val pattern = "$namespace::APP::*"
+        evictions += backend.deleteByPattern(pattern)
+        valueLock.withLock {
+            val keysToRemove = valueStore.keys.filter { it.startsWith("$namespace::APP::") }
+            keysToRemove.forEach { valueStore.remove(it) }
+        }
     }
 
     override suspend fun clearTenant(tenantId: String) {
-        tenantCachesLock.withLock {
-            tenantCaches[tenantId]?.clear()
-            tenantCaches.remove(tenantId)
+        val pattern = "$namespace::TENANT::$tenantId::*"
+        evictions += backend.deleteByPattern(pattern)
+        valueLock.withLock {
+            val prefix = "$namespace::TENANT::$tenantId::"
+            val keysToRemove = valueStore.keys.filter { it.startsWith(prefix) }
+            keysToRemove.forEach { valueStore.remove(it) }
         }
     }
 
     override suspend fun clearPrincipal(principalId: String) {
-        principalCachesLock.withLock {
-            principalCaches[principalId]?.clear()
-            principalCaches.remove(principalId)
+        val pattern = "$namespace::PRINCIPAL::$principalId::*"
+        evictions += backend.deleteByPattern(pattern)
+        valueLock.withLock {
+            val prefix = "$namespace::PRINCIPAL::$principalId::"
+            val keysToRemove = valueStore.keys.filter { it.startsWith(prefix) }
+            keysToRemove.forEach { valueStore.remove(it) }
         }
     }
 
     override suspend fun evictExpired() {
-        appCache.evictExpired()
-        tenantCachesLock.withLock {
-            tenantCaches.values.forEach { it.evictExpired() }
-        }
-        principalCachesLock.withLock {
-            principalCaches.values.forEach { it.evictExpired() }
+        // Clean up valueStore entries whose backend keys have expired
+        val allKeys = valueLock.withLock { valueStore.keys.toList() }
+        val keysToRemove = allKeys.filter { !backend.exists(it) }
+        if (keysToRemove.isNotEmpty()) {
+            valueLock.withLock {
+                keysToRemove.forEach { valueStore.remove(it) }
+            }
+            evictions += keysToRemove.size
         }
     }
 
     override suspend fun getStatistics(): CacheStatistics {
-        val appSize = appCache.getKeys().size.toLong()
-        val tenantSize = tenantCachesLock.withLock {
-            tenantCaches.values.sumOf { it.getKeys().size.toLong() }
+        // Count entries per scope from the valueStore
+        val appPrefix = "$namespace::APP::"
+        val tenantPrefix = "$namespace::TENANT::"
+        val principalPrefix = "$namespace::PRINCIPAL::"
+
+        val totalSize = valueLock.withLock {
+            valueStore.keys.count { key ->
+                key.startsWith(appPrefix) || key.startsWith(tenantPrefix) || key.startsWith(principalPrefix)
+            }.toLong()
         }
-        val principalSize = principalCachesLock.withLock {
-            principalCaches.values.sumOf { it.getKeys().size.toLong() }
-        }
-        val totalSize = appSize + tenantSize + principalSize
 
         return statsLock.withLock {
             CacheStatistics(
@@ -252,24 +213,16 @@ class InMemoryScopedCache<K : Any, V : Any>(
                 hits = hits,
                 misses = misses,
                 size = totalSize,
-                maxSize = maxSize * 3, // Rough estimate (app + avg tenant + avg principal)
+                maxSize = backend.size(),
                 evictions = evictions
             )
         }
     }
 
     override suspend fun close() {
-        // Clear all caches first
+        // Clear all entries
         clear()
-        // Cancel the scope to stop any background operations
-        job.cancel("InMemoryScopedCache closed: $namespace")
+        // Close the backend
+        backend.close()
     }
 }
-
-/**
- * A key that includes scope identifier for tenant/principal isolation.
- */
-internal data class ScopedKey<K>(
-    val scopeId: String,
-    val key: K
-)

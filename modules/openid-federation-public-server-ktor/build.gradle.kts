@@ -23,8 +23,8 @@ dependencies {
     api(projects.modules.openidFederationCommon)
 
     // IDK logging API
-    api(libs.idk.core.api.public)
-    api(libs.idk.core.api.default)
+    api(idklib.sphereon.idk.lib.core.api.public)
+    api(idklib.sphereon.idk.lib.core.api.default)
 
     // Kotlin
     implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
@@ -34,42 +34,48 @@ dependencies {
     implementation(sphereonlib.org.jetbrains.kotlin.reflect)
 
     // Ktor Server
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.server.cors)
-    implementation(libs.ktor.server.status.pages)
-    implementation(libs.ktor.server.call.logging)
-    implementation(libs.ktor.server.auth)
-    implementation(libs.ktor.server.auth.jwt)
+    implementation(sphereonlib.io.ktor.server.core)
+    implementation(sphereonlib.io.ktor.server.cio)
+    implementation(sphereonlib.io.ktor.server.content.negotiation)
+    implementation(sphereonlib.io.ktor.server.cors)
+    implementation(sphereonlib.io.ktor.server.status.pages)
+    implementation(sphereonlib.io.ktor.server.call.logging)
+    implementation(sphereonlib.io.ktor.server.auth)
+    implementation(sphereonlib.io.ktor.server.auth.jwt)
     implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
 
     // IDK crypto libraries
-    implementation(libs.idk.crypto.core.public)
-    implementation(libs.idk.crypto.core.impl)
-    implementation(libs.idk.crypto.kms.provider.software)
-    implementation(libs.idk.crypto.kms.provider.aws)
-    implementation(libs.idk.crypto.kms.provider.azure)
-    implementation(libs.idk.data.link.http.client.public)
-    implementation(libs.idk.data.link.http.client.impl)
+    implementation(idklib.sphereon.idk.lib.crypto.core.public)
+    implementation(idklib.sphereon.idk.lib.crypto.core.impl)
+    implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
+    implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
+    implementation(idklib.sphereon.idk.lib.crypto.kms.provider.azure)
+    implementation(idklib.sphereon.idk.lib.data.link.http.client.public)
+    implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
 
     // IDK Ktor server support
-    implementation(libs.idk.ktor.server.kotlin.inject)
+    implementation(idklib.sphereon.idk.ktor.server.kotlin.inject)
 
     // kotlin-inject DI with Amazon App Platform / Anvil
-    implementation(libs.bundles.kotlin.inject)
+    implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
+    implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+    implementation(sphereonlib.software.amazon.app.platform.di.common.public)
+    implementation(sphereonlib.software.amazon.app.platform.scope.public)
+    implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
+    implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
+    implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
 
     // Cryptography
     implementation(sphereonlib.dev.whyoleg.cryptography.core)
 
     // Database
-    runtimeOnly(libs.postgresql)
+    runtimeOnly(sphereonlib.org.postgresql.postgresql)
 
     // Testing
-    testImplementation(libs.kotlin.test)
-    testImplementation(libs.ktor.server.test.host)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.amz.kotlin.inject.impl)
+    testImplementation(sphereonlib.org.jetbrains.kotlin.test)
+    testImplementation(sphereonlib.io.ktor.server.test.host)
+    testImplementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
+    testImplementation(sphereonlib.software.amazon.app.platform.kotlin.inject.impl)
 }
 
 // KSP configuration for kotlin-inject with Anvil
@@ -81,10 +87,10 @@ ksp {
 
 // Configure KSP processors
 dependencies {
-    ksp(libs.kotlin.inject.compiler.ksp)
-    ksp(libs.amz.kotlin.inject.contribute.public)
-    ksp(libs.amz.kotlin.inject.contribute.code.generators)
-    ksp(libs.anvil.compiler.ksp)
+    ksp(sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
+    ksp(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+    ksp(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators)
+    ksp(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler)
 }
 
 kotlin {

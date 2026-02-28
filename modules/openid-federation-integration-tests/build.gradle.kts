@@ -12,7 +12,7 @@ kotlin {
             dependencies {
                 api(projects.modules.openidFederationClient)
                 // IDK logging API
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
                 api(projects.modules.openidFederationOpenapi)
                 api(projects.modules.openidFederationPersistence)
                 api(projects.modules.openidFederationCommon)
@@ -21,12 +21,12 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
-                implementation(libs.ktor.client.cio)
+                implementation(sphereonlib.io.ktor.client.cio)
                 // IDK crypto libraries
-                implementation(libs.idk.crypto.core.public)
-                implementation(libs.idk.crypto.kms.provider.software)
-                implementation(libs.idk.crypto.kms.provider.azure)
-                implementation(libs.idk.crypto.kms.provider.aws)
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.azure)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
                 implementation(sphereonlib.dev.whyoleg.cryptography.core)
             }
         }
@@ -34,13 +34,13 @@ kotlin {
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(libs.idk.core.api.public)
+                implementation(idklib.sphereon.idk.lib.core.api.public)
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationPersistence)
                 implementation(projects.modules.openidFederationCommon)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
-                implementation(libs.mockk)
+                implementation(sphereonlib.io.mockk.mockk)
             }
         }
 

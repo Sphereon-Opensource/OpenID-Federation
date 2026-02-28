@@ -1,168 +1,17 @@
 [versions]
 changelog = "3.0.6"
+bom = "1.0.0.Final"
+kover = "0.9.1"
+node-gradle = "7.1.0"
 
-# IDK (Identity Development Kit) dependencies
-idk = "0.14.0-SNAPSHOT"
-kotlinInject = "0.8.1-SNAPSHOT"
-anvil = "0.1.6"
-appPlatform = "0.0.9-SNAPSHOT"
-ksp = "2.1.20-1.0.29"
-agp = "8.9.0"
 android-compileSdk = "34"
 android-minSdk = "24"
 android-targetSdk = "34"
-androidx-activityCompose = "1.9.0"
-androidx-appcompat = "1.6.1"
-androidx-constraintlayout = "2.1.4"
-androidx-core-ktx = "1.13.1"
-androidx-espresso-core = "3.5.1"
-androidx-material = "1.12.0"
-androidx-test-junit = "1.1.5"
-bom = "1.0.0.Final"
-compose-plugin = "1.6.10"
-hikari = "6.2.1"
-junit = "4.13.2"
-kache = "2.1.1"
-kotlin = "2.1.20"
-ktor = "3.1.1"
-kotlinxCoroutines = "1.10.2"
-kotlinxDatetime = "0.6.2"
-kotlinxSerialization = "1.8.1"
-kover = "0.9.1"
-mockk = "1.13.17"
-nimbusJoseJwt = "9.40"
-node-gradle = "7.1.0"
-npmPublish = "3.5.3"
-openapi = "7.12.0"
-# sphereonKmp version replaced by idk version
-# Spring Boot dependencies removed - migrated to Ktor
-kermitLogging = "2.0.5"
-sqldelight = "2.0.2"
-postgresql = "42.7.3"
-projectreactor = "1.2.3"
-testcontainers = "1.20.6"
-whyoleg-cryptography = "0.4.0"
 
 [libraries]
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
-androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-junit" }
-androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "androidx-espresso-core" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "androidx-appcompat" }
-androidx-material = { group = "com.google.android.material", name = "material", version.ref = "androidx-material" }
-androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "androidx-constraintlayout" }
-androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
-hikari = { group = "com.zaxxer", name = "HikariCP", version.ref = "hikari" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-kache = { module = "com.mayakapps.kache:kache", version.ref = "kache" }
-kache-file = { module = "com.mayakapps.kache:file-kache", version.ref = "kache" }
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
-kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
-kotlinx-coroutines-reactor = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor", version.ref = "kotlinxCoroutines" }
-kotlinx-coroutines-core-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-js", version.ref = "kotlinxCoroutines" }
-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
-kotlinx-coroutines-test-js = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test-js", version.ref = "kotlinxCoroutines" }
-kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermitLogging" }
-kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
-ktor-http = { module = "io.ktor:ktor-http", version.ref = "ktor" }
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-core-jvm = { module = "io.ktor:ktor-client-core-jvm", version.ref = "ktor" }
-ktor-client-core-js = { module = "io.ktor:ktor-client-core-js", version.ref = "ktor" }
-ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
-ktor-serialization-jackson = { module = "io.ktor:ktor-serialization-jackson", version.ref = "ktor" }
-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
-ktor-client-mock-js = { module = "io.ktor:ktor-client-mock-js", version.ref = "ktor" }
-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
-ktor-client-cio-jvm = { module = "io.ktor:ktor-client-cio-jvm", version.ref = "ktor" }
-ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
-ktor-client-java = { module = "io.ktor:ktor-client-java", version.ref = "ktor" }
-
-# Ktor server dependencies
-ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor" }
-ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
-ktor-server-netty = { module = "io.ktor:ktor-server-netty", version.ref = "ktor" }
-ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
-ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
-ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
-ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
-ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
-ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
-ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
-nimbus-jose-jwt = { group = "com.nimbusds", name = "nimbus-jose-jwt", version.ref = "nimbusJoseJwt" }
-postgresql = { group = "org.postgresql", name = "postgresql", version.ref = "postgresql" }
-projectreactor-kotlin-extensions = { module = "io.projectreactor.kotlin:reactor-kotlin-extensions", version.ref = "projectreactor" }
-
-# IDK (Identity Development Kit) libraries
-idk-bom = { module = "com.sphereon.idk:idk-bom", version.ref = "idk" }
-idk-core-api-public = { module = "com.sphereon.idk:lib-core-api-public", version.ref = "idk" }
-idk-core-api-default = { module = "com.sphereon.idk:lib-core-api-default", version.ref = "idk" }
-idk-crypto-core-public = { module = "com.sphereon.idk:lib-crypto-core-public", version.ref = "idk" }
-idk-crypto-core-impl = { module = "com.sphereon.idk:lib-crypto-core-impl", version.ref = "idk" }
-idk-crypto-kms-provider-software = { module = "com.sphereon.idk:lib-crypto-kms-provider-software", version.ref = "idk" }
-idk-crypto-kms-provider-aws = { module = "com.sphereon.idk:lib-crypto-kms-provider-aws", version.ref = "idk" }
-idk-crypto-kms-provider-azure = { module = "com.sphereon.idk:lib-crypto-kms-provider-azure", version.ref = "idk" }
-idk-conf-settings = { module = "com.sphereon.idk:lib-conf-settings", version.ref = "idk" }
-idk-data-link-http-client-public = { module = "com.sphereon.idk:lib-data-link-http-client-public", version.ref = "idk" }
-idk-data-link-http-client-impl = { module = "com.sphereon.idk:lib-data-link-http-client-impl", version.ref = "idk" }
-
-# IDK Ktor server integration
-idk-ktor-server-kotlin-inject = { module = "com.sphereon.idk:ktor-server-kotlin-inject", version.ref = "idk" }
-
-# kotlin-inject for DI
-kotlin-inject-runtime = { module = "me.tatarka.inject:kotlin-inject-runtime", version.ref = "kotlinInject" }
-kotlin-inject-runtime-kmp = { module = "me.tatarka.inject:kotlin-inject-runtime-kmp", version.ref = "kotlinInject" }
-kotlin-inject-compiler-ksp = { module = "me.tatarka.inject:kotlin-inject-compiler-ksp", version.ref = "kotlinInject" }
-
-# Amazon App Platform / Anvil DI extensions
-anvil-runtime = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime", version.ref = "anvil" }
-anvil-runtime-optional = { module = "software.amazon.lastmile.kotlin.inject.anvil:runtime-optional", version.ref = "anvil" }
-anvil-compiler-ksp = { module = "software.amazon.lastmile.kotlin.inject.anvil:compiler", version.ref = "anvil" }
-amz-kotlin-inject-public = { module = "software.amazon.app.platform:kotlin-inject-public", version.ref = "appPlatform" }
-amz-kotlin-inject-impl = { module = "software.amazon.app.platform:kotlin-inject-impl", version.ref = "appPlatform" }
-amz-kotlin-scope-public = { module = "software.amazon.app.platform:scope-public", version.ref = "appPlatform" }
-amz-di-common-public = { module = "software.amazon.app.platform:di-common-public", version.ref = "appPlatform" }
-amz-kotlin-inject-contribute-public = { module = "software.amazon.app.platform:kotlin-inject-contribute-public", version.ref = "appPlatform" }
-amz-kotlin-inject-contribute-code-generators = { module = "software.amazon.app.platform:kotlin-inject-contribute-impl-code-generators", version.ref = "appPlatform" }
-
-# Spring Boot libraries removed - migrated to Ktor
-sqldelight-jdbc-driver = { group = "app.cash.sqldelight", name = "jdbc-driver", version.ref = "sqldelight" }
-testcontainer-postgres = { group = "org.testcontainers", name = "testcontainers" }
-testcontainer-junit = { group = "org.testcontainers", name = "junit-jupiter" }
-whyoleg-cryptography-core = { module = "dev.whyoleg.cryptography:cryptography-core", version.ref = "whyoleg-cryptography" }
-
-[bundles]
-kotlin-inject = [
-    "amz-kotlin-inject-public",
-    "amz-kotlin-inject-impl",
-    "amz-kotlin-inject-contribute-public",
-    "amz-di-common-public",
-    "anvil-runtime",
-    "anvil-runtime-optional",
-    "kotlin-inject-runtime-kmp",
-    "amz-kotlin-scope-public"
-]
 
 [plugins]
 changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.ref = "changelog" }
-ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-androidApplication = { id = "com.android.application", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
 bom-generator = { id = "io.github.gradlebom.generator-plugin", version.ref = "bom" }
-compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "compose-plugin" }
-kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
-openapiGenerator = { id = "org.openapi.generator", version.ref = "openapi" }
-npmPublish = { id = "dev.petuska.npm.publish", version.ref = "npmPublish" }
-# Spring Boot plugins removed - migrated to Ktor
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle" }

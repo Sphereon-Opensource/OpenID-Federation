@@ -1,11 +1,10 @@
 package com.sphereon.openid.fed.common.mime
 
+import com.sphereon.core.compat.JsExportCompat
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlin.js.ExperimentalJsExport
-import kotlin.js.JsExport
 
 private val qpAllowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~".toSet()
 
@@ -15,8 +14,7 @@ private val qpAllowedChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
  * input   an input string
  * @return URL encoded String
  */
-@OptIn(ExperimentalJsExport::class)
-@JsExport
+@JsExportCompat
 fun urlEncodeValue(input: String): String {
     return buildString {
         input.forEach { char ->
@@ -78,8 +76,7 @@ fun <T> T.toUrlEncodedJsonValue(serializer: KSerializer<T>): String {
  * input   An URL encoded input string
  * @return Decoded String
  */
-@ExperimentalJsExport
-@JsExport
+@JsExportCompat
 fun urlDecodeValue(input: String): String {
     return buildString {
         var i = 0
@@ -108,7 +105,6 @@ fun urlDecodeValue(input: String): String {
  *
  * @return Decoded String
  */
-@OptIn(ExperimentalJsExport::class)
 fun String.fromUrlEncodedValue(): String {
     return urlDecodeValue(this)
 }

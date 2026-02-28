@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -34,12 +33,11 @@ class GetKeysCommandImpl(
     private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun getKeys(account: Account, includeRevoked: Boolean): IdkResult<Array<AccountJwk>, FederationError> {
-        return execute(GetKeysArgs(account, includeRevoked), execution.sessionContext)
+        return execute(GetKeysArgs(account, includeRevoked))
     }
 
     override suspend fun doExecute(
         args: GetKeysArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetKeysArgs) -> GetKeysArgs
     ): IdkResult<Array<AccountJwk>, FederationError> {
         val (account, includeRevoked) = applyDuring(args)

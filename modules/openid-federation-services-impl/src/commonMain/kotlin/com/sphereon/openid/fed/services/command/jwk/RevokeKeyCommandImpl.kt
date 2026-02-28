@@ -5,7 +5,6 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
@@ -37,12 +36,11 @@ class RevokeKeyCommandImpl(
     private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun revokeKey(account: Account, keyId: String, reason: String?): IdkResult<AccountJwk, FederationError> {
-        return execute(RevokeKeyArgs(account, keyId, reason), execution.sessionContext)
+        return execute(RevokeKeyArgs(account, keyId, reason))
     }
 
     override suspend fun doExecute(
         args: RevokeKeyArgs,
-        sessionContext: SessionContext,
         applyDuring: (RevokeKeyArgs) -> RevokeKeyArgs
     ): IdkResult<AccountJwk, FederationError> {
         val (account, keyId, reason) = applyDuring(args)

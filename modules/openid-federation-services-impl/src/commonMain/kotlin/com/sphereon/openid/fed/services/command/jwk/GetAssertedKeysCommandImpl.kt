@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
@@ -37,12 +36,11 @@ class GetAssertedKeysCommandImpl(
         kmsKeyRef: String?,
         kid: String?
     ): IdkResult<Array<AccountJwk>, FederationError> {
-        return execute(GetAssertedKeysArgs(account, includeRevoked, kmsKeyRef, kid), execution.sessionContext)
+        return execute(GetAssertedKeysArgs(account, includeRevoked, kmsKeyRef, kid))
     }
 
     override suspend fun doExecute(
         args: GetAssertedKeysArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetAssertedKeysArgs) -> GetAssertedKeysArgs
     ): IdkResult<Array<AccountJwk>, FederationError> {
         val (account, includeRevoked, kmsKeyRef, kid) = applyDuring(args)

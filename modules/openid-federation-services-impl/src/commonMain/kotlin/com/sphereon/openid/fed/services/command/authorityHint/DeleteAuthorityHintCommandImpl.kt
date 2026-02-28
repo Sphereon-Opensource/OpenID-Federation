@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.EntityNotFoundError
@@ -36,12 +35,11 @@ class DeleteAuthorityHintCommandImpl(
     private val authorityHintQueries = Persistence.authorityHintQueries
 
     override suspend fun deleteAuthorityHint(account: Account, id: String): IdkResult<AuthorityHint, FederationError> {
-        return execute(DeleteAuthorityHintArgs(account, id), execution.sessionContext)
+        return execute(DeleteAuthorityHintArgs(account, id))
     }
 
     override suspend fun doExecute(
         args: DeleteAuthorityHintArgs,
-        sessionContext: SessionContext,
         applyDuring: (DeleteAuthorityHintArgs) -> DeleteAuthorityHintArgs
     ): IdkResult<AuthorityHint, FederationError> {
         val (account, authorityHintId) = applyDuring(args)

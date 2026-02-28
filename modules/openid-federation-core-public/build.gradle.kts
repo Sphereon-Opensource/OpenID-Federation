@@ -1,8 +1,10 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
-    alias(sphereonplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
@@ -42,18 +44,25 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
                 // IDK core API for IdkResult, IdkError, IdkErrorType
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
 
                 // Serialization for error messages
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.core)
 
                 // Ktor HTTP status codes
-                implementation(libs.ktor.http)
+                implementation(sphereonlib.io.ktor.http)
 
                 // DateTime for cache TTL configuration
                 api(sphereonlib.org.jetbrains.kotlinx.datetime)
@@ -79,7 +88,7 @@ kotlin {
         val jsMain by getting {
             dependencies {
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
-                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core.js)
             }
         }
 
@@ -108,5 +117,12 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-core-public")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }

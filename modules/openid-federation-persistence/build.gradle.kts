@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
-    id("app.cash.sqldelight") version "2.0.2"
+    id("app.cash.sqldelight") version "2.2.1"
     id("maven-publish")
 }
 
@@ -12,7 +12,7 @@ sqldelight {
     databases {
         create("Database") {
             packageName = "com.sphereon.openid.fed.persistence"
-            dialect("app.cash.sqldelight:postgresql-dialect:2.0.2")
+            dialect("app.cash.sqldelight:postgresql-dialect:2.2.1")
             schemaOutputDirectory = file("src/commonMain/resources/db/migration")
             migrationOutputDirectory = file("src/commonMain/resources/db/migration")
             deriveSchemaFromMigrations = true
@@ -40,9 +40,9 @@ kotlin {
 
         jvmMain {
             dependencies {
-                implementation(libs.sqldelight.jdbc.driver)
-                implementation(libs.hikari)
-                implementation(libs.postgresql)
+                implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
+                implementation(sphereonlib.com.zaxxer.hikaricp)
+                implementation(sphereonlib.org.postgresql.postgresql)
             }
         }
     }

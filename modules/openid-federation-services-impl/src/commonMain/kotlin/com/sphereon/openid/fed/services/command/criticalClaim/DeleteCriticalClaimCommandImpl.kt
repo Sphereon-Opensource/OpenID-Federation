@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.CriticalClaimNotFoundError
 import com.sphereon.openid.fed.core.error.FederationError
@@ -34,12 +33,11 @@ class DeleteCriticalClaimCommandImpl(
     private val critQueries = Persistence.critQueries
 
     override suspend fun delete(account: Account, id: String): IdkResult<CritEntity, FederationError> {
-        return execute(DeleteCriticalClaimArgs(account, id), execution.sessionContext)
+        return execute(DeleteCriticalClaimArgs(account, id))
     }
 
     override suspend fun doExecute(
         args: DeleteCriticalClaimArgs,
-        sessionContext: SessionContext,
         applyDuring: (DeleteCriticalClaimArgs) -> DeleteCriticalClaimArgs
     ): IdkResult<CritEntity, FederationError> {
         val (account, id) = applyDuring(args)

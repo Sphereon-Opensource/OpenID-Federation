@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
@@ -52,6 +54,13 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
@@ -63,7 +72,7 @@ kotlin {
                 api(projects.modules.openidFederationCorePublic)
                 api(projects.modules.openidFederationCoreImpl)
                 // IDK logging API
-                api(libs.idk.core.api.public)
+                api(idklib.sphereon.idk.lib.core.api.public)
             }
         }
 
@@ -76,7 +85,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation(libs.ktor.client.cio)
+                implementation(sphereonlib.io.ktor.client.cio)
             }
         }
 

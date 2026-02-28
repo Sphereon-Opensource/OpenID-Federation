@@ -3,7 +3,6 @@ package com.sphereon.openid.fed.client.command.trustChain
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetHistoricalKeysCommand
@@ -47,14 +46,12 @@ class VerifyTrustChainCommandImpl(
         currentTime: Long?
     ): IdkResult<VerifyTrustChainResponse, FederationError> {
         return execute(
-            VerifyTrustChainArgs(trustChain, trustAnchor, currentTime),
-            execution.sessionContext
+            VerifyTrustChainArgs(trustChain, trustAnchor, currentTime)
         )
     }
 
     override suspend fun doExecute(
         args: VerifyTrustChainArgs,
-        sessionContext: SessionContext,
         applyDuring: (VerifyTrustChainArgs) -> VerifyTrustChainArgs
     ): IdkResult<VerifyTrustChainResponse, FederationError> {
         val (chain, trustAnchor, currentTime) = applyDuring(args)

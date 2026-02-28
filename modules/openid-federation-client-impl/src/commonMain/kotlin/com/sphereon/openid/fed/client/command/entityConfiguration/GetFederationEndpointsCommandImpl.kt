@@ -3,7 +3,6 @@ package com.sphereon.openid.fed.client.command.entityConfiguration
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementServiceConst
@@ -37,14 +36,12 @@ class GetFederationEndpointsCommandImpl(
         entityConfiguration: EntityConfigurationStatement
     ): IdkResult<FederationEntityMetadata, FederationError> {
         return execute(
-            GetFederationEndpointsArgs(entityConfiguration),
-            execution.sessionContext
+            GetFederationEndpointsArgs(entityConfiguration)
         )
     }
 
     override suspend fun doExecute(
         args: GetFederationEndpointsArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetFederationEndpointsArgs) -> GetFederationEndpointsArgs
     ): IdkResult<FederationEntityMetadata, FederationError> {
         val (entityConfiguration) = applyDuring(args)

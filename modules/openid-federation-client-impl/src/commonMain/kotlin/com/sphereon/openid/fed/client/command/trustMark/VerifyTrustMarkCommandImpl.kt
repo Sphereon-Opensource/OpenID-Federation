@@ -3,7 +3,6 @@ package com.sphereon.openid.fed.client.command.trustMark
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.context.FederationContext
@@ -46,14 +45,12 @@ class VerifyTrustMarkCommandImpl(
         currentTime: Long?
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         return execute(
-            VerifyTrustMarkArgs(trustMark, trustAnchorConfig, currentTime),
-            execution.sessionContext
+            VerifyTrustMarkArgs(trustMark, trustAnchorConfig, currentTime)
         )
     }
 
     override suspend fun doExecute(
         args: VerifyTrustMarkArgs,
-        sessionContext: SessionContext,
         applyDuring: (VerifyTrustMarkArgs) -> VerifyTrustMarkArgs
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         val (trustMark, trustAnchorConfig, currentTime) = applyDuring(args)

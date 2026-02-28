@@ -6,7 +6,6 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
@@ -44,12 +43,11 @@ class GetSignedResolveResponseJwtCommandImpl(
         trustAnchor: String,
         entityTypes: Array<String>?
     ): IdkResult<String, FederationError> {
-        return execute(GetSignedResolveResponseJwtArgs(account, sub, trustAnchor, entityTypes), execution.sessionContext)
+        return execute(GetSignedResolveResponseJwtArgs(account, sub, trustAnchor, entityTypes))
     }
 
     override suspend fun doExecute(
         args: GetSignedResolveResponseJwtArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
     ): IdkResult<String, FederationError> {
         val (account, sub, trustAnchor, entityTypes) = applyDuring(args)

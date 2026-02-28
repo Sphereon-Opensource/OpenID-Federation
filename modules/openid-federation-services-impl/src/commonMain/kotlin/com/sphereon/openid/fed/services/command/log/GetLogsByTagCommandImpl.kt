@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -33,12 +32,11 @@ class GetLogsByTagCommandImpl(
     private val logQueries = Persistence.logQueries
 
     override suspend fun getLogsByTag(tag: String, limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(GetLogsByTagArgs(tag, limit), execution.sessionContext)
+        return execute(GetLogsByTagArgs(tag, limit))
     }
 
     override suspend fun doExecute(
         args: GetLogsByTagArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetLogsByTagArgs) -> GetLogsByTagArgs
     ): IdkResult<List<LogDTO>, FederationError> {
         val (tag, limit) = applyDuring(args)

@@ -3,7 +3,6 @@ package com.sphereon.openid.fed.client.command.entityConfiguration
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
@@ -45,14 +44,12 @@ class GetHistoricalKeysCommandImpl(
         entityConfiguration: EntityConfigurationStatement
     ): IdkResult<List<HistoricalKey>, FederationError> {
         return execute(
-            GetHistoricalKeysArgs(entityConfiguration),
-            execution.sessionContext
+            GetHistoricalKeysArgs(entityConfiguration)
         )
     }
 
     override suspend fun doExecute(
         args: GetHistoricalKeysArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetHistoricalKeysArgs) -> GetHistoricalKeysArgs
     ): IdkResult<List<HistoricalKey>, FederationError> {
         val (entityConfiguration) = applyDuring(args)

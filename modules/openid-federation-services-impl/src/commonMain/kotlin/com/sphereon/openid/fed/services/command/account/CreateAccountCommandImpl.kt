@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.AccountAlreadyExistsError
 import com.sphereon.openid.fed.core.error.FederationError
@@ -32,11 +31,10 @@ class CreateAccountCommandImpl(
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun createAccount(account: CreateAccount): IdkResult<Account, FederationError> =
-        execute(account, execution.sessionContext)
+        execute(account)
 
     override suspend fun doExecute(
         args: CreateAccount,
-        sessionContext: SessionContext,
         applyDuring: (CreateAccount) -> CreateAccount
     ): IdkResult<Account, FederationError> {
         val createRequest = applyDuring(args)

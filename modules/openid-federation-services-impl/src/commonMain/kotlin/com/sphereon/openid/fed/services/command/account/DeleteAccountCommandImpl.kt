@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -31,11 +30,10 @@ class DeleteAccountCommandImpl(
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun deleteAccount(account: Account): IdkResult<Account, FederationError> =
-        execute(DeleteAccountArgs(account), execution.sessionContext)
+        execute(DeleteAccountArgs(account))
 
     override suspend fun doExecute(
         args: DeleteAccountArgs,
-        sessionContext: SessionContext,
         applyDuring: (DeleteAccountArgs) -> DeleteAccountArgs
     ): IdkResult<Account, FederationError> {
         val request = applyDuring(args)

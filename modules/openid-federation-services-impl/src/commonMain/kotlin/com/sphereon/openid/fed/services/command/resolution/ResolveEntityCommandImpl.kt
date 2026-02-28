@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.FederationClient
 import com.sphereon.openid.fed.core.error.FederationError
@@ -47,12 +46,11 @@ class ResolveEntityCommandImpl(
         trustAnchor: String,
         entityTypes: Array<String>?
     ): IdkResult<ResolveResponse, FederationError> {
-        return execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes), execution.sessionContext)
+        return execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes))
     }
 
     override suspend fun doExecute(
         args: ResolveEntityArgs,
-        sessionContext: SessionContext,
         applyDuring: (ResolveEntityArgs) -> ResolveEntityArgs
     ): IdkResult<ResolveResponse, FederationError> {
         val (account, sub, trustAnchor, entityTypes) = applyDuring(args)

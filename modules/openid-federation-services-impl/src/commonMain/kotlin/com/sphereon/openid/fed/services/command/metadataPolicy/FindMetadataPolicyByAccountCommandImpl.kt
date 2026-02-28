@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -34,12 +33,11 @@ class FindMetadataPolicyByAccountCommandImpl(
     private val metadataPolicyQueries = Persistence.metadataPolicyQueries
 
     override suspend fun findByAccount(account: Account): IdkResult<List<MetadataPolicy>, FederationError> {
-        return execute(FindMetadataPolicyByAccountArgs(account), execution.sessionContext)
+        return execute(FindMetadataPolicyByAccountArgs(account))
     }
 
     override suspend fun doExecute(
         args: FindMetadataPolicyByAccountArgs,
-        sessionContext: SessionContext,
         applyDuring: (FindMetadataPolicyByAccountArgs) -> FindMetadataPolicyByAccountArgs
     ): IdkResult<List<MetadataPolicy>, FederationError> {
         val (account) = applyDuring(args)

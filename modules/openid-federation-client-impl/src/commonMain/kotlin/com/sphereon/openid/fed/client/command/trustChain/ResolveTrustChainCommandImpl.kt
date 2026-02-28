@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
@@ -55,14 +54,12 @@ class ResolveTrustChainCommandImpl(
         maxDepth: Int
     ): IdkResult<TrustChainResolveResponse, FederationError> {
         return execute(
-            ResolveTrustChainArgs(entityIdentifier, trustAnchors, maxDepth),
-            execution.sessionContext
+            ResolveTrustChainArgs(entityIdentifier, trustAnchors, maxDepth)
         )
     }
 
     override suspend fun doExecute(
         args: ResolveTrustChainArgs,
-        sessionContext: SessionContext,
         applyDuring: (ResolveTrustChainArgs) -> ResolveTrustChainArgs
     ): IdkResult<TrustChainResolveResponse, FederationError> {
         val (entityIdentifier, trustAnchors, maxDepth) = applyDuring(args)

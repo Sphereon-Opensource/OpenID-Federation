@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -37,9 +36,9 @@ class CreateSubordinateJwkCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun createSubordinateJwk(account: Account, id: String, jwk: Jwk): IdkResult<SubordinateJwk, FederationError> =
-        execute(CreateSubordinateJwkArgs(account, id, jwk), execution.sessionContext)
+        execute(CreateSubordinateJwkArgs(account, id, jwk))
 
-    override suspend fun doExecute(args: CreateSubordinateJwkArgs, sessionContext: SessionContext, applyDuring: (CreateSubordinateJwkArgs) -> CreateSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
+    override suspend fun doExecute(args: CreateSubordinateJwkArgs, applyDuring: (CreateSubordinateJwkArgs) -> CreateSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
         val (account, id, jwk) = applyDuring(args)
         logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
 
@@ -77,9 +76,9 @@ class GetSubordinateJwksCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun getSubordinateJwks(account: Account, id: String): IdkResult<Array<SubordinateJwk>, FederationError> =
-        execute(GetSubordinateJwksArgs(account, id), execution.sessionContext)
+        execute(GetSubordinateJwksArgs(account, id))
 
-    override suspend fun doExecute(args: GetSubordinateJwksArgs, sessionContext: SessionContext, applyDuring: (GetSubordinateJwksArgs) -> GetSubordinateJwksArgs): IdkResult<Array<SubordinateJwk>, FederationError> {
+    override suspend fun doExecute(args: GetSubordinateJwksArgs, applyDuring: (GetSubordinateJwksArgs) -> GetSubordinateJwksArgs): IdkResult<Array<SubordinateJwk>, FederationError> {
         val (account, id) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null) {
@@ -112,9 +111,9 @@ class DeleteSubordinateJwkCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun deleteSubordinateJwk(account: Account, id: String, jwkId: String): IdkResult<SubordinateJwk, FederationError> =
-        execute(DeleteSubordinateJwkArgs(account, id, jwkId), execution.sessionContext)
+        execute(DeleteSubordinateJwkArgs(account, id, jwkId))
 
-    override suspend fun doExecute(args: DeleteSubordinateJwkArgs, sessionContext: SessionContext, applyDuring: (DeleteSubordinateJwkArgs) -> DeleteSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
+    override suspend fun doExecute(args: DeleteSubordinateJwkArgs, applyDuring: (DeleteSubordinateJwkArgs) -> DeleteSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
         val (account, id, jwkId) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null || subordinate.account_id != account.id) {
@@ -150,9 +149,9 @@ class FindSubordinateMetadataCommandImpl(
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
     override suspend fun findSubordinateMetadata(account: Account, subordinateId: String): IdkResult<Array<SubordinateMetadata>, FederationError> =
-        execute(FindSubordinateMetadataArgs(account, subordinateId), execution.sessionContext)
+        execute(FindSubordinateMetadataArgs(account, subordinateId))
 
-    override suspend fun doExecute(args: FindSubordinateMetadataArgs, sessionContext: SessionContext, applyDuring: (FindSubordinateMetadataArgs) -> FindSubordinateMetadataArgs): IdkResult<Array<SubordinateMetadata>, FederationError> {
+    override suspend fun doExecute(args: FindSubordinateMetadataArgs, applyDuring: (FindSubordinateMetadataArgs) -> FindSubordinateMetadataArgs): IdkResult<Array<SubordinateMetadata>, FederationError> {
         val (account, subordinateId) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()
@@ -193,9 +192,9 @@ class CreateSubordinateMetadataCommandImpl(
         key: String,
         metadata: JsonElement
     ): IdkResult<SubordinateMetadata, FederationError> =
-        execute(CreateSubordinateMetadataArgs(account, subordinateId, key, metadata), execution.sessionContext)
+        execute(CreateSubordinateMetadataArgs(account, subordinateId, key, metadata))
 
-    override suspend fun doExecute(args: CreateSubordinateMetadataArgs, sessionContext: SessionContext, applyDuring: (CreateSubordinateMetadataArgs) -> CreateSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
+    override suspend fun doExecute(args: CreateSubordinateMetadataArgs, applyDuring: (CreateSubordinateMetadataArgs) -> CreateSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
         val (account, subordinateId, key, metadata) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()
@@ -242,9 +241,9 @@ class DeleteSubordinateMetadataCommandImpl(
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
     override suspend fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): IdkResult<SubordinateMetadata, FederationError> =
-        execute(DeleteSubordinateMetadataArgs(account, subordinateId, id), execution.sessionContext)
+        execute(DeleteSubordinateMetadataArgs(account, subordinateId, id))
 
-    override suspend fun doExecute(args: DeleteSubordinateMetadataArgs, sessionContext: SessionContext, applyDuring: (DeleteSubordinateMetadataArgs) -> DeleteSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
+    override suspend fun doExecute(args: DeleteSubordinateMetadataArgs, applyDuring: (DeleteSubordinateMetadataArgs) -> DeleteSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
         val (account, subordinateId, id) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()

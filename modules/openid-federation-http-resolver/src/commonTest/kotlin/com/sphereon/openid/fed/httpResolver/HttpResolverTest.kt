@@ -38,7 +38,7 @@ class HttpResolverTest {
         responseBody: String = "test response",
         statusCode: HttpStatusCode = HttpStatusCode.OK,
         responseHeaders: Map<String, String> = emptyMap(),
-        onRequest: ((HttpRequestData) -> Unit)? = null
+        onRequest: ((io.ktor.client.request.HttpRequestData) -> Unit)? = null
     ): HttpClient {
         return HttpClient(MockEngine) {
             engine {
@@ -49,7 +49,7 @@ class HttpResolverTest {
                     respond(
                         content = responseBody,
                         status = statusCode,
-                        headers = headersOf(*responseHeaders.flatMap { listOf(it.key, it.value) }.toTypedArray())
+                        headers = headersOf(*responseHeaders.map { (k, v) -> k to listOf(v) }.toTypedArray())
                     )
                 }
             }
@@ -378,7 +378,7 @@ class HttpResolverTest {
         override val httpTimeoutMs: Long = 30000,
         override val httpRetries: Int = 1,
         override val enableHttpCaching: Boolean = true,
-        override val enableETagSupport: Boolean = true
+        override val enableEtagSupport: Boolean = true
     ) : HttpResolverConfig
 
     private class MockScopedCache : ScopedCache<String, HttpMetadata<String>> {
@@ -444,6 +444,7 @@ class HttpResolverTest {
             principalCache.keys.filter { it.startsWith("$principalId:") }.forEach { principalCache.remove(it) }
         }
         override suspend fun evictExpired() { evictExpiredCalled = true }
+        override suspend fun close() { clear() }
         override suspend fun getStatistics(): CacheStatistics = CacheStatistics(
             namespace = namespace,
             hits = 0L,

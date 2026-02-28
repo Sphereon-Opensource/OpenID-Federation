@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -37,12 +36,11 @@ class CreateMetadataCommandImpl(
     private val metadataQueries = Persistence.metadataQueries
 
     override suspend fun createMetadata(account: Account, key: String, metadata: JsonElement): IdkResult<Metadata, FederationError> {
-        return execute(CreateMetadataArgs(account, key, metadata), execution.sessionContext)
+        return execute(CreateMetadataArgs(account, key, metadata))
     }
 
     override suspend fun doExecute(
         args: CreateMetadataArgs,
-        sessionContext: SessionContext,
         applyDuring: (CreateMetadataArgs) -> CreateMetadataArgs
     ): IdkResult<Metadata, FederationError> {
         val (account, key, metadata) = applyDuring(args)

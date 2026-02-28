@@ -1,22 +1,27 @@
 package com.sphereon.openid.fed.core.cache
 
+import com.sphereon.core.api.cache.CacheBackend
 import com.sphereon.core.api.log.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Default implementation of CacheManager using in-memory Kache-backed caches.
+ * Default implementation of CacheManager using IDK's CacheBackend infrastructure.
  *
  * This implementation:
- * - Creates InMemoryScopedCache instances for each namespace
+ * - Creates InMemoryScopedCache instances backed by IDK's CacheBackend
  * - Provides singleton cache instances per namespace
  * - Supports aggregate statistics across all caches
  *
- * Note: Cache creation in getOrCreate uses a simple check-and-set pattern.
- * In rare race conditions, a cache may be created twice but this is safe
- * as both would be valid instances.
+ * The CacheBackend determines the actual storage mechanism:
+ * - On JVM/JS: KacheCacheBackend (from IDK lib-core-api-default/nonWasmMain)
+ * - On WasmJS: MapCacheBackend (from IDK lib-core-api-default/wasmJsMain)
+ *
+ * @param backend The IDK CacheBackend to use for storage, injected via DI.
  */
-class DefaultCacheManager : CacheManager {
+class DefaultCacheManager(
+    private val backend: CacheBackend
+) : CacheManager {
 
     private val logger = Log.app().withTag("sphereon:oidf:cache:manager")
     private val caches = mutableMapOf<String, ScopedCache<*, *>>()
@@ -30,8 +35,6 @@ class DefaultCacheManager : CacheManager {
         }
 
         // Create cache if not exists
-        // Note: In rare race conditions, we might create a cache twice,
-        // but this is safe as both would be valid instances
         logger.debug(
             "Creating cache for namespace: ${requirements.namespace}",
             metadata = mapOf(
@@ -43,7 +46,7 @@ class DefaultCacheManager : CacheManager {
 
         val cache = InMemoryScopedCache<K, V>(
             namespace = requirements.namespace,
-            maxSize = requirements.maxLocalEntries,
+            backend = backend,
             ttlConfig = requirements.ttlConfig
         )
 

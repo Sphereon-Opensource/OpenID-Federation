@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -33,12 +32,11 @@ class GetRecentLogsCommandImpl(
     private val logQueries = Persistence.logQueries
 
     override suspend fun getRecentLogs(limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(GetRecentLogsArgs(limit), execution.sessionContext)
+        return execute(GetRecentLogsArgs(limit))
     }
 
     override suspend fun doExecute(
         args: GetRecentLogsArgs,
-        sessionContext: SessionContext,
         applyDuring: (GetRecentLogsArgs) -> GetRecentLogsArgs
     ): IdkResult<List<LogDTO>, FederationError> {
         val (limit) = applyDuring(args)

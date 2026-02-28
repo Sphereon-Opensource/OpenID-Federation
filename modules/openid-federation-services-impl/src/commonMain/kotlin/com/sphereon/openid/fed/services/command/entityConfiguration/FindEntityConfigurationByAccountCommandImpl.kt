@@ -5,7 +5,6 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.openid.fed.common.builder.FederationEntityMetadataObjectBuilder
@@ -50,12 +49,11 @@ class FindEntityConfigurationByAccountCommandImpl(
     }
 
     override suspend fun findByAccount(account: Account): IdkResult<EntityConfigurationStatement, FederationError> {
-        return execute(FindEntityConfigurationByAccountArgs(account), execution.sessionContext)
+        return execute(FindEntityConfigurationByAccountArgs(account))
     }
 
     override suspend fun doExecute(
         args: FindEntityConfigurationByAccountArgs,
-        sessionContext: SessionContext,
         applyDuring: (FindEntityConfigurationByAccountArgs) -> FindEntityConfigurationByAccountArgs
     ): IdkResult<EntityConfigurationStatement, FederationError> {
         val (account) = applyDuring(args)

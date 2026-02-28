@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.FederationError
@@ -37,12 +36,11 @@ class CreateMetadataPolicyCommandImpl(
     private val metadataPolicyQueries = Persistence.metadataPolicyQueries
 
     override suspend fun createPolicy(account: Account, key: String, policy: JsonElement): IdkResult<MetadataPolicy, FederationError> {
-        return execute(CreateMetadataPolicyArgs(account, key, policy), execution.sessionContext)
+        return execute(CreateMetadataPolicyArgs(account, key, policy))
     }
 
     override suspend fun doExecute(
         args: CreateMetadataPolicyArgs,
-        sessionContext: SessionContext,
         applyDuring: (CreateMetadataPolicyArgs) -> CreateMetadataPolicyArgs
     ): IdkResult<MetadataPolicy, FederationError> {
         val (account, key, policy) = applyDuring(args)

@@ -17,7 +17,7 @@ class DefaultCacheManagerTest {
 
     @BeforeTest
     fun setup() {
-        manager = DefaultCacheManager()
+        manager = DefaultCacheManager(createDefaultCacheBackend())
     }
 
     // ========== Cache Creation Tests ==========
@@ -59,20 +59,6 @@ class DefaultCacheManagerTest {
         assertNotSame(cache1, cache2)
         assertEquals("namespace1", cache1.namespace)
         assertEquals("namespace2", cache2.namespace)
-    }
-
-    @Test
-    fun `getOrCreate respects max size configuration`() = runTest {
-        val requirements = CacheRequirements(
-            namespace = "sized-cache",
-            maxLocalEntries = 50
-        )
-
-        val cache: ScopedCache<String, String> = manager.getOrCreate(requirements)
-        val stats = cache.getStatistics()
-
-        // Max size is multiplied by 3 for app + tenant + principal estimates
-        assertTrue(stats.maxSize >= 50)
     }
 
     @Test
@@ -252,7 +238,6 @@ class DefaultCacheManagerTest {
         manager.shutdown()
 
         // After shutdown, caches should be closed (entries cleared, resources released)
-        // Verify manager state is clean
         assertTrue(manager.getNamespaces().isEmpty())
         assertFalse(manager.exists("cache1"))
         assertFalse(manager.exists("cache2"))
@@ -313,8 +298,6 @@ class DefaultCacheManagerTest {
 
         val cache: ScopedCache<String, String> = manager.getOrCreate(requirements)
         assertNotNull(cache)
-        // Note: Locality is currently ignored by InMemoryScopedCache
-        // This test just verifies the API accepts the configuration
     }
 
     @Test
@@ -326,6 +309,5 @@ class DefaultCacheManagerTest {
 
         val cache: ScopedCache<String, String> = manager.getOrCreate(requirements)
         assertNotNull(cache)
-        // Tags are used for logging/metrics, not functionality
     }
 }

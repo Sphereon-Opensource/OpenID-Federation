@@ -4,7 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
-import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ReceivedTrustMarkNotFoundError
@@ -35,12 +34,11 @@ class DeleteReceivedTrustMarkCommandImpl(
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
     override suspend fun deleteReceivedTrustMark(account: Account, trustMarkId: String): IdkResult<ReceivedTrustMark, FederationError> {
-        return execute(DeleteReceivedTrustMarkArgs(account, trustMarkId), execution.sessionContext)
+        return execute(DeleteReceivedTrustMarkArgs(account, trustMarkId))
     }
 
     override suspend fun doExecute(
         args: DeleteReceivedTrustMarkArgs,
-        sessionContext: SessionContext,
         applyDuring: (DeleteReceivedTrustMarkArgs) -> DeleteReceivedTrustMarkArgs
     ): IdkResult<ReceivedTrustMark, FederationError> {
         val (account, trustMarkId) = applyDuring(args)
