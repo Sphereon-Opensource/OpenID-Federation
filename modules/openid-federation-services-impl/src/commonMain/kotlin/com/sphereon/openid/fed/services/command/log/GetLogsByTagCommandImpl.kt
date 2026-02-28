@@ -1,12 +1,14 @@
 package com.sphereon.openid.fed.services.command.log
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import me.tatarka.inject.annotations.Inject
@@ -23,22 +25,20 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, boundType = GetLogsByTagCommand::class)
 class GetLogsByTagCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<GetLogsByTagArgs, List<LogDTO>, FederationError>(
-    id = GetLogsByTagCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetLogsByTagArgs, List<LogDTO>>(
+    commandId = GetLogsByTagCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetLogsByTagArgs>(),
+    outputTypeToken = typeToken<List<LogDTO>>()
 ), GetLogsByTagCommand {
 
     private val logger = Log.app().withTag("GetLogsByTagCommand")
     private val logQueries = Persistence.logQueries
 
-    override suspend fun getLogsByTag(tag: String, limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(GetLogsByTagArgs(tag, limit))
-    }
-
     override suspend fun doExecute(
         args: GetLogsByTagArgs,
         applyDuring: (GetLogsByTagArgs) -> GetLogsByTagArgs
-    ): IdkResult<List<LogDTO>, FederationError> {
+    ): IdkResult<List<LogDTO>, IdkError> {
         val (tag, limit) = applyDuring(args)
 
         logger.debug("Retrieving logs by tag: '$tag', limit: $limit")
@@ -49,7 +49,7 @@ class GetLogsByTagCommandImpl(
             IdkResult.ok(logs)
         } catch (e: Exception) {
             logger.error("Failed to retrieve logs by tag: '$tag'", e)
-            IdkResult.err(ServerError("Failed to retrieve logs by tag", e.message, e))
+            federationErr(ServerError("Failed to retrieve logs by tag", e.message, e))
         }
     }
 }

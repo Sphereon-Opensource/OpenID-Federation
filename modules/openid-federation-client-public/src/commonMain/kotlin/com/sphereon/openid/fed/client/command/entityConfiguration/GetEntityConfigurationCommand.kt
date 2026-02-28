@@ -37,6 +37,6 @@ interface GetEntityConfigurationCommand :
     GetEntityConfigurationCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.entityConfiguration.get"
+        const val COMMAND_ID = "fed.client.get-entity-configuration"
     }
 }

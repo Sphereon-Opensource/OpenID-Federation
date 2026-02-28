@@ -66,6 +66,6 @@ interface ResolveTrustChainCommand :
     ResolveTrustChainCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.trustChain.resolve"
+        const val COMMAND_ID = "fed.client.resolve-trust-chain"
     }
 }

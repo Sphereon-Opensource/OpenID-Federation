@@ -1,24 +1,28 @@
 package com.sphereon.openid.fed.services.command.account
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 
 data class DeleteAccountArgs(val account: Account)
 
-/**
- * Service interface for delete account operation.
- */
-interface DeleteAccountCommandService {
-    suspend fun deleteAccount(account: Account): IdkResult<Account, FederationError>
-}
-
-/**
- * Command to delete an account.
- */
-interface DeleteAccountCommand : Command<DeleteAccountArgs, Account, FederationError>, DeleteAccountCommandService {
+interface DeleteAccountCommand : ServiceCommand<DeleteAccountArgs, Account>, PublicApiCommand {
     companion object {
-        const val COMMAND_ID = "fed.services.account.delete"
+        const val COMMAND_ID = "fed.account.delete"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.DELETE,
+            pathPattern = "/accounts",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "deleteAccount",
+            tags = setOf("accounts"),
+            summary = "Delete the current account"
+        )
     }
+
+    override val httpEndpoint get() = ENDPOINT
 }

@@ -38,6 +38,6 @@ interface GetFederationEndpointsCommand :
     GetFederationEndpointsCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.entityConfiguration.getFederationEndpoints"
+        const val COMMAND_ID = "fed.client.get-federation-endpoints"
     }
 }

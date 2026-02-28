@@ -1,19 +1,30 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
 data class CreateAuthorityHintArgs(val account: Account, val identifier: String)
 
-interface CreateAuthorityHintCommandService {
-    suspend fun createAuthorityHint(account: Account, identifier: String): IdkResult<AuthorityHint, FederationError>
-}
-
-interface CreateAuthorityHintCommand : Command<CreateAuthorityHintArgs, AuthorityHint, FederationError>, CreateAuthorityHintCommandService {
+interface CreateAuthorityHintCommand : ServiceCommand<CreateAuthorityHintArgs, AuthorityHint>, PublicApiCommand {
     companion object {
-        const val COMMAND_ID = "fed.services.authority-hint.create"
+        const val COMMAND_ID = "fed.authority-hint.create"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/authority-hints",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "createAuthorityHint",
+            tags = setOf("authority-hints"),
+            summary = "Create an authority hint"
+        )
     }
+
+    override val httpEndpoint get() = ENDPOINT
 }

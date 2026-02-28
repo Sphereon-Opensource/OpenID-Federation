@@ -2,10 +2,11 @@ package com.sphereon.openid.fed.server.admin.api.http
 
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.http.HttpAdapter
-import com.sphereon.core.api.http.command.CommandBackedHttpAdapter
 import com.sphereon.core.api.http.command.HttpEndpointCommand
+import com.sphereon.core.api.http.command.PublicApiHttpAdapter
 import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.core.api.http.describe.OpenApiHints
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.server.admin.api.http.command.*
 import com.sphereon.di.context.Named
@@ -18,7 +19,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  * HTTP Adapter for the OpenID Federation Admin API.
  *
  * This adapter aggregates all admin endpoint commands and provides
- * the HTTP routing layer using the IDK's CommandBackedHttpAdapter pattern.
+ * the HTTP routing layer using the IDK's PublicApiHttpAdapter pattern.
  *
  * All endpoints are mounted at the root path (no base path prefix).
  * The server configuration can add a server prefix like "/api" if needed.
@@ -89,9 +90,9 @@ class AdminHttpAdapter(
     // Cache endpoints
     private val getCacheStatsEndpoint: GetCacheStatsEndpointCommand,
     private val clearCacheEndpoint: ClearCacheEndpointCommand
-) : CommandBackedHttpAdapter(
+) : PublicApiHttpAdapter(
     id = ID,
-    execution = execution,
+    sessionExecution = execution,
     mount = HttpAdapterMount(
         serverPrefix = "",
         adapterBasePath = ""
@@ -100,6 +101,13 @@ class AdminHttpAdapter(
     companion object {
         const val ID = "FEDERATION_ADMIN"
     }
+
+    /**
+     * Service commands for binary transport and metadata.
+     * Currently empty as endpoint commands handle HTTP dispatch.
+     * Will be populated when binary transport support is enabled.
+     */
+    override val serviceCommands: List<ServiceCommand<*, *>> = emptyList()
 
     override val endpointCommands: List<HttpEndpointCommand> = listOf(
         // Account endpoints

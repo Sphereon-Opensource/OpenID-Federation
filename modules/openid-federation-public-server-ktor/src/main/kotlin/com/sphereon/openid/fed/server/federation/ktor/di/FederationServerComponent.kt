@@ -14,12 +14,6 @@ import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.server.federation.api.http.command.FederationAccountResolver
 import com.sphereon.openid.fed.services.AccountService
-import com.sphereon.openid.fed.services.EntityConfigurationStatementService
-import com.sphereon.openid.fed.services.JwkService
-import com.sphereon.openid.fed.services.LogService
-import com.sphereon.openid.fed.services.ResolutionService
-import com.sphereon.openid.fed.services.SubordinateService
-import com.sphereon.openid.fed.services.TrustMarkService
 import com.sphereon.openid.fed.services.config.AccountServiceConfig
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Component
@@ -212,72 +206,10 @@ abstract class FederationServerSessionComponent(
 ) : FederationServerSessionComponentMerged {
 
     /**
-     * Provides the aggregate FederationServices instance.
-     */
-    abstract val federationServices: FederationServices
-
-    /**
-     * Provides FederationServices aggregate containing all federation services.
-     */
-    @Provides
-    fun provideFederationServices(
-        accountService: AccountService,
-        jwkService: JwkService,
-        subordinateService: SubordinateService,
-        trustMarkService: TrustMarkService,
-        entityConfigurationStatementService: EntityConfigurationStatementService,
-        resolutionService: ResolutionService,
-        logService: LogService
-    ): FederationServices {
-        return FederationServicesImpl(
-            accountService = accountService,
-            jwkService = jwkService,
-            subordinateService = subordinateService,
-            trustMarkService = trustMarkService,
-            entityConfigurationStatementService = entityConfigurationStatementService,
-            resolutionService = resolutionService,
-            logService = logService
-        )
-    }
-
-    /**
      * Provides FederationAccountResolver for resolving accounts from HTTP requests.
      */
     @Provides
     fun provideFederationAccountResolver(accountService: AccountService): FederationAccountResolver {
         return FederationAccountResolver(accountService)
     }
-}
-
-/**
- * Interface for accessing federation services from a session instance.
- */
-interface FederationServices {
-    val accountService: AccountService
-    val jwkService: JwkService
-    val subordinateService: SubordinateService
-    val trustMarkService: TrustMarkService
-    val entityConfigurationStatementService: EntityConfigurationStatementService
-    val resolutionService: ResolutionService
-    val logService: LogService
-}
-
-/**
- * Implementation of FederationServices that holds all service instances.
- */
-data class FederationServicesImpl(
-    override val accountService: AccountService,
-    override val jwkService: JwkService,
-    override val subordinateService: SubordinateService,
-    override val trustMarkService: TrustMarkService,
-    override val entityConfigurationStatementService: EntityConfigurationStatementService,
-    override val resolutionService: ResolutionService,
-    override val logService: LogService
-) : FederationServices
-
-/**
- * Extension function to access federation services from session component.
- */
-fun FederationServerSessionComponent.asFederationServices(): FederationServices {
-    return this.federationServices
 }

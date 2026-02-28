@@ -1,14 +1,15 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ReceivedTrustMarkNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -25,22 +26,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = DeleteReceivedTrustMarkCommand::class)
 class DeleteReceivedTrustMarkCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<DeleteReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>(
-    id = DeleteReceivedTrustMarkCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<DeleteReceivedTrustMarkArgs, ReceivedTrustMark>(
+    commandId = DeleteReceivedTrustMarkCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<DeleteReceivedTrustMarkArgs>(),
+    outputTypeToken = typeToken<ReceivedTrustMark>()
 ), DeleteReceivedTrustMarkCommand {
 
     private val logger = Log.app().withTag("DeleteReceivedTrustMarkCommand")
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
-    override suspend fun deleteReceivedTrustMark(account: Account, trustMarkId: String): IdkResult<ReceivedTrustMark, FederationError> {
-        return execute(DeleteReceivedTrustMarkArgs(account, trustMarkId))
-    }
-
     override suspend fun doExecute(
         args: DeleteReceivedTrustMarkArgs,
         applyDuring: (DeleteReceivedTrustMarkArgs) -> DeleteReceivedTrustMarkArgs
-    ): IdkResult<ReceivedTrustMark, FederationError> {
+    ): IdkResult<ReceivedTrustMark, IdkError> {
         val (account, trustMarkId) = applyDuring(args)
         val username = account.username
 
@@ -50,7 +49,7 @@ class DeleteReceivedTrustMarkCommandImpl(
         val existing = receivedTrustMarkQueries.findByAccountIdAndId(account.id, trustMarkId).executeAsOneOrNull()
         if (existing == null) {
             logger.error("Trust mark not found with ID: $trustMarkId for account: $username")
-            return IdkResult.err(ReceivedTrustMarkNotFoundError(trustMarkId, username))
+            return federationErr(ReceivedTrustMarkNotFoundError(trustMarkId, username))
         }
 
         return try {
@@ -61,11 +60,11 @@ class DeleteReceivedTrustMarkCommandImpl(
                 IdkResult.ok(deletedTrustMark.toDTO())
             } else {
                 logger.error("Failed to delete trust mark ID: $trustMarkId for account: $username")
-                IdkResult.err(ServerError("Failed to delete received trust mark"))
+                federationErr(ServerError("Failed to delete received trust mark"))
             }
         } catch (e: Exception) {
             logger.error("Failed to delete trust mark ID: $trustMarkId for account: $username", e)
-            IdkResult.err(ServerError("Failed to delete received trust mark", e.message, e))
+            federationErr(ServerError("Failed to delete received trust mark", e.message, e))
         }
     }
 }

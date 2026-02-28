@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.core.error
 import com.sphereon.core.api.Err
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Ok
+import com.sphereon.core.api.error.IdkError
 
 /**
  * Type alias for federation operation results.
@@ -170,6 +171,52 @@ suspend inline fun <T, R> FederationResult<T>.andThenSuspend(
         else -> Err(this.error).asResult()
     }
 }
+
+/**
+ * Convert a FederationError to an IdkError.
+ *
+ * Since IdkError is a class and FederationError is a sealed interface (both implementing IdkErrorType),
+ * this conversion bridges the two for use with ServiceCommand<TInput, TOutput> which is fixed to IdkError.
+ */
+fun FederationError.toIdkError(): IdkError = IdkError(
+    code = code,
+    message = message,
+    severity = severity,
+    causes = causes,
+    meta = meta + mapOf("httpStatus" to httpStatusValue, "errorCode" to errorCode),
+    exception = exception
+)
+
+/**
+ * Convert an IdkResult<T, FederationError> to an IdkResult<T, IdkError>.
+ *
+ * Used when service command implementations need to return IdkResult<T, IdkError>
+ * (as required by ServiceCommand/TypedServiceCommandAdapter) but internally work with FederationError.
+ */
+fun <T> IdkResult<T, FederationError>.toIdkErrorResult(): IdkResult<T, IdkError> =
+    this.mapError { it.toIdkError() }
+
+/**
+ * Convert an IdkResult<T, IdkError> back to a FederationResult<T>.
+ *
+ * Used by ServiceFacade implementations to provide FederationResult<T> from ServiceCommand results.
+ * If the IdkError was originally a FederationError (preserved in meta), extracts the httpStatus.
+ * Otherwise wraps in a generic ServerError.
+ */
+fun <T> IdkResult<T, IdkError>.toFederationResult(): FederationResult<T> =
+    this.mapError { idkError ->
+        ServerError(
+            reason = idkError.message.defaultMessage,
+            causeDescription = idkError.code,
+            exception = idkError.exception
+        )
+    }
+
+/**
+ * Create an IdkResult.err with a FederationError automatically converted to IdkError.
+ */
+fun <T> federationErr(error: FederationError): IdkResult<T, IdkError> =
+    IdkResult.err(error.toIdkError())
 
 /**
  * Exception wrapper for FederationError.

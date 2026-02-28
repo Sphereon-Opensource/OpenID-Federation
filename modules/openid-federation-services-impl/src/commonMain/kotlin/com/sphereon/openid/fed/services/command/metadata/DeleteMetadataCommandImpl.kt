@@ -1,15 +1,16 @@
 package com.sphereon.openid.fed.services.command.metadata
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.MetadataNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.Metadata
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -26,22 +27,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = DeleteMetadataCommand::class)
 class DeleteMetadataCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<DeleteMetadataArgs, Metadata, FederationError>(
-    id = DeleteMetadataCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<DeleteMetadataArgs, Metadata>(
+    commandId = DeleteMetadataCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<DeleteMetadataArgs>(),
+    outputTypeToken = typeToken<Metadata>()
 ), DeleteMetadataCommand {
 
     private val logger = Log.app().withTag("DeleteMetadataCommand")
     private val metadataQueries = Persistence.metadataQueries
 
-    override suspend fun deleteMetadata(account: Account, id: String): IdkResult<Metadata, FederationError> {
-        return execute(DeleteMetadataArgs(account, id))
-    }
-
     override suspend fun doExecute(
         args: DeleteMetadataArgs,
         applyDuring: (DeleteMetadataArgs) -> DeleteMetadataArgs
-    ): IdkResult<Metadata, FederationError> {
+    ): IdkResult<Metadata, IdkError> {
         val (account, id) = applyDuring(args)
 
         logger.info("Deleting metadata ID: $id for account: ${account.username}")
@@ -51,12 +50,12 @@ class DeleteMetadataCommandImpl(
 
         if (metadata == null) {
             logger.error("Metadata not found with ID: $id")
-            return IdkResult.err(MetadataNotFoundError(id))
+            return federationErr(MetadataNotFoundError(id))
         }
 
         if (metadata.account_id != account.id) {
             logger.error("Metadata ID: $id does not belong to account: ${account.username}")
-            return IdkResult.err(MetadataNotFoundError(id))
+            return federationErr(MetadataNotFoundError(id))
         }
 
         return try {
@@ -67,11 +66,11 @@ class DeleteMetadataCommandImpl(
                 IdkResult.ok(deletedMetadata.toDTO())
             } else {
                 logger.error("Failed to delete metadata ID: $id")
-                IdkResult.err(ServerError(Constants.FAILED_TO_DELETE_ENTITY_CONFIGURATION_METADATA))
+                federationErr(ServerError(Constants.FAILED_TO_DELETE_ENTITY_CONFIGURATION_METADATA))
             }
         } catch (e: Exception) {
             logger.error("Failed to delete metadata ID: $id for account: ${account.username}", e)
-            IdkResult.err(ServerError("Failed to delete metadata", e.message, e))
+            federationErr(ServerError("Failed to delete metadata", e.message, e))
         }
     }
 }

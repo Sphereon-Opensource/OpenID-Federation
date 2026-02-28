@@ -3,38 +3,18 @@ package com.sphereon.openid.fed.services
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
-import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommand
-import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommandService
-import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationCommand
-import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationCommandService
 
 /**
  * Service interface responsible for managing entity configuration statements.
  * It provides functionality to generate, publish, and persist
  * entity configuration statements for a given account.
  *
- * This service aggregates all entity configuration-related commands and provides both
- * direct method access and command-based access patterns.
+ * This service aggregates all entity configuration-related commands and provides
+ * direct method access.
  *
  * All methods return FederationResult for type-safe error handling.
  */
-interface EntityConfigurationStatementService :
-    FindEntityConfigurationByAccountCommandService,
-    PublishEntityConfigurationCommandService {
-
-    /**
-     * Provides access to individual entity configuration commands for advanced use cases
-     * like composition, chaining, or extension-based processing.
-     */
-    val commands: Commands
-
-    /**
-     * Container interface for all entity configuration-related commands.
-     */
-    interface Commands {
-        val findByAccount: FindEntityConfigurationByAccountCommand
-        val publishByAccount: PublishEntityConfigurationCommand
-    }
+interface EntityConfigurationStatementService {
 
     /**
      * Retrieves the Entity Configuration Statement for a given account.
@@ -42,7 +22,7 @@ interface EntityConfigurationStatementService :
      * @param account The account for which the entity configuration statement is to be retrieved.
      * @return FederationResult containing the EntityConfigurationStatement or an error.
      */
-    override suspend fun findByAccount(account: Account): FederationResult<EntityConfigurationStatement>
+    suspend fun findByAccount(account: Account): FederationResult<EntityConfigurationStatement>
 
     /**
      * Publishes the entity configuration statement for the specified account.
@@ -54,7 +34,7 @@ interface EntityConfigurationStatementService :
      * @param kid Optional key ID.
      * @return FederationResult containing the JWT or an error.
      */
-    override suspend fun publishByAccount(
+    suspend fun publishByAccount(
         account: Account,
         dryRun: Boolean?,
         kmsKeyRef: String?,

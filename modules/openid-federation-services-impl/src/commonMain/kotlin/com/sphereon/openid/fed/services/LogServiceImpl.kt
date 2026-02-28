@@ -3,11 +3,17 @@ package com.sphereon.openid.fed.services
 import com.sphereon.core.api.log.LogLevel
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Log
+import com.sphereon.openid.fed.services.command.log.GetLogsBySeverityArgs
 import com.sphereon.openid.fed.services.command.log.GetLogsBySeverityCommand
+import com.sphereon.openid.fed.services.command.log.GetLogsByTagArgs
 import com.sphereon.openid.fed.services.command.log.GetLogsByTagCommand
+import com.sphereon.openid.fed.services.command.log.GetRecentLogsArgs
 import com.sphereon.openid.fed.services.command.log.GetRecentLogsCommand
+import com.sphereon.openid.fed.services.command.log.InsertLogArgs
 import com.sphereon.openid.fed.services.command.log.InsertLogCommand
+import com.sphereon.openid.fed.services.command.log.SearchLogsArgs
 import com.sphereon.openid.fed.services.command.log.SearchLogsCommand
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -35,31 +41,6 @@ class LogServiceImpl(
     private val getLogsByTagCommand: GetLogsByTagCommand
 ) : LogService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : LogService.Commands {
-        override val insertLog: InsertLogCommand
-            get() = this@LogServiceImpl.insertLogCommand
-
-        override val getRecentLogs: GetRecentLogsCommand
-            get() = this@LogServiceImpl.getRecentLogsCommand
-
-        override val searchLogs: SearchLogsCommand
-            get() = this@LogServiceImpl.searchLogsCommand
-
-        override val getLogsBySeverity: GetLogsBySeverityCommand
-            get() = this@LogServiceImpl.getLogsBySeverityCommand
-
-        override val getLogsByTag: GetLogsByTagCommand
-            get() = this@LogServiceImpl.getLogsByTagCommand
-    }
-
-    override val commands: LogService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun insertLog(
         level: LogLevel,
         message: String,
@@ -68,17 +49,17 @@ class LogServiceImpl(
         throwable: Throwable?,
         metadata: Map<String, String>
     ): FederationResult<Unit> =
-        insertLogCommand.insertLog(level, message, tag, timestamp, throwable, metadata)
+        insertLogCommand.execute(InsertLogArgs(level, message, tag, timestamp, throwable, metadata)).toFederationResult()
 
     override suspend fun getRecentLogs(limit: Long): FederationResult<List<Log>> =
-        getRecentLogsCommand.getRecentLogs(limit)
+        getRecentLogsCommand.execute(GetRecentLogsArgs(limit)).toFederationResult()
 
     override suspend fun searchLogs(searchTerm: String, limit: Long): FederationResult<List<Log>> =
-        searchLogsCommand.searchLogs(searchTerm, limit)
+        searchLogsCommand.execute(SearchLogsArgs(searchTerm, limit)).toFederationResult()
 
     override suspend fun getLogsBySeverity(severity: String, limit: Long): FederationResult<List<Log>> =
-        getLogsBySeverityCommand.getLogsBySeverity(severity, limit)
+        getLogsBySeverityCommand.execute(GetLogsBySeverityArgs(severity, limit)).toFederationResult()
 
     override suspend fun getLogsByTag(tag: String, limit: Long): FederationResult<List<Log>> =
-        getLogsByTagCommand.getLogsByTag(tag, limit)
+        getLogsByTagCommand.execute(GetLogsByTagArgs(tag, limit)).toFederationResult()
 }

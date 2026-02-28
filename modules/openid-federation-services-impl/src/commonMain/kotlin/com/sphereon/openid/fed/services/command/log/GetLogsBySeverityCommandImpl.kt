@@ -1,12 +1,14 @@
 package com.sphereon.openid.fed.services.command.log
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import me.tatarka.inject.annotations.Inject
@@ -23,22 +25,20 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, boundType = GetLogsBySeverityCommand::class)
 class GetLogsBySeverityCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<GetLogsBySeverityArgs, List<LogDTO>, FederationError>(
-    id = GetLogsBySeverityCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetLogsBySeverityArgs, List<LogDTO>>(
+    commandId = GetLogsBySeverityCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetLogsBySeverityArgs>(),
+    outputTypeToken = typeToken<List<LogDTO>>()
 ), GetLogsBySeverityCommand {
 
     private val logger = Log.app().withTag("GetLogsBySeverityCommand")
     private val logQueries = Persistence.logQueries
 
-    override suspend fun getLogsBySeverity(severity: String, limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(GetLogsBySeverityArgs(severity, limit))
-    }
-
     override suspend fun doExecute(
         args: GetLogsBySeverityArgs,
         applyDuring: (GetLogsBySeverityArgs) -> GetLogsBySeverityArgs
-    ): IdkResult<List<LogDTO>, FederationError> {
+    ): IdkResult<List<LogDTO>, IdkError> {
         val (severity, limit) = applyDuring(args)
 
         logger.debug("Retrieving logs by severity: '$severity', limit: $limit")
@@ -49,7 +49,7 @@ class GetLogsBySeverityCommandImpl(
             IdkResult.ok(logs)
         } catch (e: Exception) {
             logger.error("Failed to retrieve logs by severity: '$severity'", e)
-            IdkResult.err(ServerError("Failed to retrieve logs by severity", e.message, e))
+            federationErr(ServerError("Failed to retrieve logs by severity", e.message, e))
         }
     }
 }

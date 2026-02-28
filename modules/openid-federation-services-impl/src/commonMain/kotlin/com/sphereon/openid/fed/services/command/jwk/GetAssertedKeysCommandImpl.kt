@@ -1,13 +1,14 @@
 package com.sphereon.openid.fed.services.command.jwk
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -23,29 +24,22 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class GetAssertedKeysCommandImpl(
     execution: SessionExecution,
     private val getKeysCommand: GetKeysCommand
-) : ExecutionScopedCommandAdapter<GetAssertedKeysArgs, Array<AccountJwk>, FederationError>(
-    id = GetAssertedKeysCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetAssertedKeysArgs, Array<AccountJwk>>(
+    commandId = GetAssertedKeysCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetAssertedKeysArgs>(),
+    outputTypeToken = typeToken<Array<AccountJwk>>()
 ), GetAssertedKeysCommand {
 
     private val logger = Log.app().withTag("GetAssertedKeysCommand")
 
-    override suspend fun getAssertedKeysForAccount(
-        account: Account,
-        includeRevoked: Boolean,
-        kmsKeyRef: String?,
-        kid: String?
-    ): IdkResult<Array<AccountJwk>, FederationError> {
-        return execute(GetAssertedKeysArgs(account, includeRevoked, kmsKeyRef, kid))
-    }
-
     override suspend fun doExecute(
         args: GetAssertedKeysArgs,
         applyDuring: (GetAssertedKeysArgs) -> GetAssertedKeysArgs
-    ): IdkResult<Array<AccountJwk>, FederationError> {
+    ): IdkResult<Array<AccountJwk>, IdkError> {
         val (account, includeRevoked, kmsKeyRef, kid) = applyDuring(args)
 
-        val allKeysResult = getKeysCommand.getKeys(account, includeRevoked)
+        val allKeysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked))
         if (allKeysResult.isErr) {
             return allKeysResult
         }
@@ -60,7 +54,7 @@ class GetAssertedKeysCommandImpl(
 
         return if (keys.isEmpty()) {
             logger.error("No keys found for account: ${account.username}")
-            IdkResult.err(KeyNotFoundError("account:${account.id}"))
+            federationErr(KeyNotFoundError("account:${account.id}"))
         } else {
             IdkResult.ok(keys)
         }

@@ -2,12 +2,18 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommand
+import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommandArgs
+import com.sphereon.openid.fed.services.command.jwk.GetAssertedKeysArgs
 import com.sphereon.openid.fed.services.command.jwk.GetAssertedKeysCommand
+import com.sphereon.openid.fed.services.command.jwk.GetFederationHistoricalKeysJwtArgs
 import com.sphereon.openid.fed.services.command.jwk.GetFederationHistoricalKeysJwtCommand
+import com.sphereon.openid.fed.services.command.jwk.GetKeysArgs
 import com.sphereon.openid.fed.services.command.jwk.GetKeysCommand
+import com.sphereon.openid.fed.services.command.jwk.RevokeKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.RevokeKeyCommand
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -35,36 +41,11 @@ class JwkServiceImpl(
     private val getFederationHistoricalKeysJwtCommand: GetFederationHistoricalKeysJwtCommand
 ) : JwkService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : JwkService.Commands {
-        override val createKey: CreateKeyCommand
-            get() = this@JwkServiceImpl.createKeyCommand
-
-        override val getKeys: GetKeysCommand
-            get() = this@JwkServiceImpl.getKeysCommand
-
-        override val getAssertedKeys: GetAssertedKeysCommand
-            get() = this@JwkServiceImpl.getAssertedKeysCommand
-
-        override val revokeKey: RevokeKeyCommand
-            get() = this@JwkServiceImpl.revokeKeyCommand
-
-        override val getFederationHistoricalKeysJwt: GetFederationHistoricalKeysJwtCommand
-            get() = this@JwkServiceImpl.getFederationHistoricalKeysJwtCommand
-    }
-
-    override val commands: JwkService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun createKey(account: Account, opts: CreateKeyArgs): FederationResult<AccountJwk> =
-        createKeyCommand.createKey(account, opts)
+        createKeyCommand.execute(CreateKeyCommandArgs(account, opts)).toFederationResult()
 
     override suspend fun getKeys(account: Account, includeRevoked: Boolean): FederationResult<Array<AccountJwk>> =
-        getKeysCommand.getKeys(account, includeRevoked)
+        getKeysCommand.execute(GetKeysArgs(account, includeRevoked)).toFederationResult()
 
     override suspend fun getAssertedKeysForAccount(
         account: Account,
@@ -72,11 +53,11 @@ class JwkServiceImpl(
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<Array<AccountJwk>> =
-        getAssertedKeysCommand.getAssertedKeysForAccount(account, includeRevoked, kmsKeyRef, kid)
+        getAssertedKeysCommand.execute(GetAssertedKeysArgs(account, includeRevoked, kmsKeyRef, kid)).toFederationResult()
 
     override suspend fun revokeKey(account: Account, keyId: String, reason: String?): FederationResult<AccountJwk> =
-        revokeKeyCommand.revokeKey(account, keyId, reason)
+        revokeKeyCommand.execute(RevokeKeyArgs(account, keyId, reason)).toFederationResult()
 
     override suspend fun getFederationHistoricalKeysJwt(account: Account): FederationResult<String> =
-        getFederationHistoricalKeysJwtCommand.getFederationHistoricalKeysJwt(account)
+        getFederationHistoricalKeysJwtCommand.execute(GetFederationHistoricalKeysJwtArgs(account)).toFederationResult()
 }

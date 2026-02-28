@@ -1,19 +1,29 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
 data class FindAuthorityHintsByAccountArgs(val account: Account)
 
-interface FindAuthorityHintsByAccountCommandService {
-    suspend fun findByAccount(account: Account): IdkResult<List<AuthorityHint>, FederationError>
-}
-
-interface FindAuthorityHintsByAccountCommand : Command<FindAuthorityHintsByAccountArgs, List<AuthorityHint>, FederationError>, FindAuthorityHintsByAccountCommandService {
+interface FindAuthorityHintsByAccountCommand : ServiceCommand<FindAuthorityHintsByAccountArgs, List<AuthorityHint>>, PublicApiCommand {
     companion object {
-        const val COMMAND_ID = "fed.services.authority-hint.find-by-account"
+        const val COMMAND_ID = "fed.authority-hint.find-by-account"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/authority-hints",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "listAuthorityHints",
+            tags = setOf("authority-hints"),
+            summary = "List authority hints"
+        )
     }
+
+    override val httpEndpoint get() = ENDPOINT
 }

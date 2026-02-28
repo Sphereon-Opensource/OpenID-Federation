@@ -3,49 +3,17 @@ package com.sphereon.openid.fed.services
 import com.sphereon.core.api.log.LogLevel
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.openapi.models.Log
-import com.sphereon.openid.fed.services.command.log.GetLogsBySeverityCommand
-import com.sphereon.openid.fed.services.command.log.GetLogsBySeverityCommandService
-import com.sphereon.openid.fed.services.command.log.GetLogsByTagCommand
-import com.sphereon.openid.fed.services.command.log.GetLogsByTagCommandService
-import com.sphereon.openid.fed.services.command.log.GetRecentLogsCommand
-import com.sphereon.openid.fed.services.command.log.GetRecentLogsCommandService
-import com.sphereon.openid.fed.services.command.log.InsertLogCommand
-import com.sphereon.openid.fed.services.command.log.InsertLogCommandService
-import com.sphereon.openid.fed.services.command.log.SearchLogsCommand
-import com.sphereon.openid.fed.services.command.log.SearchLogsCommandService
 
 /**
  * Service interface for managing logging operations, including inserting logs,
  * retrieving recent logs, and searchable queries.
  *
- * This service aggregates all log-related commands and provides both
- * direct method access and command-based access patterns.
+ * This service aggregates all log-related commands and provides
+ * direct method access.
  *
  * All methods return FederationResult for type-safe error handling.
  */
-interface LogService :
-    InsertLogCommandService,
-    GetRecentLogsCommandService,
-    SearchLogsCommandService,
-    GetLogsBySeverityCommandService,
-    GetLogsByTagCommandService {
-
-    /**
-     * Provides access to individual log commands for advanced use cases
-     * like composition, chaining, or extension-based processing.
-     */
-    val commands: Commands
-
-    /**
-     * Container interface for all log-related commands.
-     */
-    interface Commands {
-        val insertLog: InsertLogCommand
-        val getRecentLogs: GetRecentLogsCommand
-        val searchLogs: SearchLogsCommand
-        val getLogsBySeverity: GetLogsBySeverityCommand
-        val getLogsByTag: GetLogsByTagCommand
-    }
+interface LogService {
 
     // Convenience methods that delegate to command services
 
@@ -60,7 +28,7 @@ interface LogService :
      * @param metadata Additional metadata associated with the log entry.
      * @return FederationResult containing Unit on success or an error.
      */
-    override suspend fun insertLog(
+    suspend fun insertLog(
         level: LogLevel,
         message: String,
         tag: String,
@@ -75,7 +43,7 @@ interface LogService :
      * @param limit The maximum number of log entries to retrieve. Defaults to 100.
      * @return FederationResult containing a list of logs or an error.
      */
-    override suspend fun getRecentLogs(limit: Long): FederationResult<List<Log>>
+    suspend fun getRecentLogs(limit: Long): FederationResult<List<Log>>
 
     /**
      * Searches for logs that match the provided search term.
@@ -84,7 +52,7 @@ interface LogService :
      * @param limit The maximum number of logs to return. Defaults to 100.
      * @return FederationResult containing a list of log entries or an error.
      */
-    override suspend fun searchLogs(searchTerm: String, limit: Long): FederationResult<List<Log>>
+    suspend fun searchLogs(searchTerm: String, limit: Long): FederationResult<List<Log>>
 
     /**
      * Retrieves a list of logs filtered by the specified severity level.
@@ -93,7 +61,7 @@ interface LogService :
      * @param limit The maximum number of logs to retrieve. Defaults to 100.
      * @return FederationResult containing a list of logs or an error.
      */
-    override suspend fun getLogsBySeverity(severity: String, limit: Long): FederationResult<List<Log>>
+    suspend fun getLogsBySeverity(severity: String, limit: Long): FederationResult<List<Log>>
 
     /**
      * Retrieves a list of logs associated with a specific tag.
@@ -102,5 +70,5 @@ interface LogService :
      * @param limit The maximum number of log entries to retrieve. Defaults to 100.
      * @return FederationResult containing a list of logs or an error.
      */
-    override suspend fun getLogsByTag(tag: String, limit: Long): FederationResult<List<Log>>
+    suspend fun getLogsByTag(tag: String, limit: Long): FederationResult<List<Log>>
 }

@@ -1,36 +1,31 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 
-/**
- * Arguments for the FindCriticalClaimsByAccount command.
- */
 data class FindCriticalClaimsByAccountArgs(
     val account: Account
 )
 
-/**
- * Service interface for find critical claims by account operation.
- */
-interface FindCriticalClaimsByAccountCommandService {
-    /**
-     * Retrieves all critical claims associated with the provided account.
-     *
-     * @param account The account for which critical claims are to be retrieved.
-     * @return IdkResult containing an array of CritEntity or an error.
-     */
-    suspend fun findByAccount(account: Account): IdkResult<Array<CritEntity>, FederationError>
-}
-
-/**
- * Command to find all critical claims for an account.
- */
-interface FindCriticalClaimsByAccountCommand : Command<FindCriticalClaimsByAccountArgs, Array<CritEntity>, FederationError>, FindCriticalClaimsByAccountCommandService {
+interface FindCriticalClaimsByAccountCommand : ServiceCommand<FindCriticalClaimsByAccountArgs, Array<CritEntity>>, PublicApiCommand {
     companion object {
-        const val COMMAND_ID = "fed.services.critical-claim.find-by-account"
+        const val COMMAND_ID = "fed.critical-claim.find-by-account"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/critical-claims",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "listCriticalClaims",
+            tags = setOf("critical-claims"),
+            summary = "List critical claims"
+        )
     }
+
+    override val httpEndpoint get() = ENDPOINT
 }

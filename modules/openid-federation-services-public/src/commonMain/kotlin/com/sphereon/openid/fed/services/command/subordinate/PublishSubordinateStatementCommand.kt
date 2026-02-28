@@ -1,8 +1,10 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 
 data class PublishSubordinateStatementArgs(
@@ -13,16 +15,21 @@ data class PublishSubordinateStatementArgs(
     val kid: String? = null
 )
 
-interface PublishSubordinateStatementCommandService {
-    suspend fun publishSubordinateStatement(
-        account: Account,
-        id: String,
-        dryRun: Boolean? = false,
-        kmsKeyRef: String? = null,
-        kid: String? = null
-    ): IdkResult<String, FederationError>
-}
+interface PublishSubordinateStatementCommand : ServiceCommand<PublishSubordinateStatementArgs, String>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.subordinate.publish-statement"
 
-interface PublishSubordinateStatementCommand : Command<PublishSubordinateStatementArgs, String, FederationError>, PublishSubordinateStatementCommandService {
-    companion object { const val COMMAND_ID = "fed.services.subordinate.publish-statement" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/subordinates/{id}/statement",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "publishSubordinateStatement",
+            tags = setOf("subordinates"),
+            summary = "Publish subordinate statement"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

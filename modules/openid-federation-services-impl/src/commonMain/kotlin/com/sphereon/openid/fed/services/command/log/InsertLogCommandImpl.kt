@@ -1,12 +1,14 @@
 package com.sphereon.openid.fed.services.command.log
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
@@ -22,29 +24,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = InsertLogCommand::class)
 class InsertLogCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<InsertLogArgs, Unit, FederationError>(
-    id = InsertLogCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<InsertLogArgs, Unit>(
+    commandId = InsertLogCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<InsertLogArgs>(),
+    outputTypeToken = typeToken<Unit>()
 ), InsertLogCommand {
 
     private val logger = Log.app().withTag("InsertLogCommand")
     private val logQueries = Persistence.logQueries
 
-    override suspend fun insertLog(
-        level: com.sphereon.core.api.log.LogLevel,
-        message: String,
-        tag: String,
-        timestamp: Long,
-        throwable: Throwable?,
-        metadata: Map<String, String>
-    ): IdkResult<Unit, FederationError> {
-        return execute(InsertLogArgs(level, message, tag, timestamp, throwable, metadata))
-    }
-
     override suspend fun doExecute(
         args: InsertLogArgs,
         applyDuring: (InsertLogArgs) -> InsertLogArgs
-    ): IdkResult<Unit, FederationError> {
+    ): IdkResult<Unit, IdkError> {
         val (level, message, tag, timestamp, throwable, metadata) = applyDuring(args)
 
         logger.debug("Inserting log entry with tag: $tag, level: $level")
@@ -63,7 +56,7 @@ class InsertLogCommandImpl(
             IdkResult.ok(Unit)
         } catch (e: Exception) {
             logger.error("Failed to insert log entry with tag: $tag", e)
-            IdkResult.err(ServerError("Failed to insert log", e.message, e))
+            federationErr(ServerError("Failed to insert log", e.message, e))
         }
     }
 }

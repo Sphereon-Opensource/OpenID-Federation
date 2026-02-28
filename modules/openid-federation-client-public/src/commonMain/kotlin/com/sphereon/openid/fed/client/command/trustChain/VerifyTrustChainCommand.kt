@@ -65,6 +65,6 @@ interface VerifyTrustChainCommand :
     VerifyTrustChainCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.trustChain.verify"
+        const val COMMAND_ID = "fed.client.verify-trust-chain"
     }
 }

@@ -2,15 +2,17 @@ package com.sphereon.openid.fed.services.command.resolution
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.signPayload
@@ -30,32 +32,25 @@ class GetSignedResolveResponseJwtCommandImpl(
     private val resolveEntityCommand: ResolveEntityCommand,
     private val jwkService: JwkService,
     private val jwtService: JwtService
-) : ExecutionScopedCommandAdapter<GetSignedResolveResponseJwtArgs, String, FederationError>(
-    id = GetSignedResolveResponseJwtCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetSignedResolveResponseJwtArgs, String>(
+    commandId = GetSignedResolveResponseJwtCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetSignedResolveResponseJwtArgs>(),
+    outputTypeToken = typeToken<String>()
 ), GetSignedResolveResponseJwtCommand {
 
     private val logger = Log.app().withTag("GetSignedResolveResponseJwtCommand")
 
-    override suspend fun getSignedResolveResponseJwt(
-        account: Account,
-        sub: String,
-        trustAnchor: String,
-        entityTypes: Array<String>?
-    ): IdkResult<String, FederationError> {
-        return execute(GetSignedResolveResponseJwtArgs(account, sub, trustAnchor, entityTypes))
-    }
-
     override suspend fun doExecute(
         args: GetSignedResolveResponseJwtArgs,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
-    ): IdkResult<String, FederationError> {
+    ): IdkResult<String, IdkError> {
         val (account, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Getting signed resolve response JWT for subject: $sub")
 
         // First resolve the entity
-        val resolveResult = resolveEntityCommand.resolveEntity(account, sub, trustAnchor, entityTypes)
+        val resolveResult = resolveEntityCommand.execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes))
 
         return when {
             resolveResult.isErr -> resolveResult.error.asErrorResult()
@@ -64,7 +59,7 @@ class GetSignedResolveResponseJwtCommandImpl(
                 logger.debug("Successfully built resolve response")
 
                 try {
-                    val keysResult = jwkService.getKeys(account, includeRevoked = false)
+                    val keysResult = jwkService.getKeys(account, includeRevoked = false).toIdkErrorResult()
                     if (keysResult.isErr) {
                         return keysResult.error.asErrorResult()
                     }
@@ -72,7 +67,7 @@ class GetSignedResolveResponseJwtCommandImpl(
                     val keys = keysResult.value
                     if (keys.isEmpty()) {
                         logger.error("No keys found for account: ${account.username}")
-                        return IdkResult.err(KeyNotFoundError(keyId = "account:${account.id}"))
+                        return federationErr(KeyNotFoundError(keyId = "account:${account.id}"))
                     }
 
                     val key = keys[0]
@@ -84,10 +79,10 @@ class GetSignedResolveResponseJwtCommandImpl(
                         typ = "application/resolve-response+jwt"
                     )
 
-                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
+                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms).toIdkErrorResult()
                 } catch (e: Exception) {
                     logger.error("Failed to sign resolve response JWT", e)
-                    IdkResult.err(ServerError("Failed to sign resolve response", e.message, e))
+                    federationErr(ServerError("Failed to sign resolve response", e.message, e))
                 }
             }
         }

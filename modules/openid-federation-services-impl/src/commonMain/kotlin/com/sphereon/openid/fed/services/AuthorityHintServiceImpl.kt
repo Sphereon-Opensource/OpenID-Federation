@@ -2,10 +2,14 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
+import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintArgs
 import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintCommand
+import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHintArgs
 import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHintCommand
+import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountArgs
 import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountCommand
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -31,31 +35,12 @@ class AuthorityHintServiceImpl(
     private val findAuthorityHintsByAccountCommand: FindAuthorityHintsByAccountCommand
 ) : AuthorityHintService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : AuthorityHintService.Commands {
-        override val createAuthorityHint: CreateAuthorityHintCommand
-            get() = createAuthorityHintCommand
-
-        override val deleteAuthorityHint: DeleteAuthorityHintCommand
-            get() = deleteAuthorityHintCommand
-
-        override val findByAccount: FindAuthorityHintsByAccountCommand
-            get() = findAuthorityHintsByAccountCommand
-    }
-
-    override val commands: AuthorityHintService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun createAuthorityHint(account: Account, identifier: String): FederationResult<AuthorityHint> =
-        createAuthorityHintCommand.createAuthorityHint(account, identifier)
+        createAuthorityHintCommand.execute(CreateAuthorityHintArgs(account, identifier)).toFederationResult()
 
     override suspend fun deleteAuthorityHint(account: Account, id: String): FederationResult<AuthorityHint> =
-        deleteAuthorityHintCommand.deleteAuthorityHint(account, id)
+        deleteAuthorityHintCommand.execute(DeleteAuthorityHintArgs(account, id)).toFederationResult()
 
     override suspend fun findByAccount(account: Account): FederationResult<List<AuthorityHint>> =
-        findAuthorityHintsByAccountCommand.findByAccount(account)
+        findAuthorityHintsByAccountCommand.execute(FindAuthorityHintsByAccountArgs(account)).toFederationResult()
 }

@@ -2,14 +2,15 @@ package com.sphereon.openid.fed.services.command.jwk
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.core.kms.KeyManagerService
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.CreateKeyArgs
@@ -31,22 +32,20 @@ class CreateKeyCommandImpl(
     execution: SessionExecution,
     private val keyManagerService: KeyManagerService,
     private val getKeysCommand: GetKeysCommand
-) : ExecutionScopedCommandAdapter<CreateKeyCommandArgs, AccountJwk, FederationError>(
-    id = CreateKeyCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateKeyCommandArgs, AccountJwk>(
+    commandId = CreateKeyCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateKeyCommandArgs>(),
+    outputTypeToken = typeToken<AccountJwk>()
 ), CreateKeyCommand {
 
     private val logger = Log.app().withTag("CreateKeyCommand")
     private val jwkQueries = Persistence.jwkQueries
 
-    override suspend fun createKey(account: Account, opts: CreateKeyArgs): IdkResult<AccountJwk, FederationError> {
-        return execute(CreateKeyCommandArgs(account, opts))
-    }
-
     override suspend fun doExecute(
         args: CreateKeyCommandArgs,
         applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
-    ): IdkResult<AccountJwk, FederationError> = withContext(Dispatchers.IO) {
+    ): IdkResult<AccountJwk, IdkError> = withContext(Dispatchers.IO) {
         val (account, opts) = applyDuring(args)
 
         try {
@@ -55,14 +54,14 @@ class CreateKeyCommandImpl(
             val (providerId, alias, use, keyOperations, alg) = opts
 
             // Check if key with same alias already exists
-            val existingKeysResult = getKeysCommand.getKeys(account, includeRevoked = false)
+            val existingKeysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked = false))
             if (existingKeysResult.isErr) {
                 return@withContext existingKeysResult.error.asErrorResult()
             }
             val existingKeys = existingKeysResult.value
 
             if (existingKeys.any { alias != null && it.kmsKeyRef == alias }) {
-                return@withContext IdkResult.err(ServerError("Key with alias $alias already exists for account ID: ${account.id}"))
+                return@withContext federationErr(ServerError("Key with alias $alias already exists for account ID: ${account.id}"))
             }
 
             val generatedJwk = keyManagerService.generateKey(providerId, alias, use, keyOperations, alg)
@@ -83,7 +82,7 @@ class CreateKeyCommandImpl(
             IdkResult.ok(createdKey.toDTO())
         } catch (e: Exception) {
             logger.error("Failed to create key for account: ${account.username} due to: ${e.message}", e)
-            IdkResult.err(ServerError("Failed to create key", e.message, e))
+            federationErr(ServerError("Failed to create key", e.message, e))
         }
     }
 }

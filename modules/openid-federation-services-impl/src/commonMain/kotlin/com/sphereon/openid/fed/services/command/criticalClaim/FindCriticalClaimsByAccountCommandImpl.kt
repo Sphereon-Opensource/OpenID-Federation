@@ -1,13 +1,14 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -23,22 +24,20 @@ import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 @ContributesBinding(SessionScope::class, boundType = FindCriticalClaimsByAccountCommand::class)
 class FindCriticalClaimsByAccountCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<FindCriticalClaimsByAccountArgs, Array<CritEntity>, FederationError>(
-    id = FindCriticalClaimsByAccountCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<FindCriticalClaimsByAccountArgs, Array<CritEntity>>(
+    commandId = FindCriticalClaimsByAccountCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<FindCriticalClaimsByAccountArgs>(),
+    outputTypeToken = typeToken<Array<CritEntity>>()
 ), FindCriticalClaimsByAccountCommand {
 
     private val logger = Log.app().withTag("FindCriticalClaimsByAccountCommand")
     private val critQueries = Persistence.critQueries
 
-    override suspend fun findByAccount(account: Account): IdkResult<Array<CritEntity>, FederationError> {
-        return execute(FindCriticalClaimsByAccountArgs(account))
-    }
-
     override suspend fun doExecute(
         args: FindCriticalClaimsByAccountArgs,
         applyDuring: (FindCriticalClaimsByAccountArgs) -> FindCriticalClaimsByAccountArgs
-    ): IdkResult<Array<CritEntity>, FederationError> {
+    ): IdkResult<Array<CritEntity>, IdkError> {
         val (account) = applyDuring(args)
 
         logger.info("Finding critical claims for account: ${account.username}")
@@ -50,7 +49,7 @@ class FindCriticalClaimsByAccountCommandImpl(
             IdkResult.ok(criticalClaims)
         } catch (e: Exception) {
             logger.error("Failed to find critical claims for account: ${account.username}", e)
-            IdkResult.err(ServerError("Failed to retrieve critical claims", e.message, e))
+            federationErr(ServerError("Failed to retrieve critical claims", e.message, e))
         }
     }
 }

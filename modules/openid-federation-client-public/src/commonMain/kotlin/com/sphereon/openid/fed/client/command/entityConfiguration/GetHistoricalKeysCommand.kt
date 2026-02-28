@@ -38,6 +38,6 @@ interface GetHistoricalKeysCommand :
     GetHistoricalKeysCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.entityConfiguration.getHistoricalKeys"
+        const val COMMAND_ID = "fed.client.get-historical-keys"
     }
 }

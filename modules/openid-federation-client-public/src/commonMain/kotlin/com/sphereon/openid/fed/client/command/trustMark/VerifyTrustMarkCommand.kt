@@ -46,6 +46,6 @@ interface VerifyTrustMarkCommand :
     VerifyTrustMarkCommandService {
 
     companion object {
-        const val COMMAND_ID = "fed.client.trustMark.verify"
+        const val COMMAND_ID = "fed.client.verify-trust-mark"
     }
 }

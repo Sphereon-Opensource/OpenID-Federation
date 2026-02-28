@@ -16,17 +16,6 @@ import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.server.admin.api.http.command.AccountResolver
 import com.sphereon.openid.fed.services.AccountService
-import com.sphereon.openid.fed.services.AuthorityHintService
-import com.sphereon.openid.fed.services.CriticalClaimService
-import com.sphereon.openid.fed.services.EntityConfigurationStatementService
-import com.sphereon.openid.fed.services.JwkService
-import com.sphereon.openid.fed.services.LogService
-import com.sphereon.openid.fed.services.MetadataPolicyService
-import com.sphereon.openid.fed.services.MetadataService
-import com.sphereon.openid.fed.services.ReceivedTrustMarkService
-import com.sphereon.openid.fed.services.ResolutionService
-import com.sphereon.openid.fed.services.SubordinateService
-import com.sphereon.openid.fed.services.TrustMarkService
 import com.sphereon.openid.fed.services.config.AccountServiceConfig
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Component
@@ -227,92 +216,10 @@ abstract class AdminServerSessionComponent(
 ) : AdminServerSessionComponentMerged {
 
     /**
-     * Provides the aggregate AdminServices instance.
-     */
-    abstract val adminServices: AdminServices
-
-    /**
      * Provides AccountResolver for resolving accounts from HTTP requests.
      */
     @Provides
     fun provideAccountResolver(accountService: AccountService): AccountResolver {
         return AccountResolver(accountService)
     }
-
-    /**
-     * Provides AdminServices aggregate containing all admin services.
-     */
-    @Provides
-    fun provideAdminServices(
-        accountService: AccountService,
-        jwkService: JwkService,
-        subordinateService: SubordinateService,
-        trustMarkService: TrustMarkService,
-        entityConfigurationStatementService: EntityConfigurationStatementService,
-        resolutionService: ResolutionService,
-        logService: LogService,
-        metadataService: MetadataService,
-        metadataPolicyService: MetadataPolicyService,
-        authorityHintService: AuthorityHintService,
-        criticalClaimService: CriticalClaimService,
-        receivedTrustMarkService: ReceivedTrustMarkService
-    ): AdminServices {
-        return AdminServicesImpl(
-            accountService = accountService,
-            jwkService = jwkService,
-            subordinateService = subordinateService,
-            trustMarkService = trustMarkService,
-            entityConfigurationStatementService = entityConfigurationStatementService,
-            resolutionService = resolutionService,
-            logService = logService,
-            metadataService = metadataService,
-            metadataPolicyService = metadataPolicyService,
-            authorityHintService = authorityHintService,
-            criticalClaimService = criticalClaimService,
-            receivedTrustMarkService = receivedTrustMarkService
-        )
-    }
-}
-
-/**
- * Interface for accessing admin services from a session instance.
- */
-interface AdminServices {
-    val accountService: AccountService
-    val jwkService: JwkService
-    val subordinateService: SubordinateService
-    val trustMarkService: TrustMarkService
-    val entityConfigurationStatementService: EntityConfigurationStatementService
-    val resolutionService: ResolutionService
-    val logService: LogService
-    val metadataService: MetadataService
-    val metadataPolicyService: MetadataPolicyService
-    val authorityHintService: AuthorityHintService
-    val criticalClaimService: CriticalClaimService
-    val receivedTrustMarkService: ReceivedTrustMarkService
-}
-
-/**
- * Implementation of AdminServices that holds all service instances.
- */
-data class AdminServicesImpl(
-    override val accountService: AccountService,
-    override val jwkService: JwkService,
-    override val subordinateService: SubordinateService,
-    override val trustMarkService: TrustMarkService,
-    override val entityConfigurationStatementService: EntityConfigurationStatementService,
-    override val resolutionService: ResolutionService,
-    override val logService: LogService,
-    override val metadataService: MetadataService,
-    override val metadataPolicyService: MetadataPolicyService,
-    override val authorityHintService: AuthorityHintService,
-    override val criticalClaimService: CriticalClaimService,
-    override val receivedTrustMarkService: ReceivedTrustMarkService
-) : AdminServices
-
-/**
- * Extension function to access admin services from session component.
- */
-fun AdminServerSessionComponent.asAdminServices(): AdminServices {
-    return this.adminServices
 }

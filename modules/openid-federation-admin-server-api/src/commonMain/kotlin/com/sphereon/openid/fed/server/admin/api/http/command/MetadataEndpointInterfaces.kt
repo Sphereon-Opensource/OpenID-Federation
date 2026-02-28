@@ -9,7 +9,7 @@ import com.sphereon.core.api.http.describe.MediaType
 
 interface ListMetadataEndpointCommand : HttpEndpointCommand {
     companion object {
-        const val COMMAND_ID = "fed.admin.metadata.list"
+        const val COMMAND_ID = "fed.admin.list-metadata"
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.GET,
@@ -26,7 +26,7 @@ interface ListMetadataEndpointCommand : HttpEndpointCommand {
 
 interface CreateMetadataEndpointCommand : HttpEndpointCommand {
     companion object {
-        const val COMMAND_ID = "fed.admin.metadata.create"
+        const val COMMAND_ID = "fed.admin.create-metadata"
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.POST,
@@ -44,7 +44,7 @@ interface CreateMetadataEndpointCommand : HttpEndpointCommand {
 
 interface DeleteMetadataEndpointCommand : HttpEndpointCommand {
     companion object {
-        const val COMMAND_ID = "fed.admin.metadata.delete"
+        const val COMMAND_ID = "fed.admin.delete-metadata"
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.DELETE,

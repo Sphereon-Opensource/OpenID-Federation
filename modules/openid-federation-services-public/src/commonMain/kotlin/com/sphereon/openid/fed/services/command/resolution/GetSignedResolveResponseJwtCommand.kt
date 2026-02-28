@@ -1,13 +1,8 @@
 package com.sphereon.openid.fed.services.command.resolution
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 
-/**
- * Arguments for the GetSignedResolveResponseJwt command.
- */
 data class GetSignedResolveResponseJwtArgs(
     val account: Account,
     val sub: String,
@@ -37,32 +32,8 @@ data class GetSignedResolveResponseJwtArgs(
     }
 }
 
-/**
- * Service interface for get signed resolve response JWT operation.
- */
-interface GetSignedResolveResponseJwtCommandService {
-    /**
-     * Resolves an entity and returns a signed JWT containing the resolve response.
-     *
-     * @param account The account information of the user initiating the resolution.
-     * @param sub The entity identifier (subject) whose information is to be resolved.
-     * @param trustAnchor The trust anchor against which the entity's trust chain is validated.
-     * @param entityTypes Array of entity types used for filtering metadata; can be null to include all types.
-     * @return IdkResult containing the signed JWT or an error.
-     */
-    suspend fun getSignedResolveResponseJwt(
-        account: Account,
-        sub: String,
-        trustAnchor: String,
-        entityTypes: Array<String>?
-    ): IdkResult<String, FederationError>
-}
-
-/**
- * Command to resolve an entity and return a signed JWT containing the resolve response.
- */
-interface GetSignedResolveResponseJwtCommand : Command<GetSignedResolveResponseJwtArgs, String, FederationError>, GetSignedResolveResponseJwtCommandService {
+interface GetSignedResolveResponseJwtCommand : ServiceCommand<GetSignedResolveResponseJwtArgs, String> {
     companion object {
-        const val COMMAND_ID = "fed.services.resolution.get-signed-resolve-response-jwt"
+        const val COMMAND_ID = "fed.resolution.get-signed-resolve-response-jwt"
     }
 }

@@ -1,14 +1,15 @@
 package com.sphereon.openid.fed.services.command.account
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidRequestError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.services.config.AccountServiceConfig
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -20,20 +21,19 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class GetAccountIdentifierCommandImpl(
     execution: SessionExecution,
     private val config: AccountServiceConfig
-) : ExecutionScopedCommandAdapter<GetAccountIdentifierArgs, String, FederationError>(
-    id = GetAccountIdentifierCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetAccountIdentifierArgs, String>(
+    commandId = GetAccountIdentifierCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetAccountIdentifierArgs>(),
+    outputTypeToken = typeToken<String>()
 ), GetAccountIdentifierCommand {
 
     private val logger = Log.app().withTag("GetAccountIdentifierCommand")
 
-    override suspend fun getAccountIdentifierByAccount(account: Account): IdkResult<String, FederationError> =
-        execute(GetAccountIdentifierArgs(account))
-
     override suspend fun doExecute(
         args: GetAccountIdentifierArgs,
         applyDuring: (GetAccountIdentifierArgs) -> GetAccountIdentifierArgs
-    ): IdkResult<String, FederationError> {
+    ): IdkResult<String, IdkError> {
         val request = applyDuring(args)
         val account = request.account
 
@@ -43,7 +43,7 @@ class GetAccountIdentifierCommandImpl(
         }
 
         if (config.rootIdentifier.isBlank()) {
-            return IdkResult.err(InvalidRequestError("Root identifier is not configured"))
+            return federationErr(InvalidRequestError("Root identifier is not configured"))
         }
 
         val computedIdentifier = if (account.username == Constants.DEFAULT_ROOT_USERNAME) {

@@ -1,23 +1,23 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.SubordinateNotFoundError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.SubordinateJwk
 import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.mappers.toJsonString
-import kotlinx.serialization.json.JsonElement
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
@@ -28,27 +28,26 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = CreateSubordinateJwkCommand::class)
 class CreateSubordinateJwkCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateSubordinateJwkArgs, SubordinateJwk, FederationError>(
-    id = CreateSubordinateJwkCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<CreateSubordinateJwkArgs, SubordinateJwk>(
+    commandId = CreateSubordinateJwkCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<CreateSubordinateJwkArgs>(),
+    outputTypeToken = typeToken<SubordinateJwk>()
 ), CreateSubordinateJwkCommand {
     private val logger = Log.app().withTag("CreateSubordinateJwkCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
-    override suspend fun createSubordinateJwk(account: Account, id: String, jwk: Jwk): IdkResult<SubordinateJwk, FederationError> =
-        execute(CreateSubordinateJwkArgs(account, id, jwk))
-
-    override suspend fun doExecute(args: CreateSubordinateJwkArgs, applyDuring: (CreateSubordinateJwkArgs) -> CreateSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
+    override suspend fun doExecute(args: CreateSubordinateJwkArgs, applyDuring: (CreateSubordinateJwkArgs) -> CreateSubordinateJwkArgs): IdkResult<SubordinateJwk, IdkError> {
         val (account, id, jwk) = applyDuring(args)
         logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null) {
-            return IdkResult.err(SubordinateNotFoundError(id))
+            return federationErr(SubordinateNotFoundError(id))
         }
 
         if (subordinate.account_id != account.id) {
-            return IdkResult.err(SubordinateNotFoundError(id))
+            return federationErr(SubordinateNotFoundError(id))
         }
 
         return try {
@@ -57,7 +56,7 @@ class CreateSubordinateJwkCommandImpl(
             IdkResult.ok(createdJwk.toDTO())
         } catch (e: Exception) {
             logger.error("Failed to create subordinate JWK for subordinate ID: $id", e)
-            IdkResult.err(ServerError("Failed to create subordinate JWK", e.message, e))
+            federationErr(ServerError("Failed to create subordinate JWK", e.message, e))
         }
     }
 }
@@ -68,21 +67,20 @@ class CreateSubordinateJwkCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = GetSubordinateJwksCommand::class)
 class GetSubordinateJwksCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<GetSubordinateJwksArgs, Array<SubordinateJwk>, FederationError>(
-    id = GetSubordinateJwksCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<GetSubordinateJwksArgs, Array<SubordinateJwk>>(
+    commandId = GetSubordinateJwksCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<GetSubordinateJwksArgs>(),
+    outputTypeToken = typeToken<Array<SubordinateJwk>>()
 ), GetSubordinateJwksCommand {
     private val logger = Log.app().withTag("GetSubordinateJwksCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
-    override suspend fun getSubordinateJwks(account: Account, id: String): IdkResult<Array<SubordinateJwk>, FederationError> =
-        execute(GetSubordinateJwksArgs(account, id))
-
-    override suspend fun doExecute(args: GetSubordinateJwksArgs, applyDuring: (GetSubordinateJwksArgs) -> GetSubordinateJwksArgs): IdkResult<Array<SubordinateJwk>, FederationError> {
+    override suspend fun doExecute(args: GetSubordinateJwksArgs, applyDuring: (GetSubordinateJwksArgs) -> GetSubordinateJwksArgs): IdkResult<Array<SubordinateJwk>, IdkError> {
         val (account, id) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null) {
-            return IdkResult.err(SubordinateNotFoundError(id))
+            return federationErr(SubordinateNotFoundError(id))
         }
 
         return try {
@@ -92,7 +90,7 @@ class GetSubordinateJwksCommandImpl(
             IdkResult.ok(jwks)
         } catch (e: Exception) {
             logger.error("Failed to retrieve subordinate JWKs for subordinate ID: $id", e)
-            IdkResult.err(ServerError("Failed to retrieve subordinate JWKs", e.message, e))
+            federationErr(ServerError("Failed to retrieve subordinate JWKs", e.message, e))
         }
     }
 }
@@ -103,26 +101,25 @@ class GetSubordinateJwksCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = DeleteSubordinateJwkCommand::class)
 class DeleteSubordinateJwkCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<DeleteSubordinateJwkArgs, SubordinateJwk, FederationError>(
-    id = DeleteSubordinateJwkCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<DeleteSubordinateJwkArgs, SubordinateJwk>(
+    commandId = DeleteSubordinateJwkCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<DeleteSubordinateJwkArgs>(),
+    outputTypeToken = typeToken<SubordinateJwk>()
 ), DeleteSubordinateJwkCommand {
     private val logger = Log.app().withTag("DeleteSubordinateJwkCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
-    override suspend fun deleteSubordinateJwk(account: Account, id: String, jwkId: String): IdkResult<SubordinateJwk, FederationError> =
-        execute(DeleteSubordinateJwkArgs(account, id, jwkId))
-
-    override suspend fun doExecute(args: DeleteSubordinateJwkArgs, applyDuring: (DeleteSubordinateJwkArgs) -> DeleteSubordinateJwkArgs): IdkResult<SubordinateJwk, FederationError> {
+    override suspend fun doExecute(args: DeleteSubordinateJwkArgs, applyDuring: (DeleteSubordinateJwkArgs) -> DeleteSubordinateJwkArgs): IdkResult<SubordinateJwk, IdkError> {
         val (account, id, jwkId) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null || subordinate.account_id != account.id) {
-            return IdkResult.err(SubordinateNotFoundError(id))
+            return federationErr(SubordinateNotFoundError(id))
         }
 
         val subordinateJwk = subordinateJwkQueries.findById(jwkId).executeAsOneOrNull()
         if (subordinateJwk == null || subordinateJwk.subordinate_id != subordinate.id) {
-            return IdkResult.err(InvalidRequestError(Constants.SUBORDINATE_JWK_NOT_FOUND))
+            return federationErr(InvalidRequestError(Constants.SUBORDINATE_JWK_NOT_FOUND))
         }
 
         return try {
@@ -130,7 +127,7 @@ class DeleteSubordinateJwkCommandImpl(
             IdkResult.ok(deletedJwk.toDTO())
         } catch (e: Exception) {
             logger.error("Failed to delete subordinate JWK ID: $jwkId", e)
-            IdkResult.err(ServerError("Failed to delete subordinate JWK", e.message, e))
+            federationErr(ServerError("Failed to delete subordinate JWK", e.message, e))
         }
     }
 }
@@ -141,22 +138,21 @@ class DeleteSubordinateJwkCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = FindSubordinateMetadataCommand::class)
 class FindSubordinateMetadataCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<FindSubordinateMetadataArgs, Array<SubordinateMetadata>, FederationError>(
-    id = FindSubordinateMetadataCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<FindSubordinateMetadataArgs, Array<SubordinateMetadata>>(
+    commandId = FindSubordinateMetadataCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<FindSubordinateMetadataArgs>(),
+    outputTypeToken = typeToken<Array<SubordinateMetadata>>()
 ), FindSubordinateMetadataCommand {
     private val logger = Log.app().withTag("FindSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
-    override suspend fun findSubordinateMetadata(account: Account, subordinateId: String): IdkResult<Array<SubordinateMetadata>, FederationError> =
-        execute(FindSubordinateMetadataArgs(account, subordinateId))
-
-    override suspend fun doExecute(args: FindSubordinateMetadataArgs, applyDuring: (FindSubordinateMetadataArgs) -> FindSubordinateMetadataArgs): IdkResult<Array<SubordinateMetadata>, FederationError> {
+    override suspend fun doExecute(args: FindSubordinateMetadataArgs, applyDuring: (FindSubordinateMetadataArgs) -> FindSubordinateMetadataArgs): IdkResult<Array<SubordinateMetadata>, IdkError> {
         val (account, subordinateId) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
-            return IdkResult.err(SubordinateNotFoundError(subordinateId))
+            return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
         return try {
@@ -168,7 +164,7 @@ class FindSubordinateMetadataCommandImpl(
             IdkResult.ok(metadata)
         } catch (e: Exception) {
             logger.error("Failed to find subordinate metadata for subordinate ID: $subordinateId", e)
-            IdkResult.err(ServerError("Failed to find subordinate metadata", e.message, e))
+            federationErr(ServerError("Failed to find subordinate metadata", e.message, e))
         }
     }
 }
@@ -179,27 +175,21 @@ class FindSubordinateMetadataCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = CreateSubordinateMetadataCommand::class)
 class CreateSubordinateMetadataCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateSubordinateMetadataArgs, SubordinateMetadata, FederationError>(
-    id = CreateSubordinateMetadataCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<CreateSubordinateMetadataArgs, SubordinateMetadata>(
+    commandId = CreateSubordinateMetadataCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<CreateSubordinateMetadataArgs>(),
+    outputTypeToken = typeToken<SubordinateMetadata>()
 ), CreateSubordinateMetadataCommand {
     private val logger = Log.app().withTag("CreateSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
-    override suspend fun createMetadata(
-        account: Account,
-        subordinateId: String,
-        key: String,
-        metadata: JsonElement
-    ): IdkResult<SubordinateMetadata, FederationError> =
-        execute(CreateSubordinateMetadataArgs(account, subordinateId, key, metadata))
-
-    override suspend fun doExecute(args: CreateSubordinateMetadataArgs, applyDuring: (CreateSubordinateMetadataArgs) -> CreateSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
+    override suspend fun doExecute(args: CreateSubordinateMetadataArgs, applyDuring: (CreateSubordinateMetadataArgs) -> CreateSubordinateMetadataArgs): IdkResult<SubordinateMetadata, IdkError> {
         val (account, subordinateId, key, metadata) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
-            return IdkResult.err(SubordinateNotFoundError(subordinateId))
+            return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
         val metadataAlreadyExists = subordinateMetadataQueries
@@ -207,7 +197,7 @@ class CreateSubordinateMetadataCommandImpl(
             .executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
-            return IdkResult.err(InvalidRequestError(Constants.SUBORDINATE_METADATA_ALREADY_EXISTS))
+            return federationErr(InvalidRequestError(Constants.SUBORDINATE_METADATA_ALREADY_EXISTS))
         }
 
         return try {
@@ -218,11 +208,11 @@ class CreateSubordinateMetadataCommandImpl(
             if (createdMetadata != null) {
                 IdkResult.ok(createdMetadata.toDTO())
             } else {
-                IdkResult.err(ServerError(Constants.FAILED_TO_CREATE_SUBORDINATE_METADATA))
+                federationErr(ServerError(Constants.FAILED_TO_CREATE_SUBORDINATE_METADATA))
             }
         } catch (e: Exception) {
             logger.error("Failed to create metadata for subordinate ID: $subordinateId, key: $key", e)
-            IdkResult.err(ServerError("Failed to create subordinate metadata", e.message, e))
+            federationErr(ServerError("Failed to create subordinate metadata", e.message, e))
         }
     }
 }
@@ -233,29 +223,28 @@ class CreateSubordinateMetadataCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = DeleteSubordinateMetadataCommand::class)
 class DeleteSubordinateMetadataCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<DeleteSubordinateMetadataArgs, SubordinateMetadata, FederationError>(
-    id = DeleteSubordinateMetadataCommand.COMMAND_ID, execution = execution
+) : TypedServiceCommandAdapter<DeleteSubordinateMetadataArgs, SubordinateMetadata>(
+    commandId = DeleteSubordinateMetadataCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<DeleteSubordinateMetadataArgs>(),
+    outputTypeToken = typeToken<SubordinateMetadata>()
 ), DeleteSubordinateMetadataCommand {
     private val logger = Log.app().withTag("DeleteSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
-    override suspend fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): IdkResult<SubordinateMetadata, FederationError> =
-        execute(DeleteSubordinateMetadataArgs(account, subordinateId, id))
-
-    override suspend fun doExecute(args: DeleteSubordinateMetadataArgs, applyDuring: (DeleteSubordinateMetadataArgs) -> DeleteSubordinateMetadataArgs): IdkResult<SubordinateMetadata, FederationError> {
+    override suspend fun doExecute(args: DeleteSubordinateMetadataArgs, applyDuring: (DeleteSubordinateMetadataArgs) -> DeleteSubordinateMetadataArgs): IdkResult<SubordinateMetadata, IdkError> {
         val (account, subordinateId, id) = applyDuring(args)
         val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
-            return IdkResult.err(SubordinateNotFoundError(subordinateId))
+            return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
         val metadata = subordinateMetadataQueries
             .findByAccountIdAndSubordinateIdAndId(account.id, subordinate.id, id)
             .executeAsOneOrNull()
         if (metadata == null) {
-            return IdkResult.err(InvalidRequestError(Constants.SUBORDINATE_METADATA_NOT_FOUND))
+            return federationErr(InvalidRequestError(Constants.SUBORDINATE_METADATA_NOT_FOUND))
         }
 
         return try {
@@ -263,11 +252,11 @@ class DeleteSubordinateMetadataCommandImpl(
             if (deletedMetadata != null) {
                 IdkResult.ok(deletedMetadata.toDTO())
             } else {
-                IdkResult.err(ServerError(Constants.SUBORDINATE_METADATA_NOT_FOUND))
+                federationErr(ServerError(Constants.SUBORDINATE_METADATA_NOT_FOUND))
             }
         } catch (e: Exception) {
             logger.error("Failed to delete metadata ID: $id", e)
-            IdkResult.err(ServerError("Failed to delete subordinate metadata", e.message, e))
+            federationErr(ServerError("Failed to delete subordinate metadata", e.message, e))
         }
     }
 }

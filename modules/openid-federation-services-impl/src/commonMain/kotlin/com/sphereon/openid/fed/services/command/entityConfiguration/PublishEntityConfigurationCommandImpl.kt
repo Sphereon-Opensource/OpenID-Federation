@@ -2,13 +2,16 @@ package com.sphereon.openid.fed.services.command.entityConfiguration
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
@@ -32,33 +35,26 @@ class PublishEntityConfigurationCommandImpl(
     private val findEntityConfigurationCommand: FindEntityConfigurationByAccountCommand,
     private val jwkService: JwkService,
     private val jwtService: JwtService
-) : ExecutionScopedCommandAdapter<PublishEntityConfigurationArgs, String, FederationError>(
-    id = PublishEntityConfigurationCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<PublishEntityConfigurationArgs, String>(
+    commandId = PublishEntityConfigurationCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<PublishEntityConfigurationArgs>(),
+    outputTypeToken = typeToken<String>()
 ), PublishEntityConfigurationCommand {
 
     private val logger = Log.app().withTag("PublishEntityConfigurationCommand")
     private val queries = Persistence
 
-    override suspend fun publishByAccount(
-        account: Account,
-        dryRun: Boolean?,
-        kmsKeyRef: String?,
-        kid: String?
-    ): IdkResult<String, FederationError> {
-        return execute(PublishEntityConfigurationArgs(account, dryRun, kmsKeyRef, kid))
-    }
-
     override suspend fun doExecute(
         args: PublishEntityConfigurationArgs,
         applyDuring: (PublishEntityConfigurationArgs) -> PublishEntityConfigurationArgs
-    ): IdkResult<String, FederationError> {
+    ): IdkResult<String, IdkError> {
         val (account, dryRun, kmsKeyRef, kid) = applyDuring(args)
 
         logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
 
         // Find the entity configuration
-        val findResult = findEntityConfigurationCommand.findByAccount(account)
+        val findResult = findEntityConfigurationCommand.execute(FindEntityConfigurationByAccountArgs(account))
 
         if (findResult.isErr) {
             return findResult.error.asErrorResult()
@@ -71,7 +67,7 @@ class PublishEntityConfigurationCommandImpl(
             includeRevoked = false,
             kmsKeyRef = kmsKeyRef,
             kid = kid
-        )
+        ).toIdkErrorResult()
 
         if (keysResult.isErr) {
             return keysResult.error.asErrorResult()
@@ -103,13 +99,13 @@ class PublishEntityConfigurationCommandImpl(
     private suspend fun createSignedJwt(
         statement: EntityConfigurationStatement,
         key: AccountJwk
-    ): IdkResult<String, FederationError> {
+    ): IdkResult<String, IdkError> {
         return try {
             val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms)
+            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms).toIdkErrorResult()
         } catch (e: Exception) {
             logger.error("Failed to create signed JWT", e)
-            IdkResult.err(ServerError("Failed to sign entity configuration", e.message, e))
+            federationErr(ServerError("Failed to sign entity configuration", e.message, e))
         }
     }
 
@@ -117,7 +113,7 @@ class PublishEntityConfigurationCommandImpl(
         account: Account,
         statement: EntityConfigurationStatement,
         jwt: String
-    ): IdkResult<Unit, FederationError> {
+    ): IdkResult<Unit, IdkError> {
         return try {
             queries.entityConfigurationStatementQueries.create(
                 account_id = account.id,
@@ -127,7 +123,7 @@ class PublishEntityConfigurationCommandImpl(
             IdkResult.ok(Unit)
         } catch (e: Exception) {
             logger.error("Failed to persist entity configuration", e)
-            IdkResult.err(ServerError("Failed to persist entity configuration", e.message, e))
+            federationErr(ServerError("Failed to persist entity configuration", e.message, e))
         }
     }
 }

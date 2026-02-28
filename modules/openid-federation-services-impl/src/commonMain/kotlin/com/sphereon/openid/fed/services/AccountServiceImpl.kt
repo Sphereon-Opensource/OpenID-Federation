@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.services.command.account.*
@@ -20,28 +21,18 @@ class AccountServiceImpl(
     private val deleteAccountCommand: DeleteAccountCommand
 ) : AccountService {
 
-    inner class CommandsImpl : AccountService.Commands {
-        override val createAccount get() = createAccountCommand
-        override val getAllAccounts get() = getAllAccountsCommand
-        override val getAccountByUsername get() = getAccountByUsernameCommand
-        override val getAccountIdentifier get() = getAccountIdentifierCommand
-        override val deleteAccount get() = deleteAccountCommand
-    }
-
-    override val commands: AccountService.Commands = CommandsImpl()
-
     override suspend fun createAccount(account: CreateAccount): FederationResult<Account> =
-        createAccountCommand.createAccount(account)
+        createAccountCommand.execute(account).toFederationResult()
 
     override suspend fun getAllAccounts(): FederationResult<List<Account>> =
-        getAllAccountsCommand.getAllAccounts()
+        getAllAccountsCommand.execute(Unit).toFederationResult()
 
     override suspend fun getAccountByUsername(username: String): FederationResult<Account> =
-        getAccountByUsernameCommand.getAccountByUsername(username)
+        getAccountByUsernameCommand.execute(GetAccountByUsernameArgs(username)).toFederationResult()
 
     override suspend fun getAccountIdentifierByAccount(account: Account): FederationResult<String> =
-        getAccountIdentifierCommand.getAccountIdentifierByAccount(account)
+        getAccountIdentifierCommand.execute(GetAccountIdentifierArgs(account)).toFederationResult()
 
     override suspend fun deleteAccount(account: Account): FederationResult<Account> =
-        deleteAccountCommand.deleteAccount(account)
+        deleteAccountCommand.execute(DeleteAccountArgs(account)).toFederationResult()
 }

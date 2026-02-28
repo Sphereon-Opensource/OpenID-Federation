@@ -1,15 +1,16 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -26,22 +27,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = CreateAuthorityHintCommand::class)
 class CreateAuthorityHintCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateAuthorityHintArgs, AuthorityHint, FederationError>(
-    id = CreateAuthorityHintCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateAuthorityHintArgs, AuthorityHint>(
+    commandId = CreateAuthorityHintCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateAuthorityHintArgs>(),
+    outputTypeToken = typeToken<AuthorityHint>()
 ), CreateAuthorityHintCommand {
 
     private val logger = Log.app().withTag("CreateAuthorityHintCommand")
     private val authorityHintQueries = Persistence.authorityHintQueries
 
-    override suspend fun createAuthorityHint(account: Account, identifier: String): IdkResult<AuthorityHint, FederationError> {
-        return execute(CreateAuthorityHintArgs(account, identifier))
-    }
-
     override suspend fun doExecute(
         args: CreateAuthorityHintArgs,
         applyDuring: (CreateAuthorityHintArgs) -> CreateAuthorityHintArgs
-    ): IdkResult<AuthorityHint, FederationError> {
+    ): IdkResult<AuthorityHint, IdkError> {
         val (account, identifier) = applyDuring(args)
 
         logger.debug("Attempting to create authority hint for account: ${account.username} with identifier: $identifier")
@@ -52,7 +51,7 @@ class CreateAuthorityHintCommandImpl(
 
         if (existingAuthorityHint != null) {
             logger.error("Authority hint already exists for account: ${account.username}, identifier: $identifier")
-            return IdkResult.err(InvalidRequestError(Constants.AUTHORITY_HINT_ALREADY_EXISTS))
+            return federationErr(InvalidRequestError(Constants.AUTHORITY_HINT_ALREADY_EXISTS))
         }
 
         return try {
@@ -62,11 +61,11 @@ class CreateAuthorityHintCommandImpl(
                 IdkResult.ok(created)
             } else {
                 logger.error("Failed to create authority hint for account: ${account.username} with identifier: $identifier")
-                IdkResult.err(ServerError(Constants.FAILED_TO_CREATE_AUTHORITY_HINT))
+                federationErr(ServerError(Constants.FAILED_TO_CREATE_AUTHORITY_HINT))
             }
         } catch (e: Exception) {
             logger.error("Failed to create authority hint for account: ${account.username} with identifier: $identifier", e)
-            IdkResult.err(ServerError("Failed to create authority hint", e.message, e))
+            federationErr(ServerError("Failed to create authority hint", e.message, e))
         }
     }
 }

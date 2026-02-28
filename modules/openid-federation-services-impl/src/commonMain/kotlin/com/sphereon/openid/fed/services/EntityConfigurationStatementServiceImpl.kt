@@ -2,9 +2,12 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
+import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountArgs
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommand
+import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationArgs
 import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationCommand
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -29,24 +32,8 @@ class EntityConfigurationStatementServiceImpl(
     private val publishEntityConfigurationCommand: PublishEntityConfigurationCommand
 ) : EntityConfigurationStatementService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : EntityConfigurationStatementService.Commands {
-        override val findByAccount: FindEntityConfigurationByAccountCommand
-            get() = this@EntityConfigurationStatementServiceImpl.findEntityConfigurationByAccountCommand
-
-        override val publishByAccount: PublishEntityConfigurationCommand
-            get() = this@EntityConfigurationStatementServiceImpl.publishEntityConfigurationCommand
-    }
-
-    override val commands: EntityConfigurationStatementService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun findByAccount(account: Account): FederationResult<EntityConfigurationStatement> =
-        findEntityConfigurationByAccountCommand.findByAccount(account)
+        findEntityConfigurationByAccountCommand.execute(FindEntityConfigurationByAccountArgs(account)).toFederationResult()
 
     override suspend fun publishByAccount(
         account: Account,
@@ -54,5 +41,5 @@ class EntityConfigurationStatementServiceImpl(
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<String> =
-        publishEntityConfigurationCommand.publishByAccount(account, dryRun, kmsKeyRef, kid)
+        publishEntityConfigurationCommand.execute(PublishEntityConfigurationArgs(account, dryRun, kmsKeyRef, kid)).toFederationResult()
 }

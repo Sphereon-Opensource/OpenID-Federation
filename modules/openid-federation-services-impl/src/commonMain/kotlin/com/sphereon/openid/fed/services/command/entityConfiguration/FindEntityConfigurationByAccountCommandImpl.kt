@@ -2,14 +2,17 @@ package com.sphereon.openid.fed.services.command.entityConfiguration
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.openid.fed.common.builder.FederationEntityMetadataObjectBuilder
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.FederationEntityMetadata
@@ -36,9 +39,11 @@ class FindEntityConfigurationByAccountCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,
     private val jwkService: JwkService
-) : ExecutionScopedCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement, FederationError>(
-    id = FindEntityConfigurationByAccountCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement>(
+    commandId = FindEntityConfigurationByAccountCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<FindEntityConfigurationByAccountArgs>(),
+    outputTypeToken = typeToken<EntityConfigurationStatement>()
 ), FindEntityConfigurationByAccountCommand {
 
     private val logger = Log.app().withTag("FindEntityConfigurationByAccountCommand")
@@ -48,14 +53,10 @@ class FindEntityConfigurationByAccountCommandImpl(
         private const val EXPIRATION_PERIOD_SECONDS = 3600L * 24 * 365
     }
 
-    override suspend fun findByAccount(account: Account): IdkResult<EntityConfigurationStatement, FederationError> {
-        return execute(FindEntityConfigurationByAccountArgs(account))
-    }
-
     override suspend fun doExecute(
         args: FindEntityConfigurationByAccountArgs,
         applyDuring: (FindEntityConfigurationByAccountArgs) -> FindEntityConfigurationByAccountArgs
-    ): IdkResult<EntityConfigurationStatement, FederationError> {
+    ): IdkResult<EntityConfigurationStatement, IdkError> {
         val (account) = applyDuring(args)
 
         logger.info("Finding entity configuration for account: ${account.username}")
@@ -63,16 +64,16 @@ class FindEntityConfigurationByAccountCommandImpl(
         return getEntityConfigurationStatement(account)
     }
 
-    private suspend fun getEntityConfigurationStatement(account: Account): IdkResult<EntityConfigurationStatement, FederationError> {
+    private suspend fun getEntityConfigurationStatement(account: Account): IdkResult<EntityConfigurationStatement, IdkError> {
         logger.info("Building entity configuration for account: ${account.username}")
 
-        val identifierResult = accountService.getAccountIdentifierByAccount(account)
+        val identifierResult = accountService.getAccountIdentifierByAccount(account).toIdkErrorResult()
         if (identifierResult.isErr) {
             return identifierResult.error.asErrorResult()
         }
         val identifier = identifierResult.value
 
-        val keysResult = jwkService.getKeys(account, includeRevoked = false)
+        val keysResult = jwkService.getKeys(account, includeRevoked = false).toIdkErrorResult()
         if (keysResult.isErr) {
             return keysResult.error.asErrorResult()
         }
@@ -90,7 +91,7 @@ class FindEntityConfigurationByAccountCommandImpl(
             IdkResult.ok(entityConfigBuilder.build())
         } catch (e: Exception) {
             logger.error("Failed to build entity configuration for account: ${account.username}", e)
-            IdkResult.err(ServerError("Failed to build entity configuration", e.message, e))
+            federationErr(ServerError("Failed to build entity configuration", e.message, e))
         }
     }
 

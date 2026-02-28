@@ -1,14 +1,14 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
-import com.sphereon.openid.fed.openapi.models.CreateReceivedTrustMark
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -25,22 +25,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = CreateReceivedTrustMarkCommand::class)
 class CreateReceivedTrustMarkCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>(
-    id = CreateReceivedTrustMarkCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateReceivedTrustMarkArgs, ReceivedTrustMark>(
+    commandId = CreateReceivedTrustMarkCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateReceivedTrustMarkArgs>(),
+    outputTypeToken = typeToken<ReceivedTrustMark>()
 ), CreateReceivedTrustMarkCommand {
 
     private val logger = Log.app().withTag("CreateReceivedTrustMarkCommand")
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
-    override suspend fun createReceivedTrustMark(account: Account, createRequest: CreateReceivedTrustMark): IdkResult<ReceivedTrustMark, FederationError> {
-        return execute(CreateReceivedTrustMarkArgs(account, createRequest))
-    }
-
     override suspend fun doExecute(
         args: CreateReceivedTrustMarkArgs,
         applyDuring: (CreateReceivedTrustMarkArgs) -> CreateReceivedTrustMarkArgs
-    ): IdkResult<ReceivedTrustMark, FederationError> {
+    ): IdkResult<ReceivedTrustMark, IdkError> {
         val (account, createRequest) = applyDuring(args)
         val username = account.username
 
@@ -58,11 +56,11 @@ class CreateReceivedTrustMarkCommandImpl(
                 IdkResult.ok(createdTrustMark.toDTO())
             } else {
                 logger.error("Failed to create trust mark for account: $username")
-                IdkResult.err(ServerError("Failed to create received trust mark"))
+                federationErr(ServerError("Failed to create received trust mark"))
             }
         } catch (e: Exception) {
             logger.error("Failed to create trust mark for account: $username", e)
-            IdkResult.err(ServerError("Failed to create received trust mark", e.message, e))
+            federationErr(ServerError("Failed to create received trust mark", e.message, e))
         }
     }
 }

@@ -2,10 +2,14 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
+import com.sphereon.openid.fed.services.command.criticalClaim.CreateCriticalClaimArgs
 import com.sphereon.openid.fed.services.command.criticalClaim.CreateCriticalClaimCommand
+import com.sphereon.openid.fed.services.command.criticalClaim.DeleteCriticalClaimArgs
 import com.sphereon.openid.fed.services.command.criticalClaim.DeleteCriticalClaimCommand
+import com.sphereon.openid.fed.services.command.criticalClaim.FindCriticalClaimsByAccountArgs
 import com.sphereon.openid.fed.services.command.criticalClaim.FindCriticalClaimsByAccountCommand
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -31,31 +35,12 @@ class CriticalClaimServiceImpl(
     private val findCriticalClaimsByAccountCommand: FindCriticalClaimsByAccountCommand
 ) : CriticalClaimService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : CriticalClaimService.Commands {
-        override val create: CreateCriticalClaimCommand
-            get() = this@CriticalClaimServiceImpl.createCriticalClaimCommand
-
-        override val delete: DeleteCriticalClaimCommand
-            get() = this@CriticalClaimServiceImpl.deleteCriticalClaimCommand
-
-        override val findByAccount: FindCriticalClaimsByAccountCommand
-            get() = this@CriticalClaimServiceImpl.findCriticalClaimsByAccountCommand
-    }
-
-    override val commands: CriticalClaimService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun create(account: Account, claim: String): FederationResult<CritEntity> =
-        createCriticalClaimCommand.create(account, claim)
+        createCriticalClaimCommand.execute(CreateCriticalClaimArgs(account, claim)).toFederationResult()
 
     override suspend fun delete(account: Account, id: String): FederationResult<CritEntity> =
-        deleteCriticalClaimCommand.delete(account, id)
+        deleteCriticalClaimCommand.execute(DeleteCriticalClaimArgs(account, id)).toFederationResult()
 
     override suspend fun findByAccount(account: Account): FederationResult<Array<CritEntity>> =
-        findCriticalClaimsByAccountCommand.findByAccount(account)
+        findCriticalClaimsByAccountCommand.execute(FindCriticalClaimsByAccountArgs(account)).toFederationResult()
 }

@@ -1,17 +1,29 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 
 data class DeleteSubordinateMetadataArgs(val account: Account, val subordinateId: String, val id: String)
 
-interface DeleteSubordinateMetadataCommandService {
-    suspend fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): IdkResult<SubordinateMetadata, FederationError>
-}
+interface DeleteSubordinateMetadataCommand : ServiceCommand<DeleteSubordinateMetadataArgs, SubordinateMetadata>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.subordinate.delete-metadata"
 
-interface DeleteSubordinateMetadataCommand : Command<DeleteSubordinateMetadataArgs, SubordinateMetadata, FederationError>, DeleteSubordinateMetadataCommandService {
-    companion object { const val COMMAND_ID = "fed.services.subordinate.delete-metadata" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.DELETE,
+            pathPattern = "/subordinates/{id}/metadata",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "deleteSubordinateMetadata",
+            tags = setOf("subordinates"),
+            summary = "Delete subordinate metadata"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

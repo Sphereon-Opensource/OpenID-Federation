@@ -1,14 +1,16 @@
 package com.sphereon.openid.fed.services.command.account
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.AccountAlreadyExistsError
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.persistence.Persistence
@@ -22,34 +24,33 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = CreateAccountCommand::class)
 class CreateAccountCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateAccount, Account, FederationError>(
-    id = CreateAccountCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateAccount, Account>(
+    commandId = CreateAccountCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateAccount>(),
+    outputTypeToken = typeToken<Account>()
 ), CreateAccountCommand {
 
     private val logger = Log.app().withTag("CreateAccountCommand")
     private val accountQueries = Persistence.accountQueries
 
-    override suspend fun createAccount(account: CreateAccount): IdkResult<Account, FederationError> =
-        execute(account)
-
     override suspend fun doExecute(
         args: CreateAccount,
         applyDuring: (CreateAccount) -> CreateAccount
-    ): IdkResult<Account, FederationError> {
+    ): IdkResult<Account, IdkError> {
         val createRequest = applyDuring(args)
         logger.info("Starting account creation process for username: ${createRequest.username}")
 
         val existingAccount = accountQueries.findByUsername(createRequest.username).executeAsOneOrNull()
         if (existingAccount != null) {
             logger.error("Account creation failed: Account with username ${createRequest.username} already exists")
-            return IdkResult.err(AccountAlreadyExistsError(createRequest.username))
+            return federationErr(AccountAlreadyExistsError(createRequest.username))
         }
 
         createRequest.identifier?.let { identifier ->
             if (!identifier.startsWith("https://")) {
                 logger.error("Account creation failed: Identifier must start with https:// - Provided: $identifier")
-                return IdkResult.err(InvalidRequestError("Identifier must start with https://"))
+                return federationErr(InvalidRequestError("Identifier must start with https://"))
             }
         }
 
@@ -62,7 +63,7 @@ class CreateAccountCommandImpl(
             IdkResult.ok(createdAccount.toDTO())
         } catch (e: Exception) {
             logger.error("Failed to create account: ${e.message}", e)
-            IdkResult.err(ServerError("Failed to create account", e.message, e))
+            federationErr(ServerError("Failed to create account", e.message, e))
         }
     }
 }

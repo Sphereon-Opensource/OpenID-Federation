@@ -1,13 +1,14 @@
 package com.sphereon.openid.fed.services.command.jwk
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -24,22 +25,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = GetKeysCommand::class)
 class GetKeysCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<GetKeysArgs, Array<AccountJwk>, FederationError>(
-    id = GetKeysCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<GetKeysArgs, Array<AccountJwk>>(
+    commandId = GetKeysCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<GetKeysArgs>(),
+    outputTypeToken = typeToken<Array<AccountJwk>>()
 ), GetKeysCommand {
 
     private val logger = Log.app().withTag("GetKeysCommand")
     private val jwkQueries = Persistence.jwkQueries
 
-    override suspend fun getKeys(account: Account, includeRevoked: Boolean): IdkResult<Array<AccountJwk>, FederationError> {
-        return execute(GetKeysArgs(account, includeRevoked))
-    }
-
     override suspend fun doExecute(
         args: GetKeysArgs,
         applyDuring: (GetKeysArgs) -> GetKeysArgs
-    ): IdkResult<Array<AccountJwk>, FederationError> {
+    ): IdkResult<Array<AccountJwk>, IdkError> {
         val (account, includeRevoked) = applyDuring(args)
 
         logger.debug("Retrieving keys for account: ${account.username}")
@@ -54,7 +53,7 @@ class GetKeysCommandImpl(
             IdkResult.ok(keys)
         } catch (e: Exception) {
             logger.error("Failed to retrieve keys for account: ${account.username}", e)
-            IdkResult.err(ServerError("Failed to retrieve keys", e.message, e))
+            federationErr(ServerError("Failed to retrieve keys", e.message, e))
         }
     }
 }

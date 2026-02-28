@@ -1,13 +1,14 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -24,22 +25,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = FindMetadataPolicyByAccountCommand::class)
 class FindMetadataPolicyByAccountCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<FindMetadataPolicyByAccountArgs, List<MetadataPolicy>, FederationError>(
-    id = FindMetadataPolicyByAccountCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<FindMetadataPolicyByAccountArgs, List<MetadataPolicy>>(
+    commandId = FindMetadataPolicyByAccountCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<FindMetadataPolicyByAccountArgs>(),
+    outputTypeToken = typeToken<List<MetadataPolicy>>()
 ), FindMetadataPolicyByAccountCommand {
 
     private val logger = Log.app().withTag("FindMetadataPolicyByAccountCommand")
     private val metadataPolicyQueries = Persistence.metadataPolicyQueries
 
-    override suspend fun findByAccount(account: Account): IdkResult<List<MetadataPolicy>, FederationError> {
-        return execute(FindMetadataPolicyByAccountArgs(account))
-    }
-
     override suspend fun doExecute(
         args: FindMetadataPolicyByAccountArgs,
         applyDuring: (FindMetadataPolicyByAccountArgs) -> FindMetadataPolicyByAccountArgs
-    ): IdkResult<List<MetadataPolicy>, FederationError> {
+    ): IdkResult<List<MetadataPolicy>, IdkError> {
         val (account) = applyDuring(args)
 
         logger.debug("Finding metadata policy for account: ${account.username}")
@@ -51,7 +50,7 @@ class FindMetadataPolicyByAccountCommandImpl(
             IdkResult.ok(policyList.map { it.toDTO() })
         } catch (e: Exception) {
             logger.error("Failed to find metadata policy for account: ${account.username}", e)
-            IdkResult.err(ServerError("Failed to retrieve metadata policies", e.message, e))
+            federationErr(ServerError("Failed to retrieve metadata policies", e.message, e))
         }
     }
 }

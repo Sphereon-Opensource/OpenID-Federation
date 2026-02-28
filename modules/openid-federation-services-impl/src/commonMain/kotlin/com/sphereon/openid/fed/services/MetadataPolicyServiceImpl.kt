@@ -2,10 +2,14 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
+import com.sphereon.openid.fed.services.command.metadataPolicy.CreateMetadataPolicyArgs
 import com.sphereon.openid.fed.services.command.metadataPolicy.CreateMetadataPolicyCommand
+import com.sphereon.openid.fed.services.command.metadataPolicy.DeleteMetadataPolicyArgs
 import com.sphereon.openid.fed.services.command.metadataPolicy.DeleteMetadataPolicyCommand
+import com.sphereon.openid.fed.services.command.metadataPolicy.FindMetadataPolicyByAccountArgs
 import com.sphereon.openid.fed.services.command.metadataPolicy.FindMetadataPolicyByAccountCommand
 import kotlinx.serialization.json.JsonElement
 import me.tatarka.inject.annotations.Inject
@@ -32,31 +36,12 @@ class MetadataPolicyServiceImpl(
     private val findMetadataPolicyByAccountCommand: FindMetadataPolicyByAccountCommand
 ) : MetadataPolicyService {
 
-    /**
-     * Inner class implementing the Commands interface.
-     * Provides access to individual commands for advanced use cases.
-     */
-    inner class CommandsImpl : MetadataPolicyService.Commands {
-        override val createPolicy: CreateMetadataPolicyCommand
-            get() = this@MetadataPolicyServiceImpl.createMetadataPolicyCommand
-
-        override val deletePolicy: DeleteMetadataPolicyCommand
-            get() = this@MetadataPolicyServiceImpl.deleteMetadataPolicyCommand
-
-        override val findByAccount: FindMetadataPolicyByAccountCommand
-            get() = this@MetadataPolicyServiceImpl.findMetadataPolicyByAccountCommand
-    }
-
-    override val commands: MetadataPolicyService.Commands = CommandsImpl()
-
-    // Delegate all service methods to their respective commands
-
     override suspend fun createPolicy(account: Account, key: String, policy: JsonElement): FederationResult<MetadataPolicy> =
-        createMetadataPolicyCommand.createPolicy(account, key, policy)
+        createMetadataPolicyCommand.execute(CreateMetadataPolicyArgs(account, key, policy)).toFederationResult()
 
     override suspend fun findByAccount(account: Account): FederationResult<List<MetadataPolicy>> =
-        findMetadataPolicyByAccountCommand.findByAccount(account)
+        findMetadataPolicyByAccountCommand.execute(FindMetadataPolicyByAccountArgs(account)).toFederationResult()
 
     override suspend fun deletePolicy(account: Account, id: String): FederationResult<MetadataPolicy> =
-        deleteMetadataPolicyCommand.deletePolicy(account, id)
+        deleteMetadataPolicyCommand.execute(DeleteMetadataPolicyArgs(account, id)).toFederationResult()
 }

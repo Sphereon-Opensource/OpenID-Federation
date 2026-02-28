@@ -1,39 +1,34 @@
 package com.sphereon.openid.fed.services.command.jwk
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.services.CreateKeyArgs
 
-/**
- * Arguments for the CreateKey command.
- */
 data class CreateKeyCommandArgs(
     val account: Account,
     val opts: CreateKeyArgs = CreateKeyArgs()
 )
 
-/**
- * Service interface for create key operation.
- */
-interface CreateKeyCommandService {
-    /**
-     * Creates a new JSON Web Key (JWK) for the specified account.
-     *
-     * @param account The account for which a new JWK is being created.
-     * @param opts Options for key creation.
-     * @return IdkResult containing the created AccountJwk or an error.
-     */
-    suspend fun createKey(account: Account, opts: CreateKeyArgs = CreateKeyArgs()): IdkResult<AccountJwk, FederationError>
-}
-
-/**
- * Command to create a new JSON Web Key (JWK) for an account.
- */
-interface CreateKeyCommand : Command<CreateKeyCommandArgs, AccountJwk, FederationError>, CreateKeyCommandService {
+interface CreateKeyCommand : ServiceCommand<CreateKeyCommandArgs, AccountJwk>, PublicApiCommand {
     companion object {
-        const val COMMAND_ID = "fed.services.jwk.create-key"
+        const val COMMAND_ID = "fed.jwk.create-key"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/accounts/keys",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "createKey",
+            tags = setOf("keys"),
+            summary = "Create a key"
+        )
     }
+
+    override val httpEndpoint get() = ENDPOINT
 }

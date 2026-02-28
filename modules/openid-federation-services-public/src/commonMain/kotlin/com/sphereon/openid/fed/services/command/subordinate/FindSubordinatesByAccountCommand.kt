@@ -1,17 +1,29 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.Subordinate
 
 data class FindSubordinatesByAccountArgs(val account: Account)
 
-interface FindSubordinatesByAccountCommandService {
-    suspend fun findSubordinatesByAccount(account: Account): IdkResult<Array<Subordinate>, FederationError>
-}
+interface FindSubordinatesByAccountCommand : ServiceCommand<FindSubordinatesByAccountArgs, Array<Subordinate>>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.subordinate.find-by-account"
 
-interface FindSubordinatesByAccountCommand : Command<FindSubordinatesByAccountArgs, Array<Subordinate>, FederationError>, FindSubordinatesByAccountCommandService {
-    companion object { const val COMMAND_ID = "fed.services.subordinate.find-by-account" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/subordinates",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "listSubordinates",
+            tags = setOf("subordinates"),
+            summary = "List subordinates"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

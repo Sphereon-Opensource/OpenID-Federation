@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
@@ -37,60 +38,42 @@ class TrustMarkServiceImpl(
     private val getTrustMarkCommand: GetTrustMarkCommand
 ) : TrustMarkService {
 
-    inner class CommandsImpl : TrustMarkService.Commands {
-        override val createTrustMarkType get() = createTrustMarkTypeCommand
-        override val findAllByAccount get() = findAllTrustMarkTypesByAccountCommand
-        override val findById get() = findTrustMarkTypeByIdCommand
-        override val deleteTrustMarkType get() = deleteTrustMarkTypeCommand
-        override val getIssuersForTrustMarkType get() = getIssuersForTrustMarkTypeCommand
-        override val addIssuerToTrustMarkType get() = addIssuerToTrustMarkTypeCommand
-        override val removeIssuerFromTrustMarkType get() = removeIssuerFromTrustMarkTypeCommand
-        override val getTrustMarksForAccount get() = getTrustMarksForAccountCommand
-        override val createTrustMark get() = createTrustMarkCommand
-        override val deleteTrustMark get() = deleteTrustMarkCommand
-        override val getTrustMarkStatus get() = getTrustMarkStatusCommand
-        override val getTrustMarkedSubs get() = getTrustMarkedSubsCommand
-        override val getTrustMark get() = getTrustMarkCommand
-    }
-
-    override val commands: TrustMarkService.Commands = CommandsImpl()
-
     override suspend fun createTrustMarkType(account: Account, createDto: CreateTrustMarkType): FederationResult<TrustMarkType> =
-        createTrustMarkTypeCommand.createTrustMarkType(account, createDto)
+        createTrustMarkTypeCommand.execute(CreateTrustMarkTypeArgs(account, createDto)).toFederationResult()
 
     override suspend fun findAllByAccount(account: Account): FederationResult<List<TrustMarkType>> =
-        findAllTrustMarkTypesByAccountCommand.findAllByAccount(account)
+        findAllTrustMarkTypesByAccountCommand.execute(FindAllTrustMarkTypesByAccountArgs(account)).toFederationResult()
 
     override suspend fun findById(account: Account, id: String): FederationResult<TrustMarkType> =
-        findTrustMarkTypeByIdCommand.findById(account, id)
+        findTrustMarkTypeByIdCommand.execute(FindTrustMarkTypeByIdArgs(account, id)).toFederationResult()
 
     override suspend fun deleteTrustMarkType(account: Account, id: String): FederationResult<TrustMarkType> =
-        deleteTrustMarkTypeCommand.deleteTrustMarkType(account, id)
+        deleteTrustMarkTypeCommand.execute(DeleteTrustMarkTypeArgs(account, id)).toFederationResult()
 
     override suspend fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): FederationResult<Array<TrustMarkIssuer>> =
-        getIssuersForTrustMarkTypeCommand.getIssuersForTrustMarkType(account, trustMarkTypeId)
+        getIssuersForTrustMarkTypeCommand.execute(GetIssuersForTrustMarkTypeArgs(account, trustMarkTypeId)).toFederationResult()
 
     override suspend fun addIssuerToTrustMarkType(account: Account, trustMarkTypeId: String, issuerIdentifier: String): FederationResult<TrustMarkIssuer> =
-        addIssuerToTrustMarkTypeCommand.addIssuerToTrustMarkType(account, trustMarkTypeId, issuerIdentifier)
+        addIssuerToTrustMarkTypeCommand.execute(AddIssuerToTrustMarkTypeArgs(account, trustMarkTypeId, issuerIdentifier)).toFederationResult()
 
     override suspend fun removeIssuerFromTrustMarkType(account: Account, trustMarkTypeId: String, issuerId: String): FederationResult<TrustMarkIssuer> =
-        removeIssuerFromTrustMarkTypeCommand.removeIssuerFromTrustMarkType(account, trustMarkTypeId, issuerId)
+        removeIssuerFromTrustMarkTypeCommand.execute(RemoveIssuerFromTrustMarkTypeArgs(account, trustMarkTypeId, issuerId)).toFederationResult()
 
     override suspend fun getTrustMarksForAccount(account: Account): FederationResult<List<TrustMark>> =
-        getTrustMarksForAccountCommand.getTrustMarksForAccount(account)
+        getTrustMarksForAccountCommand.execute(GetTrustMarksForAccountArgs(account)).toFederationResult()
 
     override suspend fun createTrustMark(account: Account, body: CreateTrustMarkRequest, currentTimeMillis: Long): FederationResult<CreateTrustMarkResult> =
-        createTrustMarkCommand.createTrustMark(account, body, currentTimeMillis)
+        createTrustMarkCommand.execute(CreateTrustMarkArgs(account, body, currentTimeMillis)).toFederationResult()
 
     override suspend fun deleteTrustMark(account: Account, id: String): FederationResult<TrustMarkEntity> =
-        deleteTrustMarkCommand.deleteTrustMark(account, id)
+        deleteTrustMarkCommand.execute(DeleteTrustMarkArgs(account, id)).toFederationResult()
 
     override suspend fun getTrustMarkStatus(account: Account, request: TrustMarkStatusRequest): FederationResult<Boolean> =
-        getTrustMarkStatusCommand.getTrustMarkStatus(account, request)
+        getTrustMarkStatusCommand.execute(GetTrustMarkStatusArgs(account, request)).toFederationResult()
 
     override suspend fun getTrustMarkedSubs(account: Account, request: TrustMarkListRequest): FederationResult<Array<String>> =
-        getTrustMarkedSubsCommand.getTrustMarkedSubs(account, request)
+        getTrustMarkedSubsCommand.execute(GetTrustMarkedSubsArgs(account, request)).toFederationResult()
 
     override suspend fun getTrustMark(account: Account, request: TrustMarkRequest): FederationResult<String> =
-        getTrustMarkCommand.getTrustMark(account, request)
+        getTrustMarkCommand.execute(GetTrustMarkArgs(account, request)).toFederationResult()
 }

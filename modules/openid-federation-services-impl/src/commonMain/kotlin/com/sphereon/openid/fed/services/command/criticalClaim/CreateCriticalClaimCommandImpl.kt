@@ -1,15 +1,16 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.CriticalClaimAlreadyExistsError
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -25,22 +26,20 @@ import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 @ContributesBinding(SessionScope::class, boundType = CreateCriticalClaimCommand::class)
 class CreateCriticalClaimCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateCriticalClaimArgs, CritEntity, FederationError>(
-    id = CreateCriticalClaimCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateCriticalClaimArgs, CritEntity>(
+    commandId = CreateCriticalClaimCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateCriticalClaimArgs>(),
+    outputTypeToken = typeToken<CritEntity>()
 ), CreateCriticalClaimCommand {
 
     private val logger = Log.app().withTag("CreateCriticalClaimCommand")
     private val critQueries = Persistence.critQueries
 
-    override suspend fun create(account: Account, claim: String): IdkResult<CritEntity, FederationError> {
-        return execute(CreateCriticalClaimArgs(account, claim))
-    }
-
     override suspend fun doExecute(
         args: CreateCriticalClaimArgs,
         applyDuring: (CreateCriticalClaimArgs) -> CreateCriticalClaimArgs
-    ): IdkResult<CritEntity, FederationError> {
+    ): IdkResult<CritEntity, IdkError> {
         val (account, claim) = applyDuring(args)
 
         logger.info("Creating critical claim for account: ${account.username}, claim: $claim")
@@ -52,7 +51,7 @@ class CreateCriticalClaimCommandImpl(
 
         if (existingCriticalClaim != null) {
             logger.warn("Critical claim already exists for claim: $claim")
-            return IdkResult.err(CriticalClaimAlreadyExistsError(account.id, claim))
+            return federationErr(CriticalClaimAlreadyExistsError(account.id, claim))
         }
 
         return try {
@@ -65,11 +64,11 @@ class CreateCriticalClaimCommandImpl(
                 IdkResult.ok(createdCriticalClaim)
             } else {
                 logger.error("Failed to create critical claim for account: ${account.username}, claim: $claim")
-                IdkResult.err(ServerError(Constants.FAILED_TO_CREATE_CRIT))
+                federationErr(ServerError(Constants.FAILED_TO_CREATE_CRIT))
             }
         } catch (e: Exception) {
             logger.error("Failed to create critical claim for account: ${account.username}, claim: $claim", e)
-            IdkResult.err(ServerError("Failed to create critical claim", e.message, e))
+            federationErr(ServerError("Failed to create critical claim", e.message, e))
         }
     }
 }

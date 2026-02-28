@@ -1,17 +1,29 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.Subordinate
 
 data class DeleteSubordinateArgs(val account: Account, val id: String)
 
-interface DeleteSubordinateCommandService {
-    suspend fun deleteSubordinate(account: Account, id: String): IdkResult<Subordinate, FederationError>
-}
+interface DeleteSubordinateCommand : ServiceCommand<DeleteSubordinateArgs, Subordinate>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.subordinate.delete"
 
-interface DeleteSubordinateCommand : Command<DeleteSubordinateArgs, Subordinate, FederationError>, DeleteSubordinateCommandService {
-    companion object { const val COMMAND_ID = "fed.services.subordinate.delete" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.DELETE,
+            pathPattern = "/subordinates/{id}",
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "deleteSubordinate",
+            tags = setOf("subordinates"),
+            summary = "Delete a subordinate"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

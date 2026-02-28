@@ -1,15 +1,18 @@
 package com.sphereon.openid.fed.services.command.resolution
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.FederationClient
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
@@ -32,27 +35,20 @@ class ResolveEntityCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,
     private val federationClient: FederationClient
-) : ExecutionScopedCommandAdapter<ResolveEntityArgs, ResolveResponse, FederationError>(
-    id = ResolveEntityCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<ResolveEntityArgs, ResolveResponse>(
+    commandId = ResolveEntityCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<ResolveEntityArgs>(),
+    outputTypeToken = typeToken<ResolveResponse>()
 ), ResolveEntityCommand {
 
     private val logger = Log.app().withTag("ResolveEntityCommand")
     private val ONE_DAY_IN_SEC = 3600 * 24
 
-    override suspend fun resolveEntity(
-        account: Account,
-        sub: String,
-        trustAnchor: String,
-        entityTypes: Array<String>?
-    ): IdkResult<ResolveResponse, FederationError> {
-        return execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes))
-    }
-
     override suspend fun doExecute(
         args: ResolveEntityArgs,
         applyDuring: (ResolveEntityArgs) -> ResolveEntityArgs
-    ): IdkResult<ResolveResponse, FederationError> {
+    ): IdkResult<ResolveResponse, IdkError> {
         val (account, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Resolving entity for subject: $sub, trust anchor: $trustAnchor")
@@ -72,7 +68,7 @@ class ResolveEntityCommandImpl(
 
             if (trustChainResolution.errorMessage != null) {
                 logger.error("Trust chain resolution failed: ${trustChainResolution.errorMessage}")
-                return IdkResult.err(TrustChainValidationFailedError(
+                return federationErr(TrustChainValidationFailedError(
                     entityId = sub,
                     reason = trustChainResolution.errorMessage ?: "Unknown error"
                 ))
@@ -80,7 +76,7 @@ class ResolveEntityCommandImpl(
 
             if (trustChainResolution.trustChain.isNullOrEmpty()) {
                 logger.error("No trust chain found for entity: $sub")
-                return IdkResult.err(NoTrustChainFoundError(
+                return federationErr(NoTrustChainFoundError(
                     entityId = sub,
                     trustAnchors = listOf(trustAnchor)
                 ))
@@ -112,7 +108,7 @@ class ResolveEntityCommandImpl(
             response
         } catch (e: Exception) {
             logger.error("Failed to resolve entity for subject: $sub", e)
-            IdkResult.err(ServerError(
+            federationErr(ServerError(
                 reason = "Failed to resolve entity",
                 causeDescription = e.message,
                 exception = e
@@ -127,8 +123,8 @@ class ResolveEntityCommandImpl(
         metadata: JsonObject,
         trustMarks: Array<TrustMark>,
         trustChain: Array<String>?
-    ): IdkResult<ResolveResponse, FederationError> {
-        return accountService.getAccountIdentifierByAccount(account).map { iss ->
+    ): IdkResult<ResolveResponse, IdkError> {
+        return accountService.getAccountIdentifierByAccount(account).toIdkErrorResult().map { iss ->
             ResolveResponse(
                 iss = iss,
                 sub = sub,

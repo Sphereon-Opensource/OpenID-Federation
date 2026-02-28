@@ -1,19 +1,19 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.MetadataPolicyAlreadyExistsError
 import com.sphereon.openid.fed.core.error.ServerError
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
-import kotlinx.serialization.json.JsonElement
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
@@ -27,22 +27,20 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = CreateMetadataPolicyCommand::class)
 class CreateMetadataPolicyCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<CreateMetadataPolicyArgs, MetadataPolicy, FederationError>(
-    id = CreateMetadataPolicyCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<CreateMetadataPolicyArgs, MetadataPolicy>(
+    commandId = CreateMetadataPolicyCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateMetadataPolicyArgs>(),
+    outputTypeToken = typeToken<MetadataPolicy>()
 ), CreateMetadataPolicyCommand {
 
     private val logger = Log.app().withTag("CreateMetadataPolicyCommand")
     private val metadataPolicyQueries = Persistence.metadataPolicyQueries
 
-    override suspend fun createPolicy(account: Account, key: String, policy: JsonElement): IdkResult<MetadataPolicy, FederationError> {
-        return execute(CreateMetadataPolicyArgs(account, key, policy))
-    }
-
     override suspend fun doExecute(
         args: CreateMetadataPolicyArgs,
         applyDuring: (CreateMetadataPolicyArgs) -> CreateMetadataPolicyArgs
-    ): IdkResult<MetadataPolicy, FederationError> {
+    ): IdkResult<MetadataPolicy, IdkError> {
         val (account, key, policy) = applyDuring(args)
 
         logger.info("Creating entity configuration metadata policy for account: ${account.username}, key: $key")
@@ -54,7 +52,7 @@ class CreateMetadataPolicyCommandImpl(
 
         if (policyAlreadyExists != null) {
             logger.error("Metadata policy already exists for account ID: ${account.id}, key: $key")
-            return IdkResult.err(MetadataPolicyAlreadyExistsError(account.id, key))
+            return federationErr(MetadataPolicyAlreadyExistsError(account.id, key))
         }
 
         return try {
@@ -67,11 +65,11 @@ class CreateMetadataPolicyCommandImpl(
                 IdkResult.ok(createdPolicy.toDTO())
             } else {
                 logger.error("Failed to create metadata policy for account ID: ${account.id}, key: $key")
-                IdkResult.err(ServerError(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA_POLICY))
+                federationErr(ServerError(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA_POLICY))
             }
         } catch (e: Exception) {
             logger.error("Failed to create metadata policy for account: ${account.username}, key: $key", e)
-            IdkResult.err(ServerError("Failed to create metadata policy", e.message, e))
+            federationErr(ServerError("Failed to create metadata policy", e.message, e))
         }
     }
 }

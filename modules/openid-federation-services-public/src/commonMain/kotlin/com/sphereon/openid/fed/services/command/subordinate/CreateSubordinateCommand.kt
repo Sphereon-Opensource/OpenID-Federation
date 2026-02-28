@@ -1,18 +1,31 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.Subordinate
 
 data class CreateSubordinateArgs(val account: Account, val subordinateDTO: CreateSubordinate)
 
-interface CreateSubordinateCommandService {
-    suspend fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): IdkResult<Subordinate, FederationError>
-}
+interface CreateSubordinateCommand : ServiceCommand<CreateSubordinateArgs, Subordinate>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.subordinate.create"
 
-interface CreateSubordinateCommand : Command<CreateSubordinateArgs, Subordinate, FederationError>, CreateSubordinateCommandService {
-    companion object { const val COMMAND_ID = "fed.services.subordinate.create" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/subordinates",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "createSubordinate",
+            tags = setOf("subordinates"),
+            summary = "Create a subordinate"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

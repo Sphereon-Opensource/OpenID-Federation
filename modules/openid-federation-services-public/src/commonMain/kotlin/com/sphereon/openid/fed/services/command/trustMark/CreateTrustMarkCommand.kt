@@ -1,8 +1,10 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
-import com.sphereon.core.api.IdkResult
-import com.sphereon.core.api.session.Command
-import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
+import com.sphereon.core.api.http.describe.HttpMethod
+import com.sphereon.core.api.http.describe.MediaType
+import com.sphereon.core.api.service.PublicApiCommand
+import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
@@ -13,14 +15,21 @@ data class CreateTrustMarkArgs(
     val currentTimeMillis: Long = System.currentTimeMillis()
 )
 
-interface CreateTrustMarkCommandService {
-    suspend fun createTrustMark(
-        account: Account,
-        body: CreateTrustMarkRequest,
-        currentTimeMillis: Long = System.currentTimeMillis()
-    ): IdkResult<CreateTrustMarkResult, FederationError>
-}
+interface CreateTrustMarkCommand : ServiceCommand<CreateTrustMarkArgs, CreateTrustMarkResult>, PublicApiCommand {
+    companion object {
+        const val COMMAND_ID = "fed.trust-mark.create"
 
-interface CreateTrustMarkCommand : Command<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>, CreateTrustMarkCommandService {
-    companion object { const val COMMAND_ID = "fed.services.trust-mark.create" }
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/trust-marks",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            commandId = COMMAND_ID,
+            operationId = "createTrustMark",
+            tags = setOf("trust-marks"),
+            summary = "Create a trust mark"
+        )
+    }
+
+    override val httpEndpoint get() = ENDPOINT
 }

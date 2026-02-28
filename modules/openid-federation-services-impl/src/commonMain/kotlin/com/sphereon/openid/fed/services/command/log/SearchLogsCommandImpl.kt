@@ -1,12 +1,14 @@
 package com.sphereon.openid.fed.services.command.log
 
 import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import me.tatarka.inject.annotations.Inject
@@ -23,22 +25,20 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, boundType = SearchLogsCommand::class)
 class SearchLogsCommandImpl(
     execution: SessionExecution
-) : ExecutionScopedCommandAdapter<SearchLogsArgs, List<LogDTO>, FederationError>(
-    id = SearchLogsCommand.COMMAND_ID,
-    execution = execution
+) : TypedServiceCommandAdapter<SearchLogsArgs, List<LogDTO>>(
+    commandId = SearchLogsCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<SearchLogsArgs>(),
+    outputTypeToken = typeToken<List<LogDTO>>()
 ), SearchLogsCommand {
 
     private val logger = Log.app().withTag("SearchLogsCommand")
     private val logQueries = Persistence.logQueries
 
-    override suspend fun searchLogs(searchTerm: String, limit: Long): IdkResult<List<LogDTO>, FederationError> {
-        return execute(SearchLogsArgs(searchTerm, limit))
-    }
-
     override suspend fun doExecute(
         args: SearchLogsArgs,
         applyDuring: (SearchLogsArgs) -> SearchLogsArgs
-    ): IdkResult<List<LogDTO>, FederationError> {
+    ): IdkResult<List<LogDTO>, IdkError> {
         val (searchTerm, limit) = applyDuring(args)
 
         logger.debug("Searching logs with term: '$searchTerm', limit: $limit")
@@ -49,7 +49,7 @@ class SearchLogsCommandImpl(
             IdkResult.ok(logs)
         } catch (e: Exception) {
             logger.error("Failed to search logs with term: '$searchTerm'", e)
-            IdkResult.err(ServerError("Failed to search logs", e.message, e))
+            federationErr(ServerError("Failed to search logs", e.message, e))
         }
     }
 }
