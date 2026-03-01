@@ -47,7 +47,7 @@ class CreateReceivedTrustMarkCommandImpl(
         return try {
             val createdTrustMark = receivedTrustMarkQueries.create(
                 account_id = tenantId,
-                trust_mark_id = createRequest.trustMarkId,
+                trust_mark_id = createRequest.trustMarkType,
                 jwt = createRequest.jwt,
             ).executeAsOneOrNull()
 

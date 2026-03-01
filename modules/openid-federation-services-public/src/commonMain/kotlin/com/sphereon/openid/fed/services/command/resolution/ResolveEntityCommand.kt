@@ -14,7 +14,7 @@ data class ResolveEntityArgs(
         if (this === other) return true
         if (other == null || this::class != other::class) return false
         other as ResolveEntityArgs
-        if (account != other.account) return false
+        if (tenantId != other.tenantId) return false
         if (sub != other.sub) return false
         if (trustAnchor != other.trustAnchor) return false
         if (entityTypes != null) {
@@ -25,7 +25,7 @@ data class ResolveEntityArgs(
     }
 
     override fun hashCode(): Int {
-        var result = account.hashCode()
+        var result = tenantId.hashCode()
         result = 31 * result + sub.hashCode()
         result = 31 * result + trustAnchor.hashCode()
         result = 31 * result + (entityTypes?.contentHashCode() ?: 0)

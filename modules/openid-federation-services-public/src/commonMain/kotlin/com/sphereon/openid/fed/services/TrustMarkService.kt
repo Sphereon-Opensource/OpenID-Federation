@@ -36,6 +36,7 @@ interface TrustMarkService {
     suspend fun createTrustMark(tenantId: String, body: CreateTrustMarkRequest, currentTimeMillis: Long): FederationResult<CreateTrustMarkResult>
     suspend fun deleteTrustMark(tenantId: String, id: String): FederationResult<TrustMarkEntity>
     suspend fun getTrustMarkStatus(tenantId: String, request: TrustMarkStatusRequest): FederationResult<Boolean>
+    suspend fun getSignedTrustMarkStatusJwt(tenantId: String, request: TrustMarkStatusRequest): FederationResult<String>
     suspend fun getTrustMarkedSubs(tenantId: String, request: TrustMarkListRequest): FederationResult<Array<String>>
     suspend fun getTrustMark(tenantId: String, request: TrustMarkRequest): FederationResult<String>
 }

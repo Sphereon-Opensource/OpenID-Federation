@@ -205,8 +205,12 @@ fun <T> IdkResult<T, FederationError>.toIdkErrorResult(): IdkResult<T, IdkError>
  */
 fun <T> IdkResult<T, IdkError>.toFederationResult(): FederationResult<T> =
     this.mapError { idkError ->
-        ServerError(
+        val httpStatus = idkError.meta["httpStatus"] as? Int
+        val errorCode = idkError.meta["errorCode"] as? String
+        PreservedError(
+            httpStatusValue = httpStatus ?: 500,
             reason = idkError.message.defaultMessage,
+            errorCode = errorCode ?: idkError.code,
             causeDescription = idkError.code,
             exception = idkError.exception
         )

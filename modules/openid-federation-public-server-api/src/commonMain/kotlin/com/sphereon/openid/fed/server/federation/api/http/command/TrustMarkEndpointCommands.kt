@@ -10,7 +10,29 @@ import com.sphereon.core.api.http.describe.MediaType
  */
 val TrustMarkJwtMediaType = MediaType.Custom("application/trust-mark+jwt")
 
-// ==================== Trust Mark Status (Root) Endpoint ====================
+/**
+ * Custom content type for trust mark status responses (signed JWTs).
+ */
+val TrustMarkStatusResponseJwtMediaType = MediaType.Custom("application/trust-mark-status-response+jwt")
+
+// ==================== Trust Mark Status GET (Root) Endpoint ====================
+
+interface GetTrustMarkStatusRootEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.get-trust-mark-status"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/trust-mark-status",
+            produces = setOf(TrustMarkStatusResponseJwtMediaType),
+            operationId = "checkTrustMarkStatusGet",
+            tags = setOf("trust-marks"),
+            summary = "Check trust mark status (GET)"
+        )
+    }
+}
+
+// ==================== Trust Mark Status POST (Root) Endpoint ====================
 
 interface TrustMarkStatusRootEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -19,8 +41,8 @@ interface TrustMarkStatusRootEndpointCommand : HttpEndpointCommand {
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.POST,
             pathPattern = "/trust-mark-status",
-            consumes = setOf(MediaType.ApplicationJson),
-            produces = setOf(MediaType.ApplicationJson),
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(TrustMarkStatusResponseJwtMediaType),
             operationId = "checkTrustMarkStatus",
             tags = setOf("trust-marks"),
             summary = "Check trust mark status"
@@ -28,7 +50,24 @@ interface TrustMarkStatusRootEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Trust Mark Status (Per Account) Endpoint ====================
+// ==================== Trust Mark Status GET (Per Account) Endpoint ====================
+
+interface GetTrustMarkStatusAccountEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.get-account-trust-mark-status"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/{username}/trust-mark-status",
+            produces = setOf(TrustMarkStatusResponseJwtMediaType),
+            operationId = "checkAccountTrustMarkStatusGet",
+            tags = setOf("trust-marks"),
+            summary = "Check trust mark status for a specific account (GET)"
+        )
+    }
+}
+
+// ==================== Trust Mark Status POST (Per Account) Endpoint ====================
 
 interface TrustMarkStatusAccountEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -37,8 +76,8 @@ interface TrustMarkStatusAccountEndpointCommand : HttpEndpointCommand {
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.POST,
             pathPattern = "/{username}/trust-mark-status",
-            consumes = setOf(MediaType.ApplicationJson),
-            produces = setOf(MediaType.ApplicationJson),
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(TrustMarkStatusResponseJwtMediaType),
             operationId = "checkAccountTrustMarkStatus",
             tags = setOf("trust-marks"),
             summary = "Check trust mark status for a specific account"
@@ -46,7 +85,7 @@ interface TrustMarkStatusAccountEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Trust Mark List (Root) Endpoint ====================
+// ==================== Trust Mark List GET (Root) Endpoint ====================
 
 interface TrustMarkListRootEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -63,7 +102,25 @@ interface TrustMarkListRootEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Trust Mark List (Per Account) Endpoint ====================
+// ==================== Trust Mark List POST (Root) Endpoint ====================
+
+interface PostTrustMarkListRootEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-trust-mark-list"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/trust-mark-list",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "listTrustMarkedSubordinatesPost",
+            tags = setOf("trust-marks"),
+            summary = "List subordinates with a specific trust mark (POST)"
+        )
+    }
+}
+
+// ==================== Trust Mark List GET (Per Account) Endpoint ====================
 
 interface TrustMarkListAccountEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -80,7 +137,25 @@ interface TrustMarkListAccountEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Get Trust Mark (Root) Endpoint ====================
+// ==================== Trust Mark List POST (Per Account) Endpoint ====================
+
+interface PostTrustMarkListAccountEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-account-trust-mark-list"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/{username}/trust-mark-list",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "listAccountTrustMarkedSubordinatesPost",
+            tags = setOf("trust-marks"),
+            summary = "List subordinates with a specific trust mark for an account (POST)"
+        )
+    }
+}
+
+// ==================== Get Trust Mark GET (Root) Endpoint ====================
 
 interface GetTrustMarkRootEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -97,7 +172,25 @@ interface GetTrustMarkRootEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Get Trust Mark (Per Account) Endpoint ====================
+// ==================== Get Trust Mark POST (Root) Endpoint ====================
+
+interface PostGetTrustMarkRootEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-trust-mark"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/trust-mark",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(TrustMarkJwtMediaType),
+            operationId = "getTrustMarkPost",
+            tags = setOf("trust-marks"),
+            summary = "Get a trust mark JWT (POST)"
+        )
+    }
+}
+
+// ==================== Get Trust Mark GET (Per Account) Endpoint ====================
 
 interface GetTrustMarkAccountEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -110,6 +203,24 @@ interface GetTrustMarkAccountEndpointCommand : HttpEndpointCommand {
             operationId = "getAccountTrustMark",
             tags = setOf("trust-marks"),
             summary = "Get a trust mark JWT for a specific account"
+        )
+    }
+}
+
+// ==================== Get Trust Mark POST (Per Account) Endpoint ====================
+
+interface PostGetTrustMarkAccountEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-account-trust-mark"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/{username}/trust-mark",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(TrustMarkJwtMediaType),
+            operationId = "getAccountTrustMarkPost",
+            tags = setOf("trust-marks"),
+            summary = "Get a trust mark JWT for a specific account (POST)"
         )
     }
 }

@@ -54,7 +54,7 @@ class CreateKeyCommandImpl(
             val (providerId, alias, use, keyOperations, alg) = opts
 
             // Check if key with same alias already exists
-            val existingKeysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked = false))
+            val existingKeysResult = getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked = false))
             if (existingKeysResult.isErr) {
                 return@withContext existingKeysResult.error.asErrorResult()
             }

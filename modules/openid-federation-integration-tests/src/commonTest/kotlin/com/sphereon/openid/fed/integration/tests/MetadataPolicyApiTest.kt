@@ -130,7 +130,7 @@ class MetadataPolicyApiTest {
                 })
             }
 
-            val response = client.post("$baseUrl/metadata-policy") {
+            val response = client.post("$baseUrl/metadata-policies") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -161,7 +161,7 @@ class MetadataPolicyApiTest {
         try {
             createSamplePolicy()
 
-            val response = client.get("$baseUrl/metadata-policy") {
+            val response = client.get("$baseUrl/metadata-policies") {
                 headers {
                     append("X-Account-Username", testUsername!!)
                 }
@@ -195,7 +195,7 @@ class MetadataPolicyApiTest {
                 })
             }
 
-            var response = client.post("$baseUrl/metadata-policy") {
+            var response = client.post("$baseUrl/metadata-policies") {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("X-Account-Username", testUsername!!)
@@ -215,7 +215,7 @@ class MetadataPolicyApiTest {
             println("Extracted policy ID: $policyId")
 
             // Now delete the policy by its ID
-            response = client.delete("$baseUrl/metadata-policy/$policyId") {
+            response = client.delete("$baseUrl/metadata-policies/$policyId") {
                 headers {
                     append("X-Account-Username", testUsername!!)
                 }
@@ -227,7 +227,7 @@ class MetadataPolicyApiTest {
             assertEquals(policyKey, deletedPolicyResponse.key)
 
             // Verify the policy is no longer in the list
-            val getResponse = client.get("$baseUrl/metadata-policy") {
+            val getResponse = client.get("$baseUrl/metadata-policies") {
                 headers {
                     append("X-Account-Username", testUsername!!)
                 }
@@ -313,7 +313,7 @@ class MetadataPolicyApiTest {
             })
         }
 
-        val response = client.post("$baseUrl/metadata-policy") {
+        val response = client.post("$baseUrl/metadata-policies") {
             contentType(ContentType.Application.Json)
             headers {
                 append("X-Account-Username", testUsername!!)

@@ -4,43 +4,27 @@ import com.sphereon.core.api.http.describe.HttpAdapterDescriptorProvider
 import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.core.api.http.describe.StaticPublicApiDescriptor
 import com.sphereon.openid.fed.server.admin.api.http.AdminHttpAdapter
-import com.sphereon.openid.fed.server.admin.api.http.command.ClearCacheEndpointCommand
-import com.sphereon.openid.fed.server.admin.api.http.command.GetCacheStatsEndpointCommand
-import com.sphereon.openid.fed.server.admin.api.http.command.ListLogsEndpointCommand
-import com.sphereon.openid.fed.services.command.account.CreateAccountCommand
-import com.sphereon.openid.fed.services.command.account.DeleteAccountCommand
-import com.sphereon.openid.fed.services.command.account.GetAllAccountsCommand
+import com.sphereon.openid.fed.server.admin.api.http.command.*
+import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
+import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
+import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
 import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintCommand
 import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHintCommand
 import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountCommand
-import com.sphereon.openid.fed.services.command.criticalClaim.CreateCriticalClaimCommand
-import com.sphereon.openid.fed.services.command.criticalClaim.DeleteCriticalClaimCommand
-import com.sphereon.openid.fed.services.command.criticalClaim.FindCriticalClaimsByAccountCommand
+import com.sphereon.openid.fed.services.command.trustAnchorHint.CreateTrustAnchorHintCommand
+import com.sphereon.openid.fed.services.command.trustAnchorHint.DeleteTrustAnchorHintCommand
+import com.sphereon.openid.fed.services.command.trustAnchorHint.FindTrustAnchorHintsByAccountCommand
+import com.sphereon.openid.fed.services.command.subordinateConstraint.GetSubordinateConstraintsCommand
+import com.sphereon.openid.fed.services.command.subordinateConstraint.SetSubordinateConstraintsCommand
+import com.sphereon.openid.fed.services.command.subordinateConstraint.DeleteSubordinateConstraintsCommand
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommand
 import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationCommand
-import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommand
-import com.sphereon.openid.fed.services.command.jwk.GetKeysCommand
-import com.sphereon.openid.fed.services.command.jwk.RevokeKeyCommand
 import com.sphereon.openid.fed.services.command.metadata.CreateMetadataCommand
 import com.sphereon.openid.fed.services.command.metadata.DeleteMetadataCommand
 import com.sphereon.openid.fed.services.command.metadata.FindMetadataByAccountCommand
-import com.sphereon.openid.fed.services.command.metadataPolicy.CreateMetadataPolicyCommand
-import com.sphereon.openid.fed.services.command.metadataPolicy.DeleteMetadataPolicyCommand
-import com.sphereon.openid.fed.services.command.metadataPolicy.FindMetadataPolicyByAccountCommand
 import com.sphereon.openid.fed.services.command.receivedTrustMark.CreateReceivedTrustMarkCommand
 import com.sphereon.openid.fed.services.command.receivedTrustMark.DeleteReceivedTrustMarkCommand
 import com.sphereon.openid.fed.services.command.receivedTrustMark.ListReceivedTrustMarksCommand
-import com.sphereon.openid.fed.services.command.subordinate.CreateSubordinateCommand
-import com.sphereon.openid.fed.services.command.subordinate.CreateSubordinateJwkCommand
-import com.sphereon.openid.fed.services.command.subordinate.CreateSubordinateMetadataCommand
-import com.sphereon.openid.fed.services.command.subordinate.DeleteSubordinateCommand
-import com.sphereon.openid.fed.services.command.subordinate.DeleteSubordinateJwkCommand
-import com.sphereon.openid.fed.services.command.subordinate.DeleteSubordinateMetadataCommand
-import com.sphereon.openid.fed.services.command.subordinate.FindSubordinateMetadataCommand
-import com.sphereon.openid.fed.services.command.subordinate.FindSubordinatesByAccountCommand
-import com.sphereon.openid.fed.services.command.subordinate.GetSubordinateJwksCommand
-import com.sphereon.openid.fed.services.command.subordinate.GetSubordinateStatementCommand
-import com.sphereon.openid.fed.services.command.subordinate.PublishSubordinateStatementCommand
 import com.sphereon.openid.fed.services.command.trustMark.AddIssuerToTrustMarkTypeCommand
 import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkCommand
 import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkTypeCommand
@@ -73,26 +57,26 @@ class AdminHttpAdapterDescriptorProvider : StaticPublicApiDescriptor(
         adapterBasePath = ""
     ),
     endpoints = listOf(
-        // Account endpoints (from service commands)
-        GetAllAccountsCommand.ENDPOINT,
-        CreateAccountCommand.ENDPOINT,
-        DeleteAccountCommand.ENDPOINT,
-        // Key endpoints (from service commands)
-        GetKeysCommand.ENDPOINT,
-        CreateKeyCommand.ENDPOINT,
-        RevokeKeyCommand.ENDPOINT,
-        // Subordinate endpoints (from service commands)
-        FindSubordinatesByAccountCommand.ENDPOINT,
-        CreateSubordinateCommand.ENDPOINT,
-        DeleteSubordinateCommand.ENDPOINT,
-        GetSubordinateJwksCommand.ENDPOINT,
-        CreateSubordinateJwkCommand.ENDPOINT,
-        DeleteSubordinateJwkCommand.ENDPOINT,
-        GetSubordinateStatementCommand.ENDPOINT,
-        PublishSubordinateStatementCommand.ENDPOINT,
-        FindSubordinateMetadataCommand.ENDPOINT,
-        CreateSubordinateMetadataCommand.ENDPOINT,
-        DeleteSubordinateMetadataCommand.ENDPOINT,
+        // Account endpoints (from endpoint commands)
+        ListAccountsEndpointCommand.ENDPOINT,
+        CreateAccountEndpointCommand.ENDPOINT,
+        DeleteAccountEndpointCommand.ENDPOINT,
+        // Key endpoints (from endpoint commands)
+        ListKeysEndpointCommand.ENDPOINT,
+        CreateKeyEndpointCommand.ENDPOINT,
+        RevokeKeyEndpointCommand.ENDPOINT,
+        // Subordinate endpoints (from endpoint commands)
+        ListSubordinatesEndpointCommand.ENDPOINT,
+        CreateSubordinateEndpointCommand.ENDPOINT,
+        DeleteSubordinateEndpointCommand.ENDPOINT,
+        ListSubordinateKeysEndpointCommand.ENDPOINT,
+        CreateSubordinateKeyEndpointCommand.ENDPOINT,
+        DeleteSubordinateKeyEndpointCommand.ENDPOINT,
+        GetSubordinateStatementEndpointCommand.ENDPOINT,
+        PublishSubordinateStatementEndpointCommand.ENDPOINT,
+        ListSubordinateMetadataEndpointCommand.ENDPOINT,
+        CreateSubordinateMetadataEndpointCommand.ENDPOINT,
+        DeleteSubordinateMetadataEndpointCommand.ENDPOINT,
         // Trust mark endpoints (from service commands)
         GetTrustMarksForAccountCommand.ENDPOINT,
         CreateTrustMarkCommand.ENDPOINT,
@@ -116,21 +100,29 @@ class AdminHttpAdapterDescriptorProvider : StaticPublicApiDescriptor(
         FindAuthorityHintsByAccountCommand.ENDPOINT,
         CreateAuthorityHintCommand.ENDPOINT,
         DeleteAuthorityHintCommand.ENDPOINT,
-        // Critical claim endpoints (from service commands)
-        FindCriticalClaimsByAccountCommand.ENDPOINT,
-        CreateCriticalClaimCommand.ENDPOINT,
-        DeleteCriticalClaimCommand.ENDPOINT,
-        // Metadata policy endpoints (from service commands)
-        FindMetadataPolicyByAccountCommand.ENDPOINT,
-        CreateMetadataPolicyCommand.ENDPOINT,
-        DeleteMetadataPolicyCommand.ENDPOINT,
+        // Trust anchor hint endpoints (from service commands)
+        FindTrustAnchorHintsByAccountCommand.ENDPOINT,
+        CreateTrustAnchorHintCommand.ENDPOINT,
+        DeleteTrustAnchorHintCommand.ENDPOINT,
+        // Critical claim endpoints (from endpoint commands)
+        ListCriticalClaimsEndpointCommand.ENDPOINT,
+        CreateCriticalClaimEndpointCommand.ENDPOINT,
+        DeleteCriticalClaimEndpointCommand.ENDPOINT,
+        // Metadata policy endpoints (from endpoint commands)
+        ListMetadataPoliciesEndpointCommand.ENDPOINT,
+        CreateMetadataPolicyEndpointCommand.ENDPOINT,
+        DeleteMetadataPolicyEndpointCommand.ENDPOINT,
         // Received trust mark endpoints (from service commands)
         ListReceivedTrustMarksCommand.ENDPOINT,
         CreateReceivedTrustMarkCommand.ENDPOINT,
         DeleteReceivedTrustMarkCommand.ENDPOINT,
-        // Log endpoints (non-1:1, from endpoint commands)
+        // Subordinate constraint endpoints (from service commands)
+        GetSubordinateConstraintsCommand.ENDPOINT,
+        SetSubordinateConstraintsCommand.ENDPOINT,
+        DeleteSubordinateConstraintsCommand.ENDPOINT,
+        // Log endpoints (from endpoint commands)
         ListLogsEndpointCommand.ENDPOINT,
-        // Cache endpoints (non-1:1, from endpoint commands)
+        // Cache endpoints (from endpoint commands)
         GetCacheStatsEndpointCommand.ENDPOINT,
         ClearCacheEndpointCommand.ENDPOINT
     )

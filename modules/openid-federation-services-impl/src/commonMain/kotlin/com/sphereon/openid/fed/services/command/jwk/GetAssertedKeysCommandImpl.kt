@@ -39,7 +39,7 @@ class GetAssertedKeysCommandImpl(
     ): IdkResult<Array<AccountJwk>, IdkError> {
         val (tenantId, includeRevoked, kmsKeyRef, kid) = applyDuring(args)
 
-        val allKeysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked))
+        val allKeysResult = getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked))
         if (allKeysResult.isErr) {
             return allKeysResult
         }

@@ -13,7 +13,7 @@ interface ListMetadataPoliciesEndpointCommand : HttpEndpointCommand {
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.GET,
-            pathPattern = "/metadata-policy",
+            pathPattern = "/metadata-policies",
             produces = setOf(MediaType.ApplicationJson),
             operationId = "listMetadataPolicies",
             tags = setOf("metadata-policy"),
@@ -30,7 +30,7 @@ interface CreateMetadataPolicyEndpointCommand : HttpEndpointCommand {
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.POST,
-            pathPattern = "/metadata-policy",
+            pathPattern = "/metadata-policies",
             consumes = setOf(MediaType.ApplicationJson),
             produces = setOf(MediaType.ApplicationJson),
             operationId = "createMetadataPolicy",
@@ -48,7 +48,7 @@ interface DeleteMetadataPolicyEndpointCommand : HttpEndpointCommand {
 
         val ENDPOINT = HttpEndpointDescriptor(
             method = HttpMethod.DELETE,
-            pathPattern = "/metadata-policy/{id}",
+            pathPattern = "/metadata-policies/{id}",
             produces = setOf(MediaType.ApplicationJson),
             operationId = "deleteMetadataPolicy",
             tags = setOf("metadata-policy"),

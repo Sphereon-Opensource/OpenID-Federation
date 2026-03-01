@@ -43,6 +43,12 @@ object Constants {
     const val ROOT_IDENTIFIER_NOT_SET = "Root identifier not set"
     const val ROOT_ACCOUNT_CANNOT_BE_DELETED = "Root account cannot be deleted"
 
+    // Trust anchor hint errors
+    const val FAILED_TO_CREATE_TRUST_ANCHOR_HINT = "Failed to create trust anchor hint"
+    const val TRUST_ANCHOR_HINT_NOT_FOUND = "Trust anchor hint not found"
+    const val FAILED_TO_DELETE_TRUST_ANCHOR_HINT = "Failed to delete trust anchor hint"
+    const val TRUST_ANCHOR_HINT_ALREADY_EXISTS = "Trust anchor hint already exists"
+
     // Metadata Policy errors
     const val ENTITY_CONFIGURATION_METADATA_POLICY_ALREADY_EXISTS =
             "Entity configuration metadata policy already exists"

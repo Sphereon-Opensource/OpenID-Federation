@@ -12,6 +12,10 @@ tags:
     description: Subordinate entity management
   - name: trust-marks
     description: Trust Mark management and operations
+  - name: trust-anchor-hints
+    description: Trust anchor hint management
+  - name: constraints
+    description: Subordinate constraint management
   - name: system
     description: System and operation logs
 
@@ -24,7 +28,7 @@ info:
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-  version: 0.20.13-d42
+  version: 0.25.0-1.1-d4
 servers:
   - url: /
     description: Admin Server
@@ -554,6 +558,212 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminErrorResponse'
+
+  '/trust-anchor-hints':
+    get:
+      tags:
+        - trust-anchor-hints
+      summary: Get trust anchor hints
+      operationId: getTrustAnchorHints
+      description: Retrieve all trust anchor hints for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Successfully retrieved trust anchor hints
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustAnchorHintsResponse'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+    post:
+      tags:
+        - trust-anchor-hints
+      summary: Create a trust anchor hint
+      operationId: createTrustAnchorHint
+      description: Add a new trust anchor hint for the specified account.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        description: Trust anchor hint data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTrustAnchorHint'
+      responses:
+        '201':
+          description: Trust anchor hint created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustAnchorHint'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/trust-anchor-hints/{id}':
+    delete:
+      tags:
+        - trust-anchor-hints
+      summary: Delete a trust anchor hint
+      description: Remove a trust anchor hint by its ID for the specified account.
+      operationId: deleteTrustAnchorHint
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the trust anchor hint to be deleted.
+      responses:
+        '200':
+          description: Trust anchor hint deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustAnchorHint'
+        '404':
+          description: Trust anchor hint or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+
+  '/subordinates/{subordinateId}/constraints':
+    get:
+      tags:
+        - constraints
+      summary: Get subordinate constraints
+      operationId: getSubordinateConstraints
+      description: Retrieve constraints for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Successfully retrieved subordinate constraints
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateConstraints'
+        '404':
+          description: Subordinate or constraints not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+    put:
+      tags:
+        - constraints
+      summary: Create or update subordinate constraints
+      operationId: setSubordinateConstraints
+      description: Set constraints for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the subordinate.
+      requestBody:
+        description: Constraints data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubordinateConstraints'
+      responses:
+        '200':
+          description: Constraints set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubordinateConstraints'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+    delete:
+      tags:
+        - constraints
+      summary: Delete subordinate constraints
+      operationId: deleteSubordinateConstraints
+      description: Remove constraints for the specified subordinate.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: subordinateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The ID of the subordinate.
+      responses:
+        '200':
+          description: Constraints deleted successfully
+        '404':
+          description: Subordinate or constraints not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+
   '/entity-statement':
     get:
       tags:
@@ -1672,7 +1882,7 @@ components:
             type: object
             required:
               - sub
-              - trust_mark_id
+              - trust_mark_type
             properties:
               sub:
                 type: string
@@ -1680,7 +1890,7 @@ components:
                 example: http://localhost:8080/trust-mark-holder
                 minLength: 10
                 maxLength: 2048
-              trust_mark_id:
+              trust_mark_type:
                 type: string
                 description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
                 example: http://localhost:8080/trust-mark-types/exampleType
@@ -1994,7 +2204,7 @@ components:
     CreateReceivedTrustMark:
       type: object
       properties:
-        trust_mark_id:
+        trust_mark_type:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -2003,7 +2213,7 @@ components:
           description: The received Trust Mark JWT.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required:
-        - trust_mark_id
+        - trust_mark_type
         - jwt
 
     CreateSubordinate:
@@ -2021,13 +2231,13 @@ components:
       description: Data Transfer Object for creating a Trust Mark.
       required:
         - sub
-        - trust_mark_id
+        - trust_mark_type
       properties:
         sub:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        trust_mark_id:
+        trust_mark_type:
           type: string
           description: Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.
           example: https://trustframework.example.com/marks/12345
@@ -2053,7 +2263,7 @@ components:
       required:
         - jwt
         - account_id
-        - trust_mark_id
+        - trust_mark_type
         - sub
         - trust_mark_value
         - iat
@@ -2068,10 +2278,9 @@ components:
           format: uuid
           description: The id of the trustmark owner account.
           example: "123e4567-e89b-12d3-a456-426614174000"
-        trust_mark_id:
+        trust_mark_type:
           type: string
-          format: uuid
-          description: The id of the trustmark type.
+          description: The Trust Mark Type identifier.
         sub:
           type: string
           description: The entity the Trust Mark applies to.
@@ -2135,6 +2344,12 @@ components:
               type: array
               items:
                 type: string
+            trust_anchor_hints:
+              type: array
+              description: 'An array of Entity Identifiers of Trust Anchors that the Entity suggests for trust chain resolution.'
+              items:
+                type: string
+                format: uri
             trust_marks:
               type: array
               description: 'An array of JSON objects, each representing a Trust Mark.'
@@ -2216,6 +2431,11 @@ components:
           type: string
           format: uri
           description: URL for the homepage of the organization.
+        endpoint_auth_signing_alg_values_supported:
+          type: array
+          description: JSON array containing a list of the JWS signing algorithms supported for endpoint authentication.
+          items:
+            type: string
 
     FederationHistoricalKeysResponse:
       type: object
@@ -2383,6 +2603,12 @@ components:
         trust_chain:
           type: array
           description: An optional list of trust chain certificates or keys
+          items:
+            type: string
+          nullable: true
+        peer_trust_chain:
+          type: array
+          description: An optional trust chain for the peer entity, used in entity-to-entity communication.
           items:
             type: string
           nullable: true
@@ -2554,9 +2780,9 @@ components:
           format: uuid
           description: The account ID of the Trust Mark holder.
           example: "123e4567-e89b-12d3-a456-426614174000"
-        trust_mark_id:
+        trust_mark_type:
           type: string
-          description: The Trust Mark type identifier.
+          description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         jwt:
           type: string
@@ -2760,6 +2986,8 @@ components:
               type: string
               format: uri
               description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
+            constraints:
+              $ref: '#/components/schemas/Constraints'
 
     SubordinateStatementPayload:
       allOf:
@@ -2784,6 +3012,8 @@ components:
               type: string
               format: uri
               description: String containing the fetch endpoint URL from which the Entity Subordinate Statement was issued.
+            constraints:
+              $ref: '#/components/schemas/Constraints'
 
     StatusResponse:
       type: object
@@ -2796,16 +3026,16 @@ components:
     TrustMark:
       type: object
       properties:
-        id:
+        trust_mark_type:
           type: string
-          description: The Trust Mark identifier. It MUST be the same value as the id claim contained in the Trust Mark JWT.
-          example: example-trust-mark-id
+          description: The Trust Mark Type identifier. It MUST be the same value as the trust_mark_type claim contained in the Trust Mark JWT.
+          example: https://example.com/trust-marks/member
         trust_mark:
           type: string
           description: A signed JSON Web Token that represents a Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
       required:
-        - id
+        - trust_mark_type
         - trust_mark
 
     TrustMarkIssuersResponse:
@@ -2904,7 +3134,7 @@ components:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        id:
+        trust_mark_type:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -2932,7 +3162,7 @@ components:
     TrustMarkListRequest:
       type: object
       properties:
-        trust_mark_id:
+        trust_mark_type:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -2941,12 +3171,12 @@ components:
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
       required:
-        - trust_mark_id
+        - trust_mark_type
 
     TrustMarkRequest:
       type: object
       properties:
-        trust_mark_id:
+        trust_mark_type:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -2955,7 +3185,7 @@ components:
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
       required:
-        - trust_mark_id
+        - trust_mark_type
         - sub
 
     TrustMarkStatusRequest:
@@ -2965,7 +3195,7 @@ components:
           type: string
           description: The entity the Trust Mark applies to.
           example: https://entity.example.com
-        trust_mark_id:
+        trust_mark_type:
           type: string
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
@@ -2975,7 +3205,7 @@ components:
           example: 1706031234
       required:
         - sub
-        - trust_mark_id
+        - trust_mark_type
 
     TrustMarkStatusResponse:
       type: object
@@ -3057,3 +3287,111 @@ components:
           type: string
       required:
         - isValid
+
+    TrustAnchorHintsResponse:
+      type: object
+      required:
+        - trustAnchorHints
+      properties:
+        trustAnchorHints:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustAnchorHint'
+
+    TrustAnchorHint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        identifier:
+          type: string
+        accountId:
+          type: string
+          format: uuid
+      required:
+        - id
+        - identifier
+        - accountId
+
+    CreateTrustAnchorHint:
+      type: object
+      properties:
+        identifier:
+          type: string
+          description: The identifier of the trust anchor hint (Entity Identifier of a Trust Anchor).
+          minLength: 10
+          maxLength: 2048
+      required:
+        - identifier
+
+    Constraints:
+      type: object
+      description: Constraints that apply to a subordinate entity in the trust chain.
+      properties:
+        max_path_length:
+          type: integer
+          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+        naming_constraints:
+          $ref: '#/components/schemas/NamingConstraints'
+        allowed_entity_types:
+          type: array
+          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          items:
+            type: string
+
+    NamingConstraints:
+      type: object
+      description: Constraints on Entity Identifiers of subordinate entities.
+      properties:
+        permitted:
+          type: array
+          description: Entity Identifier patterns that are permitted.
+          items:
+            type: string
+        excluded:
+          type: array
+          description: Entity Identifier patterns that are excluded.
+          items:
+            type: string
+
+    SubordinateConstraints:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier for the constraint record.
+        accountId:
+          type: string
+          format: uuid
+          description: The ID of the account.
+        subordinateId:
+          type: string
+          format: uuid
+          description: The ID of the subordinate.
+        constraints:
+          $ref: '#/components/schemas/Constraints'
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the constraints were created.
+      required:
+        - id
+        - accountId
+        - subordinateId
+        - constraints
+
+    CreateSubordinateConstraints:
+      type: object
+      properties:
+        max_path_length:
+          type: integer
+          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+        naming_constraints:
+          $ref: '#/components/schemas/NamingConstraints'
+        allowed_entity_types:
+          type: array
+          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          items:
+            type: string

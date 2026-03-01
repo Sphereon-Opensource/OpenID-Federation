@@ -170,10 +170,10 @@ class ResolveEntityCommandImpl(
                 try {
                     // Get the trust anchor config from the trust mark issuers mapping
                     val trustMarkIssuers = subEntityConfigurationStatement.trustMarkIssuers
-                    val issuers = trustMarkIssuers?.get(trustMark.id)
+                    val issuers = trustMarkIssuers?.get(trustMark.trustMarkType)
 
                     if (issuers.isNullOrEmpty()) {
-                        logger.warn("No issuers found for trust mark ${trustMark.id}")
+                        logger.warn("No issuers found for trust mark ${trustMark.trustMarkType}")
                         continue
                     }
 
@@ -183,12 +183,12 @@ class ResolveEntityCommandImpl(
 
                     if (!validationResult.isValid) {
                         verifiedTrustMarks.add(trustMark)
-                        logger.debug("Trust mark ${trustMark.id} verified successfully")
+                        logger.debug("Trust mark ${trustMark.trustMarkType} verified successfully")
                     } else {
-                        logger.warn("Trust mark ${trustMark.id} verification failed: ${validationResult.errorMessage}")
+                        logger.warn("Trust mark ${trustMark.trustMarkType} verification failed: ${validationResult.errorMessage}")
                     }
                 } catch (e: Exception) {
-                    logger.warn("Failed to verify trust mark ${trustMark.id}: ${e.message}")
+                    logger.warn("Failed to verify trust mark ${trustMark.trustMarkType}: ${e.message}")
                 }
             }
 

@@ -74,8 +74,8 @@ class VerifyTrustMarkCommandImpl(
                 ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required issuer claim"))
 
             // 4. Get Trust Mark identifier
-            val trustMarkId = decodedTrustMark.payload["id"]?.jsonPrimitive?.content
-                ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required 'id' claim"))
+            val trustMarkId = decodedTrustMark.payload["trust_mark_type"]?.jsonPrimitive?.content
+                ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required 'trust_mark_type' claim"))
 
             // 5. Fetch issuer's configuration and verify signature
             logger.debug("Fetching issuer configuration for signature verification")

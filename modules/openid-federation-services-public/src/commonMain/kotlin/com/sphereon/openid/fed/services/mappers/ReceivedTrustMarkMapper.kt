@@ -8,7 +8,7 @@ fun ReceivedTrustMarkEntity.toDTO(): ReceivedTrustMark {
     return ReceivedTrustMark(
         id = this.id,
         accountId = this.account_id,
-        trustMarkId = this.trust_mark_id,
+        trustMarkType = this.trust_mark_id,
         jwt = this.jwt,
         createdAt = this.created_at?.toString()
     )

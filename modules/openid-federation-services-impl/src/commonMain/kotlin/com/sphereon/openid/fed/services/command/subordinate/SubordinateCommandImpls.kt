@@ -18,6 +18,7 @@ import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
+import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.Subordinate
@@ -197,7 +198,15 @@ class GetSubordinateStatementCommandImpl(
                 .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsList()
 
-            buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList)
+            // Load constraints for this subordinate
+            val constraintEntity = Persistence.subordinateConstraintQueries
+                .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
+                .executeAsOneOrNull()
+            val constraints = constraintEntity?.let {
+                try { Json.decodeFromString<Constraints>(it.constraints) } catch (_: Exception) { null }
+            }
+
+            buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList, constraints)
         } catch (e: Exception) {
             logger.error("Failed to generate subordinate statement for ID: $subordinateId", e)
             federationErr(ServerError("Failed to generate subordinate statement", e.message, e))
@@ -208,7 +217,8 @@ class GetSubordinateStatementCommandImpl(
         tenantId: String,
         subordinate: SubordinateEntity,
         subordinateJwks: List<com.sphereon.openid.fed.openapi.models.Jwk>,
-        subordinateMetadataList: List<SubordinateMetadataEntity>
+        subordinateMetadataList: List<SubordinateMetadataEntity>,
+        constraints: Constraints? = null
     ): IdkResult<SubordinateStatement, IdkError> {
         val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
@@ -229,6 +239,10 @@ class GetSubordinateStatementCommandImpl(
         subordinateMetadataList.forEach {
             val metadataJson = Json.parseToJsonElement(it.metadata).jsonObject
             statement.metadata(Pair(it.key, metadataJson))
+        }
+
+        if (constraints != null) {
+            statement.constraints(constraints)
         }
 
         return IdkResult.ok(statement.build())

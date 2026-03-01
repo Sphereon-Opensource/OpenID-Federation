@@ -5,7 +5,7 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkPayload
 class TrustMarkObjectBuilder {
     private var iss: String? = null
     private var sub: String? = null
-    private var id: String? = null
+    private var trustMarkType: String? = null
     private var iat: Int? = null
     private var logoUri: String? = null
     private var exp: Int? = null
@@ -14,7 +14,7 @@ class TrustMarkObjectBuilder {
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun sub(sub: String) = apply { this.sub = sub }
-    fun id(id: String) = apply { this.id = id }
+    fun trustMarkType(trustMarkType: String) = apply { this.trustMarkType = trustMarkType }
     fun iat(iat: Int) = apply { this.iat = iat }
     fun logoUri(logoUri: String?) = apply { this.logoUri = logoUri }
     fun exp(exp: Int?) = apply { this.exp = exp }
@@ -25,7 +25,7 @@ class TrustMarkObjectBuilder {
         return TrustMarkPayload(
             iss = iss ?: throw IllegalArgumentException("iss must be provided"),
             sub = sub ?: throw IllegalArgumentException("sub must be provided"),
-            id = id ?: throw IllegalArgumentException("id must be provided"),
+            trustMarkType = trustMarkType ?: throw IllegalArgumentException("trustMarkType must be provided"),
             iat = iat ?: throw IllegalArgumentException("iat must be provided"),
             logoUri = logoUri,
             exp = exp,

@@ -1,0 +1,42 @@
+create:
+INSERT INTO SubordinateConstraint (
+    account_id,
+    subordinate_id,
+    constraints
+) VALUES (?, ?, ?)
+RETURNING *;
+
+update:
+UPDATE SubordinateConstraint
+SET constraints = ?,
+    deleted_at = NULL
+WHERE subordinate_id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+delete:
+UPDATE SubordinateConstraint
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+deleteBySubordinateId:
+UPDATE SubordinateConstraint
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE subordinate_id = ?
+AND deleted_at IS NULL
+RETURNING *;
+
+findBySubordinateId:
+SELECT *
+FROM SubordinateConstraint
+WHERE subordinate_id = ?
+AND deleted_at IS NULL;
+
+findByAccountIdAndSubordinateId:
+SELECT *
+FROM SubordinateConstraint
+WHERE account_id = ?
+AND subordinate_id = ?
+AND deleted_at IS NULL;

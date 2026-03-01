@@ -8,6 +8,9 @@ import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.core.api.http.describe.OpenApiHints
 import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
+import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
+import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
 import com.sphereon.openid.fed.server.admin.api.http.command.*
 import com.sphereon.di.context.Named
 import me.tatarka.inject.annotations.Inject
@@ -73,6 +76,10 @@ class AdminHttpAdapter(
     private val listAuthorityHintsEndpoint: ListAuthorityHintsEndpointCommand,
     private val createAuthorityHintEndpoint: CreateAuthorityHintEndpointCommand,
     private val deleteAuthorityHintEndpoint: DeleteAuthorityHintEndpointCommand,
+    // Trust anchor hint endpoints
+    private val listTrustAnchorHintsEndpoint: ListTrustAnchorHintsEndpointCommand,
+    private val createTrustAnchorHintEndpoint: CreateTrustAnchorHintEndpointCommand,
+    private val deleteTrustAnchorHintEndpoint: DeleteTrustAnchorHintEndpointCommand,
     // Critical claim endpoints
     private val listCriticalClaimsEndpoint: ListCriticalClaimsEndpointCommand,
     private val createCriticalClaimEndpoint: CreateCriticalClaimEndpointCommand,
@@ -85,6 +92,10 @@ class AdminHttpAdapter(
     private val listReceivedTrustMarksEndpoint: ListReceivedTrustMarksEndpointCommand,
     private val createReceivedTrustMarkEndpoint: CreateReceivedTrustMarkEndpointCommand,
     private val deleteReceivedTrustMarkEndpoint: DeleteReceivedTrustMarkEndpointCommand,
+    // Subordinate constraint endpoints
+    private val getSubordinateConstraintsEndpoint: GetSubordinateConstraintsEndpointCommand,
+    private val setSubordinateConstraintsEndpoint: SetSubordinateConstraintsEndpointCommand,
+    private val deleteSubordinateConstraintsEndpoint: DeleteSubordinateConstraintsEndpointCommand,
     // Log endpoints
     private val listLogsEndpoint: ListLogsEndpointCommand,
     // Cache endpoints
@@ -153,6 +164,10 @@ class AdminHttpAdapter(
         listAuthorityHintsEndpoint,
         createAuthorityHintEndpoint,
         deleteAuthorityHintEndpoint,
+        // Trust anchor hint endpoints
+        listTrustAnchorHintsEndpoint,
+        createTrustAnchorHintEndpoint,
+        deleteTrustAnchorHintEndpoint,
         // Critical claim endpoints
         listCriticalClaimsEndpoint,
         createCriticalClaimEndpoint,
@@ -165,6 +180,10 @@ class AdminHttpAdapter(
         listReceivedTrustMarksEndpoint,
         createReceivedTrustMarkEndpoint,
         deleteReceivedTrustMarkEndpoint,
+        // Subordinate constraint endpoints
+        getSubordinateConstraintsEndpoint,
+        setSubordinateConstraintsEndpoint,
+        deleteSubordinateConstraintsEndpoint,
         // Log endpoints
         listLogsEndpoint,
         // Cache endpoints
@@ -181,6 +200,8 @@ class AdminHttpAdapter(
             "entity-statement",
             "metadata",
             "authority-hints",
+            "trust-anchor-hints",
+            "constraints",
             "critical-claims",
             "metadata-policy",
             "received-trust-marks",

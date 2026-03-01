@@ -909,6 +909,26 @@ data class ServerError(
 }
 
 /**
+ * Error that preserves the original HTTP status code when round-tripping through IdkError.
+ * Used by toFederationResult() to avoid losing status information when converting IdkError back to FederationError.
+ */
+data class PreservedError(
+    override val httpStatusValue: Int,
+    val reason: String,
+    override val errorCode: String,
+    val causeDescription: String? = null,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = errorCode
+    override val httpStatus: HttpStatusCode = HttpStatusCode.fromValue(httpStatusValue)
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.preserved-error",
+        i18nParams = mapOf("reason" to reason),
+        defaultMessage = reason
+    )
+}
+
+/**
  * The service is temporarily unavailable
  */
 data class ServiceUnavailableError(

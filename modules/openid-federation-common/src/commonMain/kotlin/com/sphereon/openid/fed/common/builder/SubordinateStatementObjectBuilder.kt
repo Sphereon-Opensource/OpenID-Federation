@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.common.builder
 
 import com.sphereon.openid.fed.openapi.models.BaseStatementJwks
+import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 import kotlinx.serialization.json.JsonObject
@@ -16,6 +17,7 @@ class SubordinateStatementObjectBuilder {
     private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
     private var source_endpoint: String? = null
+    private var constraints: Constraints? = null
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun sub(sub: String) = apply { this.sub = sub }
@@ -46,6 +48,10 @@ class SubordinateStatementObjectBuilder {
         this.source_endpoint = sourceEndpoint
     }
 
+    fun constraints(constraints: Constraints) = apply {
+        this.constraints = constraints
+    }
+
     fun build(): SubordinateStatement {
         return SubordinateStatement(
             iss = iss ?: throw IllegalArgumentException("iss must be provided"),
@@ -60,6 +66,7 @@ class SubordinateStatementObjectBuilder {
             metadataPolicy = JsonObject(metadata_policy),
             metadataPolicyCrit = JsonObject(metadata_policy_crit),
             sourceEndpoint = source_endpoint,
+            constraints = constraints,
         )
     }
 }

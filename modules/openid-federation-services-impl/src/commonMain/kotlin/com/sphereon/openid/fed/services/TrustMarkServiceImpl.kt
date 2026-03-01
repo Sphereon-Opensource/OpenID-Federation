@@ -1,12 +1,19 @@
 package com.sphereon.openid.fed.services
 
+import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.core.error.KeyNotFoundError
+import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.andThenSuspend
+import com.sphereon.openid.fed.core.error.toErr
 import com.sphereon.openid.fed.core.error.toFederationResult
 
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkType
+import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.TrustMark
 import com.sphereon.openid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkRequest
@@ -14,10 +21,22 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkType
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.openid.fed.services.command.trustMark.*
+import kotlinx.serialization.Serializable
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
+
+/**
+ * Payload for the Trust Mark Status Response JWT per OpenID Federation 1.1 Section 8.4.
+ */
+@Serializable
+private data class TrustMarkStatusResponsePayload(
+    val iss: String,
+    val iat: Int,
+    val trust_mark: String,
+    val status: String
+)
 
 @Inject
 @SingleIn(SessionScope::class)
@@ -35,7 +54,10 @@ class TrustMarkServiceImpl(
     private val deleteTrustMarkCommand: DeleteTrustMarkCommand,
     private val getTrustMarkStatusCommand: GetTrustMarkStatusCommand,
     private val getTrustMarkedSubsCommand: GetTrustMarkedSubsCommand,
-    private val getTrustMarkCommand: GetTrustMarkCommand
+    private val getTrustMarkCommand: GetTrustMarkCommand,
+    private val jwkService: JwkService,
+    private val jwtService: JwtService,
+    private val tenantContextResolver: TenantContextResolver
 ) : TrustMarkService {
 
     override suspend fun createTrustMarkType(tenantId: String, createDto: CreateTrustMarkType): FederationResult<TrustMarkType> =
@@ -70,6 +92,50 @@ class TrustMarkServiceImpl(
 
     override suspend fun getTrustMarkStatus(tenantId: String, request: TrustMarkStatusRequest): FederationResult<Boolean> =
         getTrustMarkStatusCommand.execute(GetTrustMarkStatusArgs(tenantId, request)).toFederationResult()
+
+    override suspend fun getSignedTrustMarkStatusJwt(tenantId: String, request: TrustMarkStatusRequest): FederationResult<String> {
+        return getTrustMarkStatus(tenantId, request).andThenSuspend { isActive ->
+            // Get the trust mark JWT for inclusion in the response
+            val trustMarkJwt = getTrustMark(tenantId, TrustMarkRequest(
+                sub = request.sub,
+                trustMarkType = request.trustMarkType
+            ))
+
+            val trustMarkValue = if (trustMarkJwt.isOk) trustMarkJwt.value else ""
+            val status = if (isActive) "active" else "invalid"
+
+            val issuer = tenantContextResolver.resolveIdentifier(tenantId)
+                ?: return@andThenSuspend ServerError("Cannot resolve issuer identifier", null, null).toErr()
+
+            val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
+            if (keysResult.isErr) {
+                return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
+            }
+
+            val keys = keysResult.value
+            if (keys.isEmpty()) {
+                return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
+            }
+
+            val key = keys[0]
+            val iat = (System.currentTimeMillis() / 1000).toInt()
+
+            val payload = TrustMarkStatusResponsePayload(
+                iss = issuer,
+                iat = iat,
+                trust_mark = trustMarkValue,
+                status = status
+            )
+
+            val header = JwtHeader(
+                kid = key.kid,
+                alg = key.alg ?: "RS256",
+                typ = "trust-mark-status-response+jwt"
+            )
+
+            jwtService.signPayload(payload, header, key.kid, key.kmsKeyRef, key.kms)
+        }
+    }
 
     override suspend fun getTrustMarkedSubs(tenantId: String, request: TrustMarkListRequest): FederationResult<Array<String>> =
         getTrustMarkedSubsCommand.execute(GetTrustMarkedSubsArgs(tenantId, request)).toFederationResult()

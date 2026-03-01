@@ -33,27 +33,39 @@ class FederationHttpAdapterDescriptorProvider : HttpAdapterDescriptorProvider {
             // Entity Configuration endpoints
             GetEntityConfigurationEndpointCommand.ENDPOINT,
             GetAccountEntityConfigurationEndpointCommand.ENDPOINT,
-            // List subordinates endpoints
+            // List subordinates endpoints (GET + POST)
             ListSubordinatesRootEndpointCommand.ENDPOINT,
+            PostListSubordinatesRootEndpointCommand.ENDPOINT,
             ListSubordinatesAccountEndpointCommand.ENDPOINT,
-            // Fetch subordinate statement endpoints
+            PostListSubordinatesAccountEndpointCommand.ENDPOINT,
+            // Fetch subordinate statement endpoints (GET + POST)
             FetchSubordinateRootEndpointCommand.ENDPOINT,
+            PostFetchSubordinateRootEndpointCommand.ENDPOINT,
             FetchSubordinateAccountEndpointCommand.ENDPOINT,
-            // Trust mark status endpoints
+            PostFetchSubordinateAccountEndpointCommand.ENDPOINT,
+            // Trust mark status endpoints (GET + POST)
+            GetTrustMarkStatusRootEndpointCommand.ENDPOINT,
             TrustMarkStatusRootEndpointCommand.ENDPOINT,
+            GetTrustMarkStatusAccountEndpointCommand.ENDPOINT,
             TrustMarkStatusAccountEndpointCommand.ENDPOINT,
-            // Trust mark list endpoints
+            // Trust mark list endpoints (GET + POST)
             TrustMarkListRootEndpointCommand.ENDPOINT,
+            PostTrustMarkListRootEndpointCommand.ENDPOINT,
             TrustMarkListAccountEndpointCommand.ENDPOINT,
-            // Get trust mark endpoints
+            PostTrustMarkListAccountEndpointCommand.ENDPOINT,
+            // Get trust mark endpoints (GET + POST)
             GetTrustMarkRootEndpointCommand.ENDPOINT,
+            PostGetTrustMarkRootEndpointCommand.ENDPOINT,
             GetTrustMarkAccountEndpointCommand.ENDPOINT,
+            PostGetTrustMarkAccountEndpointCommand.ENDPOINT,
             // Historical keys endpoints
             HistoricalKeysRootEndpointCommand.ENDPOINT,
             HistoricalKeysAccountEndpointCommand.ENDPOINT,
-            // Resolve endpoints
+            // Resolve endpoints (GET + POST)
             ResolveRootEndpointCommand.ENDPOINT,
-            ResolveAccountEndpointCommand.ENDPOINT
+            PostResolveRootEndpointCommand.ENDPOINT,
+            ResolveAccountEndpointCommand.ENDPOINT,
+            PostResolveAccountEndpointCommand.ENDPOINT
         )
     )
 }

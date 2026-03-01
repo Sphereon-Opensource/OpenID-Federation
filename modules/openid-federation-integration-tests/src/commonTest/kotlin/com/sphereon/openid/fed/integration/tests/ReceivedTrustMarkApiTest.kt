@@ -98,7 +98,7 @@ class ReceivedTrustMarkApiTest {
                 }
                 setBody(
                     CreateReceivedTrustMark(
-                        trustMarkId = testTrustMarkId!!,
+                        trustMarkType = testTrustMarkId!!,
                         jwt = testJwt!!
                     )
                 )
@@ -107,7 +107,7 @@ class ReceivedTrustMarkApiTest {
             assertEquals(HttpStatusCode.Created, response.status)
             val createdTrustMark = response.body<ReceivedTrustMark>()
             assertNotNull(createdTrustMark.id)
-            assertEquals(testTrustMarkId, createdTrustMark.trustMarkId)
+            assertEquals(testTrustMarkId, createdTrustMark.trustMarkType)
             assertEquals(testJwt, createdTrustMark.jwt)
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")
@@ -125,7 +125,7 @@ class ReceivedTrustMarkApiTest {
                 }
                 setBody(
                     CreateReceivedTrustMark(
-                        trustMarkId = testTrustMarkId!!,
+                        trustMarkType = testTrustMarkId!!,
                         jwt = testJwt!!
                     )
                 )
@@ -141,7 +141,7 @@ class ReceivedTrustMarkApiTest {
             assertEquals(HttpStatusCode.OK, response.status)
             val trustMarksResponse = response.body<ReceivedTrustMarksResponse>()
             assertTrue(trustMarksResponse.receivedTrustMarks.isNotEmpty())
-            assertTrue(trustMarksResponse.receivedTrustMarks.any { it.trustMarkId == testTrustMarkId })
+            assertTrue(trustMarksResponse.receivedTrustMarks.any { it.trustMarkType == testTrustMarkId })
         } catch (e: Exception) {
             fail("Request failed: ${e.message}")
         }
@@ -158,7 +158,7 @@ class ReceivedTrustMarkApiTest {
                 }
                 setBody(
                     CreateReceivedTrustMark(
-                        trustMarkId = testTrustMarkId!!,
+                        trustMarkType = testTrustMarkId!!,
                         jwt = testJwt!!
                     )
                 )
@@ -210,7 +210,7 @@ class ReceivedTrustMarkApiTest {
                 }
                 setBody(
                     CreateReceivedTrustMark(
-                        trustMarkId = testTrustMarkId!!,
+                        trustMarkType = testTrustMarkId!!,
                         jwt = testJwt!!
                     )
                 )

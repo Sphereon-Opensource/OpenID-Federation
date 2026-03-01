@@ -113,6 +113,7 @@ class FindEntityConfigurationByAccountCommandImpl(
         addMetadata(tenantId, builder)
         addMetadataPolicy(tenantId, builder)
         addAuthorityHints(tenantId, builder)
+        addTrustAnchorHints(tenantId, builder)
         addCrits(tenantId, builder)
         addTrustMarkIssuers(tenantId, builder)
         addReceivedTrustMarks(tenantId, builder)
@@ -145,6 +146,13 @@ class FindEntityConfigurationByAccountCommandImpl(
             .executeAsList()
             .map { it.identifier }
             .forEach { builder.authorityHint(it) }
+    }
+
+    private fun addTrustAnchorHints(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.trustAnchorHintQueries.findByAccountId(tenantId)
+            .executeAsList()
+            .map { it.identifier }
+            .forEach { builder.trustAnchorHint(it) }
     }
 
     private fun addMetadata(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {

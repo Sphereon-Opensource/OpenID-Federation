@@ -170,7 +170,7 @@ class TrustMarkApiTest {
 
         val requestBody =
             CreateTrustMarkRequest(
-                trustMarkId = createdTrustMarkTypeId!!, // The ID of the TrustMarkType
+                trustMarkType = createdTrustMarkTypeId!!, // The ID of the TrustMarkType
                 sub = testAccountIdentifier!! // Entity itself for simplicity
             )
 
@@ -229,7 +229,7 @@ class TrustMarkApiTest {
             setBody(
                 CreateTrustMarkRequest(
                     sub = sub,
-                    trustMarkId = trustMarkId,
+                    trustMarkType = trustMarkId,
                     logoUri = logoUri,
                     exp = exp,
                     ref = ref,
@@ -281,7 +281,7 @@ class TrustMarkApiTest {
 
             val requestBody =
                 CreateTrustMarkRequest(
-                    trustMarkId = createdTrustMarkTypeId!!,
+                    trustMarkType = createdTrustMarkTypeId!!,
                     sub = testAccountIdentifier!!
                 )
 
@@ -332,7 +332,7 @@ class TrustMarkApiTest {
             assertEquals(HttpStatusCode.OK, verifyGetResponse.status)
             val remainingMarks = verifyGetResponse.body<TrustMarksResponse>().trustMarks
             assertTrue(
-                remainingMarks?.none { it.id == markIdToDelete } == true,
+                remainingMarks?.none { it.trustMark == createdMark.trustMarkValue } == true,
                 "Deleted mark should not be present"
             )
         } catch (e: Exception) {
@@ -349,7 +349,7 @@ class TrustMarkApiTest {
             val nonExistentUsername = "non-existent-tm-user-${System.currentTimeMillis()}"
             val requestBody =
                 CreateTrustMarkRequest(
-                    trustMarkId = createdTrustMarkTypeId ?: "dummy-tmt-id",
+                    trustMarkType = createdTrustMarkTypeId ?: "dummy-tmt-id",
                     sub = "subject"
                 )
 
@@ -422,7 +422,7 @@ class TrustMarkApiTest {
 
             assertNotNull(trustMarkResponse.id, "Trust mark ID should not be null when dryRun is false")
             assertEquals("https://subject-entity.example.com", trustMarkResponse.sub, "Subject mismatch")
-            assertEquals(trustMarkTypeId, trustMarkResponse.trustMarkId, "Trust mark type ID mismatch")
+            assertEquals(trustMarkTypeId, trustMarkResponse.trustMarkType, "Trust mark type ID mismatch")
             assertNotNull(trustMarkResponse.accountId, "Account ID should not be null")
             assertNotNull(trustMarkResponse.trustMarkValue, "Trust mark value (JWT) should not be null")
             assertTrue(trustMarkResponse.trustMarkValue.isNotEmpty(), "Trust mark value should not be empty")

@@ -17,7 +17,7 @@ fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
 
 fun TrustMarkEntity.toDTO(): TrustMark {
     return TrustMark(
-        id = this.trust_mark_id,
+        trustMarkType = this.trust_mark_id,
         trustMark = this.trust_mark_value,
     )
 }
@@ -26,7 +26,7 @@ fun TrustMarkEntity.toCreateTrustMarkResult(): CreateTrustMarkResult {
     return CreateTrustMarkResult(
         id = this.id,
         accountId = this.account_id,
-        trustMarkId = this.trust_mark_id,
+        trustMarkType = this.trust_mark_id,
         sub = this.sub,
         trustMarkValue = this.trust_mark_value,
         iat = this.iat.toInt(),
@@ -36,7 +36,7 @@ fun TrustMarkEntity.toCreateTrustMarkResult(): CreateTrustMarkResult {
 
 fun ReceivedTrustMark.toTrustMark(): TrustMark {
     return TrustMark(
-        id = this.trust_mark_id,
+        trustMarkType = this.trust_mark_id,
         trustMark = this.jwt
     )
 }

@@ -14,6 +14,7 @@ class EntityConfigurationStatementObjectBuilder {
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadataPolicy: MutableMap<String, JsonObject> = mutableMapOf()
     private val authorityHints: MutableList<String> = mutableListOf()
+    private val trustAnchorHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
     private val trustMarks: MutableList<TrustMark> = mutableListOf()
@@ -33,6 +34,10 @@ class EntityConfigurationStatementObjectBuilder {
 
     fun authorityHint(hint: String) = apply {
         this.authorityHints.add(hint)
+    }
+
+    fun trustAnchorHint(hint: String) = apply {
+        this.trustAnchorHints.add(hint)
     }
 
     fun crit(claim: String) = apply {
@@ -61,6 +66,7 @@ class EntityConfigurationStatementObjectBuilder {
             metadata = JsonObject(metadata),
             metadataPolicy = if (metadataPolicy.isNotEmpty()) JsonObject(metadataPolicy) else null,
             authorityHints = if (authorityHints.isNotEmpty()) authorityHints else null,
+            trustAnchorHints = if (trustAnchorHints.isNotEmpty()) trustAnchorHints else null,
             crit = if (crit.isNotEmpty()) crit else null,
             trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v }.toMap(),
             trustMarks = trustMarks

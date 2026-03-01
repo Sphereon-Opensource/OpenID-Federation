@@ -9,3 +9,6 @@ INSERT INTO SubordinateStatement (
 
 findByIssAndSub:
 SELECT * FROM SubordinateStatement WHERE iss = ? AND sub = ?  ORDER BY created_at DESC LIMIT 1;
+
+findByIss:
+SELECT * FROM SubordinateStatement WHERE iss = ?;

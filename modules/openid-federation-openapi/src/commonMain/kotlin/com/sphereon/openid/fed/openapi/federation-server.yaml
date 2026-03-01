@@ -8,7 +8,7 @@ info:
   license:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-  version: 0.20.13-d42
+  version: 0.25.0-1.1-d4
 servers:
   - url: http://localhost:8080
     description: Federation Server
@@ -72,9 +72,9 @@ paths:
           required: false
           schema:
             type: boolean
-        - name: trust_mark_id
+        - name: trust_mark_type
           in: query
-          description: 'The value of this parameter is a Trust Mark identifier. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark identifier has been issued and is still valid.'
+          description: 'The value of this parameter is a Trust Mark Type identifier. If the responder has issued Trust Marks with the specified Trust Mark type, the list in the response is filtered to include only the Immediate Subordinates for which that Trust Mark type has been issued and is still valid.'
           required: false
           schema:
             type: string
@@ -99,6 +99,45 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: listSubordinates
+    post:
+      tags:
+        - federation
+      summary: List Subordinates (POST)
+      description: List the entity Subordinates for the specified criteria using POST.
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                entity_type:
+                  type: string
+                  description: 'Entity Type Identifier to filter by.'
+                trust_marked:
+                  type: boolean
+                  description: 'If true, only return subordinates with valid Trust Marks.'
+                trust_mark_type:
+                  type: string
+                  description: 'Trust Mark Type identifier to filter by.'
+                intermediate:
+                  type: boolean
+                  description: 'If true, filter to only Intermediate entities.'
+      responses:
+        '200':
+          description: Successful fetch of Subordinates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: listSubordinatesPost
   /fetch:
     get:
       tags:
@@ -113,11 +152,18 @@ paths:
           schema:
             type: string
             format: uri
+        - name: iss
+          in: query
+          description: The Entity Identifier of the issuer of the Subordinate Statement. Used to select the issuer account when multiple accounts are hosted.
+          required: false
+          schema:
+            type: string
+            format: uri
       responses:
         '200':
           description: Successful fetch of the Subordinate Statement
           content:
-            application/resolve-response+jwt:
+            application/entity-statement+jwt:
               schema:
                 type: string
         '400':
@@ -127,6 +173,42 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: fetchSubordinateStatement
+    post:
+      tags:
+        - federation
+      summary: Fetch Subordinate Statement (POST)
+      description: Fetch the Subordinate Statement issued by a specified entity `iss` for a subordinate entity `sub` using POST.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - sub
+              properties:
+                sub:
+                  type: string
+                  format: uri
+                  description: The subject identifier (URI) of the entity for whom the Subordinate Statement is created.
+                iss:
+                  type: string
+                  format: uri
+                  description: The Entity Identifier of the issuer of the Subordinate Statement.
+      responses:
+        '200':
+          description: Successful fetch of the Subordinate Statement
+          content:
+            application/entity-statement+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: fetchSubordinateStatementPost
   /resolve:
     get:
       tags:
@@ -140,13 +222,13 @@ paths:
           required: true
           schema:
             type: string
-        - name: anchor
+        - name: trust_anchor
           in: query
-          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity identifier.
+          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity Identifier.
           required: true
           schema:
             type: string
-        - name: type
+        - name: entity_type
           in: query
           description: 'A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.'
           required: false
@@ -164,6 +246,42 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: resolveEntityStatement
+    post:
+      tags:
+        - federation
+      summary: Resolve Entity Statement (POST)
+      description: Resolve metadata and Trust Marks for an Entity using POST.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - sub
+                - trust_anchor
+              properties:
+                sub:
+                  type: string
+                  description: The Entity Identifier of the Entity whose resolved data is requested.
+                trust_anchor:
+                  type: string
+                  description: The Trust Anchor to use when resolving the metadata.
+                entity_type:
+                  type: string
+                  description: A specific Entity Type to resolve.
+      responses:
+        '200':
+          description: Successful resolve of Entity metadata
+          content:
+            application/resolve-response+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: resolveEntityStatementPost
   /trust-mark:
     get:
       tags:
@@ -171,9 +289,9 @@ paths:
       summary: Get Trust Mark
       description: Retrieve a specific Trust Mark.
       parameters:
-        - name: trust_mark_id
+        - name: trust_mark_type
           in: query
-          description: Trust Mark identifier.
+          description: Trust Mark Type identifier.
           required: true
           schema:
             type: string
@@ -197,6 +315,41 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: getTrustMark
+    post:
+      tags:
+        - federation
+      summary: Get Trust Mark (POST)
+      description: Retrieve a specific Trust Mark using POST.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - trust_mark_type
+                - sub
+              properties:
+                trust_mark_type:
+                  type: string
+                  description: Trust Mark Type identifier.
+                sub:
+                  type: string
+                  description: The Entity Identifier of the Entity to which the Trust Mark is issued.
+      responses:
+        '200':
+          description: Successful retrieval of Trust Mark
+          content:
+            application/trust-mark+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: getTrustMarkPost
   /trust-mark-status:
     get:
       tags:
@@ -204,44 +357,20 @@ paths:
       summary: Check Trust Mark Status
       description: Check if a Trust Mark is still active.
       parameters:
-        - name: sub
-          in: query
-          required: true
-          schema:
-            type: string
-          description: The Entity Identifier of the Entity to which the Trust Mark was issued.
-        - name: trust_mark_id
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Identifier of the Trust Mark.
-        - name: iat
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: |
-            Time when the Trust Mark was issued. 
-            If not specified and the Trust Mark issuer has issued several Trust Marks 
-            with the specified identifier for the Entity identified by `sub`, the most recent one is assumed.
         - name: trust_mark
           in: query
           required: true
           schema:
             type: string
-          description: The whole Trust Mark in its JWT form.
+          description: The Trust Mark to be validated (full JWT).
       responses:
         '200':
-          description: Trust Mark status
+          description: Trust Mark status as a signed JWT
           content:
-            application/json:
+            application/trust-mark-status-response+jwt:
               schema:
-                type: object
-                properties:
-                  active:
-                    type: boolean
-                    description: Whether the Trust Mark is active or not.
+                type: string
+                description: A signed JWT containing the Trust Mark status response.
         '400':
           $ref: '#/components/responses/BadRequestError'
         '404':
@@ -249,6 +378,38 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: checkTrustMarkStatus
+    post:
+      tags:
+        - federation
+      summary: Check Trust Mark Status (POST)
+      description: Check if a Trust Mark is still active using POST.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - trust_mark
+              properties:
+                trust_mark:
+                  type: string
+                  description: The Trust Mark to be validated (full JWT).
+      responses:
+        '200':
+          description: Trust Mark status as a signed JWT
+          content:
+            application/trust-mark-status-response+jwt:
+              schema:
+                type: string
+                description: A signed JWT containing the Trust Mark status response.
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: checkTrustMarkStatusPost
   /trust-mark-list:
     get:
       tags:
@@ -256,9 +417,9 @@ paths:
       summary: List Trust Marked Entities
       description: List all Entities for which Trust Marks have been issued and are still valid.
       parameters:
-        - name: trust_mark_id
+        - name: trust_mark_type
           in: query
-          description: 'Trust Mark identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark identifier, the list in the response is filtered to include only the Entities for which that Trust Mark identifier has been issued and is still valid.'
+          description: 'Trust Mark Type identifier to filter by. If the responder has issued Trust Marks with the specified Trust Mark Type, the list in the response is filtered to include only the Entities for which that Trust Mark Type has been issued and is still valid.'
           required: true
           schema:
             type: string
@@ -283,6 +444,41 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: listTrustMarkedEntities
+    post:
+      tags:
+        - federation
+      summary: List Trust Marked Entities (POST)
+      description: List all Entities for which Trust Marks have been issued and are still valid using POST.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - trust_mark_type
+              properties:
+                trust_mark_type:
+                  type: string
+                  description: Trust Mark Type identifier to filter by.
+                sub:
+                  type: string
+                  description: The Entity Identifier to filter by.
+      responses:
+        '200':
+          description: Successful fetch of Trust Marked Entities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uri
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: listTrustMarkedEntitiesPost
   /historical-keys:
     get:
       tags:

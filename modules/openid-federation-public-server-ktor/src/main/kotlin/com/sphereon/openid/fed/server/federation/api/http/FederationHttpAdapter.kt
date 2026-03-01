@@ -33,27 +33,39 @@ class FederationHttpAdapter(
     // Entity Configuration endpoints
     private val getEntityConfigurationEndpoint: GetEntityConfigurationEndpointCommand,
     private val getAccountEntityConfigurationEndpoint: GetAccountEntityConfigurationEndpointCommand,
-    // List subordinates endpoints
+    // List subordinates endpoints (GET + POST)
     private val listSubordinatesRootEndpoint: ListSubordinatesRootEndpointCommand,
+    private val postListSubordinatesRootEndpoint: PostListSubordinatesRootEndpointCommand,
     private val listSubordinatesAccountEndpoint: ListSubordinatesAccountEndpointCommand,
-    // Fetch subordinate statement endpoints
+    private val postListSubordinatesAccountEndpoint: PostListSubordinatesAccountEndpointCommand,
+    // Fetch subordinate statement endpoints (GET + POST)
     private val fetchSubordinateRootEndpoint: FetchSubordinateRootEndpointCommand,
+    private val postFetchSubordinateRootEndpoint: PostFetchSubordinateRootEndpointCommand,
     private val fetchSubordinateAccountEndpoint: FetchSubordinateAccountEndpointCommand,
-    // Trust mark status endpoints
+    private val postFetchSubordinateAccountEndpoint: PostFetchSubordinateAccountEndpointCommand,
+    // Trust mark status endpoints (GET + POST)
+    private val getTrustMarkStatusRootEndpoint: GetTrustMarkStatusRootEndpointCommand,
     private val trustMarkStatusRootEndpoint: TrustMarkStatusRootEndpointCommand,
+    private val getTrustMarkStatusAccountEndpoint: GetTrustMarkStatusAccountEndpointCommand,
     private val trustMarkStatusAccountEndpoint: TrustMarkStatusAccountEndpointCommand,
-    // Trust mark list endpoints
+    // Trust mark list endpoints (GET + POST)
     private val trustMarkListRootEndpoint: TrustMarkListRootEndpointCommand,
+    private val postTrustMarkListRootEndpoint: PostTrustMarkListRootEndpointCommand,
     private val trustMarkListAccountEndpoint: TrustMarkListAccountEndpointCommand,
-    // Get trust mark endpoints
+    private val postTrustMarkListAccountEndpoint: PostTrustMarkListAccountEndpointCommand,
+    // Get trust mark endpoints (GET + POST)
     private val getTrustMarkRootEndpoint: GetTrustMarkRootEndpointCommand,
+    private val postGetTrustMarkRootEndpoint: PostGetTrustMarkRootEndpointCommand,
     private val getTrustMarkAccountEndpoint: GetTrustMarkAccountEndpointCommand,
+    private val postGetTrustMarkAccountEndpoint: PostGetTrustMarkAccountEndpointCommand,
     // Historical keys endpoints
     private val historicalKeysRootEndpoint: HistoricalKeysRootEndpointCommand,
     private val historicalKeysAccountEndpoint: HistoricalKeysAccountEndpointCommand,
-    // Resolve endpoints
+    // Resolve endpoints (GET + POST)
     private val resolveRootEndpoint: ResolveRootEndpointCommand,
-    private val resolveAccountEndpoint: ResolveAccountEndpointCommand
+    private val postResolveRootEndpoint: PostResolveRootEndpointCommand,
+    private val resolveAccountEndpoint: ResolveAccountEndpointCommand,
+    private val postResolveAccountEndpoint: PostResolveAccountEndpointCommand
 ) : CommandBackedHttpAdapter(
     id = ID,
     execution = execution,
@@ -70,27 +82,39 @@ class FederationHttpAdapter(
         // Entity Configuration endpoints
         getEntityConfigurationEndpoint,
         getAccountEntityConfigurationEndpoint,
-        // List subordinates endpoints
+        // List subordinates endpoints (GET + POST)
         listSubordinatesRootEndpoint,
+        postListSubordinatesRootEndpoint,
         listSubordinatesAccountEndpoint,
-        // Fetch subordinate statement endpoints
+        postListSubordinatesAccountEndpoint,
+        // Fetch subordinate statement endpoints (GET + POST)
         fetchSubordinateRootEndpoint,
+        postFetchSubordinateRootEndpoint,
         fetchSubordinateAccountEndpoint,
-        // Trust mark status endpoints
+        postFetchSubordinateAccountEndpoint,
+        // Trust mark status endpoints (GET + POST)
+        getTrustMarkStatusRootEndpoint,
         trustMarkStatusRootEndpoint,
+        getTrustMarkStatusAccountEndpoint,
         trustMarkStatusAccountEndpoint,
-        // Trust mark list endpoints
+        // Trust mark list endpoints (GET + POST)
         trustMarkListRootEndpoint,
+        postTrustMarkListRootEndpoint,
         trustMarkListAccountEndpoint,
-        // Get trust mark endpoints
+        postTrustMarkListAccountEndpoint,
+        // Get trust mark endpoints (GET + POST)
         getTrustMarkRootEndpoint,
+        postGetTrustMarkRootEndpoint,
         getTrustMarkAccountEndpoint,
+        postGetTrustMarkAccountEndpoint,
         // Historical keys endpoints
         historicalKeysRootEndpoint,
         historicalKeysAccountEndpoint,
-        // Resolve endpoints
+        // Resolve endpoints (GET + POST)
         resolveRootEndpoint,
-        resolveAccountEndpoint
+        postResolveRootEndpoint,
+        resolveAccountEndpoint,
+        postResolveAccountEndpoint
     )
 
     override val openApiHints: OpenApiHints = OpenApiHints(

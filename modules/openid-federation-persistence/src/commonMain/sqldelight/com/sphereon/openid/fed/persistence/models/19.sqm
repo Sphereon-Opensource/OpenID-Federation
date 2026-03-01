@@ -1,0 +1,13 @@
+CREATE TABLE SubordinateConstraint (
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    account_id UUID AS kotlin.String NOT NULL,
+    subordinate_id UUID AS kotlin.String NOT NULL,
+    constraints TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_SubordinateConstraintAccount FOREIGN KEY (account_id) REFERENCES Account (id),
+    CONSTRAINT FK_SubordinateConstraintSubordinate FOREIGN KEY (subordinate_id) REFERENCES Subordinate (id)
+);
+CREATE UNIQUE INDEX unique_subordinate_constraint_active
+    ON SubordinateConstraint (subordinate_id) WHERE deleted_at IS NULL;
+CREATE INDEX subordinate_constraint_account_id_index ON SubordinateConstraint (account_id);

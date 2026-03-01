@@ -27,7 +27,25 @@ interface ResolveRootEndpointCommand : HttpEndpointCommand {
     }
 }
 
-// ==================== Resolve Trust Chain (Per Account) Endpoint ====================
+// ==================== Resolve Trust Chain POST (Root) Endpoint ====================
+
+interface PostResolveRootEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-resolve"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/resolve",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(ResolveResponseJwtMediaType),
+            operationId = "resolveTrustChainPost",
+            tags = setOf("resolution"),
+            summary = "Resolve trust chain for an entity (POST)"
+        )
+    }
+}
+
+// ==================== Resolve Trust Chain GET (Per Account) Endpoint ====================
 
 interface ResolveAccountEndpointCommand : HttpEndpointCommand {
     companion object {
@@ -40,6 +58,24 @@ interface ResolveAccountEndpointCommand : HttpEndpointCommand {
             operationId = "resolveAccountTrustChain",
             tags = setOf("resolution"),
             summary = "Resolve trust chain for an entity within a specific account context"
+        )
+    }
+}
+
+// ==================== Resolve Trust Chain POST (Per Account) Endpoint ====================
+
+interface PostResolveAccountEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.server.post-account-resolve"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/{username}/resolve",
+            consumes = setOf(MediaType.ApplicationFormUrlEncoded),
+            produces = setOf(ResolveResponseJwtMediaType),
+            operationId = "resolveAccountTrustChainPost",
+            tags = setOf("resolution"),
+            summary = "Resolve trust chain for an entity within a specific account context (POST)"
         )
     }
 }

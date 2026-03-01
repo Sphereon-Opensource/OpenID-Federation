@@ -6,6 +6,7 @@ import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.openapi.models.CreateMetadata
 import com.sphereon.openid.fed.openapi.models.CreateMetadataPolicy
 import com.sphereon.openid.fed.openapi.models.CreateReceivedTrustMark
+import com.sphereon.openid.fed.openapi.models.CreateTrustAnchorHint
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkType
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkTypeIssuerRequest
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
@@ -43,6 +44,7 @@ class EntityStatementApiTest {
     private var testTrustMarkIssuer: String? = null
     private var testReceivedTrustMarkId: String? = null
     private var testReceivedTrustMarkJwt: String? = null
+    private var testTrustAnchorHint: String? = null
 
     val json = Json {
         prettyPrint = true
@@ -75,6 +77,7 @@ class EntityStatementApiTest {
         testReceivedTrustMarkId = "https://example.com/received-trust-mark-${System.currentTimeMillis()}"
         testReceivedTrustMarkJwt =
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        testTrustAnchorHint = "https://trust-anchor.example.org/${System.currentTimeMillis()}"
     }
 
     @AfterTest
@@ -129,9 +132,12 @@ class EntityStatementApiTest {
 
             createTrustMarkIssuer(trustMarkType.id, "https://example-issuer.com")
 
-            // step 7: Add received trust marks
+            // Step 7: Add received trust marks
             val receivedTrustMark = createReceivedTrustMark()
             assertNotNull(receivedTrustMark, "Received trust mark creation failed")
+
+            // Step 7b: Add trust anchor hints
+            createTrustAnchorHint()
 
             // Step 8: Get the entity configuration statement
             // This retrieves the entity statement with all configured data
@@ -172,6 +178,18 @@ class EntityStatementApiTest {
             assertTrue(
                 entityStatement.contains(testReceivedTrustMarkId!!),
                 "Entity statement does not contain the created received trust mark"
+            )
+
+            // Verify trust_marks array uses trust_mark_type (not id) per 1.1 spec
+            assertTrue(
+                entityStatement.contains("\"trust_mark_type\""),
+                "Entity statement trust_marks should use 'trust_mark_type' field (1.1 spec)"
+            )
+
+            // Verify trust_anchor_hints is included
+            assertTrue(
+                entityStatement.contains(testTrustAnchorHint!!),
+                "Entity statement does not contain the created trust anchor hint"
             )
 
             // Step 9: Test the publish functionality
@@ -352,7 +370,7 @@ class EntityStatementApiTest {
             })
         }
 
-        val response = client.post("$baseUrl/metadata-policy") {
+        val response = client.post("$baseUrl/metadata-policies") {
             contentType(ContentType.Application.Json)
             headers {
                 append("X-Account-Username", testUsername!!)
@@ -445,6 +463,26 @@ class EntityStatementApiTest {
      *
      * @return The response body as text containing the created received trust mark
      */
+    private suspend fun createTrustAnchorHint() {
+        val response = client.post("$baseUrl/trust-anchor-hints") {
+            contentType(ContentType.Application.Json)
+            headers {
+                append("X-Account-Username", testUsername!!)
+            }
+            setBody(
+                CreateTrustAnchorHint(
+                    identifier = testTrustAnchorHint!!
+                )
+            )
+        }
+
+        assertEquals(
+            HttpStatusCode.Created,
+            response.status,
+            "Trust anchor hint creation failed with status: ${response.status}"
+        )
+    }
+
     private suspend fun createReceivedTrustMark(): ReceivedTrustMark {
         val response = client.post("$baseUrl/received-trust-marks") {
             contentType(ContentType.Application.Json)
@@ -453,7 +491,7 @@ class EntityStatementApiTest {
             }
             setBody(
                 CreateReceivedTrustMark(
-                    trustMarkId = testReceivedTrustMarkId!!,
+                    trustMarkType = testReceivedTrustMarkId!!,
                     jwt = testReceivedTrustMarkJwt!!
                 )
             )
