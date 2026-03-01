@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
-data class FindAuthorityHintsByAccountArgs(val account: Account)
+data class FindAuthorityHintsByAccountArgs(val tenantId: String)
 
 interface FindAuthorityHintsByAccountCommand : ServiceCommand<FindAuthorityHintsByAccountArgs, List<AuthorityHint>>, PublicApiCommand {
     companion object {

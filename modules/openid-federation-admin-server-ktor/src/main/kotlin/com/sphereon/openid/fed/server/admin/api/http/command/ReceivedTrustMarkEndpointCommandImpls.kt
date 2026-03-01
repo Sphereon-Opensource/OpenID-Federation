@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.openid.fed.services.ReceivedTrustMarkService
 import com.sphereon.openid.fed.services.mappers.toReceivedTrustMarksResponse
@@ -27,7 +28,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListReceivedTrustMarksEndpointCommandImpl(
     execution: SessionExecution,
     private val receivedTrustMarkService: ReceivedTrustMarkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListReceivedTrustMarksEndpointCommand.COMMAND_ID,
@@ -41,10 +42,10 @@ class ListReceivedTrustMarksEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = receivedTrustMarkService.listReceivedTrustMarks(account)
+        val result = receivedTrustMarkService.listReceivedTrustMarks(tenantId)
 
         return if (result.isOk) {
             val trustMarks = result.value.toReceivedTrustMarksResponse()
@@ -64,7 +65,7 @@ class ListReceivedTrustMarksEndpointCommandImpl(
 class CreateReceivedTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
     private val receivedTrustMarkService: ReceivedTrustMarkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateReceivedTrustMarkEndpointCommand.COMMAND_ID,
@@ -78,8 +79,8 @@ class CreateReceivedTrustMarkEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -89,7 +90,7 @@ class CreateReceivedTrustMarkEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = receivedTrustMarkService.createReceivedTrustMark(account, createReceivedTrustMark)
+        val result = receivedTrustMarkService.createReceivedTrustMark(tenantId, createReceivedTrustMark)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -112,7 +113,7 @@ class CreateReceivedTrustMarkEndpointCommandImpl(
 class DeleteReceivedTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
     private val receivedTrustMarkService: ReceivedTrustMarkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteReceivedTrustMarkEndpointCommand.COMMAND_ID,
@@ -126,14 +127,14 @@ class DeleteReceivedTrustMarkEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteReceivedTrustMarkEndpointCommand.ENDPOINT.pathPattern)
         val id = req.pathParams["id"]
             ?: return Ok(errorResponse(400, "Missing path parameter: id"))
 
-        val result = receivedTrustMarkService.deleteReceivedTrustMark(account, id)
+        val result = receivedTrustMarkService.deleteReceivedTrustMark(tenantId, id)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

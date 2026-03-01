@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountArgs
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommand
@@ -32,14 +32,14 @@ class EntityConfigurationStatementServiceImpl(
     private val publishEntityConfigurationCommand: PublishEntityConfigurationCommand
 ) : EntityConfigurationStatementService {
 
-    override suspend fun findByAccount(account: Account): FederationResult<EntityConfigurationStatement> =
-        findEntityConfigurationByAccountCommand.execute(FindEntityConfigurationByAccountArgs(account)).toFederationResult()
+    override suspend fun findByAccount(tenantId: String): FederationResult<EntityConfigurationStatement> =
+        findEntityConfigurationByAccountCommand.execute(FindEntityConfigurationByAccountArgs(tenantId)).toFederationResult()
 
     override suspend fun publishByAccount(
-        account: Account,
+        tenantId: String,
         dryRun: Boolean?,
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<String> =
-        publishEntityConfigurationCommand.execute(PublishEntityConfigurationArgs(account, dryRun, kmsKeyRef, kid)).toFederationResult()
+        publishEntityConfigurationCommand.execute(PublishEntityConfigurationArgs(tenantId, dryRun, kmsKeyRef, kid)).toFederationResult()
 }

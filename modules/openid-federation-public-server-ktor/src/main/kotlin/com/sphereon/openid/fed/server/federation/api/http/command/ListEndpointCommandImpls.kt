@@ -11,6 +11,7 @@ import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.SubordinateService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -23,7 +24,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = ListSubordinatesRootEndpointCommand::class)
 class ListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -38,10 +39,10 @@ class ListSubordinatesRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = subordinateService.findSubordinatesByAccountAsArray(account)
+        val result = subordinateService.findSubordinatesByAccountAsArray(tenantId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -57,7 +58,7 @@ class ListSubordinatesRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = ListSubordinatesAccountEndpointCommand::class)
 class ListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -75,10 +76,10 @@ class ListSubordinatesAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = subordinateService.findSubordinatesByAccountAsArray(account)
+        val result = subordinateService.findSubordinatesByAccountAsArray(tenantId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

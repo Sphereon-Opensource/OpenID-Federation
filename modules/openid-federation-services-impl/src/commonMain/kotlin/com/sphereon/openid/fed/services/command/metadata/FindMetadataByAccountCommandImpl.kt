@@ -39,17 +39,17 @@ class FindMetadataByAccountCommandImpl(
         args: FindMetadataByAccountArgs,
         applyDuring: (FindMetadataByAccountArgs) -> FindMetadataByAccountArgs
     ): IdkResult<List<Metadata>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
-        logger.debug("Finding metadata for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.debug("Finding metadata for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         return try {
-            val metadataList = metadataQueries.findByAccountId(account.id).executeAsList()
-            logger.debug("Found ${metadataList.size} metadata entries for account: ${account.username}")
+            val metadataList = metadataQueries.findByAccountId(tenantId).executeAsList()
+            logger.debug("Found ${metadataList.size} metadata entries for account: ${tenantId}")
             IdkResult.ok(metadataList.map { it.toDTO() })
         } catch (e: Exception) {
-            logger.error("Failed to find metadata for account: ${account.username}", e)
+            logger.error("Failed to find metadata for account: ${tenantId}", e)
             federationErr(ServerError("Failed to retrieve metadata", e.message, e))
         }
     }

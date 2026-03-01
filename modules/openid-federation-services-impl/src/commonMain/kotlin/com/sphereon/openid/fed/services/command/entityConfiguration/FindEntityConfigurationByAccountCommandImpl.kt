@@ -11,14 +11,14 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.openid.fed.common.builder.FederationEntityMetadataObjectBuilder
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.AccountService
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.mappers.toTrustMark
@@ -37,7 +37,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = FindEntityConfigurationByAccountCommand::class)
 class FindEntityConfigurationByAccountCommandImpl(
     execution: SessionExecution,
-    private val accountService: AccountService,
+    private val tenantContextResolver: TenantContextResolver,
     private val jwkService: JwkService
 ) : TypedServiceCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement>(
     commandId = FindEntityConfigurationByAccountCommand.COMMAND_ID,
@@ -57,23 +57,20 @@ class FindEntityConfigurationByAccountCommandImpl(
         args: FindEntityConfigurationByAccountArgs,
         applyDuring: (FindEntityConfigurationByAccountArgs) -> FindEntityConfigurationByAccountArgs
     ): IdkResult<EntityConfigurationStatement, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
-        logger.info("Finding entity configuration for account: ${account.username}")
+        logger.info("Finding entity configuration for account: $tenantId")
 
-        return getEntityConfigurationStatement(account)
+        return getEntityConfigurationStatement(tenantId)
     }
 
-    private suspend fun getEntityConfigurationStatement(account: Account): IdkResult<EntityConfigurationStatement, IdkError> {
-        logger.info("Building entity configuration for account: ${account.username}")
+    private suspend fun getEntityConfigurationStatement(tenantId: String): IdkResult<EntityConfigurationStatement, IdkError> {
+        logger.info("Building entity configuration for account: $tenantId")
 
-        val identifierResult = accountService.getAccountIdentifierByAccount(account).toIdkErrorResult()
-        if (identifierResult.isErr) {
-            return identifierResult.error.asErrorResult()
-        }
-        val identifier = identifierResult.value
+        val identifier = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
 
-        val keysResult = jwkService.getKeys(account, includeRevoked = false).toIdkErrorResult()
+        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false).toIdkErrorResult()
         if (keysResult.isErr) {
             return keysResult.error.asErrorResult()
         }
@@ -85,12 +82,12 @@ class FindEntityConfigurationByAccountCommandImpl(
                 keys.map { it.toJwk() }.toTypedArray()
             )
 
-            addComponents(account, entityConfigBuilder, identifier)
+            addComponents(tenantId, entityConfigBuilder, identifier)
 
-            logger.info("Successfully built entity configuration statement for account: ${account.username}")
+            logger.info("Successfully built entity configuration statement for account: $tenantId")
             IdkResult.ok(entityConfigBuilder.build())
         } catch (e: Exception) {
-            logger.error("Failed to build entity configuration for account: ${account.username}", e)
+            logger.error("Failed to build entity configuration for account: $tenantId", e)
             federationErr(ServerError("Failed to build entity configuration", e.message, e))
         }
     }
@@ -108,26 +105,26 @@ class FindEntityConfigurationByAccountCommandImpl(
     }
 
     private fun addComponents(
-        account: Account,
+        tenantId: String,
         builder: EntityConfigurationStatementObjectBuilder,
         identifier: String
     ) {
-        addFederationEntityMetadata(account, builder, identifier)
-        addMetadata(account, builder)
-        addMetadataPolicy(account, builder)
-        addAuthorityHints(account, builder)
-        addCrits(account, builder)
-        addTrustMarkIssuers(account, builder)
-        addReceivedTrustMarks(account, builder)
+        addFederationEntityMetadata(tenantId, builder, identifier)
+        addMetadata(tenantId, builder)
+        addMetadataPolicy(tenantId, builder)
+        addAuthorityHints(tenantId, builder)
+        addCrits(tenantId, builder)
+        addTrustMarkIssuers(tenantId, builder)
+        addReceivedTrustMarks(tenantId, builder)
     }
 
     private fun addFederationEntityMetadata(
-        account: Account,
+        tenantId: String,
         builder: EntityConfigurationStatementObjectBuilder,
         identifier: String
     ) {
-        val hasSubordinates = queries.subordinateQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
-        val issuedTrustMarks = queries.trustMarkQueries.findByAccountId(account.id).executeAsList().isNotEmpty()
+        val hasSubordinates = queries.subordinateQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
+        val issuedTrustMarks = queries.trustMarkQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
 
         if (hasSubordinates || issuedTrustMarks) {
             val federationEntityMetadata = FederationEntityMetadataObjectBuilder()
@@ -143,38 +140,38 @@ class FindEntityConfigurationByAccountCommandImpl(
         }
     }
 
-    private fun addAuthorityHints(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.authorityHintQueries.findByAccountId(account.id)
+    private fun addAuthorityHints(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.authorityHintQueries.findByAccountId(tenantId)
             .executeAsList()
             .map { it.identifier }
             .forEach { builder.authorityHint(it) }
     }
 
-    private fun addMetadata(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.metadataQueries.findByAccountId(account.id)
+    private fun addMetadata(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.metadataQueries.findByAccountId(tenantId)
             .executeAsList()
             .forEach {
                 builder.metadata(Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject))
             }
     }
 
-    private fun addMetadataPolicy(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.metadataPolicyQueries.findByAccountId(account.id)
+    private fun addMetadataPolicy(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.metadataPolicyQueries.findByAccountId(tenantId)
             .executeAsList()
             .forEach {
                 builder.metadataPolicy(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
             }
     }
 
-    private fun addCrits(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.critQueries.findByAccountId(account.id)
+    private fun addCrits(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.critQueries.findByAccountId(tenantId)
             .executeAsList()
             .map { it.claim }
             .forEach { builder.crit(it) }
     }
 
-    private fun addTrustMarkIssuers(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.trustMarkTypeQueries.findByAccountId(account.id)
+    private fun addTrustMarkIssuers(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.trustMarkTypeQueries.findByAccountId(tenantId)
             .executeAsList()
             .forEach { trustMarkType ->
                 val trustMarkIssuers = queries.trustMarkIssuerQueries
@@ -188,8 +185,8 @@ class FindEntityConfigurationByAccountCommandImpl(
             }
     }
 
-    private fun addReceivedTrustMarks(account: Account, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.receivedTrustMarkQueries.findByAccountId(account.id)
+    private fun addReceivedTrustMarks(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.receivedTrustMarkQueries.findByAccountId(tenantId)
             .executeAsList()
             .forEach { receivedTrustMark ->
                 builder.trustMark(receivedTrustMark.toTrustMark())

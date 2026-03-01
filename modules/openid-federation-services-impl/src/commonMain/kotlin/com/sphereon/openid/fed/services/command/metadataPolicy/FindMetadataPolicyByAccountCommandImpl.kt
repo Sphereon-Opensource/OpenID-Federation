@@ -39,17 +39,17 @@ class FindMetadataPolicyByAccountCommandImpl(
         args: FindMetadataPolicyByAccountArgs,
         applyDuring: (FindMetadataPolicyByAccountArgs) -> FindMetadataPolicyByAccountArgs
     ): IdkResult<List<MetadataPolicy>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
-        logger.debug("Finding metadata policy for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.debug("Finding metadata policy for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         return try {
-            val policyList = metadataPolicyQueries.findByAccountId(account.id).executeAsList()
-            logger.debug("Found ${policyList.size} metadata policy entries for account: ${account.username}")
+            val policyList = metadataPolicyQueries.findByAccountId(tenantId).executeAsList()
+            logger.debug("Found ${policyList.size} metadata policy entries for account: ${tenantId}")
             IdkResult.ok(policyList.map { it.toDTO() })
         } catch (e: Exception) {
-            logger.error("Failed to find metadata policy for account: ${account.username}", e)
+            logger.error("Failed to find metadata policy for account: ${tenantId}", e)
             federationErr(ServerError("Failed to retrieve metadata policies", e.message, e))
         }
     }

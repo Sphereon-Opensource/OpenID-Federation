@@ -10,14 +10,14 @@ import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.openid.fed.openapi.models.HistoricalKey
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.AccountService
 import com.sphereon.openid.fed.services.mappers.toHistoricalKey
 import com.sphereon.openid.fed.services.signPayload
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class GetFederationHistoricalKeysJwtCommandImpl(
     execution: SessionExecution,
     private val getKeysCommand: GetKeysCommand,
-    private val accountService: AccountService,
+    private val tenantContextResolver: TenantContextResolver,
     private val jwtService: JwtService
 ) : TypedServiceCommandAdapter<GetFederationHistoricalKeysJwtArgs, String>(
     commandId = GetFederationHistoricalKeysJwtCommand.COMMAND_ID,
@@ -56,16 +56,13 @@ class GetFederationHistoricalKeysJwtCommandImpl(
         args: GetFederationHistoricalKeysJwtArgs,
         applyDuring: (GetFederationHistoricalKeysJwtArgs) -> GetFederationHistoricalKeysJwtArgs
     ): IdkResult<String, IdkError> = withContext(Dispatchers.IO) {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
         try {
-            val issResult = accountService.getAccountIdentifierByAccount(account).toIdkErrorResult()
-            if (issResult.isErr) {
-                return@withContext issResult.error.asErrorResult()
-            }
-            val iss = issResult.value
+            val iss = tenantContextResolver.resolveIdentifier(tenantId)
+                ?: return@withContext federationErr(TenantNotFoundError(tenantId))
 
-            val historicalKeys = getFederationHistoricalKeys(account)
+            val historicalKeys = getFederationHistoricalKeys(tenantId)
 
             val federationKeysResponse = FederationHistoricalKeysResponse(
                 iss = iss,
@@ -73,14 +70,14 @@ class GetFederationHistoricalKeysJwtCommandImpl(
                 propertyKeys = historicalKeys
             )
 
-            val keysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked = false))
+            val keysResult = getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked = false))
             if (keysResult.isErr) {
                 return@withContext keysResult.error.asErrorResult()
             }
             val keys = keysResult.value
 
             if (keys.isEmpty()) {
-                logger.error("No keys found for account: ${account.username}")
+                logger.error("No keys found for account: $tenantId")
                 return@withContext federationErr(ServerError("The system is in an invalid state: no keys for account."))
             }
 
@@ -94,7 +91,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
             }
 
             val jwt = jwtResult.value
-            logger.trace("Successfully built federation historical keys JWT for username: ${account.username}")
+            logger.trace("Successfully built federation historical keys JWT for tenant: $tenantId")
             logger.debug("JWT: $jwt")
             IdkResult.ok(jwt)
         } catch (e: Exception) {
@@ -103,10 +100,10 @@ class GetFederationHistoricalKeysJwtCommandImpl(
         }
     }
 
-    private fun getFederationHistoricalKeys(account: Account): List<HistoricalKey> {
-        logger.debug("Retrieving federation historical keys for account: ${account.username}")
-        val records = jwkQueries.findByAccountId(account.id).executeAsList()
-        logger.debug("Found ${records.size} keys for account ID: ${account.id}")
+    private fun getFederationHistoricalKeys(tenantId: String): List<HistoricalKey> {
+        logger.debug("Retrieving federation historical keys for account: $tenantId")
+        val records = jwkQueries.findByAccountId(tenantId).executeAsList()
+        logger.debug("Found ${records.size} keys for account ID: $tenantId")
         return records.map { it.toHistoricalKey() }
     }
 }

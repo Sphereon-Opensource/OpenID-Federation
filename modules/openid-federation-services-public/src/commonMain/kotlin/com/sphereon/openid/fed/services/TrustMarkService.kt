@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkType
@@ -25,17 +25,17 @@ import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
  */
 interface TrustMarkService {
 
-    suspend fun createTrustMarkType(account: Account, createDto: CreateTrustMarkType): FederationResult<TrustMarkType>
-    suspend fun findAllByAccount(account: Account): FederationResult<List<TrustMarkType>>
-    suspend fun findById(account: Account, id: String): FederationResult<TrustMarkType>
-    suspend fun deleteTrustMarkType(account: Account, id: String): FederationResult<TrustMarkType>
-    suspend fun getIssuersForTrustMarkType(account: Account, trustMarkTypeId: String): FederationResult<Array<TrustMarkIssuer>>
-    suspend fun addIssuerToTrustMarkType(account: Account, trustMarkTypeId: String, issuerIdentifier: String): FederationResult<TrustMarkIssuer>
-    suspend fun removeIssuerFromTrustMarkType(account: Account, trustMarkTypeId: String, issuerId: String): FederationResult<TrustMarkIssuer>
-    suspend fun getTrustMarksForAccount(account: Account): FederationResult<List<TrustMark>>
-    suspend fun createTrustMark(account: Account, body: CreateTrustMarkRequest, currentTimeMillis: Long): FederationResult<CreateTrustMarkResult>
-    suspend fun deleteTrustMark(account: Account, id: String): FederationResult<TrustMarkEntity>
-    suspend fun getTrustMarkStatus(account: Account, request: TrustMarkStatusRequest): FederationResult<Boolean>
-    suspend fun getTrustMarkedSubs(account: Account, request: TrustMarkListRequest): FederationResult<Array<String>>
-    suspend fun getTrustMark(account: Account, request: TrustMarkRequest): FederationResult<String>
+    suspend fun createTrustMarkType(tenantId: String, createDto: CreateTrustMarkType): FederationResult<TrustMarkType>
+    suspend fun findAllByAccount(tenantId: String): FederationResult<List<TrustMarkType>>
+    suspend fun findById(tenantId: String, id: String): FederationResult<TrustMarkType>
+    suspend fun deleteTrustMarkType(tenantId: String, id: String): FederationResult<TrustMarkType>
+    suspend fun getIssuersForTrustMarkType(tenantId: String, trustMarkTypeId: String): FederationResult<Array<TrustMarkIssuer>>
+    suspend fun addIssuerToTrustMarkType(tenantId: String, trustMarkTypeId: String, issuerIdentifier: String): FederationResult<TrustMarkIssuer>
+    suspend fun removeIssuerFromTrustMarkType(tenantId: String, trustMarkTypeId: String, issuerId: String): FederationResult<TrustMarkIssuer>
+    suspend fun getTrustMarksForAccount(tenantId: String): FederationResult<List<TrustMark>>
+    suspend fun createTrustMark(tenantId: String, body: CreateTrustMarkRequest, currentTimeMillis: Long): FederationResult<CreateTrustMarkResult>
+    suspend fun deleteTrustMark(tenantId: String, id: String): FederationResult<TrustMarkEntity>
+    suspend fun getTrustMarkStatus(tenantId: String, request: TrustMarkStatusRequest): FederationResult<Boolean>
+    suspend fun getTrustMarkedSubs(tenantId: String, request: TrustMarkListRequest): FederationResult<Array<String>>
+    suspend fun getTrustMark(tenantId: String, request: TrustMarkRequest): FederationResult<String>
 }

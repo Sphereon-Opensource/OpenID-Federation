@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateAuthorityHint
 import com.sphereon.openid.fed.services.AuthorityHintService
 import com.sphereon.openid.fed.services.mappers.toAuthorityHintsResponse
@@ -27,7 +28,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListAuthorityHintsEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListAuthorityHintsEndpointCommand.COMMAND_ID,
@@ -41,10 +42,10 @@ class ListAuthorityHintsEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = authorityHintService.findByAccount(account)
+        val result = authorityHintService.findByAccount(tenantId)
 
         return if (result.isOk) {
             val hints = result.value.toAuthorityHintsResponse()
@@ -64,7 +65,7 @@ class ListAuthorityHintsEndpointCommandImpl(
 class CreateAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateAuthorityHintEndpointCommand.COMMAND_ID,
@@ -78,8 +79,8 @@ class CreateAuthorityHintEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -89,7 +90,7 @@ class CreateAuthorityHintEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = authorityHintService.createAuthorityHint(account, createAuthorityHint.identifier)
+        val result = authorityHintService.createAuthorityHint(tenantId, createAuthorityHint.identifier)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -112,7 +113,7 @@ class CreateAuthorityHintEndpointCommandImpl(
 class DeleteAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteAuthorityHintEndpointCommand.COMMAND_ID,
@@ -126,14 +127,14 @@ class DeleteAuthorityHintEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteAuthorityHintEndpointCommand.ENDPOINT.pathPattern)
         val id = req.pathParams["id"]
             ?: return Ok(errorResponse(400, "Missing path parameter: id"))
 
-        val result = authorityHintService.deleteAuthorityHint(account, id)
+        val result = authorityHintService.deleteAuthorityHint(tenantId, id)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

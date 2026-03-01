@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.ResolutionService
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -20,7 +21,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = ResolveRootEndpointCommand::class)
 class ResolveRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val resolutionService: ResolutionService
 ) : HttpEndpointCommandAdapter(
     id = ResolveRootEndpointCommand.COMMAND_ID,
@@ -34,8 +35,8 @@ class ResolveRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val sub = request.queryParameters["sub"]
             ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
@@ -50,7 +51,7 @@ class ResolveRootEndpointCommandImpl(
             ?.toTypedArray()
 
         val result = resolutionService.getSignedResolveResponseJwt(
-            account = account,
+            tenantId = tenantId,
             sub = sub,
             trustAnchor = trustAnchor,
             entityTypes = entityTypes
@@ -74,7 +75,7 @@ class ResolveRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = ResolveAccountEndpointCommand::class)
 class ResolveAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val resolutionService: ResolutionService
 ) : HttpEndpointCommandAdapter(
     id = ResolveAccountEndpointCommand.COMMAND_ID,
@@ -91,8 +92,8 @@ class ResolveAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val sub = request.queryParameters["sub"]
             ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
@@ -107,7 +108,7 @@ class ResolveAccountEndpointCommandImpl(
             ?.toTypedArray()
 
         val result = resolutionService.getSignedResolveResponseJwt(
-            account = account,
+            tenantId = tenantId,
             sub = sub,
             trustAnchor = trustAnchor,
             entityTypes = entityTypes

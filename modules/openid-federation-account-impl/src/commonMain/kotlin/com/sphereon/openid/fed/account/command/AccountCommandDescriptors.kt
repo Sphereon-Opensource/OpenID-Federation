@@ -1,4 +1,4 @@
-package com.sphereon.openid.fed.services.command.account
+package com.sphereon.openid.fed.account.command
 
 import com.sphereon.core.api.service.RegistrableServiceCommandDescriptor
 import com.sphereon.di.session.SessionScope

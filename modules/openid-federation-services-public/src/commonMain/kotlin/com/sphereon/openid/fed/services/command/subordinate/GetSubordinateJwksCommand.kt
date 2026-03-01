@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.SubordinateJwk
 
-data class GetSubordinateJwksArgs(val account: Account, val id: String)
+data class GetSubordinateJwksArgs(val tenantId: String, val id: String)
 
 interface GetSubordinateJwksCommand : ServiceCommand<GetSubordinateJwksArgs, Array<SubordinateJwk>>, PublicApiCommand {
     companion object {

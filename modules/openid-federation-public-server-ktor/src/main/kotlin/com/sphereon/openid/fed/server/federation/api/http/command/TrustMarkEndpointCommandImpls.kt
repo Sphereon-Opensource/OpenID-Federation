@@ -11,6 +11,7 @@ import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkStatusRequest
@@ -27,7 +28,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = TrustMarkStatusRootEndpointCommand::class)
 class TrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -42,8 +43,8 @@ class TrustMarkStatusRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
         val statusRequest = try {
@@ -52,7 +53,7 @@ class TrustMarkStatusRootEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = trustMarkService.getTrustMarkStatus(account, statusRequest)
+        val result = trustMarkService.getTrustMarkStatus(tenantId, statusRequest)
 
         return if (result.isOk) {
             val response = TrustMarkStatusResponse(active = result.value)
@@ -69,7 +70,7 @@ class TrustMarkStatusRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = TrustMarkStatusAccountEndpointCommand::class)
 class TrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -87,8 +88,8 @@ class TrustMarkStatusAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
         val statusRequest = try {
@@ -97,7 +98,7 @@ class TrustMarkStatusAccountEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = trustMarkService.getTrustMarkStatus(account, statusRequest)
+        val result = trustMarkService.getTrustMarkStatus(tenantId, statusRequest)
 
         return if (result.isOk) {
             val response = TrustMarkStatusResponse(active = result.value)
@@ -114,7 +115,7 @@ class TrustMarkStatusAccountEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = TrustMarkListRootEndpointCommand::class)
 class TrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -129,8 +130,8 @@ class TrustMarkListRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_id"]
             ?: return Ok(errorResponse(400, "Missing 'trust_mark_id' parameter"))
@@ -141,7 +142,7 @@ class TrustMarkListRootEndpointCommandImpl(
             sub = sub
         )
 
-        val result = trustMarkService.getTrustMarkedSubs(account, listRequest)
+        val result = trustMarkService.getTrustMarkedSubs(tenantId, listRequest)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -157,7 +158,7 @@ class TrustMarkListRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = TrustMarkListAccountEndpointCommand::class)
 class TrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
@@ -175,8 +176,8 @@ class TrustMarkListAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_id"]
             ?: return Ok(errorResponse(400, "Missing 'trust_mark_id' parameter"))
@@ -187,7 +188,7 @@ class TrustMarkListAccountEndpointCommandImpl(
             sub = sub
         )
 
-        val result = trustMarkService.getTrustMarkedSubs(account, listRequest)
+        val result = trustMarkService.getTrustMarkedSubs(tenantId, listRequest)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -203,7 +204,7 @@ class TrustMarkListAccountEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = GetTrustMarkRootEndpointCommand::class)
 class GetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkRootEndpointCommand.COMMAND_ID,
@@ -217,8 +218,8 @@ class GetTrustMarkRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_id"]
             ?: return Ok(errorResponse(400, "Missing 'trust_mark_id' parameter"))
@@ -230,7 +231,7 @@ class GetTrustMarkRootEndpointCommandImpl(
             sub = sub
         )
 
-        val result = trustMarkService.getTrustMark(account, trustMarkRequest)
+        val result = trustMarkService.getTrustMark(tenantId, trustMarkRequest)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -250,7 +251,7 @@ class GetTrustMarkRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = GetTrustMarkAccountEndpointCommand::class)
 class GetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkAccountEndpointCommand.COMMAND_ID,
@@ -267,8 +268,8 @@ class GetTrustMarkAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_id"]
             ?: return Ok(errorResponse(400, "Missing 'trust_mark_id' parameter"))
@@ -280,7 +281,7 @@ class GetTrustMarkAccountEndpointCommandImpl(
             sub = sub
         )
 
-        val result = trustMarkService.getTrustMark(account, trustMarkRequest)
+        val result = trustMarkService.getTrustMark(tenantId, trustMarkRequest)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(

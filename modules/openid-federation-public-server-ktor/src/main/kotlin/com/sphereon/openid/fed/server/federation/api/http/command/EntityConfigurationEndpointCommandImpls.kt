@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.persistence.Persistence
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -20,7 +21,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = GetEntityConfigurationEndpointCommand::class)
 class GetEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver
+    private val tenantContextResolver: TenantContextResolver
 ) : HttpEndpointCommandAdapter(
     id = GetEntityConfigurationEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -35,11 +36,11 @@ class GetEntityConfigurationEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val statement = entityConfigStatementQueries
-            .findLatestByAccountId(account.id)
+            .findLatestByAccountId(tenantId)
             .executeAsOneOrNull()
             ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
 
@@ -56,7 +57,7 @@ class GetEntityConfigurationEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = GetAccountEntityConfigurationEndpointCommand::class)
 class GetAccountEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver
+    private val tenantContextResolver: TenantContextResolver
 ) : HttpEndpointCommandAdapter(
     id = GetAccountEntityConfigurationEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -74,11 +75,11 @@ class GetAccountEntityConfigurationEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val statement = entityConfigStatementQueries
-            .findLatestByAccountId(account.id)
+            .findLatestByAccountId(tenantId)
             .executeAsOneOrNull()
             ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
 

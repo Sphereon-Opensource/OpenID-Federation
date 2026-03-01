@@ -14,15 +14,15 @@ import com.sphereon.openid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.SubordinateNotFoundError
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.Subordinate
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.AccountService
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.mappers.toDTOs
@@ -51,13 +51,13 @@ class FindSubordinatesByAccountCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: FindSubordinatesByAccountArgs, applyDuring: (FindSubordinatesByAccountArgs) -> FindSubordinatesByAccountArgs): IdkResult<Array<Subordinate>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
         return try {
-            val subordinates = subordinateQueries.findByAccountId(account.id).executeAsList().toTypedArray()
-            logger.debug("Found ${subordinates.size} subordinates for account: ${account.username}")
+            val subordinates = subordinateQueries.findByAccountId(tenantId).executeAsList().toTypedArray()
+            logger.debug("Found ${subordinates.size} subordinates for account: $tenantId")
             IdkResult.ok(subordinates.toDTOs())
         } catch (e: Exception) {
-            logger.error("Failed to find subordinates for account: ${account.username}", e)
+            logger.error("Failed to find subordinates for account: $tenantId", e)
             federationErr(ServerError("Failed to find subordinates", e.message, e))
         }
     }
@@ -77,8 +77,8 @@ class FindSubordinatesByAccountAsArrayCommandImpl(
 ), FindSubordinatesByAccountAsArrayCommand {
 
     override suspend fun doExecute(args: FindSubordinatesByAccountAsArrayArgs, applyDuring: (FindSubordinatesByAccountAsArrayArgs) -> FindSubordinatesByAccountAsArrayArgs): IdkResult<Array<String>, IdkError> {
-        val (account) = applyDuring(args)
-        val result = findSubordinatesByAccountCommand.execute(FindSubordinatesByAccountArgs(account))
+        val (tenantId) = applyDuring(args)
+        val result = findSubordinatesByAccountCommand.execute(FindSubordinatesByAccountArgs(tenantId))
         return result.map { subordinates -> subordinates.map { it.identifier }.toTypedArray() }
     }
 }
@@ -98,8 +98,8 @@ class DeleteSubordinateCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: DeleteSubordinateArgs, applyDuring: (DeleteSubordinateArgs) -> DeleteSubordinateArgs): IdkResult<Subordinate, IdkError> {
-        val (account, subordinateId) = applyDuring(args)
-        logger.info("Attempting to delete subordinate ID: $subordinateId for account: ${account.username}")
+        val (tenantId, subordinateId) = applyDuring(args)
+        logger.info("Attempting to delete subordinate ID: $subordinateId for account: $tenantId")
 
         val subordinate = subordinateQueries.findById(subordinateId).executeAsOneOrNull()
         if (subordinate == null) {
@@ -107,8 +107,8 @@ class DeleteSubordinateCommandImpl(
             return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
-        if (subordinate.account_id != account.id) {
-            logger.warn("Subordinate ID $subordinateId does not belong to account: ${account.username}")
+        if (subordinate.account_id != tenantId) {
+            logger.warn("Subordinate ID $subordinateId does not belong to account: $tenantId")
             return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
@@ -138,11 +138,11 @@ class CreateSubordinateCommandImpl(
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: CreateSubordinateArgs, applyDuring: (CreateSubordinateArgs) -> CreateSubordinateArgs): IdkResult<Subordinate, IdkError> {
-        val (account, createRequest) = applyDuring(args)
-        logger.info("Creating new subordinate for account: ${account.username}")
+        val (tenantId, createRequest) = applyDuring(args)
+        logger.info("Creating new subordinate for account: $tenantId")
 
         val subordinateAlreadyExists = subordinateQueries
-            .findByAccountIdAndIdentifier(account.id, createRequest.identifier)
+            .findByAccountIdAndIdentifier(tenantId, createRequest.identifier)
             .executeAsList()
 
         if (subordinateAlreadyExists.isNotEmpty()) {
@@ -151,11 +151,11 @@ class CreateSubordinateCommandImpl(
         }
 
         return try {
-            val createdSubordinate = subordinateQueries.create(account.id, createRequest.identifier).executeAsOne()
+            val createdSubordinate = subordinateQueries.create(tenantId, createRequest.identifier).executeAsOne()
             logger.info("Successfully created subordinate with ID: ${createdSubordinate.id}")
             IdkResult.ok(createdSubordinate.toDTO())
         } catch (e: Exception) {
-            logger.error("Failed to create subordinate for account: ${account.username}", e)
+            logger.error("Failed to create subordinate for account: $tenantId", e)
             federationErr(ServerError("Failed to create subordinate", e.message, e))
         }
     }
@@ -167,7 +167,7 @@ class CreateSubordinateCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = GetSubordinateStatementCommand::class)
 class GetSubordinateStatementCommandImpl(
     execution: SessionExecution,
-    private val accountService: AccountService
+    private val tenantContextResolver: TenantContextResolver
 ) : TypedServiceCommandAdapter<GetSubordinateStatementArgs, SubordinateStatement>(
     commandId = GetSubordinateStatementCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetSubordinateStatementArgs>(),
@@ -178,8 +178,8 @@ class GetSubordinateStatementCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun doExecute(args: GetSubordinateStatementArgs, applyDuring: (GetSubordinateStatementArgs) -> GetSubordinateStatementArgs): IdkResult<SubordinateStatement, IdkError> {
-        val (account, subordinateId) = applyDuring(args)
-        logger.info("Generating subordinate statement for ID: $subordinateId, account: ${account.username}")
+        val (tenantId, subordinateId) = applyDuring(args)
+        logger.info("Generating subordinate statement for ID: $subordinateId, account: $tenantId")
 
         val subordinate = subordinateQueries.findById(subordinateId).executeAsOneOrNull()
         if (subordinate == null) {
@@ -194,10 +194,10 @@ class GetSubordinateStatementCommandImpl(
                 .map { it.toJwk() }
 
             val subordinateMetadataList = Persistence.subordinateMetadataQueries
-                .findByAccountIdAndSubordinateId(account.id, subordinate.id)
+                .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsList()
 
-            buildSubordinateStatement(account, subordinate, subordinateJwks, subordinateMetadataList)
+            buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList)
         } catch (e: Exception) {
             logger.error("Failed to generate subordinate statement for ID: $subordinateId", e)
             federationErr(ServerError("Failed to generate subordinate statement", e.message, e))
@@ -205,14 +205,13 @@ class GetSubordinateStatementCommandImpl(
     }
 
     private suspend fun buildSubordinateStatement(
-        account: Account,
+        tenantId: String,
         subordinate: SubordinateEntity,
         subordinateJwks: List<com.sphereon.openid.fed.openapi.models.Jwk>,
         subordinateMetadataList: List<SubordinateMetadataEntity>
     ): IdkResult<SubordinateStatement, IdkError> {
-        val accountIdentifierResult = accountService.getAccountIdentifierByAccount(account).toIdkErrorResult()
-        if (accountIdentifierResult.isErr) return accountIdentifierResult.error.asErrorResult()
-        val accountIdentifier = accountIdentifierResult.value
+        val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
 
         val currentTimeSeconds = (System.currentTimeMillis() / 1000).toInt()
         val expirationTime = currentTimeSeconds + 3600 * 24 * 365
@@ -242,7 +241,7 @@ class GetSubordinateStatementCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = PublishSubordinateStatementCommand::class)
 class PublishSubordinateStatementCommandImpl(
     execution: SessionExecution,
-    private val accountService: AccountService,
+    private val tenantContextResolver: TenantContextResolver,
     private val jwkService: JwkService,
     private val jwtService: JwtService,
     private val getSubordinateStatementCommand: GetSubordinateStatementCommand
@@ -255,14 +254,14 @@ class PublishSubordinateStatementCommandImpl(
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(args: PublishSubordinateStatementArgs, applyDuring: (PublishSubordinateStatementArgs) -> PublishSubordinateStatementArgs): IdkResult<String, IdkError> {
-        val (account, subordinateId, dryRun, kmsKeyRef, kid) = applyDuring(args)
-        logger.info("Publishing subordinate statement for ID: $subordinateId, account: ${account.username} (dryRun: $dryRun)")
+        val (tenantId, subordinateId, dryRun, kmsKeyRef, kid) = applyDuring(args)
+        logger.info("Publishing subordinate statement for ID: $subordinateId, account: $tenantId (dryRun: $dryRun)")
 
-        val statementResult = getSubordinateStatementCommand.execute(GetSubordinateStatementArgs(account, subordinateId))
+        val statementResult = getSubordinateStatementCommand.execute(GetSubordinateStatementArgs(tenantId, subordinateId))
         if (statementResult.isErr) return statementResult.error.asErrorResult()
         val subordinateStatement = statementResult.value
 
-        val keysResult = jwkService.getAssertedKeysForAccount(account, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid).toIdkErrorResult()
+        val keysResult = jwkService.getAssertedKeysForAccount(tenantId, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid).toIdkErrorResult()
         if (keysResult.isErr) return keysResult.error.asErrorResult()
         val keys = keysResult.value
 
@@ -286,9 +285,8 @@ class PublishSubordinateStatementCommandImpl(
                 return IdkResult.ok(jwt)
             }
 
-            val accountIdentifierResult = accountService.getAccountIdentifierByAccount(account).toIdkErrorResult()
-            if (accountIdentifierResult.isErr) return accountIdentifierResult.error.asErrorResult()
-            val accountIdentifier = accountIdentifierResult.value
+            val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
+                ?: return federationErr(TenantNotFoundError(tenantId))
 
             subordinateStatementQueries.create(
                 subordinate_id = subordinateId,

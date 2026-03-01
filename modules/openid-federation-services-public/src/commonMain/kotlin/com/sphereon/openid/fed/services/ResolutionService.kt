@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
 
 /**
@@ -28,7 +28,7 @@ interface ResolutionService {
      * @return FederationResult containing the ResolveResponse or an error.
      */
     suspend fun resolveEntity(
-        account: Account,
+        tenantId: String,
         sub: String,
         trustAnchor: String,
         entityTypes: Array<String>?
@@ -44,7 +44,7 @@ interface ResolutionService {
      * @return FederationResult containing the signed JWT or an error.
      */
     suspend fun getSignedResolveResponseJwt(
-        account: Account,
+        tenantId: String,
         sub: String,
         trustAnchor: String,
         entityTypes: Array<String>?

@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateMetadata
 import com.sphereon.openid.fed.server.admin.api.mappers.toJsonElement
 import com.sphereon.openid.fed.services.MetadataService
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListMetadataEndpointCommand.COMMAND_ID,
@@ -42,10 +43,10 @@ class ListMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = metadataService.findByAccount(account)
+        val result = metadataService.findByAccount(tenantId)
 
         return if (result.isOk) {
             val metadata = result.value.toMetadataResponse()
@@ -65,7 +66,7 @@ class ListMetadataEndpointCommandImpl(
 class CreateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateMetadataEndpointCommand.COMMAND_ID,
@@ -79,8 +80,8 @@ class CreateMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -91,7 +92,7 @@ class CreateMetadataEndpointCommandImpl(
         }
 
         val result = metadataService.createMetadata(
-            account,
+            tenantId,
             createMetadata.key,
             createMetadata.metadata.toJsonElement()
         )
@@ -117,7 +118,7 @@ class CreateMetadataEndpointCommandImpl(
 class DeleteMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteMetadataEndpointCommand.COMMAND_ID,
@@ -131,14 +132,14 @@ class DeleteMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteMetadataEndpointCommand.ENDPOINT.pathPattern)
         val id = req.pathParams["id"]
             ?: return Ok(errorResponse(400, "Missing path parameter: id"))
 
-        val result = metadataService.deleteMetadata(account, id)
+        val result = metadataService.deleteMetadata(tenantId, id)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

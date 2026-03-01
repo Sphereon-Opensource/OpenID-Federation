@@ -5,11 +5,11 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 
 data class FindMetadataPolicyByAccountArgs(
-    val account: Account
+    val tenantId: String
 )
 
 interface FindMetadataPolicyByAccountCommand : ServiceCommand<FindMetadataPolicyByAccountArgs, List<MetadataPolicy>>, PublicApiCommand {

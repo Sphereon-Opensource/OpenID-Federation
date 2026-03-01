@@ -34,16 +34,16 @@ class CreateTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: CreateTrustMarkTypeArgs, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
-        val (account, createDto) = applyDuring(args)
-        logger.info("Creating trust mark type ${createDto.identifier} for username: ${account.username}")
+        val (tenantId, createDto) = applyDuring(args)
+        logger.info("Creating trust mark type ${createDto.identifier} for username: ${tenantId}")
 
-        val existing = trustMarkTypeQueries.findByAccountIdAndIdentifier(account.id, createDto.identifier).executeAsOneOrNull()
+        val existing = trustMarkTypeQueries.findByAccountIdAndIdentifier(tenantId, createDto.identifier).executeAsOneOrNull()
         if (existing != null) {
             return federationErr(InvalidRequestError("A trust mark type with the given identifier already exists for this account."))
         }
 
         return try {
-            val created = trustMarkTypeQueries.create(createDto.identifier, account.id).executeAsOne()
+            val created = trustMarkTypeQueries.create(createDto.identifier, tenantId).executeAsOne()
             logger.info("Successfully created trust mark type with ID: ${created.id}")
             IdkResult.ok(created.toDTO())
         } catch (e: Exception) {
@@ -68,9 +68,9 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
         return try {
-            IdkResult.ok(trustMarkTypeQueries.findByAccountId(account.id).executeAsList().map { it.toDTO() })
+            IdkResult.ok(trustMarkTypeQueries.findByAccountId(tenantId).executeAsList().map { it.toDTO() })
         } catch (e: Exception) {
             logger.error("Failed to find trust mark types", e)
             federationErr(ServerError("Failed to find trust mark types", e.message, e))
@@ -92,8 +92,8 @@ class FindTrustMarkTypeByIdCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: FindTrustMarkTypeByIdArgs, applyDuring: (FindTrustMarkTypeByIdArgs) -> FindTrustMarkTypeByIdArgs): IdkResult<TrustMarkType, IdkError> {
-        val (account, id) = applyDuring(args)
-        val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
+        val (tenantId, id) = applyDuring(args)
+        val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, id).executeAsOneOrNull()
         return if (type == null) federationErr(TrustMarkTypeNotFoundError(id)) else IdkResult.ok(type.toDTO())
     }
 }
@@ -113,8 +113,8 @@ class DeleteTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
-        val (account, id) = applyDuring(args)
-        val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, id).executeAsOneOrNull()
+        val (tenantId, id) = applyDuring(args)
+        val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, id).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(id))
         return try {
             val deleted = trustMarkTypeQueries.delete(id).executeAsOne()
@@ -141,8 +141,8 @@ class GetIssuersForTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun doExecute(args: GetIssuersForTrustMarkTypeArgs, applyDuring: (GetIssuersForTrustMarkTypeArgs) -> GetIssuersForTrustMarkTypeArgs): IdkResult<Array<TrustMarkIssuer>, IdkError> {
-        val (account, trustMarkTypeId) = applyDuring(args)
-        val type = trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
+        val (tenantId, trustMarkTypeId) = applyDuring(args)
+        val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))
         return IdkResult.ok(trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId).executeAsList().toTypedArray())
     }
@@ -164,8 +164,8 @@ class AddIssuerToTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun doExecute(args: AddIssuerToTrustMarkTypeArgs, applyDuring: (AddIssuerToTrustMarkTypeArgs) -> AddIssuerToTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, IdkError> {
-        val (account, trustMarkTypeId, issuerIdentifier) = applyDuring(args)
-        trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
+        val (tenantId, trustMarkTypeId, issuerIdentifier) = applyDuring(args)
+        trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))
 
         val existing = trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId).executeAsList().any { it.issuer_identifier == issuerIdentifier }
@@ -197,8 +197,8 @@ class RemoveIssuerFromTrustMarkTypeCommandImpl(
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
     override suspend fun doExecute(args: RemoveIssuerFromTrustMarkTypeArgs, applyDuring: (RemoveIssuerFromTrustMarkTypeArgs) -> RemoveIssuerFromTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, IdkError> {
-        val (account, trustMarkTypeId, issuerId) = applyDuring(args)
-        trustMarkTypeQueries.findByAccountIdAndId(account.id, trustMarkTypeId).executeAsOneOrNull()
+        val (tenantId, trustMarkTypeId, issuerId) = applyDuring(args)
+        trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))
 
         val issuer = trustMarkIssuerQueries.findByTrustMarkTypeId(trustMarkTypeId).executeAsList().find { it.id == issuerId }

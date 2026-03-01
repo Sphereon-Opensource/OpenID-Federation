@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 
@@ -25,7 +25,7 @@ interface ReceivedTrustMarkService {
      * @param createRequest The request containing the details required to create the trust mark.
      * @return FederationResult containing the created ReceivedTrustMark or an error.
      */
-    suspend fun createReceivedTrustMark(account: Account, createRequest: CreateReceivedTrustMark): FederationResult<ReceivedTrustMark>
+    suspend fun createReceivedTrustMark(tenantId: String, createRequest: CreateReceivedTrustMark): FederationResult<ReceivedTrustMark>
 
     /**
      * Retrieves a list of Trust Marks associated with the given account.
@@ -33,7 +33,7 @@ interface ReceivedTrustMarkService {
      * @param account The account for which the received Trust Marks are to be retrieved.
      * @return FederationResult containing an array of ReceivedTrustMark or an error.
      */
-    suspend fun listReceivedTrustMarks(account: Account): FederationResult<Array<ReceivedTrustMark>>
+    suspend fun listReceivedTrustMarks(tenantId: String): FederationResult<Array<ReceivedTrustMark>>
 
     /**
      * Deletes a received trust mark associated with the specified account and trust mark ID.
@@ -42,5 +42,5 @@ interface ReceivedTrustMarkService {
      * @param trustMarkId The unique identifier of the trust mark to be deleted.
      * @return FederationResult containing the deleted ReceivedTrustMark or an error.
      */
-    suspend fun deleteReceivedTrustMark(account: Account, trustMarkId: String): FederationResult<ReceivedTrustMark>
+    suspend fun deleteReceivedTrustMark(tenantId: String, trustMarkId: String): FederationResult<ReceivedTrustMark>
 }

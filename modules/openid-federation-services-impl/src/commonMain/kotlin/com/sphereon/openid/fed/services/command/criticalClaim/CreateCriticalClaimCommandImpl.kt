@@ -40,34 +40,34 @@ class CreateCriticalClaimCommandImpl(
         args: CreateCriticalClaimArgs,
         applyDuring: (CreateCriticalClaimArgs) -> CreateCriticalClaimArgs
     ): IdkResult<CritEntity, IdkError> {
-        val (account, claim) = applyDuring(args)
+        val (tenantId, claim) = applyDuring(args)
 
-        logger.info("Creating critical claim for account: ${account.username}, claim: $claim")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Creating critical claim for account: ${tenantId}, claim: $claim")
+        logger.debug("Using account with ID: ${tenantId}")
 
         val existingCriticalClaim = critQueries
-            .findByAccountIdAndClaim(account.id, claim)
+            .findByAccountIdAndClaim(tenantId, claim)
             .executeAsOneOrNull()
 
         if (existingCriticalClaim != null) {
             logger.warn("Critical claim already exists for claim: $claim")
-            return federationErr(CriticalClaimAlreadyExistsError(account.id, claim))
+            return federationErr(CriticalClaimAlreadyExistsError(tenantId, claim))
         }
 
         return try {
             val createdCriticalClaim = critQueries
-                .create(account.id, claim)
+                .create(tenantId, claim)
                 .executeAsOneOrNull()
 
             if (createdCriticalClaim != null) {
                 logger.info("Successfully created critical claim with ID: ${createdCriticalClaim.id}")
                 IdkResult.ok(createdCriticalClaim)
             } else {
-                logger.error("Failed to create critical claim for account: ${account.username}, claim: $claim")
+                logger.error("Failed to create critical claim for account: ${tenantId}, claim: $claim")
                 federationErr(ServerError(Constants.FAILED_TO_CREATE_CRIT))
             }
         } catch (e: Exception) {
-            logger.error("Failed to create critical claim for account: ${account.username}, claim: $claim", e)
+            logger.error("Failed to create critical claim for account: ${tenantId}, claim: $claim", e)
             federationErr(ServerError("Failed to create critical claim", e.message, e))
         }
     }

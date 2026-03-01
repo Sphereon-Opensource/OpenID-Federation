@@ -46,11 +46,11 @@ class CreateKeyCommandImpl(
         args: CreateKeyCommandArgs,
         applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
     ): IdkResult<AccountJwk, IdkError> = withContext(Dispatchers.IO) {
-        val (account, opts) = applyDuring(args)
+        val (tenantId, opts) = applyDuring(args)
 
         try {
-            logger.info("Creating new key for account: ${account.username}, with options: $opts")
-            logger.debug("Found account with ID: ${account.id}")
+            logger.info("Creating new key for account: ${tenantId}, with options: $opts")
+            logger.debug("Found account with ID: ${tenantId}")
             val (providerId, alias, use, keyOperations, alg) = opts
 
             // Check if key with same alias already exists
@@ -61,16 +61,16 @@ class CreateKeyCommandImpl(
             val existingKeys = existingKeysResult.value
 
             if (existingKeys.any { alias != null && it.kmsKeyRef == alias }) {
-                return@withContext federationErr(ServerError("Key with alias $alias already exists for account ID: ${account.id}"))
+                return@withContext federationErr(ServerError("Key with alias $alias already exists for account ID: ${tenantId}"))
             }
 
             val generatedJwk = keyManagerService.generateKey(providerId, alias, use, keyOperations, alg)
             requireNotNull(generatedJwk.alias) { "Generated key alias cannot be null" }
             requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
-            logger.debug("Generated key pair with KID: ${generatedJwk.kid} providerId: ${generatedJwk.providerId} and alias: ${generatedJwk.alias} for account ID: ${account.id}")
+            logger.debug("Generated key pair with KID: ${generatedJwk.kid} providerId: ${generatedJwk.providerId} and alias: ${generatedJwk.alias} for account ID: ${tenantId}")
 
             val createdKey = jwkQueries.create(
-                account_id = account.id,
+                account_id = tenantId,
                 kid = generatedJwk.kid,
                 kms_key_ref = generatedJwk.alias,
                 kms = generatedJwk.providerId,
@@ -78,10 +78,10 @@ class CreateKeyCommandImpl(
                 key = generatedJwk.jose.publicJwk.toJsonString()
             ).executeAsOne()
 
-            logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${account.id}")
+            logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${tenantId}")
             IdkResult.ok(createdKey.toDTO())
         } catch (e: Exception) {
-            logger.error("Failed to create key for account: ${account.username} due to: ${e.message}", e)
+            logger.error("Failed to create key for account: ${tenantId} due to: ${e.message}", e)
             federationErr(ServerError("Failed to create key", e.message, e))
         }
     }

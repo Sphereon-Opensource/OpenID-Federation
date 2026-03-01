@@ -39,13 +39,13 @@ class ListReceivedTrustMarksCommandImpl(
         args: ListReceivedTrustMarksArgs,
         applyDuring: (ListReceivedTrustMarksArgs) -> ListReceivedTrustMarksArgs
     ): IdkResult<Array<ReceivedTrustMark>, IdkError> {
-        val (account) = applyDuring(args)
-        val username = account.username
+        val (tenantId) = applyDuring(args)
+        val username = tenantId
 
         logger.debug("Listing trust marks for account: $username")
 
         return try {
-            val trustMarks = receivedTrustMarkQueries.findByAccountId(account.id).executeAsList()
+            val trustMarks = receivedTrustMarkQueries.findByAccountId(tenantId).executeAsList()
             logger.debug("Found ${trustMarks.size} trust marks for account: $username")
             IdkResult.ok(trustMarks.map { it.toDTO() }.toTypedArray())
         } catch (e: Exception) {

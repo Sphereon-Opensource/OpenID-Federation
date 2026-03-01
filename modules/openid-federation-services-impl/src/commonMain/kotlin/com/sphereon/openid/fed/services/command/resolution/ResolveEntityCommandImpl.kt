@@ -10,14 +10,13 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.FederationClient
 import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
 import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.Account
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
 import com.sphereon.openid.fed.openapi.models.TrustMark
-import com.sphereon.openid.fed.services.AccountService
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import me.tatarka.inject.annotations.Inject
@@ -33,7 +32,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = ResolveEntityCommand::class)
 class ResolveEntityCommandImpl(
     execution: SessionExecution,
-    private val accountService: AccountService,
+    private val tenantContextResolver: TenantContextResolver,
     private val federationClient: FederationClient
 ) : TypedServiceCommandAdapter<ResolveEntityArgs, ResolveResponse>(
     commandId = ResolveEntityCommand.COMMAND_ID,
@@ -49,12 +48,12 @@ class ResolveEntityCommandImpl(
         args: ResolveEntityArgs,
         applyDuring: (ResolveEntityArgs) -> ResolveEntityArgs
     ): IdkResult<ResolveResponse, IdkError> {
-        val (account, sub, trustAnchor, entityTypes) = applyDuring(args)
+        val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Resolving entity for subject: $sub, trust anchor: $trustAnchor")
 
         return try {
-            logger.debug("Using account: ${account.username} (ID: ${account.id})")
+            logger.debug("Using tenant: $tenantId")
             logger.debug("Entity types filter: ${entityTypes?.joinToString(", ") ?: "none"}")
 
             // Get the entity configuration statement for the subject
@@ -97,7 +96,7 @@ class ResolveEntityCommandImpl(
 
             val response = buildResolveResponse(
                 currentTime,
-                account,
+                tenantId,
                 sub,
                 filteredMetadata,
                 trustMarks,
@@ -118,13 +117,16 @@ class ResolveEntityCommandImpl(
 
     private suspend fun buildResolveResponse(
         currentTime: Long,
-        account: Account,
+        tenantId: String,
         sub: String,
         metadata: JsonObject,
         trustMarks: Array<TrustMark>,
         trustChain: Array<String>?
     ): IdkResult<ResolveResponse, IdkError> {
-        return accountService.getAccountIdentifierByAccount(account).toIdkErrorResult().map { iss ->
+        val iss = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
+
+        return IdkResult.ok(
             ResolveResponse(
                 iss = iss,
                 sub = sub,
@@ -134,7 +136,7 @@ class ResolveEntityCommandImpl(
                 trustMarks = trustMarks.toList(),
                 trustChain = trustChain?.toList()
             )
-        }
+        )
     }
 
     private fun getFilteredMetadata(

@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateCrit
 import com.sphereon.openid.fed.services.CriticalClaimService
 import kotlinx.serialization.encodeToString
@@ -26,7 +27,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListCriticalClaimsEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListCriticalClaimsEndpointCommand.COMMAND_ID,
@@ -40,10 +41,10 @@ class ListCriticalClaimsEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = criticalClaimService.findByAccount(account)
+        val result = criticalClaimService.findByAccount(tenantId)
 
         return if (result.isOk) {
             val crits = result.value.map { it.toCritResponse() }
@@ -63,7 +64,7 @@ class ListCriticalClaimsEndpointCommandImpl(
 class CreateCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateCriticalClaimEndpointCommand.COMMAND_ID,
@@ -77,8 +78,8 @@ class CreateCriticalClaimEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -88,7 +89,7 @@ class CreateCriticalClaimEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = criticalClaimService.create(account, createCrit.claim)
+        val result = criticalClaimService.create(tenantId, createCrit.claim)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -111,7 +112,7 @@ class CreateCriticalClaimEndpointCommandImpl(
 class DeleteCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteCriticalClaimEndpointCommand.COMMAND_ID,
@@ -125,14 +126,14 @@ class DeleteCriticalClaimEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteCriticalClaimEndpointCommand.ENDPOINT.pathPattern)
         val id = req.pathParams["id"]
             ?: return Ok(errorResponse(400, "Missing path parameter: id"))
 
-        val result = criticalClaimService.delete(account, id)
+        val result = criticalClaimService.delete(tenantId, id)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value.toCritResponse())))

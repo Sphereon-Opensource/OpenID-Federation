@@ -1,12 +1,9 @@
+@file:Suppress("DEPRECATION")
+
 package com.sphereon.openid.fed.services.command.account
 
-import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+@Deprecated("Use com.sphereon.openid.fed.account.command.GetAccountIdentifierArgs instead")
+typealias GetAccountIdentifierArgs = com.sphereon.openid.fed.account.command.GetAccountIdentifierArgs
 
-data class GetAccountIdentifierArgs(val account: Account)
-
-interface GetAccountIdentifierCommand : ServiceCommand<GetAccountIdentifierArgs, String> {
-    companion object {
-        const val COMMAND_ID = "fed.account.get-identifier"
-    }
-}
+@Deprecated("Use com.sphereon.openid.fed.account.command.GetAccountIdentifierCommand instead")
+typealias GetAccountIdentifierCommand = com.sphereon.openid.fed.account.command.GetAccountIdentifierCommand

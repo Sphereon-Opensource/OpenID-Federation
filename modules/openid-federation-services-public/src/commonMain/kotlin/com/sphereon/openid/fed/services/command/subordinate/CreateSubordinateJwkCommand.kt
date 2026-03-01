@@ -5,11 +5,11 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.SubordinateJwk
 
-data class CreateSubordinateJwkArgs(val account: Account, val id: String, val jwk: Jwk)
+data class CreateSubordinateJwkArgs(val tenantId: String, val id: String, val jwk: Jwk)
 
 interface CreateSubordinateJwkCommand : ServiceCommand<CreateSubordinateJwkArgs, SubordinateJwk>, PublicApiCommand {
     companion object {

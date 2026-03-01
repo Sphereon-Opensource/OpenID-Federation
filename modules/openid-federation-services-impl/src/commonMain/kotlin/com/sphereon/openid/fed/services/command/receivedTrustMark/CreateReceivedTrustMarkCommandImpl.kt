@@ -39,14 +39,14 @@ class CreateReceivedTrustMarkCommandImpl(
         args: CreateReceivedTrustMarkArgs,
         applyDuring: (CreateReceivedTrustMarkArgs) -> CreateReceivedTrustMarkArgs
     ): IdkResult<ReceivedTrustMark, IdkError> {
-        val (account, createRequest) = applyDuring(args)
-        val username = account.username
+        val (tenantId, createRequest) = applyDuring(args)
+        val username = tenantId
 
         logger.info("Creating trust mark for account: $username")
 
         return try {
             val createdTrustMark = receivedTrustMarkQueries.create(
-                account_id = account.id,
+                account_id = tenantId,
                 trust_mark_id = createRequest.trustMarkId,
                 jwt = createRequest.jwt,
             ).executeAsOneOrNull()

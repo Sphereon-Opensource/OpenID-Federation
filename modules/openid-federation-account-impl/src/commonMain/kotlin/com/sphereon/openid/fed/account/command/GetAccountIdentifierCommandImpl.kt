@@ -1,4 +1,4 @@
-package com.sphereon.openid.fed.services.command.account
+package com.sphereon.openid.fed.account.command
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
@@ -10,7 +10,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.services.config.AccountServiceConfig
+import com.sphereon.openid.fed.account.config.AccountServiceConfig
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn

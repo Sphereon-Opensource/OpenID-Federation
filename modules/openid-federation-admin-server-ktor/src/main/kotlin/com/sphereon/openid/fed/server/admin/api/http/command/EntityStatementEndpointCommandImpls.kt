@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.openid.fed.services.EntityConfigurationStatementService
 import kotlinx.serialization.encodeToString
@@ -26,7 +27,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class GetEntityStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val entityConfigurationStatementService: EntityConfigurationStatementService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = GetEntityStatementEndpointCommand.COMMAND_ID,
@@ -40,10 +41,10 @@ class GetEntityStatementEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = entityConfigurationStatementService.findByAccount(account)
+        val result = entityConfigurationStatementService.findByAccount(tenantId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -62,7 +63,7 @@ class GetEntityStatementEndpointCommandImpl(
 class PublishEntityStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val entityConfigurationStatementService: EntityConfigurationStatementService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = PublishEntityStatementEndpointCommand.COMMAND_ID,
@@ -76,8 +77,8 @@ class PublishEntityStatementEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = if (request.body.isNullOrBlank()) null else try {
             json.decodeFromString<PublishStatementRequest>(request.body!!)
@@ -86,7 +87,7 @@ class PublishEntityStatementEndpointCommandImpl(
         }
 
         val result = entityConfigurationStatementService.publishByAccount(
-            account,
+            tenantId,
             dryRun = body?.dryRun,
             kmsKeyRef = body?.kmsKeyRef,
             kid = body?.kid

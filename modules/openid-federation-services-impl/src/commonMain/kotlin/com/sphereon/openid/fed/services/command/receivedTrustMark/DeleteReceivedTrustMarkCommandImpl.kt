@@ -40,13 +40,13 @@ class DeleteReceivedTrustMarkCommandImpl(
         args: DeleteReceivedTrustMarkArgs,
         applyDuring: (DeleteReceivedTrustMarkArgs) -> DeleteReceivedTrustMarkArgs
     ): IdkResult<ReceivedTrustMark, IdkError> {
-        val (account, trustMarkId) = applyDuring(args)
-        val username = account.username
+        val (tenantId, trustMarkId) = applyDuring(args)
+        val username = tenantId
 
         logger.info("Attempting to delete trust mark ID: $trustMarkId for account: $username")
 
         // Check if trust mark exists for this account
-        val existing = receivedTrustMarkQueries.findByAccountIdAndId(account.id, trustMarkId).executeAsOneOrNull()
+        val existing = receivedTrustMarkQueries.findByAccountIdAndId(tenantId, trustMarkId).executeAsOneOrNull()
         if (existing == null) {
             logger.error("Trust mark not found with ID: $trustMarkId for account: $username")
             return federationErr(ReceivedTrustMarkNotFoundError(trustMarkId, username))

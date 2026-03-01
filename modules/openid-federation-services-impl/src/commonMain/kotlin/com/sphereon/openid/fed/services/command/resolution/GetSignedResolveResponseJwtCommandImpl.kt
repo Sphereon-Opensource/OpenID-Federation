@@ -45,12 +45,12 @@ class GetSignedResolveResponseJwtCommandImpl(
         args: GetSignedResolveResponseJwtArgs,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
     ): IdkResult<String, IdkError> {
-        val (account, sub, trustAnchor, entityTypes) = applyDuring(args)
+        val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Getting signed resolve response JWT for subject: $sub")
 
         // First resolve the entity
-        val resolveResult = resolveEntityCommand.execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes))
+        val resolveResult = resolveEntityCommand.execute(ResolveEntityArgs(tenantId, sub, trustAnchor, entityTypes))
 
         return when {
             resolveResult.isErr -> resolveResult.error.asErrorResult()
@@ -59,15 +59,15 @@ class GetSignedResolveResponseJwtCommandImpl(
                 logger.debug("Successfully built resolve response")
 
                 try {
-                    val keysResult = jwkService.getKeys(account, includeRevoked = false).toIdkErrorResult()
+                    val keysResult = jwkService.getKeys(tenantId, includeRevoked = false).toIdkErrorResult()
                     if (keysResult.isErr) {
                         return keysResult.error.asErrorResult()
                     }
 
                     val keys = keysResult.value
                     if (keys.isEmpty()) {
-                        logger.error("No keys found for account: ${account.username}")
-                        return federationErr(KeyNotFoundError(keyId = "account:${account.id}"))
+                        logger.error("No keys found for account: ${tenantId}")
+                        return federationErr(KeyNotFoundError(keyId = "account:${tenantId}"))
                     }
 
                     val key = keys[0]

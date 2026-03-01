@@ -39,18 +39,18 @@ class FindAuthorityHintsByAccountCommandImpl(
         args: FindAuthorityHintsByAccountArgs,
         applyDuring: (FindAuthorityHintsByAccountArgs) -> FindAuthorityHintsByAccountArgs
     ): IdkResult<List<AuthorityHint>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
-        logger.debug("Finding authority hints for account: ${account.username}")
+        logger.debug("Finding authority hints for account: ${tenantId}")
 
         return try {
-            val authorityHints = authorityHintQueries.findByAccountId(account.id)
+            val authorityHints = authorityHintQueries.findByAccountId(tenantId)
                 .executeAsList()
                 .map { it.toDTO() }
-            logger.info("Found ${authorityHints.size} authority hints for account: ${account.username}")
+            logger.info("Found ${authorityHints.size} authority hints for account: ${tenantId}")
             IdkResult.ok(authorityHints)
         } catch (e: Exception) {
-            logger.error("Failed to find authority hints for account: ${account.username}", e)
+            logger.error("Failed to find authority hints for account: ${tenantId}", e)
             federationErr(ServerError("Failed to retrieve authority hints", e.message, e))
         }
     }

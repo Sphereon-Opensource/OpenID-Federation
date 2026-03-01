@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateReceivedTrustMark
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.openid.fed.services.command.receivedTrustMark.CreateReceivedTrustMarkArgs
@@ -36,12 +36,12 @@ class ReceivedTrustMarkServiceImpl(
     private val listReceivedTrustMarksCommand: ListReceivedTrustMarksCommand
 ) : ReceivedTrustMarkService {
 
-    override suspend fun createReceivedTrustMark(account: Account, createRequest: CreateReceivedTrustMark): FederationResult<ReceivedTrustMark> =
-        createReceivedTrustMarkCommand.execute(CreateReceivedTrustMarkArgs(account, createRequest)).toFederationResult()
+    override suspend fun createReceivedTrustMark(tenantId: String, createRequest: CreateReceivedTrustMark): FederationResult<ReceivedTrustMark> =
+        createReceivedTrustMarkCommand.execute(CreateReceivedTrustMarkArgs(tenantId, createRequest)).toFederationResult()
 
-    override suspend fun listReceivedTrustMarks(account: Account): FederationResult<Array<ReceivedTrustMark>> =
-        listReceivedTrustMarksCommand.execute(ListReceivedTrustMarksArgs(account)).toFederationResult()
+    override suspend fun listReceivedTrustMarks(tenantId: String): FederationResult<Array<ReceivedTrustMark>> =
+        listReceivedTrustMarksCommand.execute(ListReceivedTrustMarksArgs(tenantId)).toFederationResult()
 
-    override suspend fun deleteReceivedTrustMark(account: Account, trustMarkId: String): FederationResult<ReceivedTrustMark> =
-        deleteReceivedTrustMarkCommand.execute(DeleteReceivedTrustMarkArgs(account, trustMarkId)).toFederationResult()
+    override suspend fun deleteReceivedTrustMark(tenantId: String, trustMarkId: String): FederationResult<ReceivedTrustMark> =
+        deleteReceivedTrustMarkCommand.execute(DeleteReceivedTrustMarkArgs(tenantId, trustMarkId)).toFederationResult()
 }

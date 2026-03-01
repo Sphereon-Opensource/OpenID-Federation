@@ -1,10 +1,10 @@
 package com.sphereon.openid.fed.services.command.jwk
 
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 
 data class GetFederationHistoricalKeysJwtArgs(
-    val account: Account
+    val tenantId: String
 )
 
 interface GetFederationHistoricalKeysJwtCommand : ServiceCommand<GetFederationHistoricalKeysJwtArgs, String> {

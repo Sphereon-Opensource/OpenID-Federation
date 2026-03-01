@@ -12,7 +12,6 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.JwtHeader
@@ -49,12 +48,12 @@ class PublishEntityConfigurationCommandImpl(
         args: PublishEntityConfigurationArgs,
         applyDuring: (PublishEntityConfigurationArgs) -> PublishEntityConfigurationArgs
     ): IdkResult<String, IdkError> {
-        val (account, dryRun, kmsKeyRef, kid) = applyDuring(args)
+        val (tenantId, dryRun, kmsKeyRef, kid) = applyDuring(args)
 
-        logger.info("Publishing entity configuration for account: ${account.username} (dryRun: $dryRun)")
+        logger.info("Publishing entity configuration for account: $tenantId (dryRun: $dryRun)")
 
         // Find the entity configuration
-        val findResult = findEntityConfigurationCommand.execute(FindEntityConfigurationByAccountArgs(account))
+        val findResult = findEntityConfigurationCommand.execute(FindEntityConfigurationByAccountArgs(tenantId))
 
         if (findResult.isErr) {
             return findResult.error.asErrorResult()
@@ -63,7 +62,7 @@ class PublishEntityConfigurationCommandImpl(
 
         // Get the keys for signing
         val keysResult = jwkService.getAssertedKeysForAccount(
-            account,
+            tenantId,
             includeRevoked = false,
             kmsKeyRef = kmsKeyRef,
             kid = kid
@@ -87,11 +86,11 @@ class PublishEntityConfigurationCommandImpl(
             logger.info("Dry run completed, returning JWT without persisting")
             IdkResult.ok(jwt)
         } else {
-            val persistResult = persistEntityConfiguration(account, entityConfigurationStatement, jwt)
+            val persistResult = persistEntityConfiguration(tenantId, entityConfigurationStatement, jwt)
             if (persistResult.isErr) {
                 return persistResult.error.asErrorResult()
             }
-            logger.info("Successfully published entity configuration statement for account: ${account.username}")
+            logger.info("Successfully published entity configuration statement for account: $tenantId")
             IdkResult.ok(jwt)
         }
     }
@@ -110,13 +109,13 @@ class PublishEntityConfigurationCommandImpl(
     }
 
     private fun persistEntityConfiguration(
-        account: Account,
+        tenantId: String,
         statement: EntityConfigurationStatement,
         jwt: String
     ): IdkResult<Unit, IdkError> {
         return try {
             queries.entityConfigurationStatementQueries.create(
-                account_id = account.id,
+                account_id = tenantId,
                 expires_at = statement.exp.toLong(),
                 statement = jwt
             ).executeAsOne()

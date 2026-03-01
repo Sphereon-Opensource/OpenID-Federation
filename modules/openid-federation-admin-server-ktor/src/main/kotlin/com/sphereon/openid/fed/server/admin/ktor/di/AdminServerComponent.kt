@@ -14,9 +14,7 @@ import com.sphereon.core.api.cache.CacheBackend
 import com.sphereon.openid.fed.core.cache.CacheManager
 import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
-import com.sphereon.openid.fed.server.admin.api.http.command.AccountResolver
-import com.sphereon.openid.fed.services.AccountService
-import com.sphereon.openid.fed.services.config.AccountServiceConfig
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.Provides
@@ -138,13 +136,13 @@ abstract class AdminServerAppComponent(
     }
 
     /**
-     * Provides configuration for AccountService.
+     * Provides tenant service configuration.
      */
     @Provides
     @SingleIn(AppScope::class)
-    fun provideAccountServiceConfig(): AccountServiceConfig {
+    fun provideTenantServiceConfig(): TenantServiceConfig {
         val federation = configBinder.getFederationConfig()
-        return AccountServiceConfig(federation.rootIdentifier)
+        return TenantServiceConfig(federation.rootIdentifier)
     }
 
     /**
@@ -213,13 +211,4 @@ abstract class AdminServerSessionComponent(
     val appComponent: AdminServerAppComponent,
     @Component
     val contextComponent: AdminServerContextComponent
-) : AdminServerSessionComponentMerged {
-
-    /**
-     * Provides AccountResolver for resolving accounts from HTTP requests.
-     */
-    @Provides
-    fun provideAccountResolver(accountService: AccountService): AccountResolver {
-        return AccountResolver(accountService)
-    }
-}
+) : AdminServerSessionComponentMerged

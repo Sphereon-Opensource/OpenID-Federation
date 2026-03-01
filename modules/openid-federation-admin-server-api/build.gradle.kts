@@ -26,6 +26,9 @@ kotlin {
                 // Services public interfaces
                 api(projects.modules.openidFederationServicesPublic)
 
+                // Account public interfaces (for account endpoint commands)
+                api(projects.modules.openidFederationAccountPublic)
+
                 // Common utilities
                 api(projects.modules.openidFederationCommon)
 

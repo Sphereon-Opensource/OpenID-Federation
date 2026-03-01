@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 
 data class PublishSubordinateStatementArgs(
-    val account: Account,
+    val tenantId: String,
     val id: String,
     val dryRun: Boolean? = false,
     val kmsKeyRef: String? = null,

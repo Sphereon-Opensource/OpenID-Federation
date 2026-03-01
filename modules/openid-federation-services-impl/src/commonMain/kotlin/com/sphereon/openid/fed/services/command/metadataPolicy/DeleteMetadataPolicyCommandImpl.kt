@@ -41,10 +41,10 @@ class DeleteMetadataPolicyCommandImpl(
         args: DeleteMetadataPolicyArgs,
         applyDuring: (DeleteMetadataPolicyArgs) -> DeleteMetadataPolicyArgs
     ): IdkResult<MetadataPolicy, IdkError> {
-        val (account, id) = applyDuring(args)
+        val (tenantId, id) = applyDuring(args)
 
-        logger.info("Deleting metadata policy ID: $id for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Deleting metadata policy ID: $id for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         val policy = metadataPolicyQueries.findById(id).executeAsOneOrNull()
 
@@ -53,8 +53,8 @@ class DeleteMetadataPolicyCommandImpl(
             return federationErr(MetadataPolicyNotFoundError(id))
         }
 
-        if (policy.account_id != account.id) {
-            logger.error("Metadata policy ID: $id does not belong to account: ${account.username}")
+        if (policy.account_id != tenantId) {
+            logger.error("Metadata policy ID: $id does not belong to account: ${tenantId}")
             return federationErr(MetadataPolicyNotFoundError(id))
         }
 
@@ -69,7 +69,7 @@ class DeleteMetadataPolicyCommandImpl(
                 federationErr(ServerError(Constants.FAILED_TO_DELETE_ENTITY_CONFIGURATION_METADATA_POLICY))
             }
         } catch (e: Exception) {
-            logger.error("Failed to delete metadata policy ID: $id for account: ${account.username}", e)
+            logger.error("Failed to delete metadata policy ID: $id for account: ${tenantId}", e)
             federationErr(ServerError("Failed to delete metadata policy", e.message, e))
         }
     }

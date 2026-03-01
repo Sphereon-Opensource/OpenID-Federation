@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.TrustMark
 
-data class GetTrustMarksForAccountArgs(val account: Account)
+data class GetTrustMarksForAccountArgs(val tenantId: String)
 
 interface GetTrustMarksForAccountCommand : ServiceCommand<GetTrustMarksForAccountArgs, List<TrustMark>>, PublicApiCommand {
     companion object {

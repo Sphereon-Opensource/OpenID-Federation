@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 
-data class FindSubordinateMetadataArgs(val account: Account, val subordinateId: String)
+data class FindSubordinateMetadataArgs(val tenantId: String, val subordinateId: String)
 
 interface FindSubordinateMetadataCommand : ServiceCommand<FindSubordinateMetadataArgs, Array<SubordinateMetadata>>, PublicApiCommand {
     companion object {

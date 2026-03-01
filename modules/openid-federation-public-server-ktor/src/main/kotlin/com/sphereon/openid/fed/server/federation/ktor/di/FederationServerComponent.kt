@@ -12,9 +12,7 @@ import com.sphereon.core.api.cache.CacheBackend
 import com.sphereon.openid.fed.core.cache.CacheManager
 import com.sphereon.openid.fed.core.cache.DefaultCacheManager
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
-import com.sphereon.openid.fed.server.federation.api.http.command.FederationAccountResolver
-import com.sphereon.openid.fed.services.AccountService
-import com.sphereon.openid.fed.services.config.AccountServiceConfig
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Component
 import me.tatarka.inject.annotations.Provides
@@ -124,13 +122,13 @@ abstract class FederationServerAppComponent(
     }
 
     /**
-     * Provides configuration for AccountService.
+     * Provides tenant service configuration.
      */
     @Provides
     @SingleIn(AppScope::class)
-    fun provideAccountServiceConfig(): AccountServiceConfig {
+    fun provideTenantServiceConfig(): TenantServiceConfig {
         val federation = configBinder.getFederationConfig()
-        return AccountServiceConfig(federation.rootIdentifier)
+        return TenantServiceConfig(federation.rootIdentifier)
     }
 
     /**
@@ -203,13 +201,4 @@ abstract class FederationServerSessionComponent(
     val appComponent: FederationServerAppComponent,
     @Component
     val contextComponent: FederationServerContextComponent
-) : FederationServerSessionComponentMerged {
-
-    /**
-     * Provides FederationAccountResolver for resolving accounts from HTTP requests.
-     */
-    @Provides
-    fun provideFederationAccountResolver(accountService: AccountService): FederationAccountResolver {
-        return FederationAccountResolver(accountService)
-    }
-}
+) : FederationServerSessionComponentMerged

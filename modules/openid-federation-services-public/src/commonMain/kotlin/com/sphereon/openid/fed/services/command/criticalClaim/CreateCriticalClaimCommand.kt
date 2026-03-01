@@ -5,11 +5,11 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 
 data class CreateCriticalClaimArgs(
-    val account: Account,
+    val tenantId: String,
     val claim: String
 )
 

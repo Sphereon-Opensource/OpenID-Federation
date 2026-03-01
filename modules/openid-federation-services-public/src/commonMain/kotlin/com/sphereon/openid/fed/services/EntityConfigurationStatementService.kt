@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 
 /**
@@ -22,7 +22,7 @@ interface EntityConfigurationStatementService {
      * @param account The account for which the entity configuration statement is to be retrieved.
      * @return FederationResult containing the EntityConfigurationStatement or an error.
      */
-    suspend fun findByAccount(account: Account): FederationResult<EntityConfigurationStatement>
+    suspend fun findByAccount(tenantId: String): FederationResult<EntityConfigurationStatement>
 
     /**
      * Publishes the entity configuration statement for the specified account.
@@ -35,7 +35,7 @@ interface EntityConfigurationStatementService {
      * @return FederationResult containing the JWT or an error.
      */
     suspend fun publishByAccount(
-        account: Account,
+        tenantId: String,
         dryRun: Boolean?,
         kmsKeyRef: String?,
         kid: String?

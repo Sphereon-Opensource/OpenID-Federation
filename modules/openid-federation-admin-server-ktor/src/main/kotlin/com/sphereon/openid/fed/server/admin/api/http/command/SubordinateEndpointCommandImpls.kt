@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateMetadata
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.Jwk
@@ -32,7 +33,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListSubordinatesEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListSubordinatesEndpointCommand.COMMAND_ID,
@@ -46,10 +47,10 @@ class ListSubordinatesEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = subordinateService.findSubordinatesByAccount(account)
+        val result = subordinateService.findSubordinatesByAccount(tenantId)
 
         return if (result.isOk) {
             val subordinates = result.value.toSubordinatesResponse()
@@ -69,7 +70,7 @@ class ListSubordinatesEndpointCommandImpl(
 class CreateSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateSubordinateEndpointCommand.COMMAND_ID,
@@ -83,8 +84,8 @@ class CreateSubordinateEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -94,7 +95,7 @@ class CreateSubordinateEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = subordinateService.createSubordinate(account, createSubordinate)
+        val result = subordinateService.createSubordinate(tenantId, createSubordinate)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -117,7 +118,7 @@ class CreateSubordinateEndpointCommandImpl(
 class DeleteSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteSubordinateEndpointCommand.COMMAND_ID,
@@ -131,14 +132,14 @@ class DeleteSubordinateEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteSubordinateEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: subordinateId"))
 
-        val result = subordinateService.deleteSubordinate(account, subordinateId)
+        val result = subordinateService.deleteSubordinate(tenantId, subordinateId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -157,7 +158,7 @@ class DeleteSubordinateEndpointCommandImpl(
 class ListSubordinateKeysEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListSubordinateKeysEndpointCommand.COMMAND_ID,
@@ -171,14 +172,14 @@ class ListSubordinateKeysEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(ListSubordinateKeysEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: subordinateId"))
 
-        val result = subordinateService.getSubordinateJwks(account, subordinateId)
+        val result = subordinateService.getSubordinateJwks(tenantId, subordinateId)
 
         return if (result.isOk) {
             val jwks = result.value.toSubordinateJwksResponse()
@@ -198,7 +199,7 @@ class ListSubordinateKeysEndpointCommandImpl(
 class CreateSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateSubordinateKeyEndpointCommand.COMMAND_ID,
@@ -212,8 +213,8 @@ class CreateSubordinateKeyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(CreateSubordinateKeyEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
@@ -227,7 +228,7 @@ class CreateSubordinateKeyEndpointCommandImpl(
             return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
         }
 
-        val result = subordinateService.createSubordinateJwk(account, subordinateId, jwk)
+        val result = subordinateService.createSubordinateJwk(tenantId, subordinateId, jwk)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -250,7 +251,7 @@ class CreateSubordinateKeyEndpointCommandImpl(
 class DeleteSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteSubordinateKeyEndpointCommand.COMMAND_ID,
@@ -264,8 +265,8 @@ class DeleteSubordinateKeyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteSubordinateKeyEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
@@ -273,7 +274,7 @@ class DeleteSubordinateKeyEndpointCommandImpl(
         val jwkId = req.pathParams["jwkId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: jwkId"))
 
-        val result = subordinateService.deleteSubordinateJwk(account, subordinateId, jwkId)
+        val result = subordinateService.deleteSubordinateJwk(tenantId, subordinateId, jwkId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -292,7 +293,7 @@ class DeleteSubordinateKeyEndpointCommandImpl(
 class GetSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = GetSubordinateStatementEndpointCommand.COMMAND_ID,
@@ -306,14 +307,14 @@ class GetSubordinateStatementEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(GetSubordinateStatementEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: subordinateId"))
 
-        val result = subordinateService.getSubordinateStatement(account, subordinateId)
+        val result = subordinateService.getSubordinateStatement(tenantId, subordinateId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
@@ -332,7 +333,7 @@ class GetSubordinateStatementEndpointCommandImpl(
 class PublishSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = PublishSubordinateStatementEndpointCommand.COMMAND_ID,
@@ -346,8 +347,8 @@ class PublishSubordinateStatementEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(PublishSubordinateStatementEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
@@ -360,7 +361,7 @@ class PublishSubordinateStatementEndpointCommandImpl(
         }
 
         val result = subordinateService.publishSubordinateStatement(
-            account = account,
+            tenantId = tenantId,
             id = subordinateId,
             dryRun = body?.dryRun,
             kmsKeyRef = body?.kmsKeyRef,
@@ -389,7 +390,7 @@ class PublishSubordinateStatementEndpointCommandImpl(
 class ListSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListSubordinateMetadataEndpointCommand.COMMAND_ID,
@@ -403,14 +404,14 @@ class ListSubordinateMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(ListSubordinateMetadataEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: subordinateId"))
 
-        val result = subordinateService.findSubordinateMetadata(account, subordinateId)
+        val result = subordinateService.findSubordinateMetadata(tenantId, subordinateId)
 
         return if (result.isOk) {
             val metadata = result.value.toList().toSubordinateMetadataResponse()
@@ -430,7 +431,7 @@ class ListSubordinateMetadataEndpointCommandImpl(
 class CreateSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateSubordinateMetadataEndpointCommand.COMMAND_ID,
@@ -444,8 +445,8 @@ class CreateSubordinateMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(CreateSubordinateMetadataEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
@@ -460,7 +461,7 @@ class CreateSubordinateMetadataEndpointCommandImpl(
         }
 
         val result = subordinateService.createMetadata(
-            account = account,
+            tenantId = tenantId,
             subordinateId = subordinateId,
             key = createMetadata.key,
             metadata = createMetadata.metadata
@@ -487,7 +488,7 @@ class CreateSubordinateMetadataEndpointCommandImpl(
 class DeleteSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteSubordinateMetadataEndpointCommand.COMMAND_ID,
@@ -501,8 +502,8 @@ class DeleteSubordinateMetadataEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteSubordinateMetadataEndpointCommand.ENDPOINT.pathPattern)
         val subordinateId = req.pathParams["subordinateId"]
@@ -510,7 +511,7 @@ class DeleteSubordinateMetadataEndpointCommandImpl(
         val metadataId = req.pathParams["metadataId"]
             ?: return Ok(errorResponse(400, "Missing path parameter: metadataId"))
 
-        val result = subordinateService.deleteSubordinateMetadata(account, subordinateId, metadataId)
+        val result = subordinateService.deleteSubordinateMetadata(tenantId, subordinateId, metadataId)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

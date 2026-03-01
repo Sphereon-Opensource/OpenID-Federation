@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.Subordinate
 
-data class DeleteSubordinateArgs(val account: Account, val id: String)
+data class DeleteSubordinateArgs(val tenantId: String, val id: String)
 
 interface DeleteSubordinateCommand : ServiceCommand<DeleteSubordinateArgs, Subordinate>, PublicApiCommand {
     companion object {

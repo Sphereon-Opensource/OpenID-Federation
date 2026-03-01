@@ -1,4 +1,4 @@
-package com.sphereon.openid.fed.server.admin.api.http.command
+package com.sphereon.openid.fed.account.http.command
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Ok
@@ -10,8 +10,11 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.openid.fed.openapi.models.CreateAccount
-import com.sphereon.openid.fed.services.AccountService
-import com.sphereon.openid.fed.services.mappers.toAccountsResponse
+import com.sphereon.openid.fed.account.AccountService
+import com.sphereon.openid.fed.account.mappers.toAccountsResponse
+import com.sphereon.openid.fed.account.error.AccountConstants
+import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import me.tatarka.inject.annotations.Inject
@@ -103,7 +106,7 @@ class CreateAccountEndpointCommandImpl(
 class DeleteAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteAccountEndpointCommand.COMMAND_ID,
@@ -117,8 +120,15 @@ class DeleteAccountEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val username = request.headers[AccountConstants.ACCOUNT_HEADER]
+            ?: request.headers[AccountConstants.ACCOUNT_HEADER.lowercase()]
+            ?: Constants.DEFAULT_ROOT_USERNAME
+
+        val accountResult = accountService.getAccountByUsername(username)
+        if (accountResult.isErr) {
+            return Ok(errorResponse(404, "Account not found"))
+        }
+        val account = accountResult.value
 
         val result = accountService.deleteAccount(account)
 

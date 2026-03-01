@@ -41,34 +41,34 @@ class CreateMetadataCommandImpl(
         args: CreateMetadataArgs,
         applyDuring: (CreateMetadataArgs) -> CreateMetadataArgs
     ): IdkResult<Metadata, IdkError> {
-        val (account, key, metadata) = applyDuring(args)
+        val (tenantId, key, metadata) = applyDuring(args)
 
-        logger.info("Creating entity configuration metadata for account: ${account.username}, key: $key")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Creating entity configuration metadata for account: ${tenantId}, key: $key")
+        logger.debug("Using account with ID: ${tenantId}")
 
         val metadataAlreadyExists = metadataQueries
-            .findByAccountIdAndKey(account.id, key)
+            .findByAccountIdAndKey(tenantId, key)
             .executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
-            logger.error("Metadata already exists for account ID: ${account.id}, key: $key")
-            return federationErr(MetadataAlreadyExistsError(account.id, key))
+            logger.error("Metadata already exists for account ID: ${tenantId}, key: $key")
+            return federationErr(MetadataAlreadyExistsError(tenantId, key))
         }
 
         return try {
             val createdMetadata = metadataQueries
-                .create(account.id, key, metadata.toString())
+                .create(tenantId, key, metadata.toString())
                 .executeAsOneOrNull()
 
             if (createdMetadata != null) {
                 logger.info("Successfully created metadata with ID: ${createdMetadata.id}")
                 IdkResult.ok(createdMetadata.toDTO())
             } else {
-                logger.error("Failed to create metadata for account ID: ${account.id}, key: $key")
+                logger.error("Failed to create metadata for account ID: ${tenantId}, key: $key")
                 federationErr(ServerError(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA))
             }
         } catch (e: Exception) {
-            logger.error("Failed to create metadata for account: ${account.username}, key: $key", e)
+            logger.error("Failed to create metadata for account: ${tenantId}, key: $key", e)
             federationErr(ServerError("Failed to create metadata", e.message, e))
         }
     }

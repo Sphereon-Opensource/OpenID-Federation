@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateMetadataPolicy
 import com.sphereon.openid.fed.openapi.models.MetadataPolicyResponse
 import com.sphereon.openid.fed.server.admin.api.mappers.toJsonElement
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListMetadataPoliciesEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataPolicyService: MetadataPolicyService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListMetadataPoliciesEndpointCommand.COMMAND_ID,
@@ -42,10 +43,10 @@ class ListMetadataPoliciesEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = metadataPolicyService.findByAccount(account)
+        val result = metadataPolicyService.findByAccount(tenantId)
 
         return if (result.isOk) {
             val response = MetadataPolicyResponse(result.value)
@@ -65,7 +66,7 @@ class ListMetadataPoliciesEndpointCommandImpl(
 class CreateMetadataPolicyEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataPolicyService: MetadataPolicyService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateMetadataPolicyEndpointCommand.COMMAND_ID,
@@ -79,8 +80,8 @@ class CreateMetadataPolicyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
 
@@ -91,7 +92,7 @@ class CreateMetadataPolicyEndpointCommandImpl(
         }
 
         val result = metadataPolicyService.createPolicy(
-            account,
+            tenantId,
             createMetadataPolicy.key,
             createMetadataPolicy.policy.toJsonElement()
         )
@@ -117,7 +118,7 @@ class CreateMetadataPolicyEndpointCommandImpl(
 class DeleteMetadataPolicyEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataPolicyService: MetadataPolicyService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = DeleteMetadataPolicyEndpointCommand.COMMAND_ID,
@@ -131,14 +132,14 @@ class DeleteMetadataPolicyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(DeleteMetadataPolicyEndpointCommand.ENDPOINT.pathPattern)
         val id = req.pathParams["id"]
             ?: return Ok(errorResponse(400, "Missing path parameter: id"))
 
-        val result = metadataPolicyService.deletePolicy(account, id)
+        val result = metadataPolicyService.deletePolicy(tenantId, id)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

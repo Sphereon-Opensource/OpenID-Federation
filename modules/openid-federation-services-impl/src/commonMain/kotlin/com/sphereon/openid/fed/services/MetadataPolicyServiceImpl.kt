@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import com.sphereon.openid.fed.services.command.metadataPolicy.CreateMetadataPolicyArgs
 import com.sphereon.openid.fed.services.command.metadataPolicy.CreateMetadataPolicyCommand
@@ -36,12 +36,12 @@ class MetadataPolicyServiceImpl(
     private val findMetadataPolicyByAccountCommand: FindMetadataPolicyByAccountCommand
 ) : MetadataPolicyService {
 
-    override suspend fun createPolicy(account: Account, key: String, policy: JsonElement): FederationResult<MetadataPolicy> =
-        createMetadataPolicyCommand.execute(CreateMetadataPolicyArgs(account, key, policy)).toFederationResult()
+    override suspend fun createPolicy(tenantId: String, key: String, policy: JsonElement): FederationResult<MetadataPolicy> =
+        createMetadataPolicyCommand.execute(CreateMetadataPolicyArgs(tenantId, key, policy)).toFederationResult()
 
-    override suspend fun findByAccount(account: Account): FederationResult<List<MetadataPolicy>> =
-        findMetadataPolicyByAccountCommand.execute(FindMetadataPolicyByAccountArgs(account)).toFederationResult()
+    override suspend fun findByAccount(tenantId: String): FederationResult<List<MetadataPolicy>> =
+        findMetadataPolicyByAccountCommand.execute(FindMetadataPolicyByAccountArgs(tenantId)).toFederationResult()
 
-    override suspend fun deletePolicy(account: Account, id: String): FederationResult<MetadataPolicy> =
-        deleteMetadataPolicyCommand.execute(DeleteMetadataPolicyArgs(account, id)).toFederationResult()
+    override suspend fun deletePolicy(tenantId: String, id: String): FederationResult<MetadataPolicy> =
+        deleteMetadataPolicyCommand.execute(DeleteMetadataPolicyArgs(tenantId, id)).toFederationResult()
 }

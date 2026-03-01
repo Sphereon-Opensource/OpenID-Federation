@@ -11,7 +11,6 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.Jwk
@@ -43,21 +42,21 @@ class RevokeKeyCommandImpl(
         args: RevokeKeyArgs,
         applyDuring: (RevokeKeyArgs) -> RevokeKeyArgs
     ): IdkResult<AccountJwk, IdkError> {
-        val (account, keyId, reason) = applyDuring(args)
+        val (tenantId, keyId, reason) = applyDuring(args)
 
-        logger.info("Attempting to revoke key ID: $keyId for account: ${account.username}")
-        logger.debug("Found account with ID: ${account.id}")
+        logger.info("Attempting to revoke key ID: $keyId for account: $tenantId")
+        logger.debug("Found account with ID: $tenantId")
 
         val existingKey = jwkQueries.findById(keyId).executeAsOneOrNull()
 
         if (existingKey == null) {
-            logger.error("Key with ID: $keyId not found for account: ${account.username}")
+            logger.error("Key with ID: $keyId not found for account: $tenantId")
             return federationErr(KeyNotFoundError(keyId))
         }
 
         logger.debug("Found key with ID: $keyId")
 
-        val ownershipResult = ensureKeyOwnership(existingKey, account)
+        val ownershipResult = ensureKeyOwnership(existingKey, tenantId)
         if (ownershipResult.isErr) {
             return ownershipResult.error.asErrorResult()
         }
@@ -73,9 +72,9 @@ class RevokeKeyCommandImpl(
         }
     }
 
-    private fun ensureKeyOwnership(jwk: Jwk, account: Account): IdkResult<Unit, IdkError> {
-        if (jwk.account_id != account.id) {
-            logger.error("Key does not belong to account: ${account.username}")
+    private fun ensureKeyOwnership(jwk: Jwk, tenantId: String): IdkResult<Unit, IdkError> {
+        if (jwk.account_id != tenantId) {
+            logger.error("Key does not belong to account: $tenantId")
             return federationErr(KeyNotFoundError(jwk.id))
         }
         return IdkResult.ok(Unit)

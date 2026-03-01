@@ -39,20 +39,20 @@ class GetKeysCommandImpl(
         args: GetKeysArgs,
         applyDuring: (GetKeysArgs) -> GetKeysArgs
     ): IdkResult<Array<AccountJwk>, IdkError> {
-        val (account, includeRevoked) = applyDuring(args)
+        val (tenantId, includeRevoked) = applyDuring(args)
 
-        logger.debug("Retrieving keys for account: ${account.username}")
+        logger.debug("Retrieving keys for account: ${tenantId}")
 
         return try {
-            val keys = jwkQueries.findByAccountId(account.id)
+            val keys = jwkQueries.findByAccountId(tenantId)
                 .executeAsList()
                 .filter { includeRevoked || it.revoked_at == null }
                 .map { it.toDTO() }
                 .toTypedArray()
-            logger.debug("Found ${keys.size} keys for account ID: ${account.id}, including revoked keys: $includeRevoked")
+            logger.debug("Found ${keys.size} keys for account ID: ${tenantId}, including revoked keys: $includeRevoked")
             IdkResult.ok(keys)
         } catch (e: Exception) {
-            logger.error("Failed to retrieve keys for account: ${account.username}", e)
+            logger.error("Failed to retrieve keys for account: ${tenantId}", e)
             federationErr(ServerError("Failed to retrieve keys", e.message, e))
         }
     }

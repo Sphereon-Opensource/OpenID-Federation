@@ -38,17 +38,17 @@ class FindCriticalClaimsByAccountCommandImpl(
         args: FindCriticalClaimsByAccountArgs,
         applyDuring: (FindCriticalClaimsByAccountArgs) -> FindCriticalClaimsByAccountArgs
     ): IdkResult<Array<CritEntity>, IdkError> {
-        val (account) = applyDuring(args)
+        val (tenantId) = applyDuring(args)
 
-        logger.info("Finding critical claims for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Finding critical claims for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         return try {
-            val criticalClaims = critQueries.findByAccountId(account.id).executeAsList().toTypedArray()
-            logger.info("Found ${criticalClaims.size} critical claims for account: ${account.username}")
+            val criticalClaims = critQueries.findByAccountId(tenantId).executeAsList().toTypedArray()
+            logger.info("Found ${criticalClaims.size} critical claims for account: ${tenantId}")
             IdkResult.ok(criticalClaims)
         } catch (e: Exception) {
-            logger.error("Failed to find critical claims for account: ${account.username}", e)
+            logger.error("Failed to find critical claims for account: ${tenantId}", e)
             federationErr(ServerError("Failed to retrieve critical claims", e.message, e))
         }
     }

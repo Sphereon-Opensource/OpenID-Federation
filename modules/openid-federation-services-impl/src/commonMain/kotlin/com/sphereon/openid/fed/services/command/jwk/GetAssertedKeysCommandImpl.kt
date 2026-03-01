@@ -37,7 +37,7 @@ class GetAssertedKeysCommandImpl(
         args: GetAssertedKeysArgs,
         applyDuring: (GetAssertedKeysArgs) -> GetAssertedKeysArgs
     ): IdkResult<Array<AccountJwk>, IdkError> {
-        val (account, includeRevoked, kmsKeyRef, kid) = applyDuring(args)
+        val (tenantId, includeRevoked, kmsKeyRef, kid) = applyDuring(args)
 
         val allKeysResult = getKeysCommand.execute(GetKeysArgs(account, includeRevoked))
         if (allKeysResult.isErr) {
@@ -50,11 +50,11 @@ class GetAssertedKeysCommandImpl(
             .filter { kid == null || it.kid == kid }
             .toTypedArray()
 
-        logger.debug("Found ${keys.size} keys for account: ${account.username} with filters - key ref: $kmsKeyRef, kid: $kid")
+        logger.debug("Found ${keys.size} keys for account: ${tenantId} with filters - key ref: $kmsKeyRef, kid: $kid")
 
         return if (keys.isEmpty()) {
-            logger.error("No keys found for account: ${account.username}")
-            federationErr(KeyNotFoundError("account:${account.id}"))
+            logger.error("No keys found for account: ${tenantId}")
+            federationErr(KeyNotFoundError("account:${tenantId}"))
         } else {
             IdkResult.ok(keys)
         }

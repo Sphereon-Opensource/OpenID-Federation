@@ -1,10 +1,10 @@
 package com.sphereon.openid.fed.services.command.resolution
 
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 
 data class GetSignedResolveResponseJwtArgs(
-    val account: Account,
+    val tenantId: String,
     val sub: String,
     val trustAnchor: String,
     val entityTypes: Array<String>?

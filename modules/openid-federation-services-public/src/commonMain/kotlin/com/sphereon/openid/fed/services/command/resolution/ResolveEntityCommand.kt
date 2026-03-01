@@ -1,11 +1,11 @@
 package com.sphereon.openid.fed.services.command.resolution
 
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
 
 data class ResolveEntityArgs(
-    val account: Account,
+    val tenantId: String,
     val sub: String,
     val trustAnchor: String,
     val entityTypes: Array<String>?

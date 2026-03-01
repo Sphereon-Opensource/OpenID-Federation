@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommand
 import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommandArgs
@@ -41,23 +41,23 @@ class JwkServiceImpl(
     private val getFederationHistoricalKeysJwtCommand: GetFederationHistoricalKeysJwtCommand
 ) : JwkService {
 
-    override suspend fun createKey(account: Account, opts: CreateKeyArgs): FederationResult<AccountJwk> =
-        createKeyCommand.execute(CreateKeyCommandArgs(account, opts)).toFederationResult()
+    override suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<AccountJwk> =
+        createKeyCommand.execute(CreateKeyCommandArgs(tenantId, opts)).toFederationResult()
 
-    override suspend fun getKeys(account: Account, includeRevoked: Boolean): FederationResult<Array<AccountJwk>> =
-        getKeysCommand.execute(GetKeysArgs(account, includeRevoked)).toFederationResult()
+    override suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<AccountJwk>> =
+        getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked)).toFederationResult()
 
     override suspend fun getAssertedKeysForAccount(
-        account: Account,
+        tenantId: String,
         includeRevoked: Boolean,
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<Array<AccountJwk>> =
-        getAssertedKeysCommand.execute(GetAssertedKeysArgs(account, includeRevoked, kmsKeyRef, kid)).toFederationResult()
+        getAssertedKeysCommand.execute(GetAssertedKeysArgs(tenantId, includeRevoked, kmsKeyRef, kid)).toFederationResult()
 
-    override suspend fun revokeKey(account: Account, keyId: String, reason: String?): FederationResult<AccountJwk> =
-        revokeKeyCommand.execute(RevokeKeyArgs(account, keyId, reason)).toFederationResult()
+    override suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<AccountJwk> =
+        revokeKeyCommand.execute(RevokeKeyArgs(tenantId, keyId, reason)).toFederationResult()
 
-    override suspend fun getFederationHistoricalKeysJwt(account: Account): FederationResult<String> =
-        getFederationHistoricalKeysJwtCommand.execute(GetFederationHistoricalKeysJwtArgs(account)).toFederationResult()
+    override suspend fun getFederationHistoricalKeysJwt(tenantId: String): FederationResult<String> =
+        getFederationHistoricalKeysJwtCommand.execute(GetFederationHistoricalKeysJwtArgs(tenantId)).toFederationResult()
 }

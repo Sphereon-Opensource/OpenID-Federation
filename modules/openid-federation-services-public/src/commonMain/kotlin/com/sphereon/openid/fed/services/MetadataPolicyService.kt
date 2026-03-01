@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import kotlinx.serialization.json.JsonElement
 
@@ -26,7 +26,7 @@ interface MetadataPolicyService {
      * @param policy The policy content to be associated with the account and key.
      * @return FederationResult containing the created MetadataPolicy or an error.
      */
-    suspend fun createPolicy(account: Account, key: String, policy: JsonElement): FederationResult<MetadataPolicy>
+    suspend fun createPolicy(tenantId: String, key: String, policy: JsonElement): FederationResult<MetadataPolicy>
 
     /**
      * Finds and retrieves a list of MetadataPolicy associated with the provided account.
@@ -34,7 +34,7 @@ interface MetadataPolicyService {
      * @param account The account for which metadata policy is to be fetched.
      * @return FederationResult containing a list of MetadataPolicy or an error.
      */
-    suspend fun findByAccount(account: Account): FederationResult<List<MetadataPolicy>>
+    suspend fun findByAccount(tenantId: String): FederationResult<List<MetadataPolicy>>
 
     /**
      * Deletes a metadata policy record associated with the given account and ID.
@@ -43,5 +43,5 @@ interface MetadataPolicyService {
      * @param id The unique identifier of the metadata policy record to delete.
      * @return FederationResult containing the deleted MetadataPolicy or an error.
      */
-    suspend fun deletePolicy(account: Account, id: String): FederationResult<MetadataPolicy>
+    suspend fun deletePolicy(tenantId: String, id: String): FederationResult<MetadataPolicy>
 }

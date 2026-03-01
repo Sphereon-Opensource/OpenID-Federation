@@ -41,10 +41,10 @@ class DeleteMetadataCommandImpl(
         args: DeleteMetadataArgs,
         applyDuring: (DeleteMetadataArgs) -> DeleteMetadataArgs
     ): IdkResult<Metadata, IdkError> {
-        val (account, id) = applyDuring(args)
+        val (tenantId, id) = applyDuring(args)
 
-        logger.info("Deleting metadata ID: $id for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Deleting metadata ID: $id for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         val metadata = metadataQueries.findById(id).executeAsOneOrNull()
 
@@ -53,8 +53,8 @@ class DeleteMetadataCommandImpl(
             return federationErr(MetadataNotFoundError(id))
         }
 
-        if (metadata.account_id != account.id) {
-            logger.error("Metadata ID: $id does not belong to account: ${account.username}")
+        if (metadata.account_id != tenantId) {
+            logger.error("Metadata ID: $id does not belong to account: ${tenantId}")
             return federationErr(MetadataNotFoundError(id))
         }
 
@@ -69,7 +69,7 @@ class DeleteMetadataCommandImpl(
                 federationErr(ServerError(Constants.FAILED_TO_DELETE_ENTITY_CONFIGURATION_METADATA))
             }
         } catch (e: Exception) {
-            logger.error("Failed to delete metadata ID: $id for account: ${account.username}", e)
+            logger.error("Failed to delete metadata ID: $id for account: ${tenantId}", e)
             federationErr(ServerError("Failed to delete metadata", e.message, e))
         }
     }

@@ -1,12 +1,9 @@
+@file:Suppress("DEPRECATION")
+
 package com.sphereon.openid.fed.services.command.account
 
-import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+@Deprecated("Use com.sphereon.openid.fed.account.command.GetAccountByUsernameArgs instead")
+typealias GetAccountByUsernameArgs = com.sphereon.openid.fed.account.command.GetAccountByUsernameArgs
 
-data class GetAccountByUsernameArgs(val username: String)
-
-interface GetAccountByUsernameCommand : ServiceCommand<GetAccountByUsernameArgs, Account> {
-    companion object {
-        const val COMMAND_ID = "fed.account.get-by-username"
-    }
-}
+@Deprecated("Use com.sphereon.openid.fed.account.command.GetAccountByUsernameCommand instead")
+typealias GetAccountByUsernameCommand = com.sphereon.openid.fed.account.command.GetAccountByUsernameCommand

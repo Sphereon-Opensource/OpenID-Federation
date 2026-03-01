@@ -5,11 +5,11 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.Subordinate
 
-data class CreateSubordinateArgs(val account: Account, val subordinateDTO: CreateSubordinate)
+data class CreateSubordinateArgs(val tenantId: String, val subordinateDTO: CreateSubordinate)
 
 interface CreateSubordinateCommand : ServiceCommand<CreateSubordinateArgs, Subordinate>, PublicApiCommand {
     companion object {

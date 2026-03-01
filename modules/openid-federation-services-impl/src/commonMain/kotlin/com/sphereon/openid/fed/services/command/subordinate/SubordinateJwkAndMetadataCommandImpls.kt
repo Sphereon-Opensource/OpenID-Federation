@@ -38,15 +38,15 @@ class CreateSubordinateJwkCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun doExecute(args: CreateSubordinateJwkArgs, applyDuring: (CreateSubordinateJwkArgs) -> CreateSubordinateJwkArgs): IdkResult<SubordinateJwk, IdkError> {
-        val (account, id, jwk) = applyDuring(args)
-        logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${account.username}")
+        val (tenantId, id, jwk) = applyDuring(args)
+        logger.info("Creating subordinate JWK for subordinate ID: $id, account: ${tenantId}")
 
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null) {
             return federationErr(SubordinateNotFoundError(id))
         }
 
-        if (subordinate.account_id != account.id) {
+        if (subordinate.account_id != tenantId) {
             return federationErr(SubordinateNotFoundError(id))
         }
 
@@ -77,7 +77,7 @@ class GetSubordinateJwksCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun doExecute(args: GetSubordinateJwksArgs, applyDuring: (GetSubordinateJwksArgs) -> GetSubordinateJwksArgs): IdkResult<Array<SubordinateJwk>, IdkError> {
-        val (account, id) = applyDuring(args)
+        val (tenantId, id) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
         if (subordinate == null) {
             return federationErr(SubordinateNotFoundError(id))
@@ -111,9 +111,9 @@ class DeleteSubordinateJwkCommandImpl(
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun doExecute(args: DeleteSubordinateJwkArgs, applyDuring: (DeleteSubordinateJwkArgs) -> DeleteSubordinateJwkArgs): IdkResult<SubordinateJwk, IdkError> {
-        val (account, id, jwkId) = applyDuring(args)
+        val (tenantId, id, jwkId) = applyDuring(args)
         val subordinate = subordinateQueries.findById(id).executeAsOneOrNull()
-        if (subordinate == null || subordinate.account_id != account.id) {
+        if (subordinate == null || subordinate.account_id != tenantId) {
             return federationErr(SubordinateNotFoundError(id))
         }
 
@@ -148,8 +148,8 @@ class FindSubordinateMetadataCommandImpl(
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
     override suspend fun doExecute(args: FindSubordinateMetadataArgs, applyDuring: (FindSubordinateMetadataArgs) -> FindSubordinateMetadataArgs): IdkResult<Array<SubordinateMetadata>, IdkError> {
-        val (account, subordinateId) = applyDuring(args)
-        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
+        val (tenantId, subordinateId) = applyDuring(args)
+        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(tenantId, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
             return federationErr(SubordinateNotFoundError(subordinateId))
@@ -157,7 +157,7 @@ class FindSubordinateMetadataCommandImpl(
 
         return try {
             val metadata = subordinateMetadataQueries
-                .findByAccountIdAndSubordinateId(account.id, subordinate.id)
+                .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsList()
                 .map { it.toDTO() }
                 .toTypedArray()
@@ -185,15 +185,15 @@ class CreateSubordinateMetadataCommandImpl(
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
     override suspend fun doExecute(args: CreateSubordinateMetadataArgs, applyDuring: (CreateSubordinateMetadataArgs) -> CreateSubordinateMetadataArgs): IdkResult<SubordinateMetadata, IdkError> {
-        val (account, subordinateId, key, metadata) = applyDuring(args)
-        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
+        val (tenantId, subordinateId, key, metadata) = applyDuring(args)
+        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(tenantId, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
             return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
         val metadataAlreadyExists = subordinateMetadataQueries
-            .findByAccountIdAndSubordinateIdAndKey(account.id, subordinateId, key)
+            .findByAccountIdAndSubordinateIdAndKey(tenantId, subordinateId, key)
             .executeAsOneOrNull()
 
         if (metadataAlreadyExists != null) {
@@ -202,7 +202,7 @@ class CreateSubordinateMetadataCommandImpl(
 
         return try {
             val createdMetadata = subordinateMetadataQueries
-                .create(account.id, subordinate.id, key, metadata.toString())
+                .create(tenantId, subordinate.id, key, metadata.toString())
                 .executeAsOneOrNull()
 
             if (createdMetadata != null) {
@@ -233,15 +233,15 @@ class DeleteSubordinateMetadataCommandImpl(
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
     override suspend fun doExecute(args: DeleteSubordinateMetadataArgs, applyDuring: (DeleteSubordinateMetadataArgs) -> DeleteSubordinateMetadataArgs): IdkResult<SubordinateMetadata, IdkError> {
-        val (account, subordinateId, id) = applyDuring(args)
-        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(account.id, subordinateId)
+        val (tenantId, subordinateId, id) = applyDuring(args)
+        val subordinate = subordinateQueries.findByAccountIdAndSubordinateId(tenantId, subordinateId)
             .executeAsOneOrNull()
         if (subordinate == null) {
             return federationErr(SubordinateNotFoundError(subordinateId))
         }
 
         val metadata = subordinateMetadataQueries
-            .findByAccountIdAndSubordinateIdAndId(account.id, subordinate.id, id)
+            .findByAccountIdAndSubordinateIdAndId(tenantId, subordinate.id, id)
             .executeAsOneOrNull()
         if (metadata == null) {
             return federationErr(InvalidRequestError(Constants.SUBORDINATE_METADATA_NOT_FOUND))

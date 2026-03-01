@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 
-data class GetIssuersForTrustMarkTypeArgs(val account: Account, val trustMarkTypeId: String)
+data class GetIssuersForTrustMarkTypeArgs(val tenantId: String, val trustMarkTypeId: String)
 
 interface GetIssuersForTrustMarkTypeCommand : ServiceCommand<GetIssuersForTrustMarkTypeArgs, Array<TrustMarkIssuer>>, PublicApiCommand {
     companion object {

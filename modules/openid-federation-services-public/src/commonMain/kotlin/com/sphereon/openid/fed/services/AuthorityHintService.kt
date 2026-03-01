@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
 /**
@@ -25,7 +25,7 @@ interface AuthorityHintService {
      * @param identifier The unique identifier for the authority hint to be created.
      * @return FederationResult containing the created AuthorityHint or an error.
      */
-    suspend fun createAuthorityHint(account: Account, identifier: String): FederationResult<AuthorityHint>
+    suspend fun createAuthorityHint(tenantId: String, identifier: String): FederationResult<AuthorityHint>
 
     /**
      * Deletes an AuthorityHint associated with the specified account and ID.
@@ -34,7 +34,7 @@ interface AuthorityHintService {
      * @param id The unique identifier of the AuthorityHint to delete.
      * @return FederationResult containing the deleted AuthorityHint or an error.
      */
-    suspend fun deleteAuthorityHint(account: Account, id: String): FederationResult<AuthorityHint>
+    suspend fun deleteAuthorityHint(tenantId: String, id: String): FederationResult<AuthorityHint>
 
     /**
      * Finds authority hints associated with the specified account.
@@ -42,5 +42,5 @@ interface AuthorityHintService {
      * @param account The account for which authority hints need to be retrieved.
      * @return FederationResult containing a list of authority hints or an error.
      */
-    suspend fun findByAccount(account: Account): FederationResult<List<AuthorityHint>>
+    suspend fun findByAccount(tenantId: String): FederationResult<List<AuthorityHint>>
 }

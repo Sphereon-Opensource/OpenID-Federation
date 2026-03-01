@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.Subordinate
@@ -41,53 +41,53 @@ class SubordinateServiceImpl(
     private val deleteSubordinateMetadataCommand: DeleteSubordinateMetadataCommand
 ) : SubordinateService {
 
-    override suspend fun findSubordinatesByAccount(account: Account): FederationResult<Array<Subordinate>> =
-        findSubordinatesByAccountCommand.execute(FindSubordinatesByAccountArgs(account)).toFederationResult()
+    override suspend fun findSubordinatesByAccount(tenantId: String): FederationResult<Array<Subordinate>> =
+        findSubordinatesByAccountCommand.execute(FindSubordinatesByAccountArgs(tenantId)).toFederationResult()
 
-    override suspend fun findSubordinatesByAccountAsArray(account: Account): FederationResult<Array<String>> =
-        findSubordinatesByAccountAsArrayCommand.execute(FindSubordinatesByAccountAsArrayArgs(account)).toFederationResult()
+    override suspend fun findSubordinatesByAccountAsArray(tenantId: String): FederationResult<Array<String>> =
+        findSubordinatesByAccountAsArrayCommand.execute(FindSubordinatesByAccountAsArrayArgs(tenantId)).toFederationResult()
 
-    override suspend fun deleteSubordinate(account: Account, id: String): FederationResult<Subordinate> =
-        deleteSubordinateCommand.execute(DeleteSubordinateArgs(account, id)).toFederationResult()
+    override suspend fun deleteSubordinate(tenantId: String, id: String): FederationResult<Subordinate> =
+        deleteSubordinateCommand.execute(DeleteSubordinateArgs(tenantId, id)).toFederationResult()
 
-    override suspend fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): FederationResult<Subordinate> =
-        createSubordinateCommand.execute(CreateSubordinateArgs(account, subordinateDTO)).toFederationResult()
+    override suspend fun createSubordinate(tenantId: String, subordinateDTO: CreateSubordinate): FederationResult<Subordinate> =
+        createSubordinateCommand.execute(CreateSubordinateArgs(tenantId, subordinateDTO)).toFederationResult()
 
-    override suspend fun getSubordinateStatement(account: Account, id: String): FederationResult<SubordinateStatement> =
-        getSubordinateStatementCommand.execute(GetSubordinateStatementArgs(account, id)).toFederationResult()
+    override suspend fun getSubordinateStatement(tenantId: String, id: String): FederationResult<SubordinateStatement> =
+        getSubordinateStatementCommand.execute(GetSubordinateStatementArgs(tenantId, id)).toFederationResult()
 
     override suspend fun publishSubordinateStatement(
-        account: Account,
+        tenantId: String,
         id: String,
         dryRun: Boolean?,
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<String> =
-        publishSubordinateStatementCommand.execute(PublishSubordinateStatementArgs(account, id, dryRun, kmsKeyRef, kid)).toFederationResult()
+        publishSubordinateStatementCommand.execute(PublishSubordinateStatementArgs(tenantId, id, dryRun, kmsKeyRef, kid)).toFederationResult()
 
     override suspend fun fetchSubordinateStatement(iss: String, sub: String): FederationResult<String> =
         fetchSubordinateStatementCommand.execute(FetchSubordinateStatementArgs(iss, sub)).toFederationResult()
 
-    override suspend fun createSubordinateJwk(account: Account, id: String, jwk: Jwk): FederationResult<SubordinateJwk> =
-        createSubordinateJwkCommand.execute(CreateSubordinateJwkArgs(account, id, jwk)).toFederationResult()
+    override suspend fun createSubordinateJwk(tenantId: String, id: String, jwk: Jwk): FederationResult<SubordinateJwk> =
+        createSubordinateJwkCommand.execute(CreateSubordinateJwkArgs(tenantId, id, jwk)).toFederationResult()
 
-    override suspend fun getSubordinateJwks(account: Account, id: String): FederationResult<Array<SubordinateJwk>> =
-        getSubordinateJwksCommand.execute(GetSubordinateJwksArgs(account, id)).toFederationResult()
+    override suspend fun getSubordinateJwks(tenantId: String, id: String): FederationResult<Array<SubordinateJwk>> =
+        getSubordinateJwksCommand.execute(GetSubordinateJwksArgs(tenantId, id)).toFederationResult()
 
-    override suspend fun deleteSubordinateJwk(account: Account, id: String, jwkId: String): FederationResult<SubordinateJwk> =
-        deleteSubordinateJwkCommand.execute(DeleteSubordinateJwkArgs(account, id, jwkId)).toFederationResult()
+    override suspend fun deleteSubordinateJwk(tenantId: String, id: String, jwkId: String): FederationResult<SubordinateJwk> =
+        deleteSubordinateJwkCommand.execute(DeleteSubordinateJwkArgs(tenantId, id, jwkId)).toFederationResult()
 
-    override suspend fun findSubordinateMetadata(account: Account, subordinateId: String): FederationResult<Array<SubordinateMetadata>> =
-        findSubordinateMetadataCommand.execute(FindSubordinateMetadataArgs(account, subordinateId)).toFederationResult()
+    override suspend fun findSubordinateMetadata(tenantId: String, subordinateId: String): FederationResult<Array<SubordinateMetadata>> =
+        findSubordinateMetadataCommand.execute(FindSubordinateMetadataArgs(tenantId, subordinateId)).toFederationResult()
 
     override suspend fun createMetadata(
-        account: Account,
+        tenantId: String,
         subordinateId: String,
         key: String,
         metadata: JsonElement
     ): FederationResult<SubordinateMetadata> =
-        createMetadataCommand.execute(CreateSubordinateMetadataArgs(account, subordinateId, key, metadata)).toFederationResult()
+        createMetadataCommand.execute(CreateSubordinateMetadataArgs(tenantId, subordinateId, key, metadata)).toFederationResult()
 
-    override suspend fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): FederationResult<SubordinateMetadata> =
-        deleteSubordinateMetadataCommand.execute(DeleteSubordinateMetadataArgs(account, subordinateId, id)).toFederationResult()
+    override suspend fun deleteSubordinateMetadata(tenantId: String, subordinateId: String, id: String): FederationResult<SubordinateMetadata> =
+        deleteSubordinateMetadataCommand.execute(DeleteSubordinateMetadataArgs(tenantId, subordinateId, id)).toFederationResult()
 }

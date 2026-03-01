@@ -14,7 +14,10 @@ kotlin {
                 // Public interfaces
                 api(projects.modules.openidFederationServicesPublic)
 
-                // Core module for config interfaces
+                // Account module (for backward compatibility re-exports)
+                api(projects.modules.openidFederationAccountImpl)
+
+                // Core module for config interfaces and TenantContextResolver
                 api(projects.modules.openidFederationCorePublic)
 
                 // Additional dependencies needed by implementations

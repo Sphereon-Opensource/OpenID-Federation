@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.Subordinate
@@ -21,28 +21,28 @@ import kotlinx.serialization.json.JsonElement
  */
 interface SubordinateService {
 
-    suspend fun findSubordinatesByAccount(account: Account): FederationResult<Array<Subordinate>>
-    suspend fun findSubordinatesByAccountAsArray(account: Account): FederationResult<Array<String>>
-    suspend fun deleteSubordinate(account: Account, id: String): FederationResult<Subordinate>
-    suspend fun createSubordinate(account: Account, subordinateDTO: CreateSubordinate): FederationResult<Subordinate>
-    suspend fun getSubordinateStatement(account: Account, id: String): FederationResult<SubordinateStatement>
+    suspend fun findSubordinatesByAccount(tenantId: String): FederationResult<Array<Subordinate>>
+    suspend fun findSubordinatesByAccountAsArray(tenantId: String): FederationResult<Array<String>>
+    suspend fun deleteSubordinate(tenantId: String, id: String): FederationResult<Subordinate>
+    suspend fun createSubordinate(tenantId: String, subordinateDTO: CreateSubordinate): FederationResult<Subordinate>
+    suspend fun getSubordinateStatement(tenantId: String, id: String): FederationResult<SubordinateStatement>
     suspend fun publishSubordinateStatement(
-        account: Account,
+        tenantId: String,
         id: String,
         dryRun: Boolean?,
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<String>
     suspend fun fetchSubordinateStatement(iss: String, sub: String): FederationResult<String>
-    suspend fun createSubordinateJwk(account: Account, id: String, jwk: Jwk): FederationResult<SubordinateJwk>
-    suspend fun getSubordinateJwks(account: Account, id: String): FederationResult<Array<SubordinateJwk>>
-    suspend fun deleteSubordinateJwk(account: Account, id: String, jwkId: String): FederationResult<SubordinateJwk>
-    suspend fun findSubordinateMetadata(account: Account, subordinateId: String): FederationResult<Array<SubordinateMetadata>>
+    suspend fun createSubordinateJwk(tenantId: String, id: String, jwk: Jwk): FederationResult<SubordinateJwk>
+    suspend fun getSubordinateJwks(tenantId: String, id: String): FederationResult<Array<SubordinateJwk>>
+    suspend fun deleteSubordinateJwk(tenantId: String, id: String, jwkId: String): FederationResult<SubordinateJwk>
+    suspend fun findSubordinateMetadata(tenantId: String, subordinateId: String): FederationResult<Array<SubordinateMetadata>>
     suspend fun createMetadata(
-        account: Account,
+        tenantId: String,
         subordinateId: String,
         key: String,
         metadata: JsonElement
     ): FederationResult<SubordinateMetadata>
-    suspend fun deleteSubordinateMetadata(account: Account, subordinateId: String, id: String): FederationResult<SubordinateMetadata>
+    suspend fun deleteSubordinateMetadata(tenantId: String, subordinateId: String, id: String): FederationResult<SubordinateMetadata>
 }

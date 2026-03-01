@@ -41,16 +41,16 @@ class DeleteAuthorityHintCommandImpl(
         args: DeleteAuthorityHintArgs,
         applyDuring: (DeleteAuthorityHintArgs) -> DeleteAuthorityHintArgs
     ): IdkResult<AuthorityHint, IdkError> {
-        val (account, authorityHintId) = applyDuring(args)
+        val (tenantId, authorityHintId) = applyDuring(args)
 
-        logger.debug("Attempting to delete authority hint with id: $authorityHintId for account: ${account.username}")
+        logger.debug("Attempting to delete authority hint with id: $authorityHintId for account: ${tenantId}")
 
         val authorityHint = authorityHintQueries
-            .findByAccountIdAndId(account.id, authorityHintId)
+            .findByAccountIdAndId(tenantId, authorityHintId)
             .executeAsOneOrNull()
 
         if (authorityHint == null) {
-            logger.error("Authority hint not found with id: $authorityHintId for account: ${account.username}")
+            logger.error("Authority hint not found with id: $authorityHintId for account: ${tenantId}")
             return federationErr(EntityNotFoundError("authority_hint:$authorityHintId"))
         }
 
@@ -60,14 +60,14 @@ class DeleteAuthorityHintCommandImpl(
                 ?.toDTO()
 
             if (deleted != null) {
-                logger.info("Successfully deleted authority hint with id: $authorityHintId for account: ${account.username}")
+                logger.info("Successfully deleted authority hint with id: $authorityHintId for account: ${tenantId}")
                 IdkResult.ok(deleted)
             } else {
-                logger.error("Failed to delete authority hint with id: $authorityHintId for account: ${account.username}")
+                logger.error("Failed to delete authority hint with id: $authorityHintId for account: ${tenantId}")
                 federationErr(ServerError(Constants.FAILED_TO_DELETE_AUTHORITY_HINT))
             }
         } catch (e: Exception) {
-            logger.error("Failed to delete authority hint with id: $authorityHintId for account: ${account.username}", e)
+            logger.error("Failed to delete authority hint with id: $authorityHintId for account: ${tenantId}", e)
             federationErr(ServerError("Failed to delete authority hint", e.message, e))
         }
     }

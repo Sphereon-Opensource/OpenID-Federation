@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
 import com.sphereon.openid.fed.services.command.resolution.GetSignedResolveResponseJwtArgs
 import com.sphereon.openid.fed.services.command.resolution.GetSignedResolveResponseJwtCommand
@@ -33,18 +33,18 @@ class ResolutionServiceImpl(
 ) : ResolutionService {
 
     override suspend fun resolveEntity(
-        account: Account,
+        tenantId: String,
         sub: String,
         trustAnchor: String,
         entityTypes: Array<String>?
     ): FederationResult<ResolveResponse> =
-        resolveEntityCommand.execute(ResolveEntityArgs(account, sub, trustAnchor, entityTypes)).toFederationResult()
+        resolveEntityCommand.execute(ResolveEntityArgs(tenantId, sub, trustAnchor, entityTypes)).toFederationResult()
 
     override suspend fun getSignedResolveResponseJwt(
-        account: Account,
+        tenantId: String,
         sub: String,
         trustAnchor: String,
         entityTypes: Array<String>?
     ): FederationResult<String> =
-        getSignedResolveResponseJwtCommand.execute(GetSignedResolveResponseJwtArgs(account, sub, trustAnchor, entityTypes)).toFederationResult()
+        getSignedResolveResponseJwtCommand.execute(GetSignedResolveResponseJwtArgs(tenantId, sub, trustAnchor, entityTypes)).toFederationResult()
 }

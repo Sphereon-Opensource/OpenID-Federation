@@ -39,25 +39,25 @@ class DeleteCriticalClaimCommandImpl(
         args: DeleteCriticalClaimArgs,
         applyDuring: (DeleteCriticalClaimArgs) -> DeleteCriticalClaimArgs
     ): IdkResult<CritEntity, IdkError> {
-        val (account, id) = applyDuring(args)
+        val (tenantId, id) = applyDuring(args)
 
-        logger.info("Deleting critical claim ID: $id for account: ${account.username}")
-        logger.debug("Using account with ID: ${account.id}")
+        logger.info("Deleting critical claim ID: $id for account: ${tenantId}")
+        logger.debug("Using account with ID: ${tenantId}")
 
         return try {
             val deletedCriticalClaim = critQueries
-                .deleteByAccountIdAndId(account.id, id)
+                .deleteByAccountIdAndId(tenantId, id)
                 .executeAsOneOrNull()
 
             if (deletedCriticalClaim != null) {
                 logger.info("Successfully deleted critical claim with ID: $id")
                 IdkResult.ok(deletedCriticalClaim)
             } else {
-                logger.error("Critical claim not found with ID: $id for account: ${account.username}")
+                logger.error("Critical claim not found with ID: $id for account: ${tenantId}")
                 federationErr(CriticalClaimNotFoundError(id))
             }
         } catch (e: Exception) {
-            logger.error("Failed to delete critical claim ID: $id for account: ${account.username}", e)
+            logger.error("Failed to delete critical claim ID: $id for account: ${tenantId}", e)
             federationErr(ServerError("Failed to delete critical claim", e.message, e))
         }
     }

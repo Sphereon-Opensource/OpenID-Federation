@@ -1,4 +1,4 @@
-package com.sphereon.openid.fed.services.command.account
+package com.sphereon.openid.fed.account.command
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
@@ -11,7 +11,7 @@ import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.mappers.toDTO
+import com.sphereon.openid.fed.account.mappers.toDTO
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn

@@ -13,6 +13,9 @@ kotlin {
                 // Core module with FederationResult and error types
                 api(projects.modules.openidFederationCorePublic)
 
+                // Account module (for backward compatibility re-exports)
+                api(projects.modules.openidFederationAccountPublic)
+
                 // OpenAPI models
                 api(projects.modules.openidFederationOpenapi)
 

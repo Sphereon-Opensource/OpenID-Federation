@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 
 /**
@@ -25,7 +25,7 @@ interface CriticalClaimService {
      * @param claim The claim string that uniquely identifies the critical claim.
      * @return FederationResult containing the created CritEntity or an error.
      */
-    suspend fun create(account: Account, claim: String): FederationResult<CritEntity>
+    suspend fun create(tenantId: String, claim: String): FederationResult<CritEntity>
 
     /**
      * Deletes a critical claim associated with a given account and claim ID.
@@ -34,7 +34,7 @@ interface CriticalClaimService {
      * @param id The unique identifier of the critical claim to be deleted.
      * @return FederationResult containing the deleted CritEntity or an error.
      */
-    suspend fun delete(account: Account, id: String): FederationResult<CritEntity>
+    suspend fun delete(tenantId: String, id: String): FederationResult<CritEntity>
 
     /**
      * Retrieves all critical claims associated with the provided account.
@@ -42,5 +42,5 @@ interface CriticalClaimService {
      * @param account The account for which critical claims are to be retrieved.
      * @return FederationResult containing an array of CritEntity or an error.
      */
-    suspend fun findByAccount(account: Account): FederationResult<Array<CritEntity>>
+    suspend fun findByAccount(tenantId: String): FederationResult<Array<CritEntity>>
 }

@@ -22,6 +22,10 @@ kotlin {
                 // Re-export both public interfaces and implementations
                 api(projects.modules.openidFederationServicesPublic)
                 api(projects.modules.openidFederationServicesImpl)
+
+                // Re-export account modules for backward compatibility
+                api(projects.modules.openidFederationAccountPublic)
+                api(projects.modules.openidFederationAccountImpl)
             }
         }
     }

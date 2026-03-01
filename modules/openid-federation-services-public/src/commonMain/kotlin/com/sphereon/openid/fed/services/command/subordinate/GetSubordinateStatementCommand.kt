@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 
-data class GetSubordinateStatementArgs(val account: Account, val id: String)
+data class GetSubordinateStatementArgs(val tenantId: String, val id: String)
 
 interface GetSubordinateStatementCommand : ServiceCommand<GetSubordinateStatementArgs, SubordinateStatement>, PublicApiCommand {
     companion object {

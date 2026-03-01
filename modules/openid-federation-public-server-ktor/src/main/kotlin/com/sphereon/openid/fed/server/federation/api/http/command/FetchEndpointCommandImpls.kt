@@ -10,8 +10,8 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.AccountService
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
 import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
@@ -21,8 +21,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = FetchSubordinateRootEndpointCommand::class)
 class FetchSubordinateRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
-    private val accountService: AccountService
+    private val tenantContextResolver: TenantContextResolver
 ) : HttpEndpointCommandAdapter(
     id = FetchSubordinateRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -40,14 +39,11 @@ class FetchSubordinateRootEndpointCommandImpl(
         val sub = request.queryParameters["sub"]
             ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val issResult = accountService.getAccountIdentifierByAccount(account)
-        if (issResult.isErr) {
-            return Ok(errorResponse(issResult.error.httpStatusValue, issResult.error.message.defaultMessage))
-        }
-        val iss = issResult.value
+        val iss = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return Ok(errorResponse(404, "Tenant identifier not found"))
 
         val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
             ?: return Ok(errorResponse(404, "Subordinate statement not found"))
@@ -65,8 +61,7 @@ class FetchSubordinateRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = FetchSubordinateAccountEndpointCommand::class)
 class FetchSubordinateAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
-    private val accountService: AccountService
+    private val tenantContextResolver: TenantContextResolver
 ) : HttpEndpointCommandAdapter(
     id = FetchSubordinateAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -87,14 +82,11 @@ class FetchSubordinateAccountEndpointCommandImpl(
         val sub = request.queryParameters["sub"]
             ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val issResult = accountService.getAccountIdentifierByAccount(account)
-        if (issResult.isErr) {
-            return Ok(errorResponse(issResult.error.httpStatusValue, issResult.error.message.defaultMessage))
-        }
-        val iss = issResult.value
+        val iss = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return Ok(errorResponse(404, "Tenant identifier not found"))
 
         val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
             ?: return Ok(errorResponse(404, "Subordinate statement not found"))

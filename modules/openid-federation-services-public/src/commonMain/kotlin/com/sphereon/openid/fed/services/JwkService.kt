@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 
 /**
@@ -24,7 +24,7 @@ interface JwkService {
      * @param opts Options for key creation.
      * @return FederationResult containing the created AccountJwk or an error.
      */
-    suspend fun createKey(account: Account, opts: CreateKeyArgs): FederationResult<AccountJwk>
+    suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<AccountJwk>
 
     /**
      * Retrieves the keys associated with a given account.
@@ -33,7 +33,7 @@ interface JwkService {
      * @param includeRevoked Whether to include revoked keys.
      * @return FederationResult containing an array of AccountJwk or an error.
      */
-    suspend fun getKeys(account: Account, includeRevoked: Boolean): FederationResult<Array<AccountJwk>>
+    suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<AccountJwk>>
 
     /**
      * Retrieves the keys associated with the given account or returns an error if no keys are found.
@@ -45,7 +45,7 @@ interface JwkService {
      * @return FederationResult containing an array of AccountJwk or an error.
      */
     suspend fun getAssertedKeysForAccount(
-        account: Account,
+        tenantId: String,
         includeRevoked: Boolean,
         kmsKeyRef: String?,
         kid: String?
@@ -59,7 +59,7 @@ interface JwkService {
      * @param reason An optional reason for revoking the key.
      * @return FederationResult containing the revoked AccountJwk or an error.
      */
-    suspend fun revokeKey(account: Account, keyId: String, reason: String?): FederationResult<AccountJwk>
+    suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<AccountJwk>
 
     /**
      * Generates and returns a JWT representing the historical federation keys.
@@ -67,5 +67,5 @@ interface JwkService {
      * @param account The account for which the federation historical keys JWT is being generated.
      * @return FederationResult containing the signed JWT or an error.
      */
-    suspend fun getFederationHistoricalKeysJwt(account: Account): FederationResult<String>
+    suspend fun getFederationHistoricalKeysJwt(tenantId: String): FederationResult<String>
 }

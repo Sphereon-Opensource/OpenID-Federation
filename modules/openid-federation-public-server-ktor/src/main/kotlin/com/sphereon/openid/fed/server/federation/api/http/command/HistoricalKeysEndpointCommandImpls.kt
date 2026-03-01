@@ -10,7 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
-import com.sphereon.openid.fed.services.AccountService
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.JwkService
 import me.tatarka.inject.annotations.Inject
 import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
@@ -21,9 +21,8 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @ContributesBinding(SessionScope::class, boundType = HistoricalKeysRootEndpointCommand::class)
 class HistoricalKeysRootEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
-    private val jwkService: JwkService,
-    private val accountService: AccountService
+    private val tenantContextResolver: TenantContextResolver,
+    private val jwkService: JwkService
 ) : HttpEndpointCommandAdapter(
     id = HistoricalKeysRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -36,10 +35,10 @@ class HistoricalKeysRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccountByUsername(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = jwkService.getFederationHistoricalKeysJwt(account)
+        val result = jwkService.getFederationHistoricalKeysJwt(tenantId)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -59,9 +58,8 @@ class HistoricalKeysRootEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, boundType = HistoricalKeysAccountEndpointCommand::class)
 class HistoricalKeysAccountEndpointCommandImpl(
     execution: SessionExecution,
-    private val accountResolver: FederationAccountResolver,
-    private val jwkService: JwkService,
-    private val accountService: AccountService
+    private val tenantContextResolver: TenantContextResolver,
+    private val jwkService: JwkService
 ) : HttpEndpointCommandAdapter(
     id = HistoricalKeysAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -77,10 +75,10 @@ class HistoricalKeysAccountEndpointCommandImpl(
         val username = requestWithParams.pathParams["username"]
             ?: return Ok(errorResponse(400, "Username parameter required"))
 
-        val account = accountResolver.resolveAccountByUsername(username)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = jwkService.getFederationHistoricalKeysJwt(account)
+        val result = jwkService.getFederationHistoricalKeysJwt(tenantId)
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(

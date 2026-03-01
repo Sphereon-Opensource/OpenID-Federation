@@ -1,6 +1,13 @@
+@file:Suppress("DEPRECATION")
+
 package com.sphereon.openid.fed.services.config
 
 /**
- * Configuration class for account-related settings.
+ * Backward compatibility re-export.
+ * Use [com.sphereon.openid.fed.account.config.AccountServiceConfig] instead.
  */
-class AccountServiceConfig(override val rootIdentifier: String) : IAccountServiceConfig
+@Deprecated(
+    "Use com.sphereon.openid.fed.account.config.AccountServiceConfig instead",
+    replaceWith = ReplaceWith("AccountServiceConfig", "com.sphereon.openid.fed.account.config.AccountServiceConfig")
+)
+typealias AccountServiceConfig = com.sphereon.openid.fed.account.config.AccountServiceConfig

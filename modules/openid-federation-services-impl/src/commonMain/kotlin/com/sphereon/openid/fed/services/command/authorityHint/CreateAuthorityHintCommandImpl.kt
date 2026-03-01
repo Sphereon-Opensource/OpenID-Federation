@@ -41,30 +41,30 @@ class CreateAuthorityHintCommandImpl(
         args: CreateAuthorityHintArgs,
         applyDuring: (CreateAuthorityHintArgs) -> CreateAuthorityHintArgs
     ): IdkResult<AuthorityHint, IdkError> {
-        val (account, identifier) = applyDuring(args)
+        val (tenantId, identifier) = applyDuring(args)
 
-        logger.debug("Attempting to create authority hint for account: ${account.username} with identifier: $identifier")
+        logger.debug("Attempting to create authority hint for account: ${tenantId} with identifier: $identifier")
 
         val existingAuthorityHint = authorityHintQueries
-            .findByAccountIdAndIdentifier(account.id, identifier)
+            .findByAccountIdAndIdentifier(tenantId, identifier)
             .executeAsOneOrNull()
 
         if (existingAuthorityHint != null) {
-            logger.error("Authority hint already exists for account: ${account.username}, identifier: $identifier")
+            logger.error("Authority hint already exists for account: ${tenantId}, identifier: $identifier")
             return federationErr(InvalidRequestError(Constants.AUTHORITY_HINT_ALREADY_EXISTS))
         }
 
         return try {
-            val created = authorityHintQueries.create(account.id, identifier).executeAsOneOrNull()?.toDTO()
+            val created = authorityHintQueries.create(tenantId, identifier).executeAsOneOrNull()?.toDTO()
             if (created != null) {
-                logger.info("Successfully created authority hint for account: ${account.username} with identifier: $identifier")
+                logger.info("Successfully created authority hint for account: ${tenantId} with identifier: $identifier")
                 IdkResult.ok(created)
             } else {
-                logger.error("Failed to create authority hint for account: ${account.username} with identifier: $identifier")
+                logger.error("Failed to create authority hint for account: ${tenantId} with identifier: $identifier")
                 federationErr(ServerError(Constants.FAILED_TO_CREATE_AUTHORITY_HINT))
             }
         } catch (e: Exception) {
-            logger.error("Failed to create authority hint for account: ${account.username} with identifier: $identifier", e)
+            logger.error("Failed to create authority hint for account: ${tenantId} with identifier: $identifier", e)
             federationErr(ServerError("Failed to create authority hint", e.message, e))
         }
     }

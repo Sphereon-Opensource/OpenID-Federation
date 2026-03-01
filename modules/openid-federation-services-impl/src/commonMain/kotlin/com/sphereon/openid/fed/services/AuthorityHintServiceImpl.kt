@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintArgs
 import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintCommand
@@ -35,12 +35,12 @@ class AuthorityHintServiceImpl(
     private val findAuthorityHintsByAccountCommand: FindAuthorityHintsByAccountCommand
 ) : AuthorityHintService {
 
-    override suspend fun createAuthorityHint(account: Account, identifier: String): FederationResult<AuthorityHint> =
-        createAuthorityHintCommand.execute(CreateAuthorityHintArgs(account, identifier)).toFederationResult()
+    override suspend fun createAuthorityHint(tenantId: String, identifier: String): FederationResult<AuthorityHint> =
+        createAuthorityHintCommand.execute(CreateAuthorityHintArgs(tenantId, identifier)).toFederationResult()
 
-    override suspend fun deleteAuthorityHint(account: Account, id: String): FederationResult<AuthorityHint> =
-        deleteAuthorityHintCommand.execute(DeleteAuthorityHintArgs(account, id)).toFederationResult()
+    override suspend fun deleteAuthorityHint(tenantId: String, id: String): FederationResult<AuthorityHint> =
+        deleteAuthorityHintCommand.execute(DeleteAuthorityHintArgs(tenantId, id)).toFederationResult()
 
-    override suspend fun findByAccount(account: Account): FederationResult<List<AuthorityHint>> =
-        findAuthorityHintsByAccountCommand.execute(FindAuthorityHintsByAccountArgs(account)).toFederationResult()
+    override suspend fun findByAccount(tenantId: String): FederationResult<List<AuthorityHint>> =
+        findAuthorityHintsByAccountCommand.execute(FindAuthorityHintsByAccountArgs(tenantId)).toFederationResult()
 }

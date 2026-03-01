@@ -5,11 +5,11 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 
 data class ListReceivedTrustMarksArgs(
-    val account: Account
+    val tenantId: String
 )
 
 interface ListReceivedTrustMarksCommand : ServiceCommand<ListReceivedTrustMarksArgs, Array<ReceivedTrustMark>>, PublicApiCommand {

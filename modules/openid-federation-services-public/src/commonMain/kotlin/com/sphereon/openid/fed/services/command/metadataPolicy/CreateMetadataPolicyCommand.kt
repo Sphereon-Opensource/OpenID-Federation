@@ -5,12 +5,12 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import kotlinx.serialization.json.JsonElement
 
 data class CreateMetadataPolicyArgs(
-    val account: Account,
+    val tenantId: String,
     val key: String,
     val policy: JsonElement
 )

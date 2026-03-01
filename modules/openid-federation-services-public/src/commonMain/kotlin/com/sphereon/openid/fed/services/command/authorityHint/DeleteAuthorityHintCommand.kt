@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
-data class DeleteAuthorityHintArgs(val account: Account, val id: String)
+data class DeleteAuthorityHintArgs(val tenantId: String, val id: String)
 
 interface DeleteAuthorityHintCommand : ServiceCommand<DeleteAuthorityHintArgs, AuthorityHint>, PublicApiCommand {
     companion object {

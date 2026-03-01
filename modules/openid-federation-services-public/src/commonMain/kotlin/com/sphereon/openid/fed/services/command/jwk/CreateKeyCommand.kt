@@ -5,12 +5,12 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.AccountJwk
 import com.sphereon.openid.fed.services.CreateKeyArgs
 
 data class CreateKeyCommandArgs(
-    val account: Account,
+    val tenantId: String,
     val opts: CreateKeyArgs = CreateKeyArgs()
 )
 

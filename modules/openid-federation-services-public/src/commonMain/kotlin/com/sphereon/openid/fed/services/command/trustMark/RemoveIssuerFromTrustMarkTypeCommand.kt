@@ -5,10 +5,10 @@ import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 
-data class RemoveIssuerFromTrustMarkTypeArgs(val account: Account, val trustMarkTypeId: String, val issuerId: String)
+data class RemoveIssuerFromTrustMarkTypeArgs(val tenantId: String, val trustMarkTypeId: String, val issuerId: String)
 
 interface RemoveIssuerFromTrustMarkTypeCommand : ServiceCommand<RemoveIssuerFromTrustMarkTypeArgs, TrustMarkIssuer>, PublicApiCommand {
     companion object {

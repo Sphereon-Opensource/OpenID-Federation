@@ -95,6 +95,10 @@ dependencyResolutionManagement {
 include(":modules:openid-federation-core-public")
 include(":modules:openid-federation-core-impl")
 
+// Account modules (optional account-based multi-tenancy)
+include(":modules:openid-federation-account-public")
+include(":modules:openid-federation-account-impl")
+
 // Existing modules
 include(":modules:openid-federation-openapi")
 include(":modules:openid-federation-services")

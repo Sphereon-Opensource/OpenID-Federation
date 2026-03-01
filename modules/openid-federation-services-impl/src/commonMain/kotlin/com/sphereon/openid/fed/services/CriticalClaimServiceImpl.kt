@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.services
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 import com.sphereon.openid.fed.services.command.criticalClaim.CreateCriticalClaimArgs
 import com.sphereon.openid.fed.services.command.criticalClaim.CreateCriticalClaimCommand
@@ -35,12 +35,12 @@ class CriticalClaimServiceImpl(
     private val findCriticalClaimsByAccountCommand: FindCriticalClaimsByAccountCommand
 ) : CriticalClaimService {
 
-    override suspend fun create(account: Account, claim: String): FederationResult<CritEntity> =
-        createCriticalClaimCommand.execute(CreateCriticalClaimArgs(account, claim)).toFederationResult()
+    override suspend fun create(tenantId: String, claim: String): FederationResult<CritEntity> =
+        createCriticalClaimCommand.execute(CreateCriticalClaimArgs(tenantId, claim)).toFederationResult()
 
-    override suspend fun delete(account: Account, id: String): FederationResult<CritEntity> =
-        deleteCriticalClaimCommand.execute(DeleteCriticalClaimArgs(account, id)).toFederationResult()
+    override suspend fun delete(tenantId: String, id: String): FederationResult<CritEntity> =
+        deleteCriticalClaimCommand.execute(DeleteCriticalClaimArgs(tenantId, id)).toFederationResult()
 
-    override suspend fun findByAccount(account: Account): FederationResult<Array<CritEntity>> =
-        findCriticalClaimsByAccountCommand.execute(FindCriticalClaimsByAccountArgs(account)).toFederationResult()
+    override suspend fun findByAccount(tenantId: String): FederationResult<Array<CritEntity>> =
+        findCriticalClaimsByAccountCommand.execute(FindCriticalClaimsByAccountArgs(tenantId)).toFederationResult()
 }

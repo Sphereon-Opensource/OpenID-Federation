@@ -1,58 +1,26 @@
+@file:Suppress("DEPRECATION")
+
 package com.sphereon.openid.fed.server.admin.api.http.command
 
-import com.sphereon.core.api.http.command.HttpEndpointCommand
-import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
-import com.sphereon.core.api.http.describe.HttpMethod
-import com.sphereon.core.api.http.describe.MediaType
+/**
+ * Backward compatibility re-exports.
+ * Use interfaces from [com.sphereon.openid.fed.account.http.command] instead.
+ */
 
-// ==================== List Accounts Endpoint ====================
+@Deprecated(
+    "Use com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand instead",
+    replaceWith = ReplaceWith("ListAccountsEndpointCommand", "com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand")
+)
+typealias ListAccountsEndpointCommand = com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
 
-interface ListAccountsEndpointCommand : HttpEndpointCommand {
-    companion object {
-        const val COMMAND_ID = "fed.admin.list-accounts"
+@Deprecated(
+    "Use com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand instead",
+    replaceWith = ReplaceWith("CreateAccountEndpointCommand", "com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand")
+)
+typealias CreateAccountEndpointCommand = com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
 
-        val ENDPOINT = HttpEndpointDescriptor(
-            method = HttpMethod.GET,
-            pathPattern = "/accounts",
-            produces = setOf(MediaType.ApplicationJson),
-            operationId = "listAccounts",
-            tags = setOf("accounts"),
-            summary = "List all accounts"
-        )
-    }
-}
-
-// ==================== Create Account Endpoint ====================
-
-interface CreateAccountEndpointCommand : HttpEndpointCommand {
-    companion object {
-        const val COMMAND_ID = "fed.admin.create-account"
-
-        val ENDPOINT = HttpEndpointDescriptor(
-            method = HttpMethod.POST,
-            pathPattern = "/accounts",
-            consumes = setOf(MediaType.ApplicationJson),
-            produces = setOf(MediaType.ApplicationJson),
-            operationId = "createAccount",
-            tags = setOf("accounts"),
-            summary = "Create a new account"
-        )
-    }
-}
-
-// ==================== Delete Account Endpoint ====================
-
-interface DeleteAccountEndpointCommand : HttpEndpointCommand {
-    companion object {
-        const val COMMAND_ID = "fed.admin.delete-account"
-
-        val ENDPOINT = HttpEndpointDescriptor(
-            method = HttpMethod.DELETE,
-            pathPattern = "/accounts",
-            produces = setOf(MediaType.ApplicationJson),
-            operationId = "deleteAccount",
-            tags = setOf("accounts"),
-            summary = "Delete the current account"
-        )
-    }
-}
+@Deprecated(
+    "Use com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand instead",
+    replaceWith = ReplaceWith("DeleteAccountEndpointCommand", "com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand")
+)
+typealias DeleteAccountEndpointCommand = com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand

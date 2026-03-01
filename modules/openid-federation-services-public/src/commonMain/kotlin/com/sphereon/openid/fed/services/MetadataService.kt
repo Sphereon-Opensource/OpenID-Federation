@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.openapi.models.Account
+
 import com.sphereon.openid.fed.openapi.models.Metadata
 import kotlinx.serialization.json.JsonElement
 
@@ -27,7 +27,7 @@ interface MetadataService {
      * @param metadata The metadata content to be associated with the account and key.
      * @return FederationResult containing the created Metadata or an error.
      */
-    suspend fun createMetadata(account: Account, key: String, metadata: JsonElement): FederationResult<Metadata>
+    suspend fun createMetadata(tenantId: String, key: String, metadata: JsonElement): FederationResult<Metadata>
 
     /**
      * Finds and retrieves a list of Metadata associated with the provided account.
@@ -35,7 +35,7 @@ interface MetadataService {
      * @param account The account for which metadata is to be fetched.
      * @return FederationResult containing a list of Metadata or an error.
      */
-    suspend fun findByAccount(account: Account): FederationResult<List<Metadata>>
+    suspend fun findByAccount(tenantId: String): FederationResult<List<Metadata>>
 
     /**
      * Deletes a metadata record associated with the given account and ID.
@@ -44,5 +44,5 @@ interface MetadataService {
      * @param id The unique identifier of the metadata record to delete.
      * @return FederationResult containing the deleted Metadata or an error.
      */
-    suspend fun deleteMetadata(account: Account, id: String): FederationResult<Metadata>
+    suspend fun deleteMetadata(tenantId: String, id: String): FederationResult<Metadata>
 }

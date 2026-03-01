@@ -10,6 +10,7 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.errorResponse
 import com.sphereon.core.api.http.jsonResponse
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.JwkService
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 class ListKeysEndpointCommandImpl(
     execution: SessionExecution,
     private val jwkService: JwkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListKeysEndpointCommand.COMMAND_ID,
@@ -42,10 +43,10 @@ class ListKeysEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val result = jwkService.getKeys(account, includeRevoked = false)
+        val result = jwkService.getKeys(tenantId, includeRevoked = false)
 
         return if (result.isOk) {
             val keys = result.value.toAccountJwksResponse()
@@ -65,7 +66,7 @@ class ListKeysEndpointCommandImpl(
 class CreateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val jwkService: JwkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = CreateKeyEndpointCommand.COMMAND_ID,
@@ -79,8 +80,8 @@ class CreateKeyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val createKey = if (request.body.isNullOrBlank()) {
             CreateKey()
@@ -92,7 +93,7 @@ class CreateKeyEndpointCommandImpl(
             }
         }
 
-        val result = jwkService.createKey(account, CreateKeyArgs.fromModel(createKey))
+        val result = jwkService.createKey(tenantId, CreateKeyArgs.fromModel(createKey))
 
         return if (result.isOk) {
             Ok(GenericHttpResponse(
@@ -115,7 +116,7 @@ class CreateKeyEndpointCommandImpl(
 class RevokeKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val jwkService: JwkService,
-    private val accountResolver: AccountResolver,
+    private val tenantContextResolver: TenantContextResolver,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = RevokeKeyEndpointCommand.COMMAND_ID,
@@ -129,8 +130,8 @@ class RevokeKeyEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val account = accountResolver.resolveAccount(request)
-            ?: return Ok(errorResponse(404, "Account not found"))
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
 
         val req = request.withExtractedParams(RevokeKeyEndpointCommand.ENDPOINT.pathPattern)
         val keyId = req.pathParams["keyId"]
@@ -138,7 +139,7 @@ class RevokeKeyEndpointCommandImpl(
 
         val reason = request.queryParameters["reason"]
 
-        val result = jwkService.revokeKey(account, keyId, reason)
+        val result = jwkService.revokeKey(tenantId, keyId, reason)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))
