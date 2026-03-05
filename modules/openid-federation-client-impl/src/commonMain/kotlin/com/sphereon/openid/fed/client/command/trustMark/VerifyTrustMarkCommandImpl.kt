@@ -12,6 +12,10 @@ import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.services.trustMarkService.TrustMarkServiceConst
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.core.error.SignatureVerificationFailedError
+import com.sphereon.openid.fed.core.error.TrustMarkExpiredError
+import com.sphereon.openid.fed.core.error.TrustMarkInvalidError
+import com.sphereon.openid.fed.core.error.TrustMarkIssuerNotAuthorizedError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.Jwt
 import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
@@ -66,31 +70,48 @@ class VerifyTrustMarkCommandImpl(
             val exp = decodedTrustMark.payload["exp"]?.jsonPrimitive?.content?.toLongOrNull()
             if (exp == null || exp <= timeToUse) {
                 logger.error("Trust Mark has expired")
-                return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark has expired"))
+                return IdkResult.err(TrustMarkExpiredError(
+                    trustMarkId = decodedTrustMark.payload["trust_mark_type"]?.jsonPrimitive?.content ?: "unknown"
+                ))
             }
 
             // 3. Get Trust Mark issuer for signature verification
             val trustMarkIssuer = decodedTrustMark.payload["iss"]?.jsonPrimitive?.content
-                ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required issuer claim"))
+                ?: return IdkResult.err(TrustMarkInvalidError(
+                    trustMarkId = "unknown",
+                    reason = "Trust Mark missing required issuer claim"
+                ))
 
             // 4. Get Trust Mark identifier
             val trustMarkId = decodedTrustMark.payload["trust_mark_type"]?.jsonPrimitive?.content
-                ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required 'trust_mark_type' claim"))
+                ?: return IdkResult.err(TrustMarkInvalidError(
+                    trustMarkId = "unknown",
+                    reason = "Trust Mark missing required 'trust_mark_type' claim"
+                ))
 
             // 5. Fetch issuer's configuration and verify signature
             logger.debug("Fetching issuer configuration for signature verification")
             val issuerConfigResult = getEntityConfigurationCommand.getEntityConfiguration(trustMarkIssuer)
             if (issuerConfigResult.isErr) {
-                return IdkResult.ok(TrustMarkValidationResponse(false, "Failed to fetch issuer configuration: ${issuerConfigResult.error.message.defaultMessage}"))
+                return IdkResult.err(TrustMarkInvalidError(
+                    trustMarkId = trustMarkId,
+                    reason = "Failed to fetch issuer configuration: ${issuerConfigResult.error.message.defaultMessage}"
+                ))
             }
 
             val issuerConfig = issuerConfigResult.value
             val signingKey = issuerConfig.jwks.propertyKeys?.find { it.kid == decodedTrustMark.header.kid }
-                ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark signing key not found in issuer's JWKS"))
+                ?: return IdkResult.err(TrustMarkInvalidError(
+                    trustMarkId = trustMarkId,
+                    reason = "Trust Mark signing key not found in issuer's JWKS"
+                ))
 
             if (!context.jwtService.verifyJwtSignature(trustMark, signingKey)) {
                 logger.error("Trust Mark signature verification failed")
-                return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark signature verification failed"))
+                return IdkResult.err(SignatureVerificationFailedError(
+                    reason = "Trust Mark signature verification failed",
+                    keyId = decodedTrustMark.header.kid
+                ))
             }
             logger.debug("Trust Mark signature verified successfully")
 
@@ -114,16 +135,18 @@ class VerifyTrustMarkCommandImpl(
 
             // If neither trust_mark_owners nor trust_mark_issuers is present
             logger.debug("Trust Mark not recognized in federation - no trust_mark_owners or trust_mark_issuers found")
-            return IdkResult.ok(
-                TrustMarkValidationResponse(
-                    false,
-                    "Trust Mark not recognized in federation - no trust_mark_owners or trust_mark_issuers found"
-                )
-            )
+            return IdkResult.err(TrustMarkInvalidError(
+                trustMarkId = trustMarkId,
+                reason = "Trust Mark not recognized in federation - no trust_mark_owners or trust_mark_issuers found"
+            ))
 
         } catch (e: Exception) {
             logger.error("Trust Mark validation failed", e)
-            return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark validation failed: ${e.message}"))
+            return IdkResult.err(TrustMarkInvalidError(
+                trustMarkId = "unknown",
+                reason = "Trust Mark validation failed: ${e.message}",
+                exception = e
+            ))
         }
     }
 
@@ -133,33 +156,36 @@ class VerifyTrustMarkCommandImpl(
         decodedTrustMark: Jwt
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         val ownerClaims = trustMarkOwners[trustMarkId]
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_owners"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark identifier not found in trust_mark_owners"))
 
         // Verify delegation claim exists
         val delegation = decodedTrustMark.payload["delegation"]?.jsonPrimitive?.content
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required delegation claim"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark missing required delegation claim"))
 
         // Verify delegation JWT signature with owner's JWKS
         val ownerJwks = ownerClaims.jwks
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "No JWKS found for Trust Mark owner"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "No JWKS found for Trust Mark owner"))
 
         val decodedDelegation = decodeJWTComponents(delegation)
 
         val delegationKey = findKeyInJwks(
             ownerJwks.toTypedArray(),
             decodedDelegation.header.kid
-        ) ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Delegation signing key not found in owner's JWKS"))
+        ) ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Delegation signing key not found in owner's JWKS"))
 
         if (!context.jwtService.verifyJwtSignature(delegation, delegationKey)) {
-            return IdkResult.ok(TrustMarkValidationResponse(false, "Delegation signature verification failed"))
+            return IdkResult.err(SignatureVerificationFailedError(
+                reason = "Delegation signature verification failed",
+                keyId = decodedDelegation.header.kid
+            ))
         }
 
         // Verify delegation issuer matches owner's sub
         val ownerSub = ownerClaims.sub
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark owner missing sub claim"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark owner missing sub claim"))
 
         if (decodedDelegation.payload["iss"]?.jsonPrimitive?.content != ownerSub) {
-            return IdkResult.ok(TrustMarkValidationResponse(false, "Delegation issuer does not match Trust Mark owner"))
+            return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Delegation issuer does not match Trust Mark owner"))
         }
 
         return IdkResult.ok(TrustMarkValidationResponse(true))
@@ -171,18 +197,18 @@ class VerifyTrustMarkCommandImpl(
         decodedTrustMark: Jwt
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         val issuerClaims = trustMarkIssuers[trustMarkId]
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark identifier not found in trust_mark_issuers"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark identifier not found in trust_mark_issuers"))
 
         // Verify Trust Mark issuer is authorized
         val trustMarkIssuer = decodedTrustMark.payload["iss"]?.jsonPrimitive?.content
-            ?: return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark missing required issuer claim"))
+            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark missing required issuer claim"))
 
         val isAuthorizedIssuer = issuerClaims.any { issuer ->
             issuer == trustMarkIssuer
         }
 
         if (!isAuthorizedIssuer) {
-            return IdkResult.ok(TrustMarkValidationResponse(false, "Trust Mark issuer not authorized"))
+            return IdkResult.err(TrustMarkIssuerNotAuthorizedError(trustMarkId, trustMarkIssuer))
         }
         // Signature has already been verified
         return IdkResult.ok(TrustMarkValidationResponse(true))

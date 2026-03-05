@@ -215,11 +215,11 @@ class TrustMarkApiTest {
         sub: String,
         trustMarkId: String,
         logoUri: String? = null,
-        exp: Int? = null,
+        exp: Double? = null,
         ref: String? = null,
         delegation: String? = null,
         dryRun: Boolean? = null,
-        iat: Int? = null
+        iat: Double? = null
     ): Pair<HttpStatusCode, String> {
         val response = client.post("$baseUrl/trust-marks") {
             contentType(ContentType.Application.Json)
@@ -402,7 +402,7 @@ class TrustMarkApiTest {
             val trustMarkTypeId = "https://subject-entity.example.com/trust-marks/1"
 
             // Step 3: Create a trust mark with all fields
-            val currentTimeSeconds = (System.currentTimeMillis() / 1000).toInt()
+            val currentTimeSeconds = (System.currentTimeMillis() / 1000).toDouble()
             val expirationTime = currentTimeSeconds + 86400 // 24 hours from now
 
             val (status, trustMark) = createTrustMark(

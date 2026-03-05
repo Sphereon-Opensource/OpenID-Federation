@@ -54,8 +54,9 @@ class FederationClientJsTest {
     fun testGetEntityConfiguration() = runTest {
         val serverUrl = js("process.env.FEDERATION_SERVER_URL").unsafeCast<String?>()
         if (serverUrl != null) {
-            val entityConfig = client.entityConfigurationStatementGet(serverUrl)
-            assertNotNull(entityConfig, "Entity configuration should not be null")
+            val result = client.entityConfigurationStatementGet(serverUrl)
+            assertTrue(result.isOk, "Should succeed: ${if (result.isErr) result.error.message.defaultMessage else ""}")
+            val entityConfig = result.value
             assertNotNull(entityConfig.iss, "Entity configuration should have an issuer")
         }
     }
@@ -65,12 +66,12 @@ class FederationClientJsTest {
         val serverUrl = js("process.env.FEDERATION_SERVER_URL").unsafeCast<String?>()
         val trustAnchorUrl = js("process.env.FEDERATION_TRUST_ANCHOR_URL").unsafeCast<String?>()
         if (serverUrl != null && trustAnchorUrl != null) {
-            val response = client.trustChainResolve(
+            val result = client.trustChainResolve(
                 entityIdentifier = serverUrl,
                 trustAnchors = arrayOf(trustAnchorUrl),
                 maxDepth = 5
             )
-            assertNotNull(response, "Trust chain resolve response should not be null")
+            assertTrue(result.isOk, "Should succeed: ${if (result.isErr) result.error.message.defaultMessage else ""}")
         }
     }
 
@@ -82,22 +83,23 @@ class FederationClientJsTest {
     fun testGetEntityConfigurationSwamidLeaf() = runTest {
         val trustAnchorUrl = js("process.env.FEDERATION_TRUST_ANCHOR_URL").unsafeCast<String?>()
             ?: return@runTest
-        val entityConfig = client.entityConfigurationStatementGet(SWAMID_LEAF)
-        assertNotNull(entityConfig, "SWAMID leaf entity configuration should not be null")
-        assertEquals(SWAMID_LEAF, entityConfig.iss, "iss should match the SWAMID leaf identifier")
+        val result = client.entityConfigurationStatementGet(SWAMID_LEAF)
+        assertTrue(result.isOk, "Should succeed: ${if (result.isErr) result.error.message.defaultMessage else ""}")
+        assertEquals(SWAMID_LEAF, result.value.iss, "iss should match the SWAMID leaf identifier")
     }
 
     @Test
     fun testResolveTrustChainSwamidLeaf() = runTest {
         val trustAnchorUrl = js("process.env.FEDERATION_TRUST_ANCHOR_URL").unsafeCast<String?>()
             ?: return@runTest
-        val response = client.trustChainResolve(
+        val result = client.trustChainResolve(
             entityIdentifier = SWAMID_LEAF,
             trustAnchors = arrayOf(trustAnchorUrl),
             maxDepth = 5
         )
-        assertNotNull(response, "Trust chain resolve response should not be null")
-        assertTrue(response.trustChain.isNotEmpty(), "Trust chain should not be empty: ${response.errorMessage}")
+        assertTrue(result.isOk, "Should succeed: ${if (result.isErr) result.error.message.defaultMessage else ""}")
+        val response = result.value
+        assertTrue(response.trustChain.isNotEmpty(), "Trust chain should not be empty")
         // leaf + intermediate(s) + trust anchor = at least 3
         assertTrue(response.trustChain.size >= 3, "Trust chain should have at least 3 entries (leaf + intermediate + TA), got ${response.trustChain.size}")
     }

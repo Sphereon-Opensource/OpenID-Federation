@@ -74,14 +74,21 @@ class ResolveTrustChainCommandImpl(
                     "Successfully resolved trust chain for entity: $entityIdentifier",
                     metadata = mapOf("trustChain" to trustChain.toString())
                 )
-                IdkResult.ok(TrustChainResolveResponse(trustChain, errorMessage = null))
+                IdkResult.ok(TrustChainResolveResponse(trustChain))
             } else {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")
-                IdkResult.ok(TrustChainResolveResponse(emptyList(), errorMessage = "A Trust chain could not be established"))
+                IdkResult.err(NoTrustChainFoundError(
+                    entityId = entityIdentifier,
+                    trustAnchors = trustAnchors.toList()
+                ))
             }
         } catch (e: Throwable) {
             logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
-            IdkResult.ok(TrustChainResolveResponse(emptyList(), errorMessage = e.message))
+            IdkResult.err(NoTrustChainFoundError(
+                entityId = entityIdentifier,
+                trustAnchors = trustAnchors.toList(),
+                exception = e
+            ))
         }
     }
 

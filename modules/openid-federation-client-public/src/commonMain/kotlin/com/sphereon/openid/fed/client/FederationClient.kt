@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.client
 
 import com.sphereon.core.compat.JsExportCompat
+import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
@@ -21,13 +22,13 @@ interface FederationClient {
      * @param entityIdentifier The entity identifier for which to build the trust chain.
      * @param trustAnchors The trust anchors to use for building the trust chain.
      * @param maxDepth The maximum depth to search for trust chain links.
-     * @return A [TrustChainResolveResponse] object containing the resolved trust chain.
+     * @return Ok with [TrustChainResolveResponse] on success, Err with [FederationError] on failure.
      */
     suspend fun trustChainResolve(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         maxDepth: Int = 5
-    ): TrustChainResolveResponse
+    ): FederationResult<TrustChainResolveResponse>
 
     /**
      * Verifies the trust chain.
@@ -36,13 +37,13 @@ interface FederationClient {
      * @param trustAnchor The trust anchor to use for verification. Optional.
      * @param currentTime The current time to use for verification. Defaults to the current epoch time in seconds.
      *
-     * @return A [VerifyTrustChainResponse] object containing the verification result.
+     * @return Ok with [VerifyTrustChainResponse] on success, Err with [FederationError] on failure.
      */
     suspend fun trustChainVerify(
         trustChain: Array<String>,
         trustAnchor: String?,
         currentTime: Long?
-    ): VerifyTrustChainResponse
+    ): FederationResult<VerifyTrustChainResponse>
 
     /**
      * Get an Entity Configuration Statement from an entity.
@@ -50,7 +51,7 @@ interface FederationClient {
      * @param entityIdentifier The entity identifier for which to get the statement.
      * @return EntityConfigurationStatement containing the entity configuration statement.
      */
-    suspend fun entityConfigurationStatementGet(entityIdentifier: String): EntityConfigurationStatement
+    suspend fun entityConfigurationStatementGet(entityIdentifier: String): FederationResult<EntityConfigurationStatement>
 
     /**
      * Verifies a Trust Mark according to the OpenID Federation specification.
@@ -58,11 +59,11 @@ interface FederationClient {
      * @param trustMark The Trust Mark JWT string to validate
      * @param trustAnchorConfig The Trust Anchor's Entity Configuration
      * @param currentTime Optional timestamp for validation (defaults to current time)
-     * @return TrustMarkValidationResponse containing the validation result and any error message
+     * @return Ok with [TrustMarkValidationResponse] on success, Err with [FederationError] on failure.
      */
     suspend fun trustMarksVerify(
         trustMark: String,
         trustAnchorConfig: EntityConfigurationStatement,
         currentTime: Long? = null
-    ): TrustMarkValidationResponse
+    ): FederationResult<TrustMarkValidationResponse>
 }

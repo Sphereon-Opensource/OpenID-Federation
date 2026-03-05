@@ -8,10 +8,8 @@ import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.FederationClient
-import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
-import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
@@ -58,28 +56,22 @@ class ResolveEntityCommandImpl(
 
             // Get the entity configuration statement for the subject
             logger.debug("Fetching entity configuration statement for subject: $sub")
-            val subEntityConfigurationStatement = federationClient.entityConfigurationStatementGet(sub)
+            val entityConfigResult = federationClient.entityConfigurationStatementGet(sub)
+            if (entityConfigResult.isErr) {
+                logger.error("Failed to fetch entity configuration for subject: $sub")
+                return federationErr(entityConfigResult.error)
+            }
+            val subEntityConfigurationStatement = entityConfigResult.value
 
             // Get the trust chain from subject to trust anchor
             logger.debug("Resolving trust chain from $sub to trust anchor: $trustAnchor")
-            val trustChainResolution = federationClient.trustChainResolve(sub, arrayOf(trustAnchor))
-            logger.debug("Trust chain resolution completed: ${trustChainResolution.errorMessage ?: "success"}")
-
-            if (trustChainResolution.errorMessage != null) {
-                logger.error("Trust chain resolution failed: ${trustChainResolution.errorMessage}")
-                return federationErr(TrustChainValidationFailedError(
-                    entityId = sub,
-                    reason = trustChainResolution.errorMessage ?: "Unknown error"
-                ))
+            val trustChainResult = federationClient.trustChainResolve(sub, arrayOf(trustAnchor))
+            if (trustChainResult.isErr) {
+                logger.error("Trust chain resolution failed for entity: $sub")
+                return federationErr(trustChainResult.error)
             }
-
-            if (trustChainResolution.trustChain.isNullOrEmpty()) {
-                logger.error("No trust chain found for entity: $sub")
-                return federationErr(NoTrustChainFoundError(
-                    entityId = sub,
-                    trustAnchors = listOf(trustAnchor)
-                ))
-            }
+            val trustChainResolution = trustChainResult.value
+            logger.debug("Trust chain resolution completed successfully")
 
             // Get metadata based on entity types
             logger.debug("Filtering metadata based on entity types")
@@ -178,14 +170,19 @@ class ResolveEntityCommandImpl(
                     }
 
                     // Get the trust anchor configuration and validate the trust mark
-                    val trustAnchorConfig = federationClient.entityConfigurationStatementGet(issuers[0])
-                    val validationResult = federationClient.trustMarksVerify(trustMark.trustMark, trustAnchorConfig)
+                    val configResult = federationClient.entityConfigurationStatementGet(issuers[0])
+                    if (configResult.isErr) {
+                        logger.warn("Failed to fetch issuer config for trust mark ${trustMark.trustMarkType}: ${configResult.error.message.defaultMessage}")
+                        continue
+                    }
 
-                    if (!validationResult.isValid) {
+                    val validationResult = federationClient.trustMarksVerify(trustMark.trustMark, configResult.value)
+
+                    if (validationResult.isOk) {
                         verifiedTrustMarks.add(trustMark)
                         logger.debug("Trust mark ${trustMark.trustMarkType} verified successfully")
                     } else {
-                        logger.warn("Trust mark ${trustMark.trustMarkType} verification failed: ${validationResult.errorMessage}")
+                        logger.warn("Trust mark ${trustMark.trustMarkType} verification failed: ${validationResult.error.message.defaultMessage}")
                     }
                 } catch (e: Exception) {
                     logger.warn("Failed to verify trust mark ${trustMark.trustMarkType}: ${e.message}")

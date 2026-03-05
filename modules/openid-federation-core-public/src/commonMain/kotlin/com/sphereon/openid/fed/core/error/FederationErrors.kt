@@ -1049,3 +1049,185 @@ data class X509VerificationFailedError(
         const val ERROR_CODE = "x509_verification_failed"
     }
 }
+
+// =============================================================================
+// Wallet Architecture Errors
+// =============================================================================
+
+/**
+ * Entity is not trusted in the federation
+ */
+data class EntityNotTrustedError(
+    val entityId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Forbidden
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.entity-not-trusted",
+        i18nParams = mapOf("entityId" to entityId, "reason" to reason),
+        defaultMessage = "Entity $entityId is not trusted: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "entity_not_trusted"
+    }
+}
+
+/**
+ * Endpoint constraint violation for a credential verifier
+ */
+data class EndpointConstraintViolationError(
+    val entityId: String,
+    val endpointType: String,
+    val actualValue: String,
+    val reason: String
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.endpoint-constraint-violation",
+        i18nParams = mapOf("entityId" to entityId, "endpointType" to endpointType, "actualValue" to actualValue, "reason" to reason),
+        defaultMessage = "Endpoint constraint violation for $entityId: $endpointType '$actualValue' $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "endpoint_constraint_violation"
+    }
+}
+
+/**
+ * Wallet attestation is invalid
+ */
+data class WalletAttestationInvalidError(
+    val walletProviderId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.wallet-attestation-invalid",
+        i18nParams = mapOf("walletProviderId" to walletProviderId, "reason" to reason),
+        defaultMessage = "Wallet attestation invalid for provider $walletProviderId: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "wallet_attestation_invalid"
+    }
+}
+
+/**
+ * Metadata policy application failed
+ */
+data class MetadataPolicyApplicationError(
+    val entityId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.metadata-policy-application-error",
+        i18nParams = mapOf("entityId" to entityId, "reason" to reason),
+        defaultMessage = "Metadata policy application failed for $entityId: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "metadata_policy_application_error"
+    }
+}
+
+/**
+ * Required trust marks are missing from the entity
+ */
+data class RequiredTrustMarkMissingError(
+    val entityId: String,
+    val missingTrustMarkIds: List<String>
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Forbidden
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.required-trust-mark-missing",
+        i18nParams = mapOf("entityId" to entityId, "missingTrustMarkIds" to missingTrustMarkIds.joinToString(", ")),
+        defaultMessage = "Required trust marks missing for $entityId: ${missingTrustMarkIds.joinToString(", ")}"
+    )
+
+    companion object {
+        const val ERROR_CODE = "required_trust_mark_missing"
+    }
+}
+
+/**
+ * Credential issuer is not trusted by any of the DCQL trusted authorities
+ */
+data class DcqlTrustAuthorityNotFoundError(
+    val credentialIssuerId: String,
+    val attemptedAuthorities: List<String>
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Forbidden
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.dcql-trust-authority-not-found",
+        i18nParams = mapOf("credentialIssuerId" to credentialIssuerId, "attemptedAuthorities" to attemptedAuthorities.joinToString(", ")),
+        defaultMessage = "Credential issuer $credentialIssuerId not trusted by any DCQL authority: ${attemptedAuthorities.joinToString(", ")}"
+    )
+
+    companion object {
+        const val ERROR_CODE = "dcql_trust_authority_not_found"
+    }
+}
+
+// =============================================================================
+// DIIP Profile Errors
+// =============================================================================
+
+/**
+ * Credential issuer verification failed (DIIP profile)
+ */
+data class CredentialIssuerVerificationError(
+    val issuerId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.credential-issuer-verification-failed",
+        i18nParams = mapOf("issuerId" to issuerId, "reason" to reason),
+        defaultMessage = "Credential issuer verification failed for $issuerId: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "credential_issuer_verification_failed"
+    }
+}
+
+/**
+ * DIIP profile validation failed
+ */
+data class DiipProfileValidationError(
+    val entityId: String,
+    val failedChecks: List<String>
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.diip-profile-validation-failed",
+        i18nParams = mapOf("entityId" to entityId, "failedChecks" to failedChecks.joinToString(", ")),
+        defaultMessage = "DIIP profile validation failed for $entityId: ${failedChecks.joinToString(", ")}"
+    )
+
+    companion object {
+        const val ERROR_CODE = "diip_profile_validation_failed"
+    }
+}

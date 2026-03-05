@@ -12,6 +12,7 @@ import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
 import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.Jwt
@@ -63,7 +64,10 @@ class VerifyTrustChainCommandImpl(
         val timeToUse = currentTime ?: getCurrentEpochTimeSeconds()
         if (chain.size < 3) {
             logger.error("Trust chain too short: ${chain.size} statements (minimum 3 required)")
-            return IdkResult.ok(VerifyTrustChainResponse(false, "Trust chain must contain at least 3 elements"))
+            return IdkResult.err(TrustChainValidationFailedError(
+                entityId = "unknown",
+                reason = "Trust chain must contain at least 3 elements"
+            ))
         }
 
         try {
@@ -80,7 +84,10 @@ class VerifyTrustChainCommandImpl(
                 logger.debug("Checking required claims for statement $j")
                 if (!hasRequiredClaims(statement)) {
                     logger.error("Statement at position $j missing required claims")
-                    return IdkResult.ok(VerifyTrustChainResponse(false, "Statement at position $j missing required claims"))
+                    return IdkResult.err(TrustChainValidationFailedError(
+                        entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                        reason = "Statement at position $j missing required claims"
+                    ))
                 }
 
                 val iatTolerance = 5L
@@ -89,14 +96,20 @@ class VerifyTrustChainCommandImpl(
                 logger.debug("Time considered: $timeToUse")
                 if (iat == null || iat > timeToUse + iatTolerance) {
                     logger.error("Statement $j has invalid iat: $iat")
-                    return IdkResult.ok(VerifyTrustChainResponse(false, "Statement at position $j has invalid iat"))
+                    return IdkResult.err(TrustChainValidationFailedError(
+                        entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                        reason = "Statement at position $j has invalid iat"
+                    ))
                 }
 
                 val exp = statement.payload["exp"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
                 logger.debug("Statement $j - Expires at (exp): $exp")
                 if (exp == null || exp <= timeToUse) {
                     logger.error("Statement $j has expired: $exp")
-                    return IdkResult.ok(VerifyTrustChainResponse(false, "Statement at position $j has expired"))
+                    return IdkResult.err(TrustChainValidationFailedError(
+                        entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                        reason = "Statement at position $j has expired"
+                    ))
                 }
 
                 if (j == 0) {
@@ -106,13 +119,19 @@ class VerifyTrustChainCommandImpl(
                     logger.debug("ES[0] - Comparing iss ($iss) with sub ($sub)")
                     if (iss != sub) {
                         logger.error("First statement iss ($iss) does not match sub ($sub)")
-                        return IdkResult.ok(VerifyTrustChainResponse(false, "First statement must have iss == sub"))
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = sub ?: "unknown",
+                            reason = "First statement must have iss == sub"
+                        ))
                     }
 
                     logger.debug("Verifying ES[0] signature with its own JWKS")
                     if (!verifySignatureWithOwnJwks(chain[j])) {
                         logger.error("First statement signature verification failed")
-                        return IdkResult.ok(VerifyTrustChainResponse(false, "First statement signature verification failed"))
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = sub ?: "unknown",
+                            reason = "First statement signature verification failed"
+                        ))
                     }
                 }
 
@@ -123,23 +142,19 @@ class VerifyTrustChainCommandImpl(
                     logger.debug("Comparing current iss ($currentIss) with next sub ($nextSub)")
                     if (currentIss != nextSub) {
                         logger.error("Chain broken: statement $j iss ($currentIss) does not match statement ${j + 1} sub ($nextSub)")
-                        return IdkResult.ok(
-                            VerifyTrustChainResponse(
-                                false,
-                                "Statement chain broken between positions $j and ${j + 1}"
-                            )
-                        )
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                            reason = "Statement chain broken between positions $j and ${j + 1}"
+                        ))
                     }
 
                     logger.debug("Verifying statement $j signature with statement ${j + 1}'s JWKS")
                     if (!verifySignatureWithNextJwks(chain[j], chain[j + 1])) {
                         logger.error("Signature verification failed between statements $j and ${j + 1}")
-                        return IdkResult.ok(
-                            VerifyTrustChainResponse(
-                                false,
-                                "Signature verification failed for statement $j with next statement's keys"
-                            )
-                        )
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                            reason = "Signature verification failed for statement $j with next statement's keys"
+                        ))
                     }
                 }
 
@@ -149,13 +164,19 @@ class VerifyTrustChainCommandImpl(
 
                     if (trustAnchor != null && lastIss != trustAnchor) {
                         logger.error("Last statement issuer ($lastIss) does not match trust anchor ($trustAnchor)")
-                        return IdkResult.ok(VerifyTrustChainResponse(false, "Last statement issuer does not match trust anchor"))
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = lastIss ?: "unknown",
+                            reason = "Last statement issuer does not match trust anchor"
+                        ))
                     }
 
                     logger.debug("Verifying trust anchor signature with its own JWKS")
                     if (!verifySignatureWithOwnJwks(chain[j])) {
                         logger.error("Trust anchor signature verification failed")
-                        return IdkResult.ok(VerifyTrustChainResponse(false, "Trust anchor signature verification failed"))
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = lastIss ?: "unknown",
+                            reason = "Trust anchor signature verification failed"
+                        ))
                     }
 
                     val trustAnchorEntityConfigResult = getEntityConfigurationCommand.getEntityConfiguration(
@@ -163,7 +184,10 @@ class VerifyTrustChainCommandImpl(
                     )
 
                     if (trustAnchorEntityConfigResult.isErr) {
-                        return IdkResult.ok(VerifyTrustChainResponse(false, "Failed to fetch trust anchor configuration"))
+                        return IdkResult.err(TrustChainValidationFailedError(
+                            entityId = statement.payload["iss"]?.jsonPrimitive?.content ?: "unknown",
+                            reason = "Failed to fetch trust anchor configuration"
+                        ))
                     }
 
                     val trustAnchorEntityConfiguration = trustAnchorEntityConfigResult.value
@@ -176,18 +200,19 @@ class VerifyTrustChainCommandImpl(
 
                         if (historicalKeysResult.isErr) {
                             logger.error("Failed to fetch historical keys")
-                            return IdkResult.ok(VerifyTrustChainResponse(false, "Failed to fetch historical keys"))
+                            return IdkResult.err(TrustChainValidationFailedError(
+                                entityId = statement.payload["iss"]?.jsonPrimitive?.content ?: "unknown",
+                                reason = "Failed to fetch historical keys"
+                            ))
                         }
 
                         val historicalKeys = historicalKeysResult.value
                         if (historicalKeys.find { it.kid == statement.header.kid } == null) {
                             logger.error("Trust anchor kid not found in current JWKS or historical keys")
-                            return IdkResult.ok(
-                                VerifyTrustChainResponse(
-                                    false,
-                                    "Trust anchor kid not found in current JWKS or historical keys"
-                                )
-                            )
+                            return IdkResult.err(TrustChainValidationFailedError(
+                                entityId = statement.payload["iss"]?.jsonPrimitive?.content ?: "unknown",
+                                reason = "Trust anchor kid not found in current JWKS or historical keys"
+                            ))
                         }
                         logger.debug("Trust anchor key found in historical keys")
                     }
@@ -197,16 +222,20 @@ class VerifyTrustChainCommandImpl(
             // Validate constraints from subordinate statements
             // Constraints in statement at position j apply to entities below position j in the chain
             // (i.e., statements at positions 0..j-1)
-            val constraintsResult = validateConstraints(statements, chain)
-            if (constraintsResult != null) {
-                return IdkResult.ok(constraintsResult)
+            val constraintsError = validateConstraints(statements, chain)
+            if (constraintsError != null) {
+                return IdkResult.err(constraintsError)
             }
 
             logger.debug("Trust chain verification completed successfully")
             return IdkResult.ok(VerifyTrustChainResponse(true))
         } catch (e: Exception) {
             logger.error("Chain verification failed with exception", e)
-            return IdkResult.ok(VerifyTrustChainResponse(false, "Chain verification failed: ${e.message}"))
+            return IdkResult.err(TrustChainValidationFailedError(
+                entityId = "unknown",
+                reason = "Chain verification failed: ${e.message}",
+                exception = e
+            ))
         }
     }
 
@@ -225,7 +254,7 @@ class VerifyTrustChainCommandImpl(
      *
      * @return a failure response if constraints are violated, or null if all constraints pass
      */
-    private fun validateConstraints(statements: List<Jwt>, chain: Array<String>): VerifyTrustChainResponse? {
+    private fun validateConstraints(statements: List<Jwt>, chain: Array<String>): TrustChainValidationFailedError? {
         val constraintsJson = Json { ignoreUnknownKeys = true }
 
         // Walk statements from top (trust anchor) down to leaf
@@ -258,9 +287,9 @@ class VerifyTrustChainCommandImpl(
                 val intermediatesBelow = j - 2
                 if (intermediatesBelow > maxPathLength) {
                     logger.error("max_path_length constraint violated at position $j: $intermediatesBelow intermediates > max $maxPathLength")
-                    return VerifyTrustChainResponse(
-                        false,
-                        "Constraint violation: max_path_length ($maxPathLength) exceeded at position $j, found $intermediatesBelow intermediates"
+                    return TrustChainValidationFailedError(
+                        entityId = statement.payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                        reason = "Constraint violation: max_path_length ($maxPathLength) exceeded at position $j, found $intermediatesBelow intermediates"
                     )
                 }
             }
@@ -284,9 +313,9 @@ class VerifyTrustChainCommandImpl(
                     for (entityType in entityTypes) {
                         if (entityType !in allowedEntityTypes) {
                             logger.error("allowed_entity_types constraint violated: entity at position $k has type '$entityType' not in allowed list")
-                            return VerifyTrustChainResponse(
-                                false,
-                                "Constraint violation: entity type '$entityType' at position $k not allowed by constraints at position $j"
+                            return TrustChainValidationFailedError(
+                                entityId = statements[k].payload["sub"]?.jsonPrimitive?.content ?: "unknown",
+                                reason = "Constraint violation: entity type '$entityType' at position $k not allowed by constraints at position $j"
                             )
                         }
                     }
@@ -306,15 +335,15 @@ class VerifyTrustChainCommandImpl(
         namingConstraints: NamingConstraints,
         constraintPosition: Int,
         entityPosition: Int
-    ): VerifyTrustChainResponse? {
+    ): TrustChainValidationFailedError? {
         val permitted = namingConstraints.permitted
         if (permitted != null && permitted.isNotEmpty()) {
             val matches = permitted.any { pattern -> matchesNamingPattern(entityIdentifier, pattern) }
             if (!matches) {
                 logger.error("naming_constraints.permitted violated: '$entityIdentifier' at position $entityPosition does not match any permitted pattern")
-                return VerifyTrustChainResponse(
-                    false,
-                    "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition not permitted by naming constraints at position $constraintPosition"
+                return TrustChainValidationFailedError(
+                    entityId = entityIdentifier,
+                    reason = "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition not permitted by naming constraints at position $constraintPosition"
                 )
             }
         }
@@ -324,9 +353,9 @@ class VerifyTrustChainCommandImpl(
             val matches = excluded.any { pattern -> matchesNamingPattern(entityIdentifier, pattern) }
             if (matches) {
                 logger.error("naming_constraints.excluded violated: '$entityIdentifier' at position $entityPosition matches an excluded pattern")
-                return VerifyTrustChainResponse(
-                    false,
-                    "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition excluded by naming constraints at position $constraintPosition"
+                return TrustChainValidationFailedError(
+                    entityId = entityIdentifier,
+                    reason = "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition excluded by naming constraints at position $constraintPosition"
                 )
             }
         }

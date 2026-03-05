@@ -42,8 +42,8 @@ describe("FederationClient", () => {
   describeWithServer("with real federation server", () => {
     test("entityConfigurationStatementGet returns typed result", async () => {
       const result = await client.entityConfigurationStatementGet(serverUrl);
-      expect(result).toBeDefined();
-      expect(result.iss).toBeDefined();
+      expect(result.isOk).toBe(true);
+      expect(result.value.iss).toBeDefined();
     });
 
     test("trustChainResolve returns typed result", async () => {
@@ -54,7 +54,7 @@ describe("FederationClient", () => {
       const result = await client.trustChainResolve(serverUrl, [
         trustAnchorUrl,
       ]);
-      expect(result).toBeDefined();
+      expect(result.isOk).toBe(true);
     });
   });
 
@@ -63,8 +63,8 @@ describe("FederationClient", () => {
   describeWithServer("SWAMID leaf (2 layers deep)", () => {
     test("entityConfigurationStatementGet for SWAMID leaf", async () => {
       const result = await client.entityConfigurationStatementGet(swamidLeaf);
-      expect(result).toBeDefined();
-      expect(result.iss).toBe(swamidLeaf);
+      expect(result.isOk).toBe(true);
+      expect(result.value.iss).toBe(swamidLeaf);
     });
 
     test("trustChainResolve for SWAMID leaf (2 intermediaries)", async () => {
@@ -75,9 +75,9 @@ describe("FederationClient", () => {
       const result = await client.trustChainResolve(swamidLeaf, [
         trustAnchorUrl,
       ]);
-      expect(result).toBeDefined();
-      expect(result.trustChain).toBeDefined();
-      expect(result.trustChain.size).toBeGreaterThanOrEqual(3);
+      expect(result.isOk).toBe(true);
+      expect(result.value.trustChain).toBeDefined();
+      expect(result.value.trustChain.size).toBeGreaterThanOrEqual(3);
     });
   });
 });
