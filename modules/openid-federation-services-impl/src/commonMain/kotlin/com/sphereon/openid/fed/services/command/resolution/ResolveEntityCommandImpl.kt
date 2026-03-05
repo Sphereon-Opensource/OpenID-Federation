@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.FederationClient
@@ -41,7 +41,7 @@ class ResolveEntityCommandImpl(
     outputTypeToken = typeToken<ResolveResponse>()
 ), ResolveEntityCommand {
 
-    private val logger = Log.app().withTag("ResolveEntityCommand")
+    private val logger = execution.federationLogger("ResolveEntityCommand")
     private val ONE_DAY_IN_SEC = 3600 * 24
 
     override suspend fun doExecute(
@@ -100,7 +100,7 @@ class ResolveEntityCommandImpl(
                 sub,
                 filteredMetadata,
                 trustMarks,
-                trustChainResolution.trustChain?.toTypedArray()
+                trustChainResolution.trustChain.toTypedArray()
             )
             logger.debug("Successfully built resolve response")
 
@@ -121,7 +121,7 @@ class ResolveEntityCommandImpl(
         sub: String,
         metadata: JsonObject,
         trustMarks: Array<TrustMark>,
-        trustChain: Array<String>?
+        trustChain: Array<String>
     ): IdkResult<ResolveResponse, IdkError> {
         val iss = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
@@ -130,11 +130,11 @@ class ResolveEntityCommandImpl(
             ResolveResponse(
                 iss = iss,
                 sub = sub,
-                iat = currentTime.toInt(),
-                exp = (currentTime + ONE_DAY_IN_SEC).toInt(),
+                iat = currentTime.toDouble(),
+                exp = (currentTime + ONE_DAY_IN_SEC).toDouble(),
                 metadata = metadata,
                 trustMarks = trustMarks.toList(),
-                trustChain = trustChain?.toList()
+                trustChain = trustChain.toList()
             )
         )
     }

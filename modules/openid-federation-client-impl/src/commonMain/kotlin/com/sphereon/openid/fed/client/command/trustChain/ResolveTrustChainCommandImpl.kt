@@ -77,16 +77,12 @@ class ResolveTrustChainCommandImpl(
                 IdkResult.ok(TrustChainResolveResponse(trustChain, errorMessage = null))
             } else {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")
-                IdkResult.ok(TrustChainResolveResponse(null, errorMessage = "A Trust chain could not be established"))
+                IdkResult.ok(TrustChainResolveResponse(emptyList(), errorMessage = "A Trust chain could not be established"))
             }
         } catch (e: Throwable) {
             logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
-            IdkResult.ok(TrustChainResolveResponse(null, errorMessage = e.message))
+            IdkResult.ok(TrustChainResolveResponse(emptyList(), errorMessage = e.message))
         }
-    }
-
-    private suspend fun hasProcessedAuthority(authorityConfigurationEndpoint: String): Boolean {
-        return trustChainCache?.getApp(authorityConfigurationEndpoint) != null
     }
 
     private suspend fun markAuthorityProcessed(authorityConfigurationEndpoint: String, jwt: String) {
@@ -231,13 +227,15 @@ class ResolveTrustChainCommandImpl(
     ): Pair<String, EntityConfigurationStatement>? {
         val authorityConfigurationEndpoint = getEntityConfigurationEndpoint(authority)
 
-        if (hasProcessedAuthority(authorityConfigurationEndpoint)) {
-            logger.debug("Authority $authority already processed, skipping")
-            return null
+        val cachedJwt = trustChainCache?.getApp(authorityConfigurationEndpoint)
+        val authorityEntityConfigurationJwt = if (cachedJwt != null) {
+            logger.debug("Authority $authority already fetched, using cached configuration")
+            cachedJwt
+        } else {
+            val jwt = context.jwtService.fetchAndVerifyJwt(authorityConfigurationEndpoint, context.httpResolver)
+            markAuthorityProcessed(authorityConfigurationEndpoint, jwt)
+            jwt
         }
-
-        val authorityEntityConfigurationJwt = context.jwtService.fetchAndVerifyJwt(authorityConfigurationEndpoint, context.httpResolver)
-        markAuthorityProcessed(authorityConfigurationEndpoint, authorityEntityConfigurationJwt)
 
         val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
 

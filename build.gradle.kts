@@ -1,9 +1,14 @@
-import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompile
+import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.time.Duration
 import java.time.Instant
+import javax.inject.Inject
+
+// Gradle 9 requires ExecOperations to be injected rather than using Project.exec()
+abstract class ExecService @Inject constructor(val exec: ExecOperations)
+val execService = objects.newInstance(ExecService::class.java)
 
 tasks.register("installGitHooks", Copy::class) {
     group = "git hooks"
@@ -16,7 +21,9 @@ tasks.register("installGitHooks", Copy::class) {
         include("**/*")
     }
     into(targetDir)
-    fileMode = 0b111101101 // 755 in octal: rwxr-xr-x
+    filePermissions {
+        unix("rwxr-xr-x")
+    }
 
     inputs.dir(sourceDir)
     outputs.dir(targetDir)
@@ -106,7 +113,7 @@ fun getNpmVersion(): String {
 
 allprojects {
     group = "com.sphereon.openid.fed"
-    version = "0.25.3-SNAPSHOT"
+    version = "0.25.4-SNAPSHOT"
     val npmVersion by extra { getNpmVersion() }
 
     configurations {
@@ -119,21 +126,11 @@ allprojects {
 subprojects {
     apply(plugin = "com.sphereon.gradle.plugin.conventions")
 
-    // Enable suspend function exporting for JS/WasmJS targets (Kotlin 2.3.20-RC+)
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-        compilerOptions {
-            freeCompilerArgs.add("-Xenable-suspend-function-exporting")
-        }
-    }
-
-    tasks.withType<KotlinJsCompile>().configureEach {
-        compilerOptions {
-            target.set("es2015")
-        }
-    }
-    tasks.withType<org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink> {
-        compilerOptions.moduleKind.set(org.jetbrains.kotlin.gradle.dsl.JsModuleKind.MODULE_ES)
-    }
+    // JS/WasmJS compiler flags — aligned with IDK ConventionsPlugin
+    // Note: -Xenable-suspend-function-exporting, -Xes-long-as-bigint, and -XXLanguage:+JsAllowLongInExportedDeclarations
+    // are already set by the ConventionsPlugin on Kotlin2JsCompile tasks.
+    // moduleKind and target must be set per-module in js { compilerOptions { } }
+    // because the KMP plugin overrides convention plugin settings at a later lifecycle point.
 
     // TODO: Move to publication plugin once ready
     plugins.withType<MavenPublishPlugin> {
@@ -169,7 +166,7 @@ tasks.register("checkDockerStatusDb") {
     description = "Checks if Docker containers are running"
     doLast {
         val output = ByteArrayOutputStream()
-        val process = exec {
+        val process = execService.exec.exec {
             commandLine("docker", "compose", "ps", "-q", "db")
             isIgnoreExitValue = true
             standardOutput = output
@@ -190,7 +187,7 @@ tasks.register("dockerCleanup") {
     group = "docker"
     description = "Stops and removes specific Docker containers"
     doLast {
-        exec {
+        execService.exec.exec {
             commandLine(
                 "docker",
                 "compose",
@@ -212,7 +209,7 @@ tasks.register("dockerStartAdminServer") {
     dependsOn(rootProject.tasks.named("dockerStartDb"))
 
     doFirst {
-        exec {
+        execService.exec.exec {
             commandLine(
                 "docker",
                 "compose",
@@ -231,7 +228,7 @@ tasks.register("dockerStartDb") {
 
     doLast {
         if (!project.ext.has("databaseRunning") || !project.ext.get("databaseRunning").toString().toBoolean()) {
-            exec {
+            execService.exec.exec {
                 commandLine("docker", "compose", "up", "-d", "db")
             }
         }
@@ -259,7 +256,7 @@ fun waitForDatabase() {
 
     while (!ready && attempts < maxAttempts) {
         try {
-            val process = exec {
+            val process = execService.exec.exec {
                 commandLine("docker", "compose", "exec", "-T", "db", "pg_isready", "-U", "postgres")
                 isIgnoreExitValue = true
             }

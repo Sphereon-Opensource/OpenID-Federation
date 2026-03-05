@@ -29,8 +29,8 @@ fun TrustMarkEntity.toCreateTrustMarkResult(): CreateTrustMarkResult {
         trustMarkType = this.trust_mark_id,
         sub = this.sub,
         trustMarkValue = this.trust_mark_value,
-        iat = this.iat.toInt(),
-        exp = this.exp?.toInt()
+        iat = this.iat.toDouble(),
+        exp = this.exp?.toDouble()
     )
 }
 

@@ -9,8 +9,8 @@ import kotlinx.serialization.json.JsonObject
 class SubordinateStatementObjectBuilder {
     private var iss: String? = null
     private var sub: String? = null
-    private var exp: Int? = null
-    private var iat: Int? = null
+    private var exp: Double? = null
+    private var iat: Double? = null
     private var jwks: MutableList<Jwk> = mutableListOf()
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
@@ -21,8 +21,8 @@ class SubordinateStatementObjectBuilder {
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun sub(sub: String) = apply { this.sub = sub }
-    fun exp(exp: Int) = apply { this.exp = exp }
-    fun iat(iat: Int) = apply { this.iat = iat }
+    fun exp(exp: Double) = apply { this.exp = exp }
+    fun iat(iat: Double) = apply { this.iat = iat }
 
     fun metadata(metadata: Pair<String, JsonObject>) = apply {
         this.metadata[metadata.first] = metadata.second

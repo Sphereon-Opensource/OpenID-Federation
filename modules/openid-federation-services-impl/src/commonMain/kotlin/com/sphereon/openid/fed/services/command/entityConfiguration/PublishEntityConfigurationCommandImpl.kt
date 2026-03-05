@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
@@ -41,7 +41,7 @@ class PublishEntityConfigurationCommandImpl(
     outputTypeToken = typeToken<String>()
 ), PublishEntityConfigurationCommand {
 
-    private val logger = Log.app().withTag("PublishEntityConfigurationCommand")
+    private val logger = execution.federationLogger("PublishEntityConfigurationCommand")
     private val queries = Persistence
 
     override suspend fun doExecute(

@@ -12,9 +12,13 @@ import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.Jwt
+import com.sphereon.openid.fed.openapi.models.NamingConstraints
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.tatarka.inject.annotations.Inject
@@ -80,7 +84,7 @@ class VerifyTrustChainCommandImpl(
                 }
 
                 val iatTolerance = 5L
-                val iat = statement.payload["iat"]?.jsonPrimitive?.content?.toLongOrNull()
+                val iat = statement.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
                 logger.debug("Statement $j - Issued at (iat): $iat")
                 logger.debug("Time considered: $timeToUse")
                 if (iat == null || iat > timeToUse + iatTolerance) {
@@ -88,7 +92,7 @@ class VerifyTrustChainCommandImpl(
                     return IdkResult.ok(VerifyTrustChainResponse(false, "Statement at position $j has invalid iat"))
                 }
 
-                val exp = statement.payload["exp"]?.jsonPrimitive?.content?.toLongOrNull()
+                val exp = statement.payload["exp"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
                 logger.debug("Statement $j - Expires at (exp): $exp")
                 if (exp == null || exp <= timeToUse) {
                     logger.error("Statement $j has expired: $exp")
@@ -190,12 +194,153 @@ class VerifyTrustChainCommandImpl(
                 }
             }
 
+            // Validate constraints from subordinate statements
+            // Constraints in statement at position j apply to entities below position j in the chain
+            // (i.e., statements at positions 0..j-1)
+            val constraintsResult = validateConstraints(statements, chain)
+            if (constraintsResult != null) {
+                return IdkResult.ok(constraintsResult)
+            }
+
             logger.debug("Trust chain verification completed successfully")
             return IdkResult.ok(VerifyTrustChainResponse(true))
         } catch (e: Exception) {
             logger.error("Chain verification failed with exception", e)
             return IdkResult.ok(VerifyTrustChainResponse(false, "Chain verification failed: ${e.message}"))
         }
+    }
+
+    /**
+     * Validates constraints from subordinate statements in the trust chain.
+     *
+     * Per the OpenID Federation 1.1 spec:
+     * - `max_path_length`: Maximum number of Intermediates between the entity issuing the constraint
+     *   and the leaf entities. A value of 0 means the subordinate must be a leaf.
+     * - `naming_constraints.permitted`: Entity Identifiers must match at least one permitted pattern.
+     * - `naming_constraints.excluded`: Entity Identifiers must not match any excluded pattern.
+     * - `allowed_entity_types`: Subordinate entities must only have the listed entity types.
+     *
+     * Constraints in a statement at position j (issued by entity at j+1 about entity at j)
+     * apply to all entities below position j in the chain.
+     *
+     * @return a failure response if constraints are violated, or null if all constraints pass
+     */
+    private fun validateConstraints(statements: List<Jwt>, chain: Array<String>): VerifyTrustChainResponse? {
+        val constraintsJson = Json { ignoreUnknownKeys = true }
+
+        // Walk statements from top (trust anchor) down to leaf
+        // statements[last] = trust anchor entity config (no constraints to check here)
+        // statements[last-1] = subordinate statement about statements[last-2].sub, issued by trust anchor
+        // ...
+        // statements[1] = subordinate statement about the leaf, issued by first intermediate
+
+        for (j in (statements.size - 1) downTo 1) {
+            val statement = statements[j]
+            val constraintsElement = statement.payload["constraints"] ?: continue
+
+            val constraints: Constraints = try {
+                constraintsJson.decodeFromString(constraintsElement.toString())
+            } catch (e: Exception) {
+                logger.warn("Failed to parse constraints at position $j: ${e.message}")
+                continue
+            }
+
+            logger.debug("Validating constraints from statement at position $j")
+
+            // max_path_length: number of intermediates allowed between this entity and the leaves
+            // Position j is a subordinate statement. The subject is at position j-1.
+            // Intermediates between j-1 and the leaf (position 0) = j - 1 - 1 = j - 2
+            // (position 0 is the leaf, positions 1..j-1 are intermediates below j)
+            val maxPathLength = constraints.maxPathLength
+            if (maxPathLength != null) {
+                // Number of intermediates below the constrained entity (position j-1)
+                // The leaf is at position 0, so intermediates are positions 1..j-2
+                val intermediatesBelow = j - 2
+                if (intermediatesBelow > maxPathLength) {
+                    logger.error("max_path_length constraint violated at position $j: $intermediatesBelow intermediates > max $maxPathLength")
+                    return VerifyTrustChainResponse(
+                        false,
+                        "Constraint violation: max_path_length ($maxPathLength) exceeded at position $j, found $intermediatesBelow intermediates"
+                    )
+                }
+            }
+
+            // naming_constraints: apply to all entities below this point in the chain
+            val namingConstraints = constraints.namingConstraints
+            if (namingConstraints != null) {
+                for (k in 0 until j) {
+                    val entitySub = statements[k].payload["sub"]?.jsonPrimitive?.content ?: continue
+                    val namingError = validateNamingConstraints(entitySub, namingConstraints, j, k)
+                    if (namingError != null) return namingError
+                }
+            }
+
+            // allowed_entity_types: check that entities below have only allowed types
+            val allowedEntityTypes = constraints.allowedEntityTypes
+            if (allowedEntityTypes != null && allowedEntityTypes.isNotEmpty()) {
+                for (k in 0 until j) {
+                    val entityMetadata = statements[k].payload["metadata"]?.jsonObject ?: continue
+                    val entityTypes = entityMetadata.keys
+                    for (entityType in entityTypes) {
+                        if (entityType !in allowedEntityTypes) {
+                            logger.error("allowed_entity_types constraint violated: entity at position $k has type '$entityType' not in allowed list")
+                            return VerifyTrustChainResponse(
+                                false,
+                                "Constraint violation: entity type '$entityType' at position $k not allowed by constraints at position $j"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Validates an entity identifier against naming constraints.
+     * Per spec, `permitted` patterns use suffix matching and `excluded` patterns use suffix matching.
+     */
+    private fun validateNamingConstraints(
+        entityIdentifier: String,
+        namingConstraints: NamingConstraints,
+        constraintPosition: Int,
+        entityPosition: Int
+    ): VerifyTrustChainResponse? {
+        val permitted = namingConstraints.permitted
+        if (permitted != null && permitted.isNotEmpty()) {
+            val matches = permitted.any { pattern -> matchesNamingPattern(entityIdentifier, pattern) }
+            if (!matches) {
+                logger.error("naming_constraints.permitted violated: '$entityIdentifier' at position $entityPosition does not match any permitted pattern")
+                return VerifyTrustChainResponse(
+                    false,
+                    "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition not permitted by naming constraints at position $constraintPosition"
+                )
+            }
+        }
+
+        val excluded = namingConstraints.excluded
+        if (excluded != null && excluded.isNotEmpty()) {
+            val matches = excluded.any { pattern -> matchesNamingPattern(entityIdentifier, pattern) }
+            if (matches) {
+                logger.error("naming_constraints.excluded violated: '$entityIdentifier' at position $entityPosition matches an excluded pattern")
+                return VerifyTrustChainResponse(
+                    false,
+                    "Constraint violation: entity identifier '$entityIdentifier' at position $entityPosition excluded by naming constraints at position $constraintPosition"
+                )
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Matches an entity identifier against a naming constraint pattern.
+     * Patterns use URL suffix matching: a pattern like "https://example.com" matches
+     * any identifier that starts with "https://example.com".
+     */
+    private fun matchesNamingPattern(identifier: String, pattern: String): Boolean {
+        return identifier.startsWith(pattern)
     }
 
     private fun hasRequiredClaims(statement: Jwt): Boolean {

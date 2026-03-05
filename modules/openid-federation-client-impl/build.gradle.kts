@@ -12,15 +12,13 @@ plugins {
 kotlin {
     jvm()
 
-    js(IR) {
+    js {
+        outputModuleName = "@sphereon/openid-federation-client-impl"
         nodejs {
-            testTask {
-            }
             useEsModules()
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-        useEsModules()
-        binaries.library()
-        generateTypeScriptDefinitions()
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-client-impl"
             version = rootProject.extra["npmVersion"] as String

@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
@@ -30,7 +30,7 @@ class DeleteTrustAnchorHintCommandImpl(
     outputTypeToken = typeToken<TrustAnchorHint>()
 ), DeleteTrustAnchorHintCommand {
 
-    private val logger = Log.app().withTag("DeleteTrustAnchorHintCommand")
+    private val logger = execution.federationLogger("DeleteTrustAnchorHintCommand")
     private val trustAnchorHintQueries = Persistence.trustAnchorHintQueries
 
     override suspend fun doExecute(

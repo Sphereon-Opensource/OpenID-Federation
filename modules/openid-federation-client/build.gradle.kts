@@ -23,13 +23,13 @@ plugins {
 kotlin {
     jvm()
 
-    js(IR) {
+    js {
+        outputModuleName = "@sphereon/openid-federation-client"
         nodejs {
             useEsModules()
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-        useEsModules()
-        binaries.library()
-        generateTypeScriptDefinitions()
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-client"
             version = rootProject.extra["npmVersion"] as String

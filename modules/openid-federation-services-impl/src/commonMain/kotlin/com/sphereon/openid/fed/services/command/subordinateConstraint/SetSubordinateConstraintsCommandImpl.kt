@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
@@ -32,7 +32,7 @@ class SetSubordinateConstraintsCommandImpl(
     outputTypeToken = typeToken<SubordinateConstraints>()
 ), SetSubordinateConstraintsCommand {
 
-    private val logger = Log.app().withTag("SetSubordinateConstraintsCommand")
+    private val logger = execution.federationLogger("SetSubordinateConstraintsCommand")
     private val subordinateConstraintQueries = Persistence.subordinateConstraintQueries
 
     override suspend fun doExecute(

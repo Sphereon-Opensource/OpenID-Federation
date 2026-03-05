@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
@@ -35,7 +35,7 @@ class RevokeKeyCommandImpl(
     outputTypeToken = typeToken<AccountJwk>()
 ), RevokeKeyCommand {
 
-    private val logger = Log.app().withTag("RevokeKeyCommand")
+    private val logger = execution.federationLogger("RevokeKeyCommand")
     private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun doExecute(

@@ -225,7 +225,7 @@ paths:
         - name: trust_anchor
           in: query
           description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity Identifier.
-          required: true
+          required: false
           schema:
             type: string
         - name: entity_type
@@ -259,7 +259,6 @@ paths:
               type: object
               required:
                 - sub
-                - trust_anchor
               properties:
                 sub:
                   type: string

@@ -10,25 +10,13 @@ plugins {
 kotlin {
     jvm()
 
-    js(IR) {
-        /* browser {
-             useEsModules()
-             commonWebpackConfig {
-                 devServer = KotlinWebpackConfig.DevServer().apply {
-                     port = 8083
-                 }
-             }
-         }*/
+    js {
+        outputModuleName = "@sphereon/openid-federation-http-resolver"
         nodejs {
             useEsModules()
-            testTask {
-                /*useMocha {
-                    timeout = "5000"
-                }*/
-            }
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-        binaries.library()
-        generateTypeScriptDefinitions()
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-http-resolver"
             version = rootProject.extra["npmVersion"] as String

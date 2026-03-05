@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.InvalidRequestError
@@ -30,7 +30,7 @@ class CreateTrustMarkTypeCommandImpl(
     inputTypeToken = typeToken<CreateTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkType>()
 ), CreateTrustMarkTypeCommand {
-    private val logger = Log.app().withTag("CreateTrustMarkTypeCommand")
+    private val logger = execution.federationLogger("CreateTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: CreateTrustMarkTypeArgs, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
@@ -64,7 +64,7 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
     inputTypeToken = typeToken<FindAllTrustMarkTypesByAccountArgs>(),
     outputTypeToken = typeToken<List<TrustMarkType>>()
 ), FindAllTrustMarkTypesByAccountCommand {
-    private val logger = Log.app().withTag("FindAllTrustMarkTypesByAccountCommand")
+    private val logger = execution.federationLogger("FindAllTrustMarkTypesByAccountCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, IdkError> {
@@ -109,7 +109,7 @@ class DeleteTrustMarkTypeCommandImpl(
     inputTypeToken = typeToken<DeleteTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkType>()
 ), DeleteTrustMarkTypeCommand {
-    private val logger = Log.app().withTag("DeleteTrustMarkTypeCommand")
+    private val logger = execution.federationLogger("DeleteTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
     override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
@@ -159,7 +159,7 @@ class AddIssuerToTrustMarkTypeCommandImpl(
     inputTypeToken = typeToken<AddIssuerToTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkIssuer>()
 ), AddIssuerToTrustMarkTypeCommand {
-    private val logger = Log.app().withTag("AddIssuerToTrustMarkTypeCommand")
+    private val logger = execution.federationLogger("AddIssuerToTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
@@ -192,7 +192,7 @@ class RemoveIssuerFromTrustMarkTypeCommandImpl(
     inputTypeToken = typeToken<RemoveIssuerFromTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkIssuer>()
 ), RemoveIssuerFromTrustMarkTypeCommand {
-    private val logger = Log.app().withTag("RemoveIssuerFromTrustMarkTypeCommand")
+    private val logger = execution.federationLogger("RemoveIssuerFromTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 

@@ -138,21 +138,19 @@ kotlin {
         }
     }
 
-    js(IR) {
+    js {
+        outputModuleName = "@sphereon/openid-federation-open-api"
         tasks.named("compileKotlinJs") {
             dependsOn("fixOpenApiKotlinIssues")
         }
         tasks.named("jsSourcesJar") {
             dependsOn("fixOpenApiKotlinIssues")
         }
-        binaries.library()
-        generateTypeScriptDefinitions()
         nodejs {
             useEsModules()
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-       /* browser {
-            useEsModules()
-        }*/
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-open-api"

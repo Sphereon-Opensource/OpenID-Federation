@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.EntityConfigurationStatementObjectBuilder
@@ -46,7 +46,7 @@ class FindEntityConfigurationByAccountCommandImpl(
     outputTypeToken = typeToken<EntityConfigurationStatement>()
 ), FindEntityConfigurationByAccountCommand {
 
-    private val logger = Log.app().withTag("FindEntityConfigurationByAccountCommand")
+    private val logger = execution.federationLogger("FindEntityConfigurationByAccountCommand")
     private val queries = Persistence
 
     companion object {
@@ -99,8 +99,8 @@ class FindEntityConfigurationByAccountCommandImpl(
         val currentTimeSeconds = System.currentTimeMillis() / 1000
         return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)
-            .iat(currentTimeSeconds.toInt())
-            .exp((currentTimeSeconds + EXPIRATION_PERIOD_SECONDS).toInt())
+            .iat(currentTimeSeconds.toDouble())
+            .exp((currentTimeSeconds + EXPIRATION_PERIOD_SECONDS).toDouble())
             .jwks(keys.toMutableList())
     }
 

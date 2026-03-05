@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
@@ -32,7 +32,7 @@ class CreateReceivedTrustMarkCommandImpl(
     outputTypeToken = typeToken<ReceivedTrustMark>()
 ), CreateReceivedTrustMarkCommand {
 
-    private val logger = Log.app().withTag("CreateReceivedTrustMarkCommand")
+    private val logger = execution.federationLogger("CreateReceivedTrustMarkCommand")
     private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
 
     override suspend fun doExecute(

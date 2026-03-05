@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
@@ -48,7 +48,7 @@ class FindSubordinatesByAccountCommandImpl(
     inputTypeToken = typeToken<FindSubordinatesByAccountArgs>(),
     outputTypeToken = typeToken<Array<Subordinate>>()
 ), FindSubordinatesByAccountCommand {
-    private val logger = Log.app().withTag("FindSubordinatesByAccountCommand")
+    private val logger = execution.federationLogger("FindSubordinatesByAccountCommand")
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: FindSubordinatesByAccountArgs, applyDuring: (FindSubordinatesByAccountArgs) -> FindSubordinatesByAccountArgs): IdkResult<Array<Subordinate>, IdkError> {
@@ -95,7 +95,7 @@ class DeleteSubordinateCommandImpl(
     inputTypeToken = typeToken<DeleteSubordinateArgs>(),
     outputTypeToken = typeToken<Subordinate>()
 ), DeleteSubordinateCommand {
-    private val logger = Log.app().withTag("DeleteSubordinateCommand")
+    private val logger = execution.federationLogger("DeleteSubordinateCommand")
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: DeleteSubordinateArgs, applyDuring: (DeleteSubordinateArgs) -> DeleteSubordinateArgs): IdkResult<Subordinate, IdkError> {
@@ -135,7 +135,7 @@ class CreateSubordinateCommandImpl(
     inputTypeToken = typeToken<CreateSubordinateArgs>(),
     outputTypeToken = typeToken<Subordinate>()
 ), CreateSubordinateCommand {
-    private val logger = Log.app().withTag("CreateSubordinateCommand")
+    private val logger = execution.federationLogger("CreateSubordinateCommand")
     private val subordinateQueries = Persistence.subordinateQueries
 
     override suspend fun doExecute(args: CreateSubordinateArgs, applyDuring: (CreateSubordinateArgs) -> CreateSubordinateArgs): IdkResult<Subordinate, IdkError> {
@@ -174,7 +174,7 @@ class GetSubordinateStatementCommandImpl(
     inputTypeToken = typeToken<GetSubordinateStatementArgs>(),
     outputTypeToken = typeToken<SubordinateStatement>()
 ), GetSubordinateStatementCommand {
-    private val logger = Log.app().withTag("GetSubordinateStatementCommand")
+    private val logger = execution.federationLogger("GetSubordinateStatementCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
@@ -223,7 +223,7 @@ class GetSubordinateStatementCommandImpl(
         val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
 
-        val currentTimeSeconds = (System.currentTimeMillis() / 1000).toInt()
+        val currentTimeSeconds = (System.currentTimeMillis() / 1000).toDouble()
         val expirationTime = currentTimeSeconds + 3600 * 24 * 365
 
         check(accountIdentifier.isNotEmpty()) { "Account identifier is empty" }
@@ -264,7 +264,7 @@ class PublishSubordinateStatementCommandImpl(
     inputTypeToken = typeToken<PublishSubordinateStatementArgs>(),
     outputTypeToken = typeToken<String>()
 ), PublishSubordinateStatementCommand {
-    private val logger = Log.app().withTag("PublishSubordinateStatementCommand")
+    private val logger = execution.federationLogger("PublishSubordinateStatementCommand")
     private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(args: PublishSubordinateStatementArgs, applyDuring: (PublishSubordinateStatementArgs) -> PublishSubordinateStatementArgs): IdkResult<String, IdkError> {

@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
@@ -39,7 +39,7 @@ class GetSignedResolveResponseJwtCommandImpl(
     outputTypeToken = typeToken<String>()
 ), GetSignedResolveResponseJwtCommand {
 
-    private val logger = Log.app().withTag("GetSignedResolveResponseJwtCommand")
+    private val logger = execution.federationLogger("GetSignedResolveResponseJwtCommand")
 
     override suspend fun doExecute(
         args: GetSignedResolveResponseJwtArgs,

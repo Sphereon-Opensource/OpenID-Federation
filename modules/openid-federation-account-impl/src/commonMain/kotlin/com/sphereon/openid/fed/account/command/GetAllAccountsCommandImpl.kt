@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.UnitInputServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
@@ -27,7 +27,7 @@ class GetAllAccountsCommandImpl(
     outputTypeToken = typeToken<List<Account>>()
 ), GetAllAccountsCommand {
 
-    private val logger = Log.app().withTag("GetAllAccountsCommand")
+    private val logger = execution.federationLogger("GetAllAccountsCommand")
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun doExecute(

@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
@@ -34,7 +34,7 @@ class DeleteAuthorityHintCommandImpl(
     outputTypeToken = typeToken<AuthorityHint>()
 ), DeleteAuthorityHintCommand {
 
-    private val logger = Log.app().withTag("DeleteAuthorityHintCommand")
+    private val logger = execution.federationLogger("DeleteAuthorityHintCommand")
     private val authorityHintQueries = Persistence.authorityHintQueries
 
     override suspend fun doExecute(

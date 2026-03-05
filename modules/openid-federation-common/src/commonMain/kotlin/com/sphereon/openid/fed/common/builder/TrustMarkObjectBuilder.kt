@@ -6,20 +6,22 @@ class TrustMarkObjectBuilder {
     private var iss: String? = null
     private var sub: String? = null
     private var trustMarkType: String? = null
-    private var iat: Int? = null
+    private var iat: Double? = null
     private var logoUri: String? = null
-    private var exp: Int? = null
+    private var exp: Double? = null
     private var ref: String? = null
     private var delegation: String? = null
+    private var trustMarkLifetime: Int? = null
 
     fun iss(iss: String) = apply { this.iss = iss }
     fun sub(sub: String) = apply { this.sub = sub }
     fun trustMarkType(trustMarkType: String) = apply { this.trustMarkType = trustMarkType }
-    fun iat(iat: Int) = apply { this.iat = iat }
+    fun iat(iat: Double) = apply { this.iat = iat }
     fun logoUri(logoUri: String?) = apply { this.logoUri = logoUri }
-    fun exp(exp: Int?) = apply { this.exp = exp }
+    fun exp(exp: Double?) = apply { this.exp = exp }
     fun ref(ref: String?) = apply { this.ref = ref }
     fun delegation(delegation: String?) = apply { this.delegation = delegation }
+    fun trustMarkLifetime(trustMarkLifetime: Int?) = apply { this.trustMarkLifetime = trustMarkLifetime }
 
     fun build(): TrustMarkPayload {
         return TrustMarkPayload(
@@ -30,7 +32,8 @@ class TrustMarkObjectBuilder {
             logoUri = logoUri,
             exp = exp,
             ref = ref,
-            delegation = delegation
+            delegation = delegation,
+            trustMarkLifetime = trustMarkLifetime
         )
     }
 }

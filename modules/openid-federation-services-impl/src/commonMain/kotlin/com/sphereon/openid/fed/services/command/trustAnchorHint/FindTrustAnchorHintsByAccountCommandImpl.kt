@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
@@ -28,7 +28,7 @@ class FindTrustAnchorHintsByAccountCommandImpl(
     outputTypeToken = typeToken<List<TrustAnchorHint>>()
 ), FindTrustAnchorHintsByAccountCommand {
 
-    private val logger = Log.app().withTag("FindTrustAnchorHintsByAccountCommand")
+    private val logger = execution.federationLogger("FindTrustAnchorHintsByAccountCommand")
     private val trustAnchorHintQueries = Persistence.trustAnchorHintQueries
 
     override suspend fun doExecute(

@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
@@ -33,7 +33,7 @@ class CreateSubordinateJwkCommandImpl(
     inputTypeToken = typeToken<CreateSubordinateJwkArgs>(),
     outputTypeToken = typeToken<SubordinateJwk>()
 ), CreateSubordinateJwkCommand {
-    private val logger = Log.app().withTag("CreateSubordinateJwkCommand")
+    private val logger = execution.federationLogger("CreateSubordinateJwkCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
@@ -72,7 +72,7 @@ class GetSubordinateJwksCommandImpl(
     inputTypeToken = typeToken<GetSubordinateJwksArgs>(),
     outputTypeToken = typeToken<Array<SubordinateJwk>>()
 ), GetSubordinateJwksCommand {
-    private val logger = Log.app().withTag("GetSubordinateJwksCommand")
+    private val logger = execution.federationLogger("GetSubordinateJwksCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
@@ -106,7 +106,7 @@ class DeleteSubordinateJwkCommandImpl(
     inputTypeToken = typeToken<DeleteSubordinateJwkArgs>(),
     outputTypeToken = typeToken<SubordinateJwk>()
 ), DeleteSubordinateJwkCommand {
-    private val logger = Log.app().withTag("DeleteSubordinateJwkCommand")
+    private val logger = execution.federationLogger("DeleteSubordinateJwkCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
@@ -143,7 +143,7 @@ class FindSubordinateMetadataCommandImpl(
     inputTypeToken = typeToken<FindSubordinateMetadataArgs>(),
     outputTypeToken = typeToken<Array<SubordinateMetadata>>()
 ), FindSubordinateMetadataCommand {
-    private val logger = Log.app().withTag("FindSubordinateMetadataCommand")
+    private val logger = execution.federationLogger("FindSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
@@ -180,7 +180,7 @@ class CreateSubordinateMetadataCommandImpl(
     inputTypeToken = typeToken<CreateSubordinateMetadataArgs>(),
     outputTypeToken = typeToken<SubordinateMetadata>()
 ), CreateSubordinateMetadataCommand {
-    private val logger = Log.app().withTag("CreateSubordinateMetadataCommand")
+    private val logger = execution.federationLogger("CreateSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 
@@ -228,7 +228,7 @@ class DeleteSubordinateMetadataCommandImpl(
     inputTypeToken = typeToken<DeleteSubordinateMetadataArgs>(),
     outputTypeToken = typeToken<SubordinateMetadata>()
 ), DeleteSubordinateMetadataCommand {
-    private val logger = Log.app().withTag("DeleteSubordinateMetadataCommand")
+    private val logger = execution.federationLogger("DeleteSubordinateMetadataCommand")
     private val subordinateQueries = Persistence.subordinateQueries
     private val subordinateMetadataQueries = Persistence.subordinateMetadataQueries
 

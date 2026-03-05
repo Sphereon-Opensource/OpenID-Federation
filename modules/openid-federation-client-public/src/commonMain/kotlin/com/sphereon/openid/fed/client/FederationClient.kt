@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.client
 
+import com.sphereon.core.compat.JsExportCompat
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
@@ -10,6 +11,7 @@ import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
  *
  * Implementations are provided via DI (session-scoped).
  */
+@JsExportCompat
 interface FederationClient {
 
     /**

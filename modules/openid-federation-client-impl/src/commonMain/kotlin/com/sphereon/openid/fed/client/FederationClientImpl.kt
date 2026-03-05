@@ -58,7 +58,7 @@ class FederationClientImpl(
         return if (result.isOk) {
             result.value
         } else {
-            TrustChainResolveResponse(null, errorMessage = result.error.message.defaultMessage)
+            TrustChainResolveResponse(emptyList(), errorMessage = result.error.message.defaultMessage)
         }
     }
 

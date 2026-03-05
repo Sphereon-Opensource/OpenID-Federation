@@ -11,15 +11,13 @@ plugins {
 kotlin {
     jvm()
 
-    js(IR) {
+    js {
+        outputModuleName = "@sphereon/openid-federation-core-public"
         nodejs {
             useEsModules()
-            testTask {
-            }
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-
-        binaries.library()
-        generateTypeScriptDefinitions()
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-core-public"

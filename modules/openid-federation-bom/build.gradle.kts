@@ -1,10 +1,23 @@
 plugins {
-    alias(libs.plugins.bom.generator)
+    `java-platform`
+    `maven-publish`
+}
+
+// Include all sibling modules as BOM constraints (replaces gradle-bom-generator-plugin)
+dependencies {
+    constraints {
+        rootProject.subprojects
+            .filter { it != project }
+            .forEach { subproject ->
+                api(subproject)
+            }
+    }
 }
 
 publishing {
     publications {
         create<MavenPublication>("mavenKotlin") {
+            from(components["javaPlatform"])
             artifactId = "openid-federation-bom"
 
             pom {

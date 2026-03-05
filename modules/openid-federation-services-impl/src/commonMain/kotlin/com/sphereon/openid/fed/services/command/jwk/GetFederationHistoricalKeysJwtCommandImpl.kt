@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
@@ -49,7 +49,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
         private const val JWT_TYPE = "jwk-set+jwt"
     }
 
-    private val logger = Log.app().withTag("GetFederationHistoricalKeysJwtCommand")
+    private val logger = execution.federationLogger("GetFederationHistoricalKeysJwtCommand")
     private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun doExecute(
@@ -66,7 +66,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
 
             val federationKeysResponse = FederationHistoricalKeysResponse(
                 iss = iss,
-                iat = (System.currentTimeMillis() / 1000).toInt(),
+                iat = (System.currentTimeMillis() / 1000).toDouble(),
                 propertyKeys = historicalKeys
             )
 

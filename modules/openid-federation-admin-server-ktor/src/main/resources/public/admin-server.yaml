@@ -1902,8 +1902,8 @@ components:
                 description: Optional URL to a logo for the Trust Mark entity.
                 example: https://example.com/logo
               exp:
-                type: integer
-                description: Optional expiration time of the Trust Mark in seconds since the epoch
+                type: number
+                description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               ref:
                 type: string
                 format: uri
@@ -1916,9 +1916,11 @@ components:
                 description: 'If true, the request will be executed but not persisted.'
                 example: false
               iat:
+                type: number
+                description: The time for the trust mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
+              trust_mark_lifetime:
                 type: integer
-                format: int32
-                description: The time for the trust mark was issued.
+                description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
   schemas:
     AccountsResponse:
       type: object
@@ -2077,12 +2079,11 @@ components:
           type: string
           description: The Entity Identifier of the subject.
         exp:
-          type: integer
-          description: Expiration time after which the statement MUST NOT be accepted for processing.
+          type: number
+          description: Expiration time after which the statement MUST NOT be accepted for processing. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
         iat:
-          type: integer
-          format: int32
-          description: The time the statement was issued.
+          type: number
+          description: The time the statement was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
         jwks:
           type: object
           x-tags:
@@ -2246,8 +2247,8 @@ components:
           description: Optional URL to a logo for the Trust Mark entity.
           example: https://example.com/logo.png
         exp:
-          type: integer
-          description: Optional expiration time of the Trust Mark in seconds since the epoch.
+          type: number
+          description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         ref:
           type: string
@@ -2289,11 +2290,11 @@ components:
           type: string
           description: The JWT of the Trust Mark.
         iat:
-          type: integer
-          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+          type: number
+          description: 'Time when the signed JWT was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).'
         exp:
-          type: integer
-          description: The time the Trust Mark will expire.
+          type: number
+          description: The time the Trust Mark will expire. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
 
     TrustMarksResponse:
       type: object
@@ -2449,8 +2450,8 @@ components:
           format: uri
           description: The Entity's Entity Identifier.
         iat:
-          type: integer
-          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+          type: number
+          description: 'Time when the signed JWT was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).'
         keys:
           type: array
           items:
@@ -2465,13 +2466,11 @@ components:
           properties:
             iat:
               type: number
-              format: int32
-              description: The time the key was issued.
+              description: The time the key was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               example: 1629936000
             exp:
               type: number
-              format: int32
-              description: The time the key will expire.
+              description: The time the key will expire. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               example: 1632528000
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
@@ -2812,12 +2811,12 @@ components:
           format: date-time
           description: Entity Identifier of the subject of the resolve response.
         iat:
-          type: integer
-          description: The time whem this resolution was issued.
+          type: number
+          description: The time when this resolution was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         exp:
-          type: integer
-          description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+          type: number
+          description: Time when this resolution is no longer valid. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         metadata:
           type: object
@@ -3139,16 +3138,16 @@ components:
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         iat:
-          type: integer
-          description: The time the Trust Mark was issued.
+          type: number
+          description: The time the Trust Mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         logo_uri:
           type: string
           description: Optional URL to a logo for the Trust Mark entity.
           example: https://example.com/logo.png
         exp:
-          type: integer
-          description: The time the Trust Mark expires.
+          type: number
+          description: The time the Trust Mark expires. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         ref:
           type: string
@@ -3158,6 +3157,9 @@ components:
           type: string
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        trust_mark_lifetime:
+          type: integer
+          description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
 
     TrustMarkListRequest:
       type: object
@@ -3200,8 +3202,8 @@ components:
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         iat:
-          type: integer
-          description: The time the Trust Mark was issued.
+          type: number
+          description: The time the Trust Mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
       required:
         - sub
@@ -3268,8 +3270,7 @@ components:
       properties:
         trustChain:
           type: array
-          nullable: true
-          description: A list of strings representing the resolved trust chain. Each string contains a JWT.
+          description: A list of strings representing the resolved trust chain. Each string contains a JWT. Empty if resolution failed.
           items:
             type: string
         errorMessage:
@@ -3277,7 +3278,7 @@ components:
           nullable: true
           description: Error message in case of a failure, if any.
       required:
-        - error
+        - trustChain
     TrustMarkValidationResponse:
       type: object
       properties:

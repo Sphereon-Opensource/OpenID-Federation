@@ -5,7 +5,7 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
@@ -41,7 +41,7 @@ class GetTrustMarksForAccountCommandImpl(
     inputTypeToken = typeToken<GetTrustMarksForAccountArgs>(),
     outputTypeToken = typeToken<List<TrustMark>>()
 ), GetTrustMarksForAccountCommand {
-    private val logger = Log.app().withTag("GetTrustMarksForAccountCommand")
+    private val logger = execution.federationLogger("GetTrustMarksForAccountCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(args: GetTrustMarksForAccountArgs, applyDuring: (GetTrustMarksForAccountArgs) -> GetTrustMarksForAccountArgs): IdkResult<List<TrustMark>, IdkError> {
@@ -69,7 +69,7 @@ class CreateTrustMarkCommandImpl(
     inputTypeToken = typeToken<CreateTrustMarkArgs>(),
     outputTypeToken = typeToken<CreateTrustMarkResult>()
 ), CreateTrustMarkCommand {
-    private val logger = Log.app().withTag("CreateTrustMarkCommand")
+    private val logger = execution.federationLogger("CreateTrustMarkCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, IdkError> {
@@ -80,7 +80,7 @@ class CreateTrustMarkCommandImpl(
         if (keys.isEmpty()) return federationErr(KeyNotFoundError("account:$tenantId"))
 
         val key = keys[0]
-        val iat = request.iat ?: (currentTimeMillis / 1000).toInt()
+        val iat = request.iat ?: (currentTimeMillis / 1000).toDouble()
 
         return try {
             val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
@@ -94,6 +94,7 @@ class CreateTrustMarkCommandImpl(
                 .logoUri(request.logoUri)
                 .ref(request.ref)
                 .delegation(request.delegation)
+                .trustMarkLifetime(request.trustMarkLifetime)
             if (request.exp != null) trustMark.exp(request.exp)
 
             val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg ?: "RS256")
@@ -105,8 +106,8 @@ class CreateTrustMarkCommandImpl(
                 return IdkResult.ok(CreateTrustMarkResult(trustMarkValue = jwt, trustMarkType = request.trustMarkType, sub = request.sub, accountId = tenantId, iat = iat))
             }
 
-            val entity = trustMarkQueries.create(tenantId, request.trustMarkType, request.sub, jwt, iat, request.exp).executeAsOne()
-            IdkResult.ok(CreateTrustMarkResult(accountId = entity.account_id, trustMarkValue = entity.trust_mark_value, id = entity.id, iat = entity.iat, sub = entity.sub, trustMarkType = entity.trust_mark_id, exp = entity.exp))
+            val entity = trustMarkQueries.create(tenantId, request.trustMarkType, request.sub, jwt, iat.toInt(), request.exp?.toInt()).executeAsOne()
+            IdkResult.ok(CreateTrustMarkResult(accountId = entity.account_id, trustMarkValue = entity.trust_mark_value, id = entity.id, iat = entity.iat.toDouble(), sub = entity.sub, trustMarkType = entity.trust_mark_id, exp = entity.exp?.toDouble()))
         } catch (e: Exception) {
             logger.error("Failed to create trust mark", e)
             federationErr(ServerError("Failed to create trust mark", e.message, e))
@@ -125,7 +126,7 @@ class DeleteTrustMarkCommandImpl(
     inputTypeToken = typeToken<DeleteTrustMarkArgs>(),
     outputTypeToken = typeToken<TrustMarkEntity>()
 ), DeleteTrustMarkCommand {
-    private val logger = Log.app().withTag("DeleteTrustMarkCommand")
+    private val logger = execution.federationLogger("DeleteTrustMarkCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(args: DeleteTrustMarkArgs, applyDuring: (DeleteTrustMarkArgs) -> DeleteTrustMarkArgs): IdkResult<TrustMarkEntity, IdkError> {
@@ -152,7 +153,7 @@ class GetTrustMarkStatusCommandImpl(
     inputTypeToken = typeToken<GetTrustMarkStatusArgs>(),
     outputTypeToken = typeToken<Boolean>()
 ), GetTrustMarkStatusCommand {
-    private val logger = Log.app().withTag("GetTrustMarkStatusCommand")
+    private val logger = execution.federationLogger("GetTrustMarkStatusCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(args: GetTrustMarkStatusArgs, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, IdkError> {
@@ -160,7 +161,7 @@ class GetTrustMarkStatusCommandImpl(
         return try {
             val trustMarks = trustMarkQueries.findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(tenantId, statusRequest.trustMarkType, statusRequest.sub).executeAsList()
             if (statusRequest.iat != null) {
-                IdkResult.ok(trustMarks.any { it.iat == statusRequest.iat })
+                IdkResult.ok(trustMarks.any { it.iat.toDouble() == statusRequest.iat })
             } else {
                 IdkResult.ok(trustMarks.isNotEmpty())
             }
@@ -182,7 +183,7 @@ class GetTrustMarkedSubsCommandImpl(
     inputTypeToken = typeToken<GetTrustMarkedSubsArgs>(),
     outputTypeToken = typeToken<Array<String>>()
 ), GetTrustMarkedSubsCommand {
-    private val logger = Log.app().withTag("GetTrustMarkedSubsCommand")
+    private val logger = execution.federationLogger("GetTrustMarkedSubsCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(args: GetTrustMarkedSubsArgs, applyDuring: (GetTrustMarkedSubsArgs) -> GetTrustMarkedSubsArgs): IdkResult<Array<String>, IdkError> {

@@ -4,7 +4,7 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
-import com.sphereon.core.api.log.Log
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
@@ -32,7 +32,7 @@ class FindMetadataPolicyByAccountCommandImpl(
     outputTypeToken = typeToken<List<MetadataPolicy>>()
 ), FindMetadataPolicyByAccountCommand {
 
-    private val logger = Log.app().withTag("FindMetadataPolicyByAccountCommand")
+    private val logger = execution.federationLogger("FindMetadataPolicyByAccountCommand")
     private val metadataPolicyQueries = Persistence.metadataPolicyQueries
 
     override suspend fun doExecute(

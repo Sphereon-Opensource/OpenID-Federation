@@ -17,6 +17,9 @@ kotlin {
                 // Core module for config interfaces
                 api(projects.modules.openidFederationCorePublic)
 
+                // Core implementation for session-scoped logging
+                implementation(projects.modules.openidFederationCoreImpl)
+
                 // Common utilities
                 api(projects.modules.openidFederationCommon)
 
