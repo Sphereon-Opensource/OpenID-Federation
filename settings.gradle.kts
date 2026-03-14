@@ -111,6 +111,9 @@ include(":modules:openid-federation-client-public")
 include(":modules:openid-federation-client-impl")
 include(":modules:openid-federation-client-test-js")
 
+// Trust bridge module (bridges OID-Fed trust chain to IDK Trust Validation framework)
+include(":modules:openid-federation-trust")
+
 // Wallet architecture modules (OpenID Federation Wallet Architecture 1.0)
 include(":modules:openid-federation-wallet-public")
 include(":modules:openid-federation-wallet-impl")
