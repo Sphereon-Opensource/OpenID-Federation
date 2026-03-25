@@ -9,13 +9,14 @@ import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.wallet.policy.EndpointConstraintValidator
 import kotlinx.serialization.json.JsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ValidateEndpointConstraintsCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ValidateEndpointConstraintsCommand>())
 class ValidateEndpointConstraintsCommandImpl(
     execution: SessionExecution
 ) : ExecutionScopedCommandAdapter<ValidateEndpointConstraintsArgs, EndpointConstraintsResult, FederationError>(

@@ -14,13 +14,14 @@ import com.sphereon.openid.fed.openapi.models.SubordinateConstraints
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetSubordinateConstraintsCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSubordinateConstraintsCommand>())
 class GetSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
     private val json: Json

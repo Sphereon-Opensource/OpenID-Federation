@@ -1,6 +1,7 @@
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(libs.plugins.metro)
     id("maven-publish")
 }
 

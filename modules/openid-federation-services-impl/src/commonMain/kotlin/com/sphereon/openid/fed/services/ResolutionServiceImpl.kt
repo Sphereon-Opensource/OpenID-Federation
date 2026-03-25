@@ -9,9 +9,10 @@ import com.sphereon.openid.fed.services.command.resolution.GetSignedResolveRespo
 import com.sphereon.openid.fed.services.command.resolution.GetSignedResolveResponseJwtCommand
 import com.sphereon.openid.fed.services.command.resolution.ResolveEntityArgs
 import com.sphereon.openid.fed.services.command.resolution.ResolveEntityCommand
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of ResolutionService as a command aggregator.
@@ -26,7 +27,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ResolutionService::class)
+@ContributesBinding(SessionScope::class, binding = binding<ResolutionService>())
 class ResolutionServiceImpl(
     private val resolveEntityCommand: ResolveEntityCommand,
     private val getSignedResolveResponseJwtCommand: GetSignedResolveResponseJwtCommand

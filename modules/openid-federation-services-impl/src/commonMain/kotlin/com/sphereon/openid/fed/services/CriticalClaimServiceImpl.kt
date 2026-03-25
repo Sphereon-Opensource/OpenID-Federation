@@ -11,9 +11,10 @@ import com.sphereon.openid.fed.services.command.criticalClaim.DeleteCriticalClai
 import com.sphereon.openid.fed.services.command.criticalClaim.DeleteCriticalClaimCommand
 import com.sphereon.openid.fed.services.command.criticalClaim.FindCriticalClaimsByAccountArgs
 import com.sphereon.openid.fed.services.command.criticalClaim.FindCriticalClaimsByAccountCommand
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of CriticalClaimService as a command aggregator.
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CriticalClaimService::class)
+@ContributesBinding(SessionScope::class, binding = binding<CriticalClaimService>())
 class CriticalClaimServiceImpl(
     private val createCriticalClaimCommand: CreateCriticalClaimCommand,
     private val deleteCriticalClaimCommand: DeleteCriticalClaimCommand,

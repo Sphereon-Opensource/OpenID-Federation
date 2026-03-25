@@ -22,9 +22,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the VerifyTrustChainCommand.
@@ -32,7 +33,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = VerifyTrustChainCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<VerifyTrustChainCommand>())
 class VerifyTrustChainCommandImpl(
     execution: SessionExecution,
     private val context: FederationContext,

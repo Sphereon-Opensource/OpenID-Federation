@@ -15,15 +15,16 @@ import com.sphereon.openid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.openid.fed.services.EntityConfigurationStatementService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== Get Entity Statement Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetEntityStatementEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetEntityStatementEndpointCommand>())
 class GetEntityStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val entityConfigurationStatementService: EntityConfigurationStatementService,
@@ -59,7 +60,7 @@ class GetEntityStatementEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PublishEntityStatementEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PublishEntityStatementEndpointCommand>())
 class PublishEntityStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val entityConfigurationStatementService: EntityConfigurationStatementService,

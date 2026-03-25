@@ -15,15 +15,16 @@ import com.sphereon.openid.fed.openapi.models.CreateCrit
 import com.sphereon.openid.fed.services.CriticalClaimService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Critical Claims Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListCriticalClaimsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListCriticalClaimsEndpointCommand>())
 class ListCriticalClaimsEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
@@ -60,7 +61,7 @@ class ListCriticalClaimsEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateCriticalClaimEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateCriticalClaimEndpointCommand>())
 class CreateCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
@@ -108,7 +109,7 @@ class CreateCriticalClaimEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteCriticalClaimEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteCriticalClaimEndpointCommand>())
 class DeleteCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,

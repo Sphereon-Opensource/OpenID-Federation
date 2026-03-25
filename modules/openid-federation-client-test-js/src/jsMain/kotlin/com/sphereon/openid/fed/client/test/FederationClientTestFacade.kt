@@ -2,7 +2,7 @@ package com.sphereon.openid.fed.client.test
 
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.openid.fed.client.FederationClient
-import com.sphereon.openid.fed.client.asFederationClientComponent
+import com.sphereon.openid.fed.client.asFederationClientGraph
 
 /**
  * Creates a [FederationClient] instance backed by the full DI graph.
@@ -13,13 +13,15 @@ import com.sphereon.openid.fed.client.asFederationClientComponent
 @JsExport
 fun createFederationClient(): FederationClient {
     configureKmsProvider()
-    val app = ClientTestAppComponent::class.create(
-        Unit, "federation-client-test-js", "test", "1.0.0"
+    val app = createClientTestAppGraph(
+        application = Unit,
+        appId = "federation-client-test-js",
+        profile = "test",
+        version = "1.0.0"
     )
-    app.initRootScopeProvider()
     val context = app.userContextManager.getAnonymous()
     val session = context.sessionContextManager.createOrGetFromId("default-session")
-    return session.asFederationClientComponent().federationClient
+    return session.asFederationClientGraph().federationClient
 }
 
 private fun configureKmsProvider() {

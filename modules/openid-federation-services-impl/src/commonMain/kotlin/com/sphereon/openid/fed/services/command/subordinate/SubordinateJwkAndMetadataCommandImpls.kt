@@ -18,14 +18,15 @@ import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.mappers.toJsonString
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // CreateSubordinateJwkCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateJwkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateJwkCommand>())
 class CreateSubordinateJwkCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<CreateSubordinateJwkArgs, SubordinateJwk>(
@@ -64,7 +65,7 @@ class CreateSubordinateJwkCommandImpl(
 // GetSubordinateJwksCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetSubordinateJwksCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSubordinateJwksCommand>())
 class GetSubordinateJwksCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetSubordinateJwksArgs, Array<SubordinateJwk>>(
@@ -98,7 +99,7 @@ class GetSubordinateJwksCommandImpl(
 // DeleteSubordinateJwkCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateJwkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateJwkCommand>())
 class DeleteSubordinateJwkCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteSubordinateJwkArgs, SubordinateJwk>(
@@ -135,7 +136,7 @@ class DeleteSubordinateJwkCommandImpl(
 // FindSubordinateMetadataCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindSubordinateMetadataCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindSubordinateMetadataCommand>())
 class FindSubordinateMetadataCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<FindSubordinateMetadataArgs, Array<SubordinateMetadata>>(
@@ -172,7 +173,7 @@ class FindSubordinateMetadataCommandImpl(
 // CreateSubordinateMetadataCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateMetadataCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateMetadataCommand>())
 class CreateSubordinateMetadataCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<CreateSubordinateMetadataArgs, SubordinateMetadata>(
@@ -220,7 +221,7 @@ class CreateSubordinateMetadataCommandImpl(
 // DeleteSubordinateMetadataCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateMetadataCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateMetadataCommand>())
 class DeleteSubordinateMetadataCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteSubordinateMetadataArgs, SubordinateMetadata>(

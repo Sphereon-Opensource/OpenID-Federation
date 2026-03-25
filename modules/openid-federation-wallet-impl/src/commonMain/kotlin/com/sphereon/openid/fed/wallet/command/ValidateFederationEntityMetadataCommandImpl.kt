@@ -10,13 +10,14 @@ import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.wallet.policy.DiipProfileValidator
 import kotlinx.serialization.json.jsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ValidateFederationEntityMetadataCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ValidateFederationEntityMetadataCommand>())
 class ValidateFederationEntityMetadataCommandImpl(
     execution: SessionExecution,
     private val evaluateEntityTrustCommand: EvaluateEntityTrustCommand

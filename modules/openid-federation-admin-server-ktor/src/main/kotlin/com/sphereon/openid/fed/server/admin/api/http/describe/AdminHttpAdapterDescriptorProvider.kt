@@ -35,10 +35,12 @@ import com.sphereon.openid.fed.services.command.trustMark.FindTrustMarkTypeByIdC
 import com.sphereon.openid.fed.services.command.trustMark.GetIssuersForTrustMarkTypeCommand
 import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarksForAccountCommand
 import com.sphereon.openid.fed.services.command.trustMark.RemoveIssuerFromTrustMarkTypeCommand
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * AppScope descriptor provider for AdminHttpAdapter.
@@ -49,7 +51,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(AppScope::class)
-@ContributesBinding(AppScope::class, boundType = HttpAdapterDescriptorProvider::class, multibinding = true)
+@ContributesIntoSet(AppScope::class, binding = binding<HttpAdapterDescriptorProvider>())
 class AdminHttpAdapterDescriptorProvider : StaticPublicApiDescriptor(
     adapterId = AdminHttpAdapter.ID,
     mount = HttpAdapterMount(

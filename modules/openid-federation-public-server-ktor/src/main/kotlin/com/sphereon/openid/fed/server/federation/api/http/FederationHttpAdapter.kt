@@ -8,11 +8,13 @@ import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.core.api.http.describe.OpenApiHints
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.server.federation.api.http.command.*
-import com.sphereon.di.context.Named
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Named
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.SingleIn
 
 /**
  * HTTP Adapter for the OpenID Federation Server API.
@@ -27,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 @Named(FederationHttpAdapter.ID)
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = HttpAdapter::class, multibinding = true)
+@ContributesIntoSet(SessionScope::class, binding = binding<HttpAdapter>())
 class FederationHttpAdapter(
     execution: SessionExecution,
     // Entity Configuration endpoints
@@ -131,7 +133,7 @@ class FederationHttpAdapter(
      * DI Component interface for accessing the FederationHttpAdapter from session context.
      */
     @ContributesTo(SessionScope::class)
-    interface Component {
+    interface Graph {
         val federationHttpAdapter: FederationHttpAdapter
     }
 }

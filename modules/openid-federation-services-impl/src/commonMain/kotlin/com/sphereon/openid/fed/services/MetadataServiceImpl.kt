@@ -12,9 +12,10 @@ import com.sphereon.openid.fed.services.command.metadata.DeleteMetadataCommand
 import com.sphereon.openid.fed.services.command.metadata.FindMetadataByAccountArgs
 import com.sphereon.openid.fed.services.command.metadata.FindMetadataByAccountCommand
 import kotlinx.serialization.json.JsonElement
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of MetadataService as a command aggregator.
@@ -29,7 +30,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = MetadataService::class)
+@ContributesBinding(SessionScope::class, binding = binding<MetadataService>())
 class MetadataServiceImpl(
     private val createMetadataCommand: CreateMetadataCommand,
     private val deleteMetadataCommand: DeleteMetadataCommand,

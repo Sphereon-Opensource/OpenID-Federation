@@ -22,9 +22,10 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkType
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.openid.fed.services.command.trustMark.*
 import kotlinx.serialization.Serializable
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
 
 /**
@@ -40,7 +41,7 @@ private data class TrustMarkStatusResponsePayload(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustMarkService::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustMarkService>())
 class TrustMarkServiceImpl(
     private val createTrustMarkTypeCommand: CreateTrustMarkTypeCommand,
     private val findAllTrustMarkTypesByAccountCommand: FindAllTrustMarkTypesByAccountCommand,

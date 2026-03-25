@@ -16,15 +16,16 @@ import com.sphereon.openid.fed.services.TrustAnchorHintService
 import com.sphereon.openid.fed.services.mappers.toTrustAnchorHintsResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Trust Anchor Hints Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListTrustAnchorHintsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListTrustAnchorHintsEndpointCommand>())
 class ListTrustAnchorHintsEndpointCommandImpl(
     execution: SessionExecution,
     private val trustAnchorHintService: TrustAnchorHintService,
@@ -61,7 +62,7 @@ class ListTrustAnchorHintsEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateTrustAnchorHintEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateTrustAnchorHintEndpointCommand>())
 class CreateTrustAnchorHintEndpointCommandImpl(
     execution: SessionExecution,
     private val trustAnchorHintService: TrustAnchorHintService,
@@ -109,7 +110,7 @@ class CreateTrustAnchorHintEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteTrustAnchorHintEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteTrustAnchorHintEndpointCommand>())
 class DeleteTrustAnchorHintEndpointCommandImpl(
     execution: SessionExecution,
     private val trustAnchorHintService: TrustAnchorHintService,

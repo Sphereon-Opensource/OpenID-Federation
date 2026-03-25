@@ -3,7 +3,7 @@ package com.sphereon.openid.fed.core.logging
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.log.LogService
 import com.sphereon.core.api.log.SessionLogService
-import me.tatarka.inject.annotations.Inject
+import dev.zacsweers.metro.Inject
 
 /**
  * Interface for federation-specific logging.

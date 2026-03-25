@@ -10,9 +10,10 @@ import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Federation client implementation for reading and validating statements and trust chains.
@@ -22,7 +23,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FederationClient::class)
+@ContributesBinding(SessionScope::class, binding = binding<FederationClient>())
 class FederationClientImpl(
     private val resolveTrustChainCommand: ResolveTrustChainCommand,
     private val verifyTrustChainCommand: VerifyTrustChainCommand,

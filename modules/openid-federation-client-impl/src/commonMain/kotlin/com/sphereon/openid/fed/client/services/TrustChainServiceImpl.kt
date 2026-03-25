@@ -6,9 +6,10 @@ import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of TrustChainService as a command aggregator.
@@ -23,7 +24,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustChainService::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustChainService>())
 class TrustChainServiceImpl(
     private val resolveTrustChainCommand: ResolveTrustChainCommand,
     private val verifyTrustChainCommand: VerifyTrustChainCommand

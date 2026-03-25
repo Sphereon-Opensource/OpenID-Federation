@@ -11,9 +11,10 @@ import com.sphereon.openid.fed.core.error.InvalidEntityConfigurationError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.FederationEntityMetadata
 import kotlinx.serialization.json.jsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the GetFederationEndpointsCommand.
@@ -21,7 +22,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetFederationEndpointsCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetFederationEndpointsCommand>())
 class GetFederationEndpointsCommandImpl(
     execution: SessionExecution,
     private val context: FederationContext

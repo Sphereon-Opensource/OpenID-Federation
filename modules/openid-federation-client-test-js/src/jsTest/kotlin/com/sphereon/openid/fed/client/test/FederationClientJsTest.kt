@@ -2,7 +2,7 @@ package com.sphereon.openid.fed.client.test
 
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.openid.fed.client.FederationClient
-import com.sphereon.openid.fed.client.asFederationClientComponent
+import com.sphereon.openid.fed.client.asFederationClientGraph
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,13 +16,15 @@ class FederationClientJsTest {
     init {
         configureKmsProvider()
 
-        val app = ClientTestAppComponent::class.create(
-            this, "federation-client-test-js", "test", "0.25.0"
+        val app = createClientTestAppGraph(
+            application = this,
+            appId = "federation-client-test-js",
+            profile = "test",
+            version = "0.25.0"
         )
-        app.initRootScopeProvider()
         val context = app.userContextManager.getAnonymous()
         val session = context.sessionContextManager.createOrGetFromId("test-session")
-        client = session.asFederationClientComponent().federationClient
+        client = session.asFederationClientGraph().federationClient
     }
 
     private fun configureKmsProvider() {

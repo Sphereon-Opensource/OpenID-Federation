@@ -11,9 +11,10 @@ import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 
 /**
@@ -22,7 +23,7 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetLogsByTagCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetLogsByTagCommand>())
 class GetLogsByTagCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetLogsByTagArgs, List<LogDTO>>(

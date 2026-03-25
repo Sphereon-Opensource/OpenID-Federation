@@ -1,11 +1,7 @@
-@file:OptIn(KspExperimental::class)
-
-import com.google.devtools.ksp.KspExperimental
-
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.jvm)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     id("maven-publish")
     application
 }
@@ -56,14 +52,9 @@ dependencies {
     // IDK Ktor server support
     implementation(idklib.sphereon.idk.ktor.server.kotlin.inject)
 
-    // kotlin-inject DI with Amazon App Platform / Anvil
-    implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
-    implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+    // DI
     implementation(sphereonlib.software.amazon.app.platform.di.common.public)
     implementation(sphereonlib.software.amazon.app.platform.scope.public)
-    implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-    implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
-    implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
 
     // Cryptography
     implementation(sphereonlib.dev.whyoleg.cryptography.core)
@@ -75,22 +66,6 @@ dependencies {
     testImplementation(sphereonlib.org.jetbrains.kotlin.test)
     testImplementation(sphereonlib.io.ktor.server.test.host)
     testImplementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
-    testImplementation(sphereonlib.software.amazon.app.platform.kotlin.inject.impl)
-}
-
-// KSP configuration for kotlin-inject with Anvil
-ksp {
-    useKsp2.set(true)
-    // Use Amazon App Platform binding processor instead of Anvil's
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-// Configure KSP processors
-dependencies {
-    ksp(sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    ksp(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
-    ksp(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators)
-    ksp(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler)
 }
 
 kotlin {

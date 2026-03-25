@@ -1,7 +1,7 @@
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     id("maven-publish")
 }
 
@@ -38,10 +38,6 @@ kotlin {
                 implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
                 implementation(sphereonlib.dev.whyoleg.cryptography.core)
 
-                // kotlin-inject for DI
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
             }
         }
 
@@ -55,7 +51,7 @@ kotlin {
 
         val jvmMain by getting {
             dependencies {
-                // Core module dependencies (needed for KSP to resolve config types)
+                // Core module dependencies
                 api(projects.modules.openidFederationCorePublic)
                 api(projects.modules.openidFederationCommon)
             }
@@ -67,18 +63,6 @@ kotlin {
             }
         }
     }
-}
-
-ksp {
-    // We are using the Amazon App Platform binding processor instead
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-dependencies {
-    add("kspJvm", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
-    add("kspJvm", sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators)
-    add("kspJvm", sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler)
 }
 
 publishing {

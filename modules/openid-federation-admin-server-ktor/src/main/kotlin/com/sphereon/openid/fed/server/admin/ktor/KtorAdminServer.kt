@@ -5,9 +5,9 @@ import com.sphereon.ktor.server.inject.installUniversalHttpAdapters
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
-import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppComponent
+import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerConfig
-import com.sphereon.openid.fed.server.admin.ktor.di.create
+import com.sphereon.openid.fed.server.admin.ktor.di.createAdminServerAppGraph
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -38,33 +38,33 @@ fun main() {
     // This can be overridden by environment variables if needed
     configureDefaultKmsProvider()
 
-    // Create AppComponent with IDK DI
+    // Create AppGraph with IDK DI
     // Configuration is loaded automatically via OidfConfigBinder
-    val appComponent = AdminServerAppComponent.init(
+    val appGraph = createAdminServerAppGraph(
         application = Unit
     )
-    logger.info("AppComponent created and initialized")
+    logger.info("AppGraph created and initialized")
 
     // Debug: Print KMS provider config to verify it's being set correctly
-    debugLogKmsProviderConfig(appComponent)
+    debugLogKmsProviderConfig(appGraph)
 
     // Get configuration from the component (loaded via OidfConfigBinder)
-    val config = appComponent.serverConfig
+    val config = appGraph.serverConfig
     logger.info("Configuration loaded: rootIdentifier=${config.rootIdentifier}, port=${config.port}")
 
     // Start Ktor server
     embeddedServer(CIO, port = config.port, host = config.host) {
-        configureAdmin(appComponent, config)
+        configureAdmin(appGraph, config)
     }.start(wait = true)
 }
 
 /**
  * Configure the Ktor application for admin server.
  */
-fun Application.configureAdmin(appComponent: AdminServerAppComponent, config: AdminServerConfig) {
-    // Install kotlin-inject plugin with AppComponent
+fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServerConfig) {
+    // Install kotlin-inject plugin with AppGraph
     install(KotlinInjectPlugin) {
-        this.appComponent = appComponent
+        this.appGraph = appGraph
     }
     logger.info("KotlinInject plugin installed - DI enabled")
 
@@ -120,7 +120,7 @@ fun Application.configureAdmin(appComponent: AdminServerAppComponent, config: Ad
 
         // Debug endpoint to show backing storage state
         get("/debug/kms") {
-            val backingStorage = appComponent.memoryKeyStoreBackingStorage
+            val backingStorage = appGraph.memoryKeyStoreBackingStorage
             val partitionCount = backingStorage.getPartitionCount()
             val partitionKeys = backingStorage.getPartitionKeys()
 
@@ -140,7 +140,7 @@ fun Application.configureAdmin(appComponent: AdminServerAppComponent, config: Ad
             sb.appendLine()
             sb.appendLine("=== KMS Provider Configs ===")
             try {
-                val configs = appComponent.kmsProviderConfigBinder.getKmsProviderConfigs(appComponent.appConfigService)
+                val configs = appGraph.kmsProviderConfigBinder.getKmsProviderConfigs(appGraph.appConfigService)
                 configs.forEach { config ->
                     sb.appendLine("Provider: ${config.id} (${config.kmsProviderType})")
                     sb.appendLine("  enabled: ${config.enabled}")
@@ -203,7 +203,7 @@ private fun configureDefaultKmsProvider() {
     }
 
     // The namespace must match the app component's appId and profile
-    // AdminServerAppComponent uses appId="openid-federation-admin-server", profile="default"
+    // AdminServerAppGraph uses appId="openid-federation-admin-server", profile="default"
     val namespace = "openid-federation-admin-server.default"
 
     logger.info("Configuring default software KMS provider programmatically with namespace: $namespace")
@@ -233,7 +233,7 @@ private fun configureDefaultKmsProvider() {
  * Debug function to log the KMS provider configuration.
  * This helps verify that the config is being deserialized correctly.
  */
-private fun debugLogKmsProviderConfig(appComponent: AdminServerAppComponent) {
+private fun debugLogKmsProviderConfig(appGraph: AdminServerAppGraph) {
     try {
         logger.info("=== DEBUG: KMS Config ===")
 

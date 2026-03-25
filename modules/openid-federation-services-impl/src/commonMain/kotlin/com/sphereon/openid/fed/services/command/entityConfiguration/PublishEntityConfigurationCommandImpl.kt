@@ -18,9 +18,10 @@ import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.signPayload
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the PublishEntityConfigurationCommand.
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PublishEntityConfigurationCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PublishEntityConfigurationCommand>())
 class PublishEntityConfigurationCommandImpl(
     execution: SessionExecution,
     private val findEntityConfigurationCommand: FindEntityConfigurationByAccountCommand,

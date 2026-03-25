@@ -1,11 +1,10 @@
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     alias(libs.plugins.node.gradle)
 }
 
-// KSP processors are JVM artifacts — ensure repositories are available for resolution
 repositories {
     mavenCentral()
     maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
@@ -44,13 +43,8 @@ kotlin {
                 implementation(idklib.sphereon.idk.lib.core.api.default)
                 implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
                 implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
                 implementation(sphereonlib.software.amazon.app.platform.di.common.public)
                 implementation(sphereonlib.software.amazon.app.platform.scope.public)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
                 implementation(sphereonlib.io.ktor.client.js)
                 implementation(sphereonlib.io.ktor.client.core)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)
@@ -68,30 +62,6 @@ kotlin {
             }
         }
     }
-}
-
-ksp {
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-fun DependencyHandlerScope.addKspDependencies(configName: String) {
-    addProvider(configName, sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public.get())
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators.get())
-    add(configName, sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler.get())
-}
-
-dependencies {
-    addKspDependencies("kspJs")
-}
-
-kotlin.sourceSets.named("jsMain") {
-    kotlin.srcDir("build/generated/ksp/js/jsMain/kotlin")
-}
-
-kotlin.sourceSets.named("jsTest") {
-    kotlin.srcDir("build/generated/ksp/js/jsMain/kotlin")
-    kotlin.srcDir("build/generated/ksp/js/jsTest/kotlin")
 }
 
 // node-gradle configuration for TypeScript tests

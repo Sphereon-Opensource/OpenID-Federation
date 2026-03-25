@@ -10,9 +10,9 @@ import com.sphereon.core.api.log.LogOutputFormat
 import com.sphereon.core.api.log.LoggerConfig
 import kotlinx.coroutines.runBlocking
 import com.sphereon.openid.fed.openapi.models.ErrorResponse
-import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerAppComponent
+import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerAppGraph
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerConfig
-import com.sphereon.openid.fed.server.federation.ktor.di.create
+import com.sphereon.openid.fed.server.federation.ktor.di.createFederationServerAppGraph
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -42,34 +42,34 @@ fun main() {
     // Configure default software KMS provider programmatically to ensure it's available
     configureDefaultKmsProvider()
 
-    // Create IDK component hierarchy
+    // Create IDK graph
     // Configuration is loaded automatically via OidfConfigBinder
-    val appComponent = FederationServerAppComponent.init(
+    val appGraph = createFederationServerAppGraph(
         application = Unit
     )
 
-    // Get configuration from the component (loaded via OidfConfigBinder)
-    val config = appComponent.serverConfig
+    // Get configuration from the graph (loaded via OidfConfigBinder)
+    val config = appGraph.serverConfig
 
     // Configure logging using loaded config
-    configureLogger(appComponent)
+    configureLogger(appGraph)
 
     logger.info("Federation server initialized")
     logger.info("Configuration: rootIdentifier=${config.rootIdentifier}, port=${config.port}")
 
     // Start the embedded server
     embeddedServer(CIO, port = config.port, host = config.host) {
-        configureFederation(appComponent, config)
+        configureFederation(appGraph, config)
     }.start(wait = true)
 }
 
 /**
  * Configure the Ktor application for federation server.
  */
-fun Application.configureFederation(appComponent: FederationServerAppComponent, config: FederationServerConfig) {
-    // Install kotlin-inject plugin with AppComponent
+fun Application.configureFederation(appGraph: FederationServerAppGraph, config: FederationServerConfig) {
+    // Install kotlin-inject plugin with AppGraph
     install(KotlinInjectPlugin) {
-        this.appComponent = appComponent
+        this.appGraph = appGraph
     }
     logger.info("KotlinInject plugin installed - DI enabled")
 
@@ -106,8 +106,8 @@ fun Application.configureFederation(appComponent: FederationServerAppComponent, 
 /**
  * Configures the logger with settings from OidfConfigBinder.
  */
-private fun configureLogger(appComponent: FederationServerAppComponent) {
-    val loggerSettings = appComponent.configBinder.getLoggerConfig()
+private fun configureLogger(appGraph: FederationServerAppGraph) {
+    val loggerSettings = appGraph.configBinder.getLoggerConfig()
     val severityStr = loggerSettings.severity
     val outputFormatStr = loggerSettings.output
     val includeTimestamp = loggerSettings.includeTimestamp
@@ -243,7 +243,7 @@ private fun configureDefaultKmsProvider() {
     }
 
     // The namespace must match the app component's appId and profile
-    // FederationServerAppComponent uses appId="openid-federation-server", profile="default"
+    // FederationServerAppGraph uses appId="openid-federation-server", profile="default"
     val namespace = "openid-federation-server.default"
 
     println("Configuring default software KMS provider programmatically with namespace: $namespace")

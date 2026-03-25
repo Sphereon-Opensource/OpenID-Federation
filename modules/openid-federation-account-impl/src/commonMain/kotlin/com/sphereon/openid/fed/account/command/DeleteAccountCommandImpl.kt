@@ -14,13 +14,14 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.account.mappers.toDTO
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteAccountCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteAccountCommand>())
 class DeleteAccountCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteAccountArgs, Account>(

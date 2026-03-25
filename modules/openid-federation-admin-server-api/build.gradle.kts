@@ -41,14 +41,8 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
 
-                // kotlin-inject (KMP-compatible)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
                 implementation(sphereonlib.software.amazon.app.platform.di.common.public)
                 implementation(sphereonlib.software.amazon.app.platform.scope.public)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
             }
         }
 

@@ -1,10 +1,10 @@
 package com.sphereon.openid.fed.client
 
-import com.sphereon.di.session.SessionComponent
+import com.sphereon.di.session.SessionGraph
 import com.sphereon.di.session.SessionInstance
 import com.sphereon.di.session.SessionScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Extension function to access FederationClient from a SessionInstance.
@@ -12,17 +12,17 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  * Usage:
  * ```
  * val sessionInstance = contextInstance.sessionContextManager.createOrGetFromId("session-id")
- * val federationClient = sessionInstance.asFederationClientComponent().federationClient
+ * val federationClient = sessionInstance.asFederationClientGraph().federationClient
  * ```
  */
-fun SessionInstance.asFederationClientComponent(): FederationClientSessionComponent =
-    this.component as FederationClientSessionComponent
+fun SessionInstance.asFederationClientGraph(): FederationClientSessionGraph =
+    this.graph as FederationClientSessionGraph
 
 /**
- * Extension function to access FederationClient from a SessionComponent.
+ * Extension function to access FederationClient from a SessionGraph.
  */
-fun SessionComponent.asFederationClientComponent(): FederationClientSessionComponent =
-    this as FederationClientSessionComponent
+fun SessionGraph.asFederationClientGraph(): FederationClientSessionGraph =
+    this as FederationClientSessionGraph
 
 /**
  * Session-scoped component interface that provides access to FederationClient.
@@ -33,7 +33,7 @@ fun SessionComponent.asFederationClientComponent(): FederationClientSessionCompo
  */
 @SingleIn(SessionScope::class)
 @ContributesTo(SessionScope::class)
-interface FederationClientSessionComponent {
+interface FederationClientSessionGraph {
     /**
      * The FederationClient instance for this session.
      */

@@ -24,15 +24,17 @@ import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, OidfEntityIdExternalIdentifierResolutionService::class, multibinding = false)
-@ContributesBinding(SessionScope::class, ExternalIdentifierService::class, multibinding = true)
+@ContributesBinding(SessionScope::class, binding = binding<OidfEntityIdExternalIdentifierResolutionService>())
+@ContributesIntoSet(SessionScope::class, binding = binding<ExternalIdentifierService>())
 class OidfEntityIdExternalIdentifierResolutionServiceImpl(
     execution: SessionExecution,
     private val federationClient: Lazy<FederationClient>
@@ -178,7 +180,7 @@ class OidfEntityIdExternalIdentifierResolutionServiceImpl(
     }
 
     @ContributesTo(SessionScope::class)
-    interface Component {
+    interface Graph {
         val oidfEntityIdExternalIdentifierResolutionService: OidfEntityIdExternalIdentifierResolutionService
     }
 

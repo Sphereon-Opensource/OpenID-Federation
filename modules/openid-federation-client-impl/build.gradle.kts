@@ -4,7 +4,7 @@ plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
@@ -68,14 +68,9 @@ kotlin {
                 api(idklib.sphereon.idk.lib.crypto.core.impl)
                 api(idklib.sphereon.idk.lib.crypto.kms.provider.software)
 
-                // kotlin-inject for DI
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+                // Metro DI
                 implementation(sphereonlib.software.amazon.app.platform.di.common.public)
                 implementation(sphereonlib.software.amazon.app.platform.scope.public)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
 
                 // Standard library
                 implementation(sphereonlib.io.ktor.client.core)
@@ -139,47 +134,6 @@ kotlin {
             }
         }
     }
-}
-
-ksp {
-    // We are using the Amazon App Platform binding processor instead!
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-fun DependencyHandlerScope.addKspDependencies(configName: String) {
-    addProvider(configName, sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public.get())
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators.get())
-    add(configName, sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler.get())
-}
-
-// KSP dependencies for kotlin-inject code generation
-dependencies {
-    addKspDependencies("kspJvm")
-    addKspDependencies("kspJvmTest")
-    addKspDependencies("kspJs")
-    addKspDependencies("kspJsTest")
-    addKspDependencies("kspWasmJs")
-    addKspDependencies("kspWasmJsTest")
-}
-
-// Needed because KSP-generated code needs to be included in the source sets
-kotlin.sourceSets.named("jsMain") {
-    kotlin.srcDir("build/generated/ksp/js/jsMain/kotlin")
-}
-
-kotlin.sourceSets.named("jsTest") {
-    kotlin.srcDir("build/generated/ksp/js/jsMain/kotlin")
-    kotlin.srcDir("build/generated/ksp/js/jsTest/kotlin")
-}
-
-kotlin.sourceSets.named("wasmJsMain") {
-    kotlin.srcDir("build/generated/ksp/wasmJs/wasmJsMain/kotlin")
-}
-
-kotlin.sourceSets.named("wasmJsTest") {
-    kotlin.srcDir("build/generated/ksp/wasmJs/wasmJsMain/kotlin")
-    kotlin.srcDir("build/generated/ksp/wasmJs/wasmJsTest/kotlin")
 }
 
 npmPublish {

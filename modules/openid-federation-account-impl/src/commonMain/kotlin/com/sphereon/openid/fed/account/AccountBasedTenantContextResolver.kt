@@ -6,9 +6,10 @@ import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.account.error.AccountConstants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * TenantContextResolver implementation that resolves tenants via Account DB lookup.
@@ -18,7 +19,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TenantContextResolver::class)
+@ContributesBinding(SessionScope::class, binding = binding<TenantContextResolver>())
 class AccountBasedTenantContextResolver(
     private val accountService: AccountService,
     private val config: TenantServiceConfig

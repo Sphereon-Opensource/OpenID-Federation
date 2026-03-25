@@ -13,15 +13,16 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.services.LogService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Logs Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListLogsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListLogsEndpointCommand>())
 class ListLogsEndpointCommandImpl(
     execution: SessionExecution,
     private val logService: LogService,

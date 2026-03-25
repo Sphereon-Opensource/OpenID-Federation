@@ -16,15 +16,16 @@ import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.services.SubordinateConstraintService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== Get Subordinate Constraints Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetSubordinateConstraintsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSubordinateConstraintsEndpointCommand>())
 class GetSubordinateConstraintsEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateConstraintService: SubordinateConstraintService,
@@ -64,7 +65,7 @@ class GetSubordinateConstraintsEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = SetSubordinateConstraintsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<SetSubordinateConstraintsEndpointCommand>())
 class SetSubordinateConstraintsEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateConstraintService: SubordinateConstraintService,
@@ -118,7 +119,7 @@ class SetSubordinateConstraintsEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateConstraintsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateConstraintsEndpointCommand>())
 class DeleteSubordinateConstraintsEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateConstraintService: SubordinateConstraintService,

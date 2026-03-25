@@ -5,10 +5,12 @@ import com.sphereon.core.api.http.describe.HttpAdapterDescriptorProvider
 import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.openid.fed.server.federation.api.http.FederationHttpAdapter
 import com.sphereon.openid.fed.server.federation.api.http.command.*
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * AppScope descriptor provider for FederationHttpAdapter.
@@ -19,7 +21,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(AppScope::class)
-@ContributesBinding(AppScope::class, boundType = HttpAdapterDescriptorProvider::class, multibinding = true)
+@ContributesIntoSet(AppScope::class, binding = binding<HttpAdapterDescriptorProvider>())
 class FederationHttpAdapterDescriptorProvider : HttpAdapterDescriptorProvider {
     override val id: String = FederationHttpAdapter.ID
 

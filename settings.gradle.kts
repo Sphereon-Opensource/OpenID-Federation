@@ -3,6 +3,12 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
+        // Maven local first for Sphereon artifacts (local builds take priority over remote SNAPSHOTs)
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+            }
+        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -26,12 +32,6 @@ pluginManagement {
         gradlePluginPortal()
         maven {
             url = uri("https://jitpack.io")
-        }
-        // Keep maven local at the end
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-            }
         }
     }
 }
@@ -57,6 +57,12 @@ dependencyResolutionManagement {
         }
     }
     repositories {
+        // Maven local first for Sphereon artifacts (local builds take priority over remote SNAPSHOTs)
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+            }
+        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -80,12 +86,6 @@ dependencyResolutionManagement {
         }
         maven {
             url = uri("https://jitpack.io")
-        }
-        // Keep maven local at the end
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-            }
         }
     }
 }

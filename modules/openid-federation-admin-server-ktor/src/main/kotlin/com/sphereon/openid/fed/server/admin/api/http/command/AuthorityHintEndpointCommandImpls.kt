@@ -16,15 +16,16 @@ import com.sphereon.openid.fed.services.AuthorityHintService
 import com.sphereon.openid.fed.services.mappers.toAuthorityHintsResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Authority Hints Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListAuthorityHintsEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListAuthorityHintsEndpointCommand>())
 class ListAuthorityHintsEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
@@ -61,7 +62,7 @@ class ListAuthorityHintsEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateAuthorityHintEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateAuthorityHintEndpointCommand>())
 class CreateAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
@@ -109,7 +110,7 @@ class CreateAuthorityHintEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteAuthorityHintEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteAuthorityHintEndpointCommand>())
 class DeleteAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,

@@ -21,15 +21,16 @@ import com.sphereon.openid.fed.services.mappers.toSubordinateMetadataResponse
 import com.sphereon.openid.fed.services.mappers.toSubordinatesResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Subordinates Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListSubordinatesEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesEndpointCommand>())
 class ListSubordinatesEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -66,7 +67,7 @@ class ListSubordinatesEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateEndpointCommand>())
 class CreateSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -114,7 +115,7 @@ class CreateSubordinateEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateEndpointCommand>())
 class DeleteSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -154,7 +155,7 @@ class DeleteSubordinateEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListSubordinateKeysEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListSubordinateKeysEndpointCommand>())
 class ListSubordinateKeysEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -195,7 +196,7 @@ class ListSubordinateKeysEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateKeyEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateKeyEndpointCommand>())
 class CreateSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -247,7 +248,7 @@ class CreateSubordinateKeyEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateKeyEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateKeyEndpointCommand>())
 class DeleteSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -289,7 +290,7 @@ class DeleteSubordinateKeyEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetSubordinateStatementEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSubordinateStatementEndpointCommand>())
 class GetSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -329,7 +330,7 @@ class GetSubordinateStatementEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PublishSubordinateStatementEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PublishSubordinateStatementEndpointCommand>())
 class PublishSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -386,7 +387,7 @@ class PublishSubordinateStatementEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListSubordinateMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListSubordinateMetadataEndpointCommand>())
 class ListSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -427,7 +428,7 @@ class ListSubordinateMetadataEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateMetadataEndpointCommand>())
 class CreateSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -484,7 +485,7 @@ class CreateSubordinateMetadataEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateMetadataEndpointCommand>())
 class DeleteSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,

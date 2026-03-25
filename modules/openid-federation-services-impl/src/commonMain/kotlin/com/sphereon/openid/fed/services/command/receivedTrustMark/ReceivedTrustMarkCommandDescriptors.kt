@@ -2,9 +2,9 @@ package com.sphereon.openid.fed.services.command.receivedTrustMark
 
 import com.sphereon.core.api.service.RegistrableServiceCommandDescriptor
 import com.sphereon.di.session.SessionScope
-import me.tatarka.inject.annotations.IntoSet
-import me.tatarka.inject.annotations.Provides
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
+import dev.zacsweers.metro.IntoSet
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.ContributesTo
 
 @ContributesTo(SessionScope::class)
 interface ReceivedTrustMarkCommandDescriptors {

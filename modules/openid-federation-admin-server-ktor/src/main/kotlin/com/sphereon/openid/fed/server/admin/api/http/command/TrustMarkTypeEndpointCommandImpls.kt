@@ -20,15 +20,16 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer as Persistence
 import com.sphereon.openid.fed.services.TrustMarkService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Trust Mark Types Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListTrustMarkTypesEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListTrustMarkTypesEndpointCommand>())
 class ListTrustMarkTypesEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -65,7 +66,7 @@ class ListTrustMarkTypesEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateTrustMarkTypeEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkTypeEndpointCommand>())
 class CreateTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -113,7 +114,7 @@ class CreateTrustMarkTypeEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkTypeEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkTypeEndpointCommand>())
 class GetTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -153,7 +154,7 @@ class GetTrustMarkTypeEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteTrustMarkTypeEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkTypeEndpointCommand>())
 class DeleteTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -193,7 +194,7 @@ class DeleteTrustMarkTypeEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkTypeIssuersEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkTypeIssuersEndpointCommand>())
 class GetTrustMarkTypeIssuersEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -235,7 +236,7 @@ class GetTrustMarkTypeIssuersEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = AddTrustMarkTypeIssuerEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<AddTrustMarkTypeIssuerEndpointCommand>())
 class AddTrustMarkTypeIssuerEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -301,7 +302,7 @@ private fun PersistenceTrustMarkIssuer.toApiModel(): TrustMarkIssuer = TrustMark
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = RemoveTrustMarkTypeIssuerEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<RemoveTrustMarkTypeIssuerEndpointCommand>())
 class RemoveTrustMarkTypeIssuerEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,

@@ -3,6 +3,7 @@ changelog = "3.0.6"
 bom = "1.0.0.Final"
 kover = "0.9.1"
 node-gradle = "7.1.0"
+metro = "0.11.4"
 
 android-compileSdk = "34"
 android-minSdk = "24"
@@ -15,3 +16,4 @@ changelog = { id = "se.bjurr.gitchangelog.git-changelog-gradle-plugin", version.
 bom-generator = { id = "io.github.gradlebom.generator-plugin", version.ref = "bom" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle" }
+metro = { id = "dev.zacsweers.metro", version.ref = "metro" }

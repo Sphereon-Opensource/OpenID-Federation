@@ -26,9 +26,11 @@ import com.sphereon.trust.core.model.TrustValidationRequest
 import com.sphereon.trust.core.model.TrustValidationResult
 import com.sphereon.trust.core.validation.AbstractTrustValidationService
 import kotlinx.datetime.Clock
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -47,7 +49,7 @@ import kotlin.time.Duration.Companion.minutes
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(scope = SessionScope::class, boundType = TrustValidationService::class, multibinding = true)
+@ContributesIntoSet(scope = SessionScope::class, binding = binding<TrustValidationService>())
 class OidfTrustValidationService(
     private val resolveTrustChainCommand: ResolveTrustChainCommand,
     private val verifyTrustChainCommand: VerifyTrustChainCommand,

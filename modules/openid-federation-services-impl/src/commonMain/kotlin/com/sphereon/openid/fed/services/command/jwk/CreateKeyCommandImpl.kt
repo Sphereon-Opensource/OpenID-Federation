@@ -17,9 +17,10 @@ import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the CreateKeyCommand.
@@ -27,7 +28,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateKeyCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateKeyCommand>())
 class CreateKeyCommandImpl(
     execution: SessionExecution,
     private val keyManagerService: KeyManagerService,

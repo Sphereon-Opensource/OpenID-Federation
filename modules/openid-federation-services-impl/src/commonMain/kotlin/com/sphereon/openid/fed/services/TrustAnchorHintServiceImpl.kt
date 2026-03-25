@@ -11,13 +11,14 @@ import com.sphereon.openid.fed.services.command.trustAnchorHint.DeleteTrustAncho
 import com.sphereon.openid.fed.services.command.trustAnchorHint.DeleteTrustAnchorHintCommand
 import com.sphereon.openid.fed.services.command.trustAnchorHint.FindTrustAnchorHintsByAccountArgs
 import com.sphereon.openid.fed.services.command.trustAnchorHint.FindTrustAnchorHintsByAccountCommand
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustAnchorHintService::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustAnchorHintService>())
 class TrustAnchorHintServiceImpl(
     private val createTrustAnchorHintCommand: CreateTrustAnchorHintCommand,
     private val deleteTrustAnchorHintCommand: DeleteTrustAnchorHintCommand,

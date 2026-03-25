@@ -12,15 +12,16 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.persistence.Persistence
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== Fetch Subordinate Statement GET (Root) ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FetchSubordinateRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FetchSubordinateRootEndpointCommand>())
 class FetchSubordinateRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver
@@ -50,7 +51,7 @@ class FetchSubordinateRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostFetchSubordinateRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostFetchSubordinateRootEndpointCommand>())
 class PostFetchSubordinateRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver
@@ -83,7 +84,7 @@ class PostFetchSubordinateRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FetchSubordinateAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FetchSubordinateAccountEndpointCommand>())
 class FetchSubordinateAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver
@@ -116,7 +117,7 @@ class FetchSubordinateAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostFetchSubordinateAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostFetchSubordinateAccountEndpointCommand>())
 class PostFetchSubordinateAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver

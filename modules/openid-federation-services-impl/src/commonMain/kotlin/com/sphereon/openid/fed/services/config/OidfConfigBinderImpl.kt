@@ -3,10 +3,11 @@ package com.sphereon.openid.fed.services.config
 import com.sphereon.openid.fed.common.config.getEnvironmentVariable
 import com.sphereon.openid.fed.common.config.normalizeKeyForEnv
 import com.sphereon.openid.fed.core.config.*
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of OidfConfigBinder that provides typed configuration access.
@@ -36,7 +37,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(AppScope::class)
-@ContributesBinding(AppScope::class, boundType = OidfConfigBinder::class)
+@ContributesBinding(AppScope::class, binding = binding<OidfConfigBinder>())
 class OidfConfigBinderImpl : OidfConfigBinder {
 
     override fun getFederationConfig(): FederationConfig {

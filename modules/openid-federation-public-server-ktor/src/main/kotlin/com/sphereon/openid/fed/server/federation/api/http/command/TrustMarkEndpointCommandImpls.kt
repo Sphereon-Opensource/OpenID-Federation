@@ -21,15 +21,16 @@ import com.sphereon.crypto.jose.jws.JwsCompact
 import com.sphereon.crypto.jose.jws.JwsUtils
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== Trust Mark Status GET (Root) ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkStatusRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusRootEndpointCommand>())
 class GetTrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -70,7 +71,7 @@ class GetTrustMarkStatusRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustMarkStatusRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustMarkStatusRootEndpointCommand>())
 class TrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -114,7 +115,7 @@ class TrustMarkStatusRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkStatusAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusAccountEndpointCommand>())
 class GetTrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -158,7 +159,7 @@ class GetTrustMarkStatusAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustMarkStatusAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustMarkStatusAccountEndpointCommand>())
 class TrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -227,7 +228,7 @@ private suspend fun handleTrustMarkStatusResponse(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustMarkListRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustMarkListRootEndpointCommand>())
 class TrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -260,7 +261,7 @@ class TrustMarkListRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostTrustMarkListRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostTrustMarkListRootEndpointCommand>())
 class PostTrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -296,7 +297,7 @@ class PostTrustMarkListRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = TrustMarkListAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustMarkListAccountEndpointCommand>())
 class TrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -332,7 +333,7 @@ class TrustMarkListAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostTrustMarkListAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostTrustMarkListAccountEndpointCommand>())
 class PostTrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -371,7 +372,7 @@ class PostTrustMarkListAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkRootEndpointCommand>())
 class GetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -404,7 +405,7 @@ class GetTrustMarkRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostGetTrustMarkRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostGetTrustMarkRootEndpointCommand>())
 class PostGetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -440,7 +441,7 @@ class PostGetTrustMarkRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkAccountEndpointCommand>())
 class GetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -476,7 +477,7 @@ class GetTrustMarkAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostGetTrustMarkAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostGetTrustMarkAccountEndpointCommand>())
 class PostGetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

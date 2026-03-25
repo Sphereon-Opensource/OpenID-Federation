@@ -12,15 +12,16 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.ResolutionService
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== Resolve Trust Chain GET (Root) ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ResolveRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ResolveRootEndpointCommand>())
 class ResolveRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -59,7 +60,7 @@ class ResolveRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostResolveRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostResolveRootEndpointCommand>())
 class PostResolveRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -99,7 +100,7 @@ class PostResolveRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ResolveAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ResolveAccountEndpointCommand>())
 class ResolveAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -141,7 +142,7 @@ class ResolveAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostResolveAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostResolveAccountEndpointCommand>())
 class PostResolveAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

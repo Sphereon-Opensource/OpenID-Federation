@@ -12,11 +12,13 @@ import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
 import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
 import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
 import com.sphereon.openid.fed.server.admin.api.http.command.*
-import com.sphereon.di.context.Named
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Named
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.SingleIn
 
 /**
  * HTTP Adapter for the OpenID Federation Admin API.
@@ -30,7 +32,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
 @Inject
 @Named(AdminHttpAdapter.ID)
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = HttpAdapter::class, multibinding = true)
+@ContributesIntoSet(SessionScope::class, binding = binding<HttpAdapter>())
 class AdminHttpAdapter(
     execution: SessionExecution,
     // Account endpoints
@@ -215,7 +217,7 @@ class AdminHttpAdapter(
      * DI Component interface for accessing the AdminHttpAdapter from session context.
      */
     @ContributesTo(SessionScope::class)
-    interface Component {
+    interface Graph {
         val adminHttpAdapter: AdminHttpAdapter
     }
 }

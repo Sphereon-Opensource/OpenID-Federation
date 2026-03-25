@@ -25,15 +25,16 @@ import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.signPayload
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
 
 // GetTrustMarksForAccountCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarksForAccountCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarksForAccountCommand>())
 class GetTrustMarksForAccountCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetTrustMarksForAccountArgs, List<TrustMark>>(
@@ -58,7 +59,7 @@ class GetTrustMarksForAccountCommandImpl(
 // CreateTrustMarkCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateTrustMarkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkCommand>())
 class CreateTrustMarkCommandImpl(
     execution: SessionExecution,
     private val jwkService: JwkService,
@@ -118,7 +119,7 @@ class CreateTrustMarkCommandImpl(
 // DeleteTrustMarkCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteTrustMarkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkCommand>())
 class DeleteTrustMarkCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteTrustMarkArgs, TrustMarkEntity>(
@@ -145,7 +146,7 @@ class DeleteTrustMarkCommandImpl(
 // GetTrustMarkStatusCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkStatusCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusCommand>())
 class GetTrustMarkStatusCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, Boolean>(
@@ -175,7 +176,7 @@ class GetTrustMarkStatusCommandImpl(
 // GetTrustMarkedSubsCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkedSubsCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkedSubsCommand>())
 class GetTrustMarkedSubsCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetTrustMarkedSubsArgs, Array<String>>(
@@ -205,7 +206,7 @@ class GetTrustMarkedSubsCommandImpl(
 // GetTrustMarkCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetTrustMarkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkCommand>())
 class GetTrustMarkCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetTrustMarkArgs, String>(

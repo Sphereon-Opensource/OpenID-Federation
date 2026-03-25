@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     id("maven-publish")
     alias(libs.plugins.kover)
 }
@@ -49,14 +49,9 @@ kotlin {
                 // IDK cache
                 implementation(idklib.sphereon.idk.lib.core.api.public)
 
-                // kotlin-inject for DI
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.public)
-                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public)
+                // Metro DI
                 implementation(sphereonlib.software.amazon.app.platform.di.common.public)
                 implementation(sphereonlib.software.amazon.app.platform.scope.public)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime)
-                implementation(sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.runtime.optional)
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
 
                 // Standard library
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
@@ -80,34 +75,6 @@ kotlin {
             }
         }
     }
-}
-
-ksp {
-    arg("software.amazon.lastmile.kotlin.inject.anvil.processor.ContributesBindingProcessor", "disabled")
-}
-
-fun DependencyHandlerScope.addKspDependencies(configName: String) {
-    addProvider(configName, sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.public.get())
-    add(configName, sphereonlib.software.amazon.app.platform.kotlin.inject.contribute.impl.code.generators.get())
-    add(configName, sphereonlib.software.amazon.lastmile.kotlin.inject.anvil.compiler.get())
-}
-
-dependencies {
-    addKspDependencies("kspJvm")
-    addKspDependencies("kspJvmTest")
-    addKspDependencies("kspJs")
-    addKspDependencies("kspJsTest")
-    addKspDependencies("kspWasmJs")
-    addKspDependencies("kspWasmJsTest")
-}
-
-kotlin.sourceSets.named("jsMain") {
-    kotlin.srcDir("build/generated/ksp/js/jsMain/kotlin")
-}
-
-kotlin.sourceSets.named("wasmJsMain") {
-    kotlin.srcDir("build/generated/ksp/wasmJs/wasmJsMain/kotlin")
 }
 
 publishing {

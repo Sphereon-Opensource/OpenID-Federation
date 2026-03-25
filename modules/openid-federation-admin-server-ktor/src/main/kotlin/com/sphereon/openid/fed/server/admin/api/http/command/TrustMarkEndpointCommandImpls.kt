@@ -18,15 +18,16 @@ import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.mappers.toTrustMarksResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Trust Marks Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListTrustMarksEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListTrustMarksEndpointCommand>())
 class ListTrustMarksEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -63,7 +64,7 @@ class ListTrustMarksEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateTrustMarkEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkEndpointCommand>())
 class CreateTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -112,7 +113,7 @@ class CreateTrustMarkEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteTrustMarkEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkEndpointCommand>())
 class DeleteTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,

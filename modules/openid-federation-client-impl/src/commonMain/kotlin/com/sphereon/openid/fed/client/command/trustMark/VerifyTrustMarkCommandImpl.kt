@@ -21,9 +21,10 @@ import com.sphereon.openid.fed.openapi.models.Jwt
 import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
 import kotlinx.serialization.json.jsonPrimitive
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the VerifyTrustMarkCommand.
@@ -31,7 +32,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = VerifyTrustMarkCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<VerifyTrustMarkCommand>())
 class VerifyTrustMarkCommandImpl(
     execution: SessionExecution,
     private val context: FederationContext,

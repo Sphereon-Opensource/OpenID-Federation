@@ -24,9 +24,10 @@ import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of the FindEntityConfigurationByAccountCommand.
@@ -34,7 +35,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindEntityConfigurationByAccountCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindEntityConfigurationByAccountCommand>())
 class FindEntityConfigurationByAccountCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

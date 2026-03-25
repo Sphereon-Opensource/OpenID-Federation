@@ -31,16 +31,17 @@ import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.signPayload
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import com.sphereon.openid.fed.persistence.models.Subordinate as SubordinateEntity
 import com.sphereon.openid.fed.persistence.models.SubordinateMetadata as SubordinateMetadataEntity
 
 // FindSubordinatesByAccountCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindSubordinatesByAccountCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindSubordinatesByAccountCommand>())
 class FindSubordinatesByAccountCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<FindSubordinatesByAccountArgs, Array<Subordinate>>(
@@ -67,7 +68,7 @@ class FindSubordinatesByAccountCommandImpl(
 // FindSubordinatesByAccountAsArrayCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindSubordinatesByAccountAsArrayCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindSubordinatesByAccountAsArrayCommand>())
 class FindSubordinatesByAccountAsArrayCommandImpl(
     execution: SessionExecution,
     private val findSubordinatesByAccountCommand: FindSubordinatesByAccountCommand
@@ -87,7 +88,7 @@ class FindSubordinatesByAccountAsArrayCommandImpl(
 // DeleteSubordinateCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteSubordinateCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateCommand>())
 class DeleteSubordinateCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteSubordinateArgs, Subordinate>(
@@ -127,7 +128,7 @@ class DeleteSubordinateCommandImpl(
 // CreateSubordinateCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateSubordinateCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateCommand>())
 class CreateSubordinateCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<CreateSubordinateArgs, Subordinate>(
@@ -165,7 +166,7 @@ class CreateSubordinateCommandImpl(
 // GetSubordinateStatementCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetSubordinateStatementCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSubordinateStatementCommand>())
 class GetSubordinateStatementCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver
@@ -252,7 +253,7 @@ class GetSubordinateStatementCommandImpl(
 // PublishSubordinateStatementCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PublishSubordinateStatementCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PublishSubordinateStatementCommand>())
 class PublishSubordinateStatementCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -320,7 +321,7 @@ class PublishSubordinateStatementCommandImpl(
 // FetchSubordinateStatementCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FetchSubordinateStatementCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FetchSubordinateStatementCommand>())
 class FetchSubordinateStatementCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<FetchSubordinateStatementArgs, String>(

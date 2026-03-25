@@ -11,9 +11,10 @@ import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHin
 import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHintCommand
 import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountArgs
 import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountCommand
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of AuthorityHintService as a command aggregator.
@@ -28,7 +29,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = AuthorityHintService::class)
+@ContributesBinding(SessionScope::class, binding = binding<AuthorityHintService>())
 class AuthorityHintServiceImpl(
     private val createAuthorityHintCommand: CreateAuthorityHintCommand,
     private val deleteAuthorityHintCommand: DeleteAuthorityHintCommand,

@@ -1,10 +1,10 @@
 package com.sphereon.openid.fed.wallet
 
-import com.sphereon.di.session.SessionComponent
+import com.sphereon.di.session.SessionGraph
 import com.sphereon.di.session.SessionInstance
 import com.sphereon.di.session.SessionScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Extension function to access FederationWalletClient from a SessionInstance.
@@ -12,17 +12,17 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  * Usage:
  * ```
  * val sessionInstance = contextInstance.sessionContextManager.createOrGetFromId("session-id")
- * val walletClient = sessionInstance.asFederationWalletComponent().federationWalletClient
+ * val walletClient = sessionInstance.asFederationWalletGraph().federationWalletClient
  * ```
  */
-fun SessionInstance.asFederationWalletComponent(): FederationWalletSessionComponent =
-    this.component as FederationWalletSessionComponent
+fun SessionInstance.asFederationWalletGraph(): FederationWalletSessionGraph =
+    this.graph as FederationWalletSessionGraph
 
 /**
- * Extension function to access FederationWalletClient from a SessionComponent.
+ * Extension function to access FederationWalletClient from a SessionGraph.
  */
-fun SessionComponent.asFederationWalletComponent(): FederationWalletSessionComponent =
-    this as FederationWalletSessionComponent
+fun SessionGraph.asFederationWalletGraph(): FederationWalletSessionGraph =
+    this as FederationWalletSessionGraph
 
 /**
  * Session-scoped component interface that provides access to FederationWalletClient.
@@ -33,6 +33,6 @@ fun SessionComponent.asFederationWalletComponent(): FederationWalletSessionCompo
  */
 @SingleIn(SessionScope::class)
 @ContributesTo(SessionScope::class)
-interface FederationWalletSessionComponent {
+interface FederationWalletSessionGraph {
     val federationWalletClient: FederationWalletClient
 }

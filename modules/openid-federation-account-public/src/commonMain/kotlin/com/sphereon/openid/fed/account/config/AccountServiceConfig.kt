@@ -1,10 +1,11 @@
 package com.sphereon.openid.fed.account.config
 
 import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.AppScope
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Configuration class for account-related settings.
@@ -12,7 +13,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(AppScope::class)
-@ContributesBinding(AppScope::class, boundType = IAccountServiceConfig::class)
+@ContributesBinding(AppScope::class, binding = binding<IAccountServiceConfig>())
 class AccountServiceConfig(tenantConfig: TenantServiceConfig) : IAccountServiceConfig {
     override val rootIdentifier: String = tenantConfig.rootIdentifier
 

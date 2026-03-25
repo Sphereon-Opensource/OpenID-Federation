@@ -10,10 +10,10 @@ import com.sphereon.openid.fed.core.cache.CacheManager
 import com.sphereon.openid.fed.httpResolver.HttpMetadata
 import com.sphereon.openid.fed.httpResolver.HttpResolver
 import io.ktor.client.statement.bodyAsText
-import me.tatarka.inject.annotations.Inject
-import me.tatarka.inject.annotations.Provides
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesTo
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.ContributesTo
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Provides FederationContext for dependency injection.

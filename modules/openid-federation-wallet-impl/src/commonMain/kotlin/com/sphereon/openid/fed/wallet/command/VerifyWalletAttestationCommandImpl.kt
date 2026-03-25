@@ -19,13 +19,14 @@ import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonPrimitive
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = VerifyWalletAttestationCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<VerifyWalletAttestationCommand>())
 class VerifyWalletAttestationCommandImpl(
     execution: SessionExecution,
     private val context: FederationContext,

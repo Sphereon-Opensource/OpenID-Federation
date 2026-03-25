@@ -8,9 +8,8 @@ import com.sphereon.crypto.resolution.extern.ExternalIdentifierJwkOpts
 import com.sphereon.crypto.resolution.extern.ExternalIdentifierOIDFEntityIdOpts
 import com.sphereon.di.session.SessionInstance
 import com.sphereon.openid.fed.client.FederationClient
-import com.sphereon.openid.fed.client.asFederationClientComponent
-import com.sphereon.openid.fed.client.test.ClientImplTestAppComponent
-import com.sphereon.openid.fed.client.test.create
+import com.sphereon.openid.fed.client.asFederationClientGraph
+import com.sphereon.openid.fed.client.test.createClientImplTestAppGraph
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -39,15 +38,17 @@ class OidfEntityIdExternalIdentifierResolutionServiceE2eTest {
     fun setUp() {
         configureKmsProvider()
 
-        val app = ClientImplTestAppComponent::class.create(
-            this, "federation-client-impl-test", "test", "1.0.0"
+        val app = createClientImplTestAppGraph(
+            application = this,
+            appId = "federation-client-impl-test",
+            profile = "test",
+            version = "1.0.0"
         )
-        app.initRootScopeProvider()
 
         val context = app.userContextManager.getAnonymous()
         session = context.sessionContextManager.createOrGetFromId("oidf-entity-id-test")
-        federationClient = session.asFederationClientComponent().federationClient
-        oidfResolutionService = (session.component as OidfEntityIdExternalIdentifierResolutionServiceImpl.Component)
+        federationClient = session.asFederationClientGraph().federationClient
+        oidfResolutionService = (session.graph as OidfEntityIdExternalIdentifierResolutionServiceImpl.Graph)
             .oidfEntityIdExternalIdentifierResolutionService
     }
 
@@ -87,8 +88,8 @@ class OidfEntityIdExternalIdentifierResolutionServiceE2eTest {
 
     @Test
     fun testServiceIsRegisteredInMultiExternalIdentifierService() {
-        val multiComponent = session.component as com.sphereon.crypto.resolution.extern.MultiExternalIdentifierResolutionServiceImpl.Component
-        assertNotNull(multiComponent, "MultiExternalIdentifierResolutionServiceImpl.Component should be available")
+        val multiGraph = session.graph as com.sphereon.crypto.resolution.extern.MultiExternalIdentifierService.Graph
+        assertNotNull(multiGraph.multiExternalIdentifierService, "MultiExternalIdentifierService should be available via DI")
     }
 
     // =========================================================================

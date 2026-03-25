@@ -17,15 +17,16 @@ import com.sphereon.openid.fed.services.MetadataService
 import com.sphereon.openid.fed.services.mappers.toMetadataResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // ==================== List Metadata Endpoint Implementation ====================
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListMetadataEndpointCommand>())
 class ListMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,
@@ -62,7 +63,7 @@ class ListMetadataEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateMetadataEndpointCommand>())
 class CreateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,
@@ -114,7 +115,7 @@ class CreateMetadataEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteMetadataEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataEndpointCommand>())
 class DeleteMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val metadataService: MetadataService,

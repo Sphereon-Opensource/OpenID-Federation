@@ -15,14 +15,15 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkType
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.openid.fed.services.mappers.toDTO
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 // CreateTrustMarkTypeCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = CreateTrustMarkTypeCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkTypeCommand>())
 class CreateTrustMarkTypeCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<CreateTrustMarkTypeArgs, TrustMarkType>(
@@ -56,7 +57,7 @@ class CreateTrustMarkTypeCommandImpl(
 // FindAllTrustMarkTypesByAccountCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindAllTrustMarkTypesByAccountCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindAllTrustMarkTypesByAccountCommand>())
 class FindAllTrustMarkTypesByAccountCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<FindAllTrustMarkTypesByAccountArgs, List<TrustMarkType>>(
@@ -81,7 +82,7 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
 // FindTrustMarkTypeByIdCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = FindTrustMarkTypeByIdCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<FindTrustMarkTypeByIdCommand>())
 class FindTrustMarkTypeByIdCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<FindTrustMarkTypeByIdArgs, TrustMarkType>(
@@ -101,7 +102,7 @@ class FindTrustMarkTypeByIdCommandImpl(
 // DeleteTrustMarkTypeCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteTrustMarkTypeCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkTypeCommand>())
 class DeleteTrustMarkTypeCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteTrustMarkTypeArgs, TrustMarkType>(
@@ -129,7 +130,7 @@ class DeleteTrustMarkTypeCommandImpl(
 // GetIssuersForTrustMarkTypeCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = GetIssuersForTrustMarkTypeCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetIssuersForTrustMarkTypeCommand>())
 class GetIssuersForTrustMarkTypeCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<GetIssuersForTrustMarkTypeArgs, Array<TrustMarkIssuer>>(
@@ -151,7 +152,7 @@ class GetIssuersForTrustMarkTypeCommandImpl(
 // AddIssuerToTrustMarkTypeCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = AddIssuerToTrustMarkTypeCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<AddIssuerToTrustMarkTypeCommand>())
 class AddIssuerToTrustMarkTypeCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<AddIssuerToTrustMarkTypeArgs, TrustMarkIssuer>(
@@ -184,7 +185,7 @@ class AddIssuerToTrustMarkTypeCommandImpl(
 // RemoveIssuerFromTrustMarkTypeCommand Implementation
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = RemoveIssuerFromTrustMarkTypeCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<RemoveIssuerFromTrustMarkTypeCommand>())
 class RemoveIssuerFromTrustMarkTypeCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<RemoveIssuerFromTrustMarkTypeArgs, TrustMarkIssuer>(

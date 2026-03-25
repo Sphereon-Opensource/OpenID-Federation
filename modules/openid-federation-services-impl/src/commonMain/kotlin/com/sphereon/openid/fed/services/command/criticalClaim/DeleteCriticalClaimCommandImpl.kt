@@ -11,9 +11,10 @@ import com.sphereon.openid.fed.core.error.CriticalClaimNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.persistence.Persistence
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 
 /**
@@ -22,7 +23,7 @@ import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = DeleteCriticalClaimCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<DeleteCriticalClaimCommand>())
 class DeleteCriticalClaimCommandImpl(
     execution: SessionExecution
 ) : TypedServiceCommandAdapter<DeleteCriticalClaimArgs, CritEntity>(

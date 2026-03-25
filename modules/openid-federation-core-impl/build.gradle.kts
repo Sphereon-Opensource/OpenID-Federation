@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(sphereonplug.plugins.com.google.devtools.ksp.com.google.devtools.ksp.gradle.plugin)
+    alias(libs.plugins.metro)
     id("maven-publish")
     alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
@@ -68,9 +68,6 @@ kotlin {
                 // Coroutines
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
 
-                // kotlin-inject runtime
-                implementation(sphereonlib.me.tatarka.inject.kotlin.inject.runtime.kmp)
-
                 // DateTime for cache TTL
                 implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
             }
@@ -116,21 +113,6 @@ kotlin {
                 implementation(kotlin("test"))
             }
         }
-    }
-}
-
-// KSP configuration for kotlin-inject
-dependencies {
-    add("kspCommonMainMetadata", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add("kspJvm", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add("kspJs", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-    add("kspWasmJs", sphereonlib.me.tatarka.inject.kotlin.inject.compiler.ksp)
-}
-
-// Configure KSP for all targets
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 

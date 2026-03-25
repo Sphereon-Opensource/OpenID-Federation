@@ -16,9 +16,10 @@ import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.SubordinateService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Filter parameters for the /list endpoint per OpenID Federation 1.1 spec.
@@ -34,7 +35,7 @@ private data class ListFilters(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListSubordinatesRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesRootEndpointCommand>())
 class ListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -70,7 +71,7 @@ class ListSubordinatesRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostListSubordinatesRootEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostListSubordinatesRootEndpointCommand>())
 class PostListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -107,7 +108,7 @@ class PostListSubordinatesRootEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = ListSubordinatesAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesAccountEndpointCommand>())
 class ListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -146,7 +147,7 @@ class ListSubordinatesAccountEndpointCommandImpl(
 
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = PostListSubordinatesAccountEndpointCommand::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostListSubordinatesAccountEndpointCommand>())
 class PostListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

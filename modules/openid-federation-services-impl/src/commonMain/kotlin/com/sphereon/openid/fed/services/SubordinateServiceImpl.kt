@@ -12,9 +12,10 @@ import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 import com.sphereon.openid.fed.services.command.subordinate.*
 import kotlinx.serialization.json.JsonElement
-import me.tatarka.inject.annotations.Inject
-import software.amazon.lastmile.kotlin.inject.anvil.ContributesBinding
-import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Implementation of SubordinateService that aggregates all subordinate-related commands.
@@ -24,7 +25,7 @@ import software.amazon.lastmile.kotlin.inject.anvil.SingleIn
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, boundType = SubordinateService::class)
+@ContributesBinding(SessionScope::class, binding = binding<SubordinateService>())
 class SubordinateServiceImpl(
     private val findSubordinatesByAccountCommand: FindSubordinatesByAccountCommand,
     private val findSubordinatesByAccountAsArrayCommand: FindSubordinatesByAccountAsArrayCommand,
