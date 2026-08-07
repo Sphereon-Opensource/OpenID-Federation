@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -24,7 +26,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteAccountCommand>())
 class DeleteAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteAccountArgs, Account>(
+) : TypedServiceCommandAdapter<DeleteAccountArgs, Account, FederationError>(
     commandId = DeleteAccountCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteAccountArgs>(),
@@ -37,7 +39,7 @@ class DeleteAccountCommandImpl(
     override suspend fun doExecute(
         args: DeleteAccountArgs,
         applyDuring: (DeleteAccountArgs) -> DeleteAccountArgs
-    ): IdkResult<Account, IdkError> {
+    ): IdkResult<Account, FederationError> {
         val request = applyDuring(args)
         val account = request.account
         logger.info("Starting account deletion process for username: ${account.username}")

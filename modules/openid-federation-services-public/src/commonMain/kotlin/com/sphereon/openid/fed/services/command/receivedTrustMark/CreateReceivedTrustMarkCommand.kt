@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -14,7 +16,7 @@ data class CreateReceivedTrustMarkArgs(
     val createRequest: CreateReceivedTrustMark
 )
 
-interface CreateReceivedTrustMarkCommand : ServiceCommand<CreateReceivedTrustMarkArgs, ReceivedTrustMark>, PublicApiCommand {
+interface CreateReceivedTrustMarkCommand : ServiceCommand<CreateReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.received-trust-mark.create"
 

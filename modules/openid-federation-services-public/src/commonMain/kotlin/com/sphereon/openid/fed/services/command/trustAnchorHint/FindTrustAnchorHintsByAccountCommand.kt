@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustAnchorHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -10,7 +12,7 @@ import com.sphereon.openid.fed.openapi.models.TrustAnchorHint
 
 data class FindTrustAnchorHintsByAccountArgs(val tenantId: String)
 
-interface FindTrustAnchorHintsByAccountCommand : ServiceCommand<FindTrustAnchorHintsByAccountArgs, List<TrustAnchorHint>>, PublicApiCommand {
+interface FindTrustAnchorHintsByAccountCommand : ServiceCommand<FindTrustAnchorHintsByAccountArgs, List<TrustAnchorHint>, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.trust-anchor-hint.find-by-account"
 

@@ -2,8 +2,10 @@ package com.sphereon.openid.fed.server.federation.ktor
 
 import com.sphereon.ktor.server.inject.KotlinInjectPlugin
 import com.sphereon.ktor.server.inject.installUniversalHttpAdapters
+import com.sphereon.ktor.server.inject.resolver.FixedTenantResolver
 import com.sphereon.openid.fed.common.exceptions.federation.FederationException
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
+import com.sphereon.core.api.conf.DefaultPrincipalMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.log.LogLevel
 import com.sphereon.core.api.log.LogOutputFormat
@@ -67,9 +69,12 @@ fun main() {
  * Configure the Ktor application for federation server.
  */
 fun Application.configureFederation(appGraph: FederationServerAppGraph, config: FederationServerConfig) {
-    // Install kotlin-inject plugin with AppGraph
+    // Install kotlin-inject plugin with AppGraph.
+    // Single-tenant federation deployment: fixed "default" tenant (IDK no longer
+    // allows header-based tenant resolution).
     install(KotlinInjectPlugin) {
         this.appGraph = appGraph
+        tenantResolver = FixedTenantResolver("default")
     }
     logger.info("KotlinInject plugin installed - DI enabled")
 
@@ -227,44 +232,35 @@ private fun Application.configurePlugins(config: FederationServerConfig) {
 }
 
 /**
- * Configure the default software KMS provider via property source.
- * This ensures a working KMS provider is available for key operations.
- * The configuration can be overridden by environment variables if needed.
+ * Configure the default software KMS provider via property sources.
  *
- * IMPORTANT: Properties must use the namespace prefix matching appId.profile
- * The namespace for federation server is: openid-federation-server.default
+ * Mirrors the IDK Ktor KMS tests: un-namespaced `kms.providers.*` keys on both
+ * app and principal maps (session KeyManagerService resolves from principal config).
  */
 private fun configureDefaultKmsProvider() {
-    // Check if KMS provider is already configured via environment variables
-    val envType = System.getenv("KMS_PROVIDERS_MEMORY_TYPE")
-    if (envType != null) {
-        println("KMS provider configuration detected in environment variables")
-        return
-    }
-
-    // The namespace must match the app component's appId and profile
-    // FederationServerAppGraph uses appId="openid-federation-server", profile="default"
     val namespace = "openid-federation-server.default"
 
-    println("Configuring default software KMS provider programmatically with namespace: $namespace")
-    DefaultAppMapPropertySource.addProperties(
-        mapOf(
-            // Software/memory KMS provider configuration with proper namespace prefix
-            "$namespace.kms.providers.memory.type" to "software",
-            "$namespace.kms.providers.memory.id" to "memory",
-            "$namespace.kms.providers.memory.enabled" to "true",
-            "$namespace.kms.providers.memory.order" to "100",
-            // Memory keystore with app-level scope for persistence across requests
-            "$namespace.kms.providers.memory.keystore.type" to "memory",
-            "$namespace.kms.providers.memory.keystore.id" to "oidf-memory-keystore",
-            "$namespace.kms.providers.memory.keystore.keyvisibility" to "private",
-            "$namespace.kms.providers.memory.keystore.scopebinding" to "app",
-            // Also register keystore at the standalone keystores path for KeyStoreConfigBinder
-            "$namespace.kms.keystores.oidf-memory-keystore.type" to "memory",
-            "$namespace.kms.keystores.oidf-memory-keystore.id" to "oidf-memory-keystore",
-            "$namespace.kms.keystores.oidf-memory-keystore.keyvisibility" to "private",
-            "$namespace.kms.keystores.oidf-memory-keystore.scopebinding" to "app"
-        )
+    val providerProps = mapOf(
+        "kms.providers.memory.type" to "software",
+        "kms.providers.memory.id" to "memory",
+        "kms.providers.memory.enabled" to "true",
+        "kms.providers.memory.order" to "100",
+        "kms.providers.memory.persistKeysDuringGeneration" to "true",
+        "kms.providers.memory.exposePrivateKeysDuringGeneration" to "true",
+        "kms.providers.memory.keyStore.type" to "memory",
+        "kms.providers.memory.keyStore.id" to "oidfmemorykeystore",
+        "kms.providers.memory.keyStore.keyVisibility" to "private",
+        "kms.providers.memory.keyStore.scopeBinding" to "app",
+        "kms.providers.memory.keyStore.overwriteAlias" to "true",
+        "kms.keystores.oidfmemorykeystore.type" to "memory",
+        "kms.keystores.oidfmemorykeystore.id" to "oidfmemorykeystore",
+        "kms.keystores.oidfmemorykeystore.keyVisibility" to "private",
+        "kms.keystores.oidfmemorykeystore.scopeBinding" to "app",
     )
+    val namespacedProps = providerProps.mapKeys { (k, _) -> "$namespace.$k" }
+
+    println("Configuring default software KMS provider (app + principal maps)")
+    DefaultAppMapPropertySource.addProperties(providerProps + namespacedProps)
+    DefaultPrincipalMapPropertySource.addProperties(providerProps)
     println("Default software KMS provider configured")
 }

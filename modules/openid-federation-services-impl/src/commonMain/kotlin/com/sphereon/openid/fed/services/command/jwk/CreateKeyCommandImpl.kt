@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -33,7 +35,7 @@ class CreateKeyCommandImpl(
     execution: SessionExecution,
     private val keyManagerService: KeyManagerService,
     private val getKeysCommand: GetKeysCommand
-) : TypedServiceCommandAdapter<CreateKeyCommandArgs, AccountJwk>(
+) : TypedServiceCommandAdapter<CreateKeyCommandArgs, AccountJwk, FederationError>(
     commandId = CreateKeyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateKeyCommandArgs>(),
@@ -46,7 +48,7 @@ class CreateKeyCommandImpl(
     override suspend fun doExecute(
         args: CreateKeyCommandArgs,
         applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
-    ): IdkResult<AccountJwk, IdkError> = withContext(Dispatchers.IO) {
+    ): IdkResult<AccountJwk, FederationError> = withContext(Dispatchers.IO) {
         val (tenantId, opts) = applyDuring(args)
 
         try {

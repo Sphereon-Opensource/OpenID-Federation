@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<CreateMetadataPolicyCommand>())
 class CreateMetadataPolicyCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateMetadataPolicyArgs, MetadataPolicy>(
+) : TypedServiceCommandAdapter<CreateMetadataPolicyArgs, MetadataPolicy, FederationError>(
     commandId = CreateMetadataPolicyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateMetadataPolicyArgs>(),
@@ -41,7 +43,7 @@ class CreateMetadataPolicyCommandImpl(
     override suspend fun doExecute(
         args: CreateMetadataPolicyArgs,
         applyDuring: (CreateMetadataPolicyArgs) -> CreateMetadataPolicyArgs
-    ): IdkResult<MetadataPolicy, IdkError> {
+    ): IdkResult<MetadataPolicy, FederationError> {
         val (tenantId, key, policy) = applyDuring(args)
 
         logger.info("Creating entity configuration metadata policy for account: ${tenantId}, key: $key")

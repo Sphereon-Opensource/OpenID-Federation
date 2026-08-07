@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 @ContributesBinding(SessionScope::class, binding = binding<DeleteCriticalClaimCommand>())
 class DeleteCriticalClaimCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteCriticalClaimArgs, CritEntity>(
+) : TypedServiceCommandAdapter<DeleteCriticalClaimArgs, CritEntity, FederationError>(
     commandId = DeleteCriticalClaimCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteCriticalClaimArgs>(),
@@ -39,7 +41,7 @@ class DeleteCriticalClaimCommandImpl(
     override suspend fun doExecute(
         args: DeleteCriticalClaimArgs,
         applyDuring: (DeleteCriticalClaimArgs) -> DeleteCriticalClaimArgs
-    ): IdkResult<CritEntity, IdkError> {
+    ): IdkResult<CritEntity, FederationError> {
         val (tenantId, id) = applyDuring(args)
 
         logger.info("Deleting critical claim ID: $id for account: ${tenantId}")

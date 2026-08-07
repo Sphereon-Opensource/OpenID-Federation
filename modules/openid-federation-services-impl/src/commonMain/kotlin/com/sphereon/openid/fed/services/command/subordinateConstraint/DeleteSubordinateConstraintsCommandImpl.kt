@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.subordinateConstraint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -25,7 +27,7 @@ import dev.zacsweers.metro.SingleIn
 class DeleteSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
     private val json: Json
-) : TypedServiceCommandAdapter<DeleteSubordinateConstraintsArgs, SubordinateConstraints>(
+) : TypedServiceCommandAdapter<DeleteSubordinateConstraintsArgs, SubordinateConstraints, FederationError>(
     commandId = DeleteSubordinateConstraintsCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteSubordinateConstraintsArgs>(),
@@ -38,7 +40,7 @@ class DeleteSubordinateConstraintsCommandImpl(
     override suspend fun doExecute(
         args: DeleteSubordinateConstraintsArgs,
         applyDuring: (DeleteSubordinateConstraintsArgs) -> DeleteSubordinateConstraintsArgs
-    ): IdkResult<SubordinateConstraints, IdkError> {
+    ): IdkResult<SubordinateConstraints, FederationError> {
         val (tenantId, subordinateId) = applyDuring(args)
 
         logger.debug("Deleting constraints for subordinate: $subordinateId, account: $tenantId")

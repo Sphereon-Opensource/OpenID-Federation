@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<CreateAuthorityHintCommand>())
 class CreateAuthorityHintCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateAuthorityHintArgs, AuthorityHint>(
+) : TypedServiceCommandAdapter<CreateAuthorityHintArgs, AuthorityHint, FederationError>(
     commandId = CreateAuthorityHintCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateAuthorityHintArgs>(),
@@ -41,7 +43,7 @@ class CreateAuthorityHintCommandImpl(
     override suspend fun doExecute(
         args: CreateAuthorityHintArgs,
         applyDuring: (CreateAuthorityHintArgs) -> CreateAuthorityHintArgs
-    ): IdkResult<AuthorityHint, IdkError> {
+    ): IdkResult<AuthorityHint, FederationError> {
         val (tenantId, identifier) = applyDuring(args)
 
         logger.debug("Attempting to create authority hint for account: ${tenantId} with identifier: $identifier")

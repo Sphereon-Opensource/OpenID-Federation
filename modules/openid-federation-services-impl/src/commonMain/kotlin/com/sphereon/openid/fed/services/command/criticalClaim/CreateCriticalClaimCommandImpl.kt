@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -27,7 +29,7 @@ import com.sphereon.openid.fed.persistence.models.Crit as CritEntity
 @ContributesBinding(SessionScope::class, binding = binding<CreateCriticalClaimCommand>())
 class CreateCriticalClaimCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateCriticalClaimArgs, CritEntity>(
+) : TypedServiceCommandAdapter<CreateCriticalClaimArgs, CritEntity, FederationError>(
     commandId = CreateCriticalClaimCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateCriticalClaimArgs>(),
@@ -40,7 +42,7 @@ class CreateCriticalClaimCommandImpl(
     override suspend fun doExecute(
         args: CreateCriticalClaimArgs,
         applyDuring: (CreateCriticalClaimArgs) -> CreateCriticalClaimArgs
-    ): IdkResult<CritEntity, IdkError> {
+    ): IdkResult<CritEntity, FederationError> {
         val (tenantId, claim) = applyDuring(args)
 
         logger.info("Creating critical claim for account: ${tenantId}, claim: $claim")

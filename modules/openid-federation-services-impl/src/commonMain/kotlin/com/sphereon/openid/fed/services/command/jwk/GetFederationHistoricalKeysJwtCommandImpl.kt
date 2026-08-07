@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -39,7 +41,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
     private val getKeysCommand: GetKeysCommand,
     private val tenantContextResolver: TenantContextResolver,
     private val jwtService: JwtService
-) : TypedServiceCommandAdapter<GetFederationHistoricalKeysJwtArgs, String>(
+) : TypedServiceCommandAdapter<GetFederationHistoricalKeysJwtArgs, String, FederationError>(
     commandId = GetFederationHistoricalKeysJwtCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetFederationHistoricalKeysJwtArgs>(),
@@ -56,7 +58,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
     override suspend fun doExecute(
         args: GetFederationHistoricalKeysJwtArgs,
         applyDuring: (GetFederationHistoricalKeysJwtArgs) -> GetFederationHistoricalKeysJwtArgs
-    ): IdkResult<String, IdkError> = withContext(Dispatchers.IO) {
+    ): IdkResult<String, FederationError> = withContext(Dispatchers.IO) {
         val (tenantId) = applyDuring(args)
 
         try {
@@ -84,7 +86,7 @@ class GetFederationHistoricalKeysJwtCommandImpl(
 
             val key = keys.first()
             val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg ?: "RS256")
-            val jwtResult = jwtService.signPayload(federationKeysResponse, header, key.kid, key.kmsKeyRef, key.kms).toIdkErrorResult()
+            val jwtResult = jwtService.signPayload(federationKeysResponse, header, key.kid, key.kmsKeyRef, key.kms)
 
             if (jwtResult.isErr) {
                 logger.error("Failed to sign federation historical keys JWT")

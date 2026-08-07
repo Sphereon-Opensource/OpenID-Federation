@@ -3,10 +3,10 @@ package com.sphereon.openid.fed.services
 import com.sphereon.crypto.core.KeyInfo
 import com.sphereon.crypto.core.KeyType
 import com.sphereon.crypto.core.KeyVisibility
-import com.sphereon.crypto.jose.jws.CreateJwsArgs
-import com.sphereon.crypto.jose.jws.CreateJwsOpts
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.crypto.jose.jws.JwsIdentifierMode
+import com.sphereon.crypto.jose.jws.command.CreateJwsArgs
+import com.sphereon.crypto.jose.jws.command.CreateJwsOpts
 import com.sphereon.crypto.resolution.managed.ManagedOptsAlias
 import com.sphereon.crypto.resolution.managed.ManagedOptsKeyInfo
 import com.sphereon.crypto.resolution.managed.ManagedOptsKid

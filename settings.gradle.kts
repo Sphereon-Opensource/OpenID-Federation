@@ -3,6 +3,12 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
+        // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+            }
+        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -32,13 +38,6 @@ pluginManagement {
             url = uri("https://jitpack.io")
         }
         gradlePluginPortal()
-
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-
-            }
-        }
     }
 }
 
@@ -63,6 +62,12 @@ dependencyResolutionManagement {
         }
     }
     repositories {
+        // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+            }
+        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -93,14 +98,6 @@ dependencyResolutionManagement {
             url = uri("https://jitpack.io")
         }
         gradlePluginPortal()
-
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-
-            }
-        }
-
     }
 }
 

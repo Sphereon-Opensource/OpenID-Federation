@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.http.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Ok
 import com.sphereon.core.api.context.SessionExecution
@@ -7,8 +9,8 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.errorResponse
-import com.sphereon.core.api.http.jsonResponse
+import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.core.api.http.response.jsonResponse
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.account.AccountService
 import com.sphereon.openid.fed.account.mappers.toAccountsResponse

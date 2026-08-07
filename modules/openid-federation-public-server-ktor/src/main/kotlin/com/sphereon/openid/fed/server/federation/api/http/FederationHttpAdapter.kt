@@ -8,9 +8,7 @@ import com.sphereon.core.api.http.describe.HttpAdapterMount
 import com.sphereon.core.api.http.describe.OpenApiHints
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.server.federation.api.http.command.*
-import dev.zacsweers.metro.Named
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.ContributesTo
@@ -25,9 +23,12 @@ import dev.zacsweers.metro.SingleIn
  * All endpoints are mounted at the root path (no base path prefix).
  * Endpoints are available both at root level (for default account) and
  * under /{username} for account-specific access.
+ *
+ * Note: do not put `@Named` on this class. `DefaultHttpAdapterDispatcher` injects
+ * an unqualified `Set<HttpAdapter>`; a class-level `@Named` would put this adapter
+ * into a named set and leave dispatch with only `NoOpHttpAdapter`.
  */
 @Inject
-@Named(FederationHttpAdapter.ID)
 @SingleIn(SessionScope::class)
 @ContributesIntoSet(SessionScope::class, binding = binding<HttpAdapter>())
 class FederationHttpAdapter(
@@ -77,7 +78,8 @@ class FederationHttpAdapter(
     )
 ) {
     companion object {
-        const val ID = "FEDERATION_SERVER"
+        /** CommandId-compatible adapter id (module.service.command). */
+        const val ID = "fed.server.http"
     }
 
     override val endpointCommands: List<HttpEndpointCommand> = listOf(

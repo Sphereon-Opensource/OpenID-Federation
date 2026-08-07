@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -14,7 +16,7 @@ data class CreateKeyCommandArgs(
     val opts: CreateKeyArgs = CreateKeyArgs()
 )
 
-interface CreateKeyCommand : ServiceCommand<CreateKeyCommandArgs, AccountJwk>, PublicApiCommand {
+interface CreateKeyCommand : ServiceCommand<CreateKeyCommandArgs, AccountJwk, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.jwk.create-key"
 

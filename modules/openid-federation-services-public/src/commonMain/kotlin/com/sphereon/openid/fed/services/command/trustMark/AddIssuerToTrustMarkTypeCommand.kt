@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -10,7 +12,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 
 data class AddIssuerToTrustMarkTypeArgs(val tenantId: String, val trustMarkTypeId: String, val issuerIdentifier: String)
 
-interface AddIssuerToTrustMarkTypeCommand : ServiceCommand<AddIssuerToTrustMarkTypeArgs, TrustMarkIssuer>, PublicApiCommand {
+interface AddIssuerToTrustMarkTypeCommand : ServiceCommand<AddIssuerToTrustMarkTypeArgs, TrustMarkIssuer, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.trust-mark.add-issuer-to-type"
 

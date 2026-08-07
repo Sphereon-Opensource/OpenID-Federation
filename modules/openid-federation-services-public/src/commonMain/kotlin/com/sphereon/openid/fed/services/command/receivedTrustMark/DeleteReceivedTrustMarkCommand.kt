@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -13,7 +15,7 @@ data class DeleteReceivedTrustMarkArgs(
     val trustMarkId: String
 )
 
-interface DeleteReceivedTrustMarkCommand : ServiceCommand<DeleteReceivedTrustMarkArgs, ReceivedTrustMark>, PublicApiCommand {
+interface DeleteReceivedTrustMarkCommand : ServiceCommand<DeleteReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.received-trust-mark.delete"
 

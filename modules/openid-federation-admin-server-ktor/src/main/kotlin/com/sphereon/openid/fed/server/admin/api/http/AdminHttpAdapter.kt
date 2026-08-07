@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.server.admin.api.http
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.http.HttpAdapter
 import com.sphereon.core.api.http.command.HttpEndpointCommand
@@ -12,9 +14,7 @@ import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
 import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
 import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
 import com.sphereon.openid.fed.server.admin.api.http.command.*
-import dev.zacsweers.metro.Named
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.ContributesTo
@@ -28,9 +28,12 @@ import dev.zacsweers.metro.SingleIn
  *
  * All endpoints are mounted at the root path (no base path prefix).
  * The server configuration can add a server prefix like "/api" if needed.
+ *
+ * Note: do not put `@Named` on this class. `DefaultHttpAdapterDispatcher` injects
+ * an unqualified `Set<HttpAdapter>`; a class-level `@Named` would put this adapter
+ * into a named set and leave dispatch with only `NoOpHttpAdapter`.
  */
 @Inject
-@Named(AdminHttpAdapter.ID)
 @SingleIn(SessionScope::class)
 @ContributesIntoSet(SessionScope::class, binding = binding<HttpAdapter>())
 class AdminHttpAdapter(
@@ -112,7 +115,8 @@ class AdminHttpAdapter(
     )
 ) {
     companion object {
-        const val ID = "FEDERATION_ADMIN"
+        /** CommandId-compatible adapter id (module.service.command). */
+        const val ID = "fed.admin.http"
     }
 
     /**
@@ -120,7 +124,7 @@ class AdminHttpAdapter(
      * Currently empty as endpoint commands handle HTTP dispatch.
      * Will be populated when binary transport support is enabled.
      */
-    override val serviceCommands: List<ServiceCommand<*, *>> = emptyList()
+    override val serviceCommands: List<ServiceCommand<*, *, FederationError>> = emptyList()
 
     override val endpointCommands: List<HttpEndpointCommand> = listOf(
         // Account endpoints

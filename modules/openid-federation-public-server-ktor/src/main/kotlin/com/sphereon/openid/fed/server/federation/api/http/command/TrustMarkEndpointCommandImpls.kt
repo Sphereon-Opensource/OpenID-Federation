@@ -7,8 +7,8 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.errorResponse
-import com.sphereon.core.api.http.jsonResponse
+import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.core.api.http.response.jsonResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver

@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -27,7 +29,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteReceivedTrustMarkCommand>())
 class DeleteReceivedTrustMarkCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteReceivedTrustMarkArgs, ReceivedTrustMark>(
+) : TypedServiceCommandAdapter<DeleteReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>(
     commandId = DeleteReceivedTrustMarkCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteReceivedTrustMarkArgs>(),
@@ -40,7 +42,7 @@ class DeleteReceivedTrustMarkCommandImpl(
     override suspend fun doExecute(
         args: DeleteReceivedTrustMarkArgs,
         applyDuring: (DeleteReceivedTrustMarkArgs) -> DeleteReceivedTrustMarkArgs
-    ): IdkResult<ReceivedTrustMark, IdkError> {
+    ): IdkResult<ReceivedTrustMark, FederationError> {
         val (tenantId, trustMarkId) = applyDuring(args)
         val username = tenantId
 

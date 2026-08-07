@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -22,7 +24,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<GetAllAccountsCommand>())
 class GetAllAccountsCommandImpl(
     execution: SessionExecution
-) : UnitInputServiceCommandAdapter<List<Account>>(
+) : UnitInputServiceCommandAdapter<List<Account>, FederationError>(
     commandId = GetAllAccountsCommand.COMMAND_ID,
     execution = execution,
     outputTypeToken = typeToken<List<Account>>()
@@ -34,7 +36,7 @@ class GetAllAccountsCommandImpl(
     override suspend fun doExecute(
         args: Unit,
         applyDuring: (Unit) -> Unit
-    ): IdkResult<List<Account>, IdkError> {
+    ): IdkResult<List<Account>, FederationError> {
         applyDuring(args)
         logger.debug("Retrieving all accounts")
         return try {

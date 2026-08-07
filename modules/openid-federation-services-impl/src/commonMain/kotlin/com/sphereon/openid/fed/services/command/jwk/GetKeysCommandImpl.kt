@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<GetKeysCommand>())
 class GetKeysCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetKeysArgs, Array<AccountJwk>>(
+) : TypedServiceCommandAdapter<GetKeysArgs, Array<AccountJwk>, FederationError>(
     commandId = GetKeysCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetKeysArgs>(),
@@ -39,7 +41,7 @@ class GetKeysCommandImpl(
     override suspend fun doExecute(
         args: GetKeysArgs,
         applyDuring: (GetKeysArgs) -> GetKeysArgs
-    ): IdkResult<Array<AccountJwk>, IdkError> {
+    ): IdkResult<Array<AccountJwk>, FederationError> {
         val (tenantId, includeRevoked) = applyDuring(args)
 
         logger.debug("Retrieving keys for account: ${tenantId}")

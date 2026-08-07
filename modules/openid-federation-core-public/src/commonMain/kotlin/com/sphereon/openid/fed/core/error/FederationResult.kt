@@ -1,4 +1,6 @@
-package com.sphereon.openid.fed.core.error
+package com.sphereon.openid.fed.core.error
+
+import kotlin.jvm.JvmName
 
 import com.sphereon.core.api.Err
 import com.sphereon.core.api.IdkResult
@@ -176,7 +178,7 @@ suspend inline fun <T, R> FederationResult<T>.andThenSuspend(
  * Convert a FederationError to an IdkError.
  *
  * Since IdkError is a class and FederationError is a sealed interface (both implementing IdkErrorType),
- * this conversion bridges the two for use with ServiceCommand<TInput, TOutput> which is fixed to IdkError.
+ * this conversion bridges the two for use with ServiceCommand<TInput, TOutput, FederationError> which is fixed to IdkError.
  */
 fun FederationError.toIdkError(): IdkError = IdkError(
     code = code,
@@ -190,19 +192,26 @@ fun FederationError.toIdkError(): IdkError = IdkError(
 /**
  * Convert an IdkResult<T, FederationError> to an IdkResult<T, IdkError>.
  *
- * Used when service command implementations need to return IdkResult<T, IdkError>
- * (as required by ServiceCommand/TypedServiceCommandAdapter) but internally work with FederationError.
+ * Used at HTTP adapter boundaries where endpoint commands are fixed to IdkError.
  */
 fun <T> IdkResult<T, FederationError>.toIdkErrorResult(): IdkResult<T, IdkError> =
     this.mapError { it.toIdkError() }
 
 /**
+ * Service commands now return IdkResult with FederationError directly.
+ * FederationResult is that same shape, so this is identity.
+ */
+@Suppress("NOTHING_TO_INLINE")
+inline fun <T> IdkResult<T, FederationError>.toFederationResult(): FederationResult<T> = this
+
+/**
  * Convert an IdkResult<T, IdkError> back to a FederationResult<T>.
  *
- * Used by ServiceFacade implementations to provide FederationResult<T> from ServiceCommand results.
+ * Used when wrapping IDK operations that still return IdkError.
  * If the IdkError was originally a FederationError (preserved in meta), extracts the httpStatus.
  * Otherwise wraps in a generic ServerError.
  */
+@JvmName("idkErrorToFederationResult")
 fun <T> IdkResult<T, IdkError>.toFederationResult(): FederationResult<T> =
     this.mapError { idkError ->
         val httpStatus = idkError.meta["httpStatus"] as? Int
@@ -217,10 +226,10 @@ fun <T> IdkResult<T, IdkError>.toFederationResult(): FederationResult<T> =
     }
 
 /**
- * Create an IdkResult.err with a FederationError automatically converted to IdkError.
+ * Create an error result for federation service commands.
  */
-fun <T> federationErr(error: FederationError): IdkResult<T, IdkError> =
-    IdkResult.err(error.toIdkError())
+fun <T> federationErr(error: FederationError): IdkResult<T, FederationError> =
+    IdkResult.err(error)
 
 /**
  * Exception wrapper for FederationError.

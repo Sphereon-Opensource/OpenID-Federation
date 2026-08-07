@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.service.ServiceCommand
 
 
@@ -32,7 +34,7 @@ data class GetSignedResolveResponseJwtArgs(
     }
 }
 
-interface GetSignedResolveResponseJwtCommand : ServiceCommand<GetSignedResolveResponseJwtArgs, String> {
+interface GetSignedResolveResponseJwtCommand : ServiceCommand<GetSignedResolveResponseJwtArgs, String, FederationError> {
     companion object {
         const val COMMAND_ID = "fed.resolution.get-signed-resolve-response-jwt"
     }

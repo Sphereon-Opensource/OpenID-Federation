@@ -23,7 +23,10 @@ class FederationClientJsTest {
             version = "0.25.0"
         )
         val context = app.userContextManager.getAnonymous()
-        val session = context.sessionContextManager.createOrGetFromId("test-session")
+        val session = context.sessionContextManager.createOrGetFromId(
+            sessionId = "test-session",
+            principalType = com.sphereon.di.context.PrincipalType.ANONYMOUS,
+        )
         client = session.asFederationClientGraph().federationClient
     }
 

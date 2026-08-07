@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteAuthorityHintCommand>())
 class DeleteAuthorityHintCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteAuthorityHintArgs, AuthorityHint>(
+) : TypedServiceCommandAdapter<DeleteAuthorityHintArgs, AuthorityHint, FederationError>(
     commandId = DeleteAuthorityHintCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteAuthorityHintArgs>(),
@@ -41,7 +43,7 @@ class DeleteAuthorityHintCommandImpl(
     override suspend fun doExecute(
         args: DeleteAuthorityHintArgs,
         applyDuring: (DeleteAuthorityHintArgs) -> DeleteAuthorityHintArgs
-    ): IdkResult<AuthorityHint, IdkError> {
+    ): IdkResult<AuthorityHint, FederationError> {
         val (tenantId, authorityHintId) = applyDuring(args)
 
         logger.debug("Attempting to delete authority hint with id: $authorityHintId for account: ${tenantId}")

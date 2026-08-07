@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -15,7 +17,7 @@ data class CreateTrustMarkArgs(
     val currentTimeMillis: Long = System.currentTimeMillis()
 )
 
-interface CreateTrustMarkCommand : ServiceCommand<CreateTrustMarkArgs, CreateTrustMarkResult>, PublicApiCommand {
+interface CreateTrustMarkCommand : ServiceCommand<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.trust-mark.create"
 

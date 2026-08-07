@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.subordinateConstraint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -25,7 +27,7 @@ import dev.zacsweers.metro.SingleIn
 class GetSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
     private val json: Json
-) : TypedServiceCommandAdapter<GetSubordinateConstraintsArgs, SubordinateConstraints>(
+) : TypedServiceCommandAdapter<GetSubordinateConstraintsArgs, SubordinateConstraints, FederationError>(
     commandId = GetSubordinateConstraintsCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetSubordinateConstraintsArgs>(),
@@ -38,7 +40,7 @@ class GetSubordinateConstraintsCommandImpl(
     override suspend fun doExecute(
         args: GetSubordinateConstraintsArgs,
         applyDuring: (GetSubordinateConstraintsArgs) -> GetSubordinateConstraintsArgs
-    ): IdkResult<SubordinateConstraints, IdkError> {
+    ): IdkResult<SubordinateConstraints, FederationError> {
         val (tenantId, subordinateId) = applyDuring(args)
 
         logger.debug("Getting constraints for subordinate: $subordinateId, account: $tenantId")

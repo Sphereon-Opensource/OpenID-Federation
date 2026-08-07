@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.receivedTrustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<ListReceivedTrustMarksCommand>())
 class ListReceivedTrustMarksCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<ListReceivedTrustMarksArgs, Array<ReceivedTrustMark>>(
+) : TypedServiceCommandAdapter<ListReceivedTrustMarksArgs, Array<ReceivedTrustMark>, FederationError>(
     commandId = ListReceivedTrustMarksCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<ListReceivedTrustMarksArgs>(),
@@ -39,7 +41,7 @@ class ListReceivedTrustMarksCommandImpl(
     override suspend fun doExecute(
         args: ListReceivedTrustMarksArgs,
         applyDuring: (ListReceivedTrustMarksArgs) -> ListReceivedTrustMarksArgs
-    ): IdkResult<Array<ReceivedTrustMark>, IdkError> {
+    ): IdkResult<Array<ReceivedTrustMark>, FederationError> {
         val (tenantId) = applyDuring(args)
         val username = tenantId
 

@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -10,7 +12,7 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkType
 
 data class FindTrustMarkTypeByIdArgs(val tenantId: String, val id: String)
 
-interface FindTrustMarkTypeByIdCommand : ServiceCommand<FindTrustMarkTypeByIdArgs, TrustMarkType>, PublicApiCommand {
+interface FindTrustMarkTypeByIdCommand : ServiceCommand<FindTrustMarkTypeByIdArgs, TrustMarkType, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.trust-mark.find-type-by-id"
 

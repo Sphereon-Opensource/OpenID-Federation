@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -33,7 +35,7 @@ class GetSignedResolveResponseJwtCommandImpl(
     private val resolveEntityCommand: ResolveEntityCommand,
     private val jwkService: JwkService,
     private val jwtService: JwtService
-) : TypedServiceCommandAdapter<GetSignedResolveResponseJwtArgs, String>(
+) : TypedServiceCommandAdapter<GetSignedResolveResponseJwtArgs, String, FederationError>(
     commandId = GetSignedResolveResponseJwtCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetSignedResolveResponseJwtArgs>(),
@@ -45,7 +47,7 @@ class GetSignedResolveResponseJwtCommandImpl(
     override suspend fun doExecute(
         args: GetSignedResolveResponseJwtArgs,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
-    ): IdkResult<String, IdkError> {
+    ): IdkResult<String, FederationError> {
         val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Getting signed resolve response JWT for subject: $sub")
@@ -60,7 +62,7 @@ class GetSignedResolveResponseJwtCommandImpl(
                 logger.debug("Successfully built resolve response")
 
                 try {
-                    val keysResult = jwkService.getKeys(tenantId, includeRevoked = false).toIdkErrorResult()
+                    val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
                     if (keysResult.isErr) {
                         return keysResult.error.asErrorResult()
                     }
@@ -80,7 +82,7 @@ class GetSignedResolveResponseJwtCommandImpl(
                         typ = "application/resolve-response+jwt"
                     )
 
-                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms).toIdkErrorResult()
+                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
                 } catch (e: Exception) {
                     logger.error("Failed to sign resolve response JWT", e)
                     federationErr(ServerError("Failed to sign resolve response", e.message, e))

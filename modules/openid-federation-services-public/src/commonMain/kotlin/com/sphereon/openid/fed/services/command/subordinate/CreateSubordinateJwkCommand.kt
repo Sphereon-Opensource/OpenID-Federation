@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -11,7 +13,7 @@ import com.sphereon.openid.fed.openapi.models.SubordinateJwk
 
 data class CreateSubordinateJwkArgs(val tenantId: String, val id: String, val jwk: Jwk)
 
-interface CreateSubordinateJwkCommand : ServiceCommand<CreateSubordinateJwkArgs, SubordinateJwk>, PublicApiCommand {
+interface CreateSubordinateJwkCommand : ServiceCommand<CreateSubordinateJwkArgs, SubordinateJwk, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.subordinate.create-jwk"
 

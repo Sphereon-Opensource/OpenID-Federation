@@ -9,19 +9,13 @@ package com.sphereon.openid.fed.trust
 import com.sphereon.core.api.IdkOkResult
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Ok
-import com.sphereon.core.api.Err
+import com.sphereon.core.api.cache.CacheBackend
+import com.sphereon.core.api.cache.CacheManager
 import com.sphereon.core.api.cache.CacheRequirements
-import com.sphereon.core.api.cache.CacheService
+import com.sphereon.core.api.cache.CacheSerializer
 import com.sphereon.core.api.cache.CacheStatistics
-import com.sphereon.core.api.cache.TypedCacheService
-import com.sphereon.core.api.cache.CacheGetArgs
-import com.sphereon.core.api.cache.CacheGetResult
-import com.sphereon.core.api.cache.CachePutArgs
-import com.sphereon.core.api.cache.CachePutResult
-import com.sphereon.core.api.cache.CacheRemoveArgs
-import com.sphereon.core.api.cache.CacheRemoveResult
-import com.sphereon.core.api.cache.CacheInvalidateArgs
-import com.sphereon.core.api.cache.CacheInvalidateResult
+import com.sphereon.core.api.cache.ScopedCache
+import com.sphereon.core.api.cache.ScopedKey
 import com.sphereon.core.api.conf.AppConfigService
 import com.sphereon.core.api.conf.ConfigLevel
 import com.sphereon.core.api.conf.ConfigService
@@ -30,7 +24,6 @@ import com.sphereon.core.api.conf.TenantConfigService
 import com.sphereon.core.api.context.ContextConfig
 import com.sphereon.core.api.context.IdkScope
 import com.sphereon.core.api.context.SessionExecution
-import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.log.AsyncLogService
 import com.sphereon.core.api.log.LogMessage
 import com.sphereon.core.api.log.LoggerConfig
@@ -40,18 +33,14 @@ import com.sphereon.di.context.NoOpSessionContext
 import com.sphereon.di.context.createAnonymousSessionContext
 import com.sphereon.di.session.SessionContext
 import com.sphereon.di.session.SessionContextManager
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationArgs
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.trust.core.model.TrustAnchor
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
-import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommandService
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
-import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommandService
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkArgs
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
-import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommandService
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
@@ -334,8 +323,8 @@ class OidfTrustValidationServiceTest {
             verifyTrustMarkCommand = trustMarkCmd,
             getEntityConfigurationCommand = getEntityConfigCmd,
             trustConfigProvider = configProvider,
-            cacheService = NoOpCacheService(),
-            execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test")),
+            cacheManager = NoOpCacheManager(),
+            execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test", correlationId = "oidfed-test")),
             entityInfoExtractor = OidfEntityInfoExtractor(getEntityConfigCmd)
         )
     }
@@ -343,39 +332,64 @@ class OidfTrustValidationServiceTest {
     // -- Test infrastructure --
 
     /**
-     * No-op CacheService for testing — passes through without storing.
-     * Matches the published CacheService API from IDK 0.25.0-SNAPSHOT.
+     * No-op CacheManager for testing — creates in-memory no-store caches.
+     * Matches the published CacheManager API from IDK 0.25.0-SNAPSHOT.
      */
-    private class NoOpCacheService : CacheService {
-        override suspend fun get(args: CacheGetArgs) = Ok(CacheGetResult.miss(backend = "noop"))
-        override suspend fun put(args: CachePutArgs) = Ok(CachePutResult(stored = false, toBackend = "noop"))
-        override suspend fun remove(args: CacheRemoveArgs) = Ok(CacheRemoveResult(removed = false, fromBackend = "noop"))
-        override suspend fun invalidate(args: CacheInvalidateArgs) = Ok(CacheInvalidateResult(entriesRemoved = 0L, namespacesAffected = emptyList()))
-        override suspend fun invalidateTenant(tenantId: String) = Ok(CacheInvalidateResult(entriesRemoved = 0L, namespacesAffected = emptyList()))
-        override suspend fun invalidatePrincipal(tenantId: String, principalId: String) = Ok(CacheInvalidateResult(entriesRemoved = 0L, namespacesAffected = emptyList()))
-        override fun <K : Any, V : Any> getCache(requirements: CacheRequirements): TypedCacheService<K, V> = NoOpTypedCache()
-        override fun <V : Any> getStringCache(requirements: CacheRequirements): TypedCacheService<String, V> = NoOpTypedCache()
-        override fun stats(): Map<String, CacheStatistics> = emptyMap()
+    private class NoOpCacheManager : CacheManager {
+        override fun registerBackend(backend: CacheBackend) = Unit
+        override fun getBackends(): List<CacheBackend> = emptyList()
+        override fun getBackend(id: String): CacheBackend? = null
+        override fun hasDistributedBackend(): Boolean = false
+        override fun hasLocalBackend(): Boolean = false
+        override fun registerNamespace(requirements: CacheRequirements) = Unit
+        override fun getRequirements(namespace: String): CacheRequirements? = null
+        override fun getNamespaces(): Set<String> = emptySet()
+        override fun <K : Any, V : Any> createCache(
+            requirements: CacheRequirements,
+            keySerializer: CacheSerializer<K>,
+            valueSerializer: CacheSerializer<V>,
+        ): ScopedCache<K, V> = NoOpScopedCache(requirements.namespace)
+
+        override fun <K : Any, V : Any> getCache(namespace: String): ScopedCache<K, V>? = null
+        override fun getAllCaches(): List<ScopedCache<*, *>> = emptyList()
+        override fun aggregateStats(): Map<String, CacheStatistics> = emptyMap()
+        override suspend fun invalidateTenant(tenantId: String) = Unit
+        override suspend fun invalidatePrincipal(tenantId: String, principalId: String) = Unit
+        override suspend fun clearAll() = Unit
         override suspend fun isHealthy(): Boolean = true
     }
 
-    private class NoOpTypedCache<K : Any, V : Any> : TypedCacheService<K, V> {
-        override val namespace: String get() = "noop"
-        override suspend fun getApp(key: K): IdkResult<V?, IdkError> = Ok(null)
-        override suspend fun putApp(key: K, value: V, ttl: Duration?): IdkResult<Unit, IdkError> = Ok(Unit)
-        override suspend fun removeApp(key: K): IdkResult<Boolean, IdkError> = Ok(false)
-        override suspend fun getOrPutApp(key: K, ttl: Duration?, compute: suspend () -> V): IdkResult<V, IdkError> = Ok(compute())
-        override suspend fun getTenant(tenantId: String, key: K): IdkResult<V?, IdkError> = Ok(null)
-        override suspend fun putTenant(tenantId: String, key: K, value: V, ttl: Duration?): IdkResult<Unit, IdkError> = Ok(Unit)
-        override suspend fun removeTenant(tenantId: String, key: K): IdkResult<Boolean, IdkError> = Ok(false)
-        override suspend fun getOrPutTenant(tenantId: String, key: K, ttl: Duration?, compute: suspend () -> V): IdkResult<V, IdkError> = Ok(compute())
-        override suspend fun getPrincipal(tenantId: String, principalId: String, key: K): IdkResult<V?, IdkError> = Ok(null)
-        override suspend fun putPrincipal(tenantId: String, principalId: String, key: K, value: V, ttl: Duration?): IdkResult<Unit, IdkError> = Ok(Unit)
-        override suspend fun removePrincipal(tenantId: String, principalId: String, key: K): IdkResult<Boolean, IdkError> = Ok(false)
-        override suspend fun getOrPutPrincipal(tenantId: String, principalId: String, key: K, ttl: Duration?, compute: suspend () -> V): IdkResult<V, IdkError> = Ok(compute())
-        override suspend fun invalidateTenant(tenantId: String): IdkResult<Long, IdkError> = Ok(0L)
-        override suspend fun invalidatePrincipal(tenantId: String, principalId: String): IdkResult<Long, IdkError> = Ok(0L)
+    private class NoOpScopedCache<K : Any, V : Any>(
+        override val namespace: String
+    ) : ScopedCache<K, V> {
+        override val backendId: String = "noop"
+        override suspend fun getApp(key: K): V? = null
+        override suspend fun putApp(key: K, value: V, ttl: Duration?) = Unit
+        override suspend fun removeApp(key: K): Boolean = false
+        override suspend fun containsApp(key: K): Boolean = false
+        override suspend fun getTenant(tenantId: String, key: K): V? = null
+        override suspend fun putTenant(tenantId: String, key: K, value: V, ttl: Duration?) = Unit
+        override suspend fun removeTenant(tenantId: String, key: K): Boolean = false
+        override suspend fun containsTenant(tenantId: String, key: K): Boolean = false
+        override suspend fun getPrincipal(tenantId: String, principalId: String, key: K): V? = null
+        override suspend fun putPrincipal(tenantId: String, principalId: String, key: K, value: V, ttl: Duration?) = Unit
+        override suspend fun removePrincipal(tenantId: String, principalId: String, key: K): Boolean = false
+        override suspend fun containsPrincipal(tenantId: String, principalId: String, key: K): Boolean = false
+        override suspend fun invalidateApp() = Unit
+        override suspend fun invalidateTenant(tenantId: String) = Unit
+        override suspend fun invalidatePrincipal(tenantId: String, principalId: String) = Unit
+        override suspend fun invalidateByKeyPattern(pattern: String) = Unit
+        override suspend fun get(key: ScopedKey<K>): V? = null
+        override suspend fun put(key: ScopedKey<K>, value: V, ttl: Duration?) = Unit
+        override suspend fun getOrPut(key: ScopedKey<K>, ttl: Duration?, compute: suspend () -> V): V = compute()
+        override suspend fun remove(key: ScopedKey<K>): Boolean = false
+        override suspend fun contains(key: ScopedKey<K>): Boolean = false
+        override suspend fun clear() = Unit
+        override suspend fun size(): Long = 0
         override fun stats(): CacheStatistics = CacheStatistics()
+        override suspend fun getMany(keys: Collection<ScopedKey<K>>): Map<ScopedKey<K>, V> = emptyMap()
+        override suspend fun putMany(entries: Map<ScopedKey<K>, V>, ttl: Duration?) = Unit
+        override suspend fun removeMany(keys: Collection<ScopedKey<K>>): Int = 0
     }
 
     private class TestSessionExecution(

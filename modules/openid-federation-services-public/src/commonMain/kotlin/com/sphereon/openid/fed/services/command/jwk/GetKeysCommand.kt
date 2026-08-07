@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -13,7 +15,7 @@ data class GetKeysArgs(
     val includeRevoked: Boolean = false
 )
 
-interface GetKeysCommand : ServiceCommand<GetKeysArgs, Array<AccountJwk>>, PublicApiCommand {
+interface GetKeysCommand : ServiceCommand<GetKeysArgs, Array<AccountJwk>, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.jwk.get-keys"
 

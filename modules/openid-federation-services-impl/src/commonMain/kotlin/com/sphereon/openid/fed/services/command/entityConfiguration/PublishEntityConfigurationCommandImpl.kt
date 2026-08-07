@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.entityConfiguration
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -35,7 +37,7 @@ class PublishEntityConfigurationCommandImpl(
     private val findEntityConfigurationCommand: FindEntityConfigurationByAccountCommand,
     private val jwkService: JwkService,
     private val jwtService: JwtService
-) : TypedServiceCommandAdapter<PublishEntityConfigurationArgs, String>(
+) : TypedServiceCommandAdapter<PublishEntityConfigurationArgs, String, FederationError>(
     commandId = PublishEntityConfigurationCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<PublishEntityConfigurationArgs>(),
@@ -48,7 +50,7 @@ class PublishEntityConfigurationCommandImpl(
     override suspend fun doExecute(
         args: PublishEntityConfigurationArgs,
         applyDuring: (PublishEntityConfigurationArgs) -> PublishEntityConfigurationArgs
-    ): IdkResult<String, IdkError> {
+    ): IdkResult<String, FederationError> {
         val (tenantId, dryRun, kmsKeyRef, kid) = applyDuring(args)
 
         logger.info("Publishing entity configuration for account: $tenantId (dryRun: $dryRun)")
@@ -67,7 +69,7 @@ class PublishEntityConfigurationCommandImpl(
             includeRevoked = false,
             kmsKeyRef = kmsKeyRef,
             kid = kid
-        ).toIdkErrorResult()
+        )
 
         if (keysResult.isErr) {
             return keysResult.error.asErrorResult()
@@ -99,10 +101,10 @@ class PublishEntityConfigurationCommandImpl(
     private suspend fun createSignedJwt(
         statement: EntityConfigurationStatement,
         key: AccountJwk
-    ): IdkResult<String, IdkError> {
+    ): IdkResult<String, FederationError> {
         return try {
             val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms).toIdkErrorResult()
+            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms)
         } catch (e: Exception) {
             logger.error("Failed to create signed JWT", e)
             federationErr(ServerError("Failed to sign entity configuration", e.message, e))
@@ -113,7 +115,7 @@ class PublishEntityConfigurationCommandImpl(
         tenantId: String,
         statement: EntityConfigurationStatement,
         jwt: String
-    ): IdkResult<Unit, IdkError> {
+    ): IdkResult<Unit, FederationError> {
         return try {
             queries.entityConfigurationStatementQueries.create(
                 account_id = tenantId,

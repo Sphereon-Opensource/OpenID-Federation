@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -33,7 +35,7 @@ class ResolveEntityCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val federationClient: FederationClient
-) : TypedServiceCommandAdapter<ResolveEntityArgs, ResolveResponse>(
+) : TypedServiceCommandAdapter<ResolveEntityArgs, ResolveResponse, FederationError>(
     commandId = ResolveEntityCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<ResolveEntityArgs>(),
@@ -46,7 +48,7 @@ class ResolveEntityCommandImpl(
     override suspend fun doExecute(
         args: ResolveEntityArgs,
         applyDuring: (ResolveEntityArgs) -> ResolveEntityArgs
-    ): IdkResult<ResolveResponse, IdkError> {
+    ): IdkResult<ResolveResponse, FederationError> {
         val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
 
         logger.info("Resolving entity for subject: $sub, trust anchor: $trustAnchor")
@@ -115,7 +117,7 @@ class ResolveEntityCommandImpl(
         metadata: JsonObject,
         trustMarks: Array<TrustMark>,
         trustChain: Array<String>
-    ): IdkResult<ResolveResponse, IdkError> {
+    ): IdkResult<ResolveResponse, FederationError> {
         val iss = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
 

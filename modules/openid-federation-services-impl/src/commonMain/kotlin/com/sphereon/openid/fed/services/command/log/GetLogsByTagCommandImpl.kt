@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.log
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, binding = binding<GetLogsByTagCommand>())
 class GetLogsByTagCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetLogsByTagArgs, List<LogDTO>>(
+) : TypedServiceCommandAdapter<GetLogsByTagArgs, List<LogDTO>, FederationError>(
     commandId = GetLogsByTagCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetLogsByTagArgs>(),
@@ -39,7 +41,7 @@ class GetLogsByTagCommandImpl(
     override suspend fun doExecute(
         args: GetLogsByTagArgs,
         applyDuring: (GetLogsByTagArgs) -> GetLogsByTagArgs
-    ): IdkResult<List<LogDTO>, IdkError> {
+    ): IdkResult<List<LogDTO>, FederationError> {
         val (tag, limit) = applyDuring(args)
 
         logger.debug("Retrieving logs by tag: '$tag', limit: $limit")

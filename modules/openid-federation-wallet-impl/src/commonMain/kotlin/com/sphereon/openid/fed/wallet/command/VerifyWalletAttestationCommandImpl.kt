@@ -6,7 +6,7 @@ import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.crypto.core.jose.Jwk as CryptoJwk
 import com.sphereon.crypto.core.json.cryptoJsonSerializer
 import com.sphereon.crypto.jose.jws.JwsCompact
-import com.sphereon.crypto.jose.jws.VerifyJwsArgs
+import com.sphereon.crypto.jose.jws.command.VerifyJwsArgs
 import com.sphereon.crypto.resolution.extern.ExternalIdentifierJwkOpts
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext

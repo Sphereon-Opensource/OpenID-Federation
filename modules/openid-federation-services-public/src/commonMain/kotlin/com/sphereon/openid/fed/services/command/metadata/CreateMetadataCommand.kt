@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadata
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -15,7 +17,7 @@ data class CreateMetadataArgs(
     val metadata: JsonElement
 )
 
-interface CreateMetadataCommand : ServiceCommand<CreateMetadataArgs, Metadata>, PublicApiCommand {
+interface CreateMetadataCommand : ServiceCommand<CreateMetadataArgs, Metadata, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.metadata.create"
 

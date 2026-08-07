@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -25,7 +27,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<CreateAccountCommand>())
 class CreateAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateAccount, Account>(
+) : TypedServiceCommandAdapter<CreateAccount, Account, FederationError>(
     commandId = CreateAccountCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateAccount>(),
@@ -38,7 +40,7 @@ class CreateAccountCommandImpl(
     override suspend fun doExecute(
         args: CreateAccount,
         applyDuring: (CreateAccount) -> CreateAccount
-    ): IdkResult<Account, IdkError> {
+    ): IdkResult<Account, FederationError> {
         val createRequest = applyDuring(args)
         logger.info("Starting account creation process for username: ${createRequest.username}")
 

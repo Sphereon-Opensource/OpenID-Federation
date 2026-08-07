@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustAnchorHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -24,7 +26,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteTrustAnchorHintCommand>())
 class DeleteTrustAnchorHintCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteTrustAnchorHintArgs, TrustAnchorHint>(
+) : TypedServiceCommandAdapter<DeleteTrustAnchorHintArgs, TrustAnchorHint, FederationError>(
     commandId = DeleteTrustAnchorHintCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteTrustAnchorHintArgs>(),
@@ -37,7 +39,7 @@ class DeleteTrustAnchorHintCommandImpl(
     override suspend fun doExecute(
         args: DeleteTrustAnchorHintArgs,
         applyDuring: (DeleteTrustAnchorHintArgs) -> DeleteTrustAnchorHintArgs
-    ): IdkResult<TrustAnchorHint, IdkError> {
+    ): IdkResult<TrustAnchorHint, FederationError> {
         val (tenantId, trustAnchorHintId) = applyDuring(args)
 
         logger.debug("Attempting to delete trust anchor hint with id: $trustAnchorHintId for account: $tenantId")

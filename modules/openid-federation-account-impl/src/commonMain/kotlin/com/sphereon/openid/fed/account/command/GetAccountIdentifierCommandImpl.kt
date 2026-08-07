@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -22,7 +24,7 @@ import dev.zacsweers.metro.SingleIn
 class GetAccountIdentifierCommandImpl(
     execution: SessionExecution,
     private val config: AccountServiceConfig
-) : TypedServiceCommandAdapter<GetAccountIdentifierArgs, String>(
+) : TypedServiceCommandAdapter<GetAccountIdentifierArgs, String, FederationError>(
     commandId = GetAccountIdentifierCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetAccountIdentifierArgs>(),
@@ -34,7 +36,7 @@ class GetAccountIdentifierCommandImpl(
     override suspend fun doExecute(
         args: GetAccountIdentifierArgs,
         applyDuring: (GetAccountIdentifierArgs) -> GetAccountIdentifierArgs
-    ): IdkResult<String, IdkError> {
+    ): IdkResult<String, FederationError> {
         val request = applyDuring(args)
         val account = request.account
 

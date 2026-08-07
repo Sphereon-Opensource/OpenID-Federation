@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustAnchorHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -22,7 +24,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<FindTrustAnchorHintsByAccountCommand>())
 class FindTrustAnchorHintsByAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<FindTrustAnchorHintsByAccountArgs, List<TrustAnchorHint>>(
+) : TypedServiceCommandAdapter<FindTrustAnchorHintsByAccountArgs, List<TrustAnchorHint>, FederationError>(
     commandId = FindTrustAnchorHintsByAccountCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<FindTrustAnchorHintsByAccountArgs>(),
@@ -35,7 +37,7 @@ class FindTrustAnchorHintsByAccountCommandImpl(
     override suspend fun doExecute(
         args: FindTrustAnchorHintsByAccountArgs,
         applyDuring: (FindTrustAnchorHintsByAccountArgs) -> FindTrustAnchorHintsByAccountArgs
-    ): IdkResult<List<TrustAnchorHint>, IdkError> {
+    ): IdkResult<List<TrustAnchorHint>, FederationError> {
         val (tenantId) = applyDuring(args)
 
         logger.debug("Finding trust anchor hints for account: $tenantId")

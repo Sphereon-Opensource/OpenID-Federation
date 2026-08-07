@@ -53,7 +53,7 @@ data class FederationServerConfig(
 @DependencyGraph(AppScope::class)
 abstract class FederationServerAppGraph : AbstractAppGraph() {
     abstract val configBinder: OidfConfigBinder
-    abstract override val kmsProviderConfigBinder: KmsProviderConfigBinder
+    abstract val kmsProviderConfigBinder: KmsProviderConfigBinder
     abstract val memoryKeyStoreBackingStorage: MemoryKeyStoreBackingStorage
     abstract val serverConfig: FederationServerConfig
 

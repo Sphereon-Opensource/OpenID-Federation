@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.log
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, binding = binding<SearchLogsCommand>())
 class SearchLogsCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<SearchLogsArgs, List<LogDTO>>(
+) : TypedServiceCommandAdapter<SearchLogsArgs, List<LogDTO>, FederationError>(
     commandId = SearchLogsCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<SearchLogsArgs>(),
@@ -39,7 +41,7 @@ class SearchLogsCommandImpl(
     override suspend fun doExecute(
         args: SearchLogsArgs,
         applyDuring: (SearchLogsArgs) -> SearchLogsArgs
-    ): IdkResult<List<LogDTO>, IdkError> {
+    ): IdkResult<List<LogDTO>, FederationError> {
         val (searchTerm, limit) = applyDuring(args)
 
         logger.debug("Searching logs with term: '$searchTerm', limit: $limit")

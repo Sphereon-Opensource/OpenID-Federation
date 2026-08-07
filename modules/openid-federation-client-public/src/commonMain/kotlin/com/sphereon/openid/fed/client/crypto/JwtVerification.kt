@@ -4,7 +4,7 @@ import com.sphereon.crypto.core.jose.Jwk as CryptoJwk
 import com.sphereon.crypto.core.json.cryptoJsonSerializer
 import com.sphereon.crypto.jose.jws.JwsCompact
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.crypto.jose.jws.VerifyJwsArgs
+import com.sphereon.crypto.jose.jws.command.VerifyJwsArgs
 import com.sphereon.crypto.resolution.extern.ExternalIdentifierJwkOpts
 import com.sphereon.openid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.Json

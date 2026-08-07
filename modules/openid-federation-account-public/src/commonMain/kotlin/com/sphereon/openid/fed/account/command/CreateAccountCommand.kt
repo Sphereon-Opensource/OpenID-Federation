@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -8,7 +10,7 @@ import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.openid.fed.openapi.models.Account
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 
-interface CreateAccountCommand : ServiceCommand<CreateAccount, Account>, PublicApiCommand {
+interface CreateAccountCommand : ServiceCommand<CreateAccount, Account, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.account.create"
 

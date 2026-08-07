@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.authorityHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -10,7 +12,7 @@ import com.sphereon.openid.fed.openapi.models.AuthorityHint
 
 data class DeleteAuthorityHintArgs(val tenantId: String, val id: String)
 
-interface DeleteAuthorityHintCommand : ServiceCommand<DeleteAuthorityHintArgs, AuthorityHint>, PublicApiCommand {
+interface DeleteAuthorityHintCommand : ServiceCommand<DeleteAuthorityHintArgs, AuthorityHint, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.authority-hint.delete"
 

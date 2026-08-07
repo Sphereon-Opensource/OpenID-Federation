@@ -6,8 +6,9 @@
 
 package com.sphereon.openid.fed.trust
 
+import com.sphereon.core.api.cache.CacheManager
 import com.sphereon.core.api.cache.CacheRequirements
-import com.sphereon.core.api.cache.CacheService
+import com.sphereon.core.api.cache.CacheSerializers
 import com.sphereon.core.api.cache.CacheTtlConfig
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.di.session.SessionScope
@@ -25,12 +26,11 @@ import com.sphereon.trust.core.model.TrustStatus
 import com.sphereon.trust.core.model.TrustValidationRequest
 import com.sphereon.trust.core.model.TrustValidationResult
 import com.sphereon.trust.core.validation.AbstractTrustValidationService
-import kotlinx.datetime.Clock
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -56,7 +56,7 @@ class OidfTrustValidationService(
     private val verifyTrustMarkCommand: VerifyTrustMarkCommand,
     private val getEntityConfigurationCommand: GetEntityConfigurationCommand,
     private val trustConfigProvider: TrustConfigProvider,
-    private val cacheService: CacheService,
+    private val cacheManager: CacheManager,
     private val execution: SessionExecution,
     private val entityInfoExtractor: OidfEntityInfoExtractor
 ) : AbstractTrustValidationService("openid_federation", setOf(TrustContext.TYPE_OPENID_FEDERATION)) {
@@ -64,11 +64,12 @@ class OidfTrustValidationService(
     private val logger = execution.log.logManager.withTagAsync("OidfTrustValidationService")
 
     private val cache by lazy {
-        cacheService.getStringCache<TrustValidationResult>(
+        cacheManager.createStringCache(
             CacheRequirements(
                 namespace = "trust.oidfed.chains",
                 ttlConfig = CacheTtlConfig(app = 30.minutes)
-            )
+            ),
+            CacheSerializers.json<TrustValidationResult>()
         )
     }
 
@@ -96,9 +97,9 @@ class OidfTrustValidationService(
         // Check cache
         val cacheKey = "$entityIdentifier:${trustAnchors.sorted().joinToString(",")}"
         val cached = cache.getApp(cacheKey)
-        if (cached.isOk && cached.value != null) {
+        if (cached != null) {
             logger.debug("Using cached trust chain result for $entityIdentifier")
-            return cached.value!!
+            return cached
         }
 
         return try {
@@ -176,21 +177,9 @@ class OidfTrustValidationService(
         }
     }
 
-    private val anchorsCache by lazy {
-        cacheService.getStringCache<List<TrustAnchor>>(
-            CacheRequirements(
-                namespace = "trust.oidfed.anchors",
-                ttlConfig = CacheTtlConfig(app = 30.minutes)
-            )
-        )
-    }
-
     override suspend fun getTrustAnchors(): List<TrustAnchor> {
-        val cached = anchorsCache.getApp("anchors")
-        if (cached.isOk && cached.value != null) {
-            return cached.value!!
-        }
-
+        // TrustAnchor.keyInfo is @Contextual and not reliably JSON-serializable for CacheManager,
+        // so resolve live from entity configurations rather than caching typed anchors.
         val trustAnchorIds = trustConfigProvider.getTrustConfig().anchors.oidfed.trustAnchors
         val anchors = mutableListOf<TrustAnchor>()
 
@@ -230,9 +219,6 @@ class OidfTrustValidationService(
             }
         }
 
-        if (anchors.isNotEmpty()) {
-            anchorsCache.putApp("anchors", anchors)
-        }
         return anchors
     }
 

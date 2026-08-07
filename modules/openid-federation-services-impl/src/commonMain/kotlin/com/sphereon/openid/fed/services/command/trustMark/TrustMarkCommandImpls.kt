@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -37,7 +39,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarksForAccountCommand>())
 class GetTrustMarksForAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetTrustMarksForAccountArgs, List<TrustMark>>(
+) : TypedServiceCommandAdapter<GetTrustMarksForAccountArgs, List<TrustMark>, FederationError>(
     commandId = GetTrustMarksForAccountCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarksForAccountArgs>(),
     outputTypeToken = typeToken<List<TrustMark>>()
@@ -45,7 +47,7 @@ class GetTrustMarksForAccountCommandImpl(
     private val logger = execution.federationLogger("GetTrustMarksForAccountCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: GetTrustMarksForAccountArgs, applyDuring: (GetTrustMarksForAccountArgs) -> GetTrustMarksForAccountArgs): IdkResult<List<TrustMark>, IdkError> {
+    override suspend fun doExecute(args: GetTrustMarksForAccountArgs, applyDuring: (GetTrustMarksForAccountArgs) -> GetTrustMarksForAccountArgs): IdkResult<List<TrustMark>, FederationError> {
         val (tenantId) = applyDuring(args)
         return try {
             IdkResult.ok(trustMarkQueries.findByAccountId(tenantId).executeAsList().map { it.toDTO() })
@@ -65,7 +67,7 @@ class CreateTrustMarkCommandImpl(
     private val jwkService: JwkService,
     private val jwtService: JwtService,
     private val tenantContextResolver: TenantContextResolver
-) : TypedServiceCommandAdapter<CreateTrustMarkArgs, CreateTrustMarkResult>(
+) : TypedServiceCommandAdapter<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>(
     commandId = CreateTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<CreateTrustMarkArgs>(),
     outputTypeToken = typeToken<CreateTrustMarkResult>()
@@ -73,9 +75,9 @@ class CreateTrustMarkCommandImpl(
     private val logger = execution.federationLogger("CreateTrustMarkCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, IdkError> {
+    override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
         val (tenantId, request, currentTimeMillis) = applyDuring(args)
-        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false).toIdkErrorResult()
+        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
         if (keysResult.isErr) return keysResult.error.asErrorResult()
         val keys = keysResult.value
         if (keys.isEmpty()) return federationErr(KeyNotFoundError("account:$tenantId"))
@@ -99,7 +101,7 @@ class CreateTrustMarkCommandImpl(
             if (request.exp != null) trustMark.exp(request.exp)
 
             val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms).toIdkErrorResult()
+            val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms)
             if (jwtResult.isErr) return jwtResult.error.asErrorResult()
             val jwt = jwtResult.value
 
@@ -122,7 +124,7 @@ class CreateTrustMarkCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkCommand>())
 class DeleteTrustMarkCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteTrustMarkArgs, TrustMarkEntity>(
+) : TypedServiceCommandAdapter<DeleteTrustMarkArgs, TrustMarkEntity, FederationError>(
     commandId = DeleteTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<DeleteTrustMarkArgs>(),
     outputTypeToken = typeToken<TrustMarkEntity>()
@@ -130,7 +132,7 @@ class DeleteTrustMarkCommandImpl(
     private val logger = execution.federationLogger("DeleteTrustMarkCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: DeleteTrustMarkArgs, applyDuring: (DeleteTrustMarkArgs) -> DeleteTrustMarkArgs): IdkResult<TrustMarkEntity, IdkError> {
+    override suspend fun doExecute(args: DeleteTrustMarkArgs, applyDuring: (DeleteTrustMarkArgs) -> DeleteTrustMarkArgs): IdkResult<TrustMarkEntity, FederationError> {
         val (tenantId, trustMarkId) = applyDuring(args)
         trustMarkQueries.findByAccountIdAndId(tenantId, trustMarkId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkNotFoundError(trustMarkId))
@@ -149,7 +151,7 @@ class DeleteTrustMarkCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusCommand>())
 class GetTrustMarkStatusCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, Boolean>(
+) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, Boolean, FederationError>(
     commandId = GetTrustMarkStatusCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarkStatusArgs>(),
     outputTypeToken = typeToken<Boolean>()
@@ -157,7 +159,7 @@ class GetTrustMarkStatusCommandImpl(
     private val logger = execution.federationLogger("GetTrustMarkStatusCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: GetTrustMarkStatusArgs, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, IdkError> {
+    override suspend fun doExecute(args: GetTrustMarkStatusArgs, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, FederationError> {
         val (tenantId, statusRequest) = applyDuring(args)
         return try {
             val trustMarks = trustMarkQueries.findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(tenantId, statusRequest.trustMarkType, statusRequest.sub).executeAsList()
@@ -179,7 +181,7 @@ class GetTrustMarkStatusCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkedSubsCommand>())
 class GetTrustMarkedSubsCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetTrustMarkedSubsArgs, Array<String>>(
+) : TypedServiceCommandAdapter<GetTrustMarkedSubsArgs, Array<String>, FederationError>(
     commandId = GetTrustMarkedSubsCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarkedSubsArgs>(),
     outputTypeToken = typeToken<Array<String>>()
@@ -187,7 +189,7 @@ class GetTrustMarkedSubsCommandImpl(
     private val logger = execution.federationLogger("GetTrustMarkedSubsCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: GetTrustMarkedSubsArgs, applyDuring: (GetTrustMarkedSubsArgs) -> GetTrustMarkedSubsArgs): IdkResult<Array<String>, IdkError> {
+    override suspend fun doExecute(args: GetTrustMarkedSubsArgs, applyDuring: (GetTrustMarkedSubsArgs) -> GetTrustMarkedSubsArgs): IdkResult<Array<String>, FederationError> {
         val (tenantId, listRequest) = applyDuring(args)
         return try {
             val subs = if (listRequest.sub != null) {
@@ -209,14 +211,14 @@ class GetTrustMarkedSubsCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkCommand>())
 class GetTrustMarkCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetTrustMarkArgs, String>(
+) : TypedServiceCommandAdapter<GetTrustMarkArgs, String, FederationError>(
     commandId = GetTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarkArgs>(),
     outputTypeToken = typeToken<String>()
 ), GetTrustMarkCommand {
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: GetTrustMarkArgs, applyDuring: (GetTrustMarkArgs) -> GetTrustMarkArgs): IdkResult<String, IdkError> {
+    override suspend fun doExecute(args: GetTrustMarkArgs, applyDuring: (GetTrustMarkArgs) -> GetTrustMarkArgs): IdkResult<String, FederationError> {
         val (tenantId, request) = applyDuring(args)
         val trustMark = trustMarkQueries.getLatestByAccountIdAndTrustMarkTypeIdentifierAndSub(tenantId, request.trustMarkType, request.sub).executeAsOneOrNull()
             ?: return federationErr(TrustMarkNotFoundError("${request.trustMarkType}:${request.sub}"))

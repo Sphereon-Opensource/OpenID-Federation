@@ -20,7 +20,10 @@ fun createFederationClient(): FederationClient {
         version = "1.0.0"
     )
     val context = app.userContextManager.getAnonymous()
-    val session = context.sessionContextManager.createOrGetFromId("default-session")
+    val session = context.sessionContextManager.createOrGetFromId(
+        sessionId = "default-session",
+        principalType = com.sphereon.di.context.PrincipalType.ANONYMOUS,
+    )
     return session.asFederationClientGraph().federationClient
 }
 

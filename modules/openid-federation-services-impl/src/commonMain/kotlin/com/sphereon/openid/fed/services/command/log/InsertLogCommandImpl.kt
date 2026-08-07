@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.log
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -25,7 +27,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<InsertLogCommand>())
 class InsertLogCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<InsertLogArgs, Unit>(
+) : TypedServiceCommandAdapter<InsertLogArgs, Unit, FederationError>(
     commandId = InsertLogCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<InsertLogArgs>(),
@@ -38,7 +40,7 @@ class InsertLogCommandImpl(
     override suspend fun doExecute(
         args: InsertLogArgs,
         applyDuring: (InsertLogArgs) -> InsertLogArgs
-    ): IdkResult<Unit, IdkError> {
+    ): IdkResult<Unit, FederationError> {
         val (level, message, tag, timestamp, throwable, metadata) = applyDuring(args)
 
         logger.debug("Inserting log entry with tag: $tag, level: $level")

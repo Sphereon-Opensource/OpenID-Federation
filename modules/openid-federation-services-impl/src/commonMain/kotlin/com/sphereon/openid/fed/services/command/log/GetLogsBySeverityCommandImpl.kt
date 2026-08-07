@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.log
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, binding = binding<GetLogsBySeverityCommand>())
 class GetLogsBySeverityCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetLogsBySeverityArgs, List<LogDTO>>(
+) : TypedServiceCommandAdapter<GetLogsBySeverityArgs, List<LogDTO>, FederationError>(
     commandId = GetLogsBySeverityCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetLogsBySeverityArgs>(),
@@ -39,7 +41,7 @@ class GetLogsBySeverityCommandImpl(
     override suspend fun doExecute(
         args: GetLogsBySeverityArgs,
         applyDuring: (GetLogsBySeverityArgs) -> GetLogsBySeverityArgs
-    ): IdkResult<List<LogDTO>, IdkError> {
+    ): IdkResult<List<LogDTO>, FederationError> {
         val (severity, limit) = applyDuring(args)
 
         logger.debug("Retrieving logs by severity: '$severity', limit: $limit")

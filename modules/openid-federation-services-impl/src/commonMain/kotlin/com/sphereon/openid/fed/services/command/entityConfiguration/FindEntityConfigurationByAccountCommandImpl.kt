@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.entityConfiguration
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -40,7 +42,7 @@ class FindEntityConfigurationByAccountCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val jwkService: JwkService
-) : TypedServiceCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement>(
+) : TypedServiceCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement, FederationError>(
     commandId = FindEntityConfigurationByAccountCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<FindEntityConfigurationByAccountArgs>(),
@@ -57,7 +59,7 @@ class FindEntityConfigurationByAccountCommandImpl(
     override suspend fun doExecute(
         args: FindEntityConfigurationByAccountArgs,
         applyDuring: (FindEntityConfigurationByAccountArgs) -> FindEntityConfigurationByAccountArgs
-    ): IdkResult<EntityConfigurationStatement, IdkError> {
+    ): IdkResult<EntityConfigurationStatement, FederationError> {
         val (tenantId) = applyDuring(args)
 
         logger.info("Finding entity configuration for account: $tenantId")
@@ -65,13 +67,13 @@ class FindEntityConfigurationByAccountCommandImpl(
         return getEntityConfigurationStatement(tenantId)
     }
 
-    private suspend fun getEntityConfigurationStatement(tenantId: String): IdkResult<EntityConfigurationStatement, IdkError> {
+    private suspend fun getEntityConfigurationStatement(tenantId: String): IdkResult<EntityConfigurationStatement, FederationError> {
         logger.info("Building entity configuration for account: $tenantId")
 
         val identifier = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
 
-        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false).toIdkErrorResult()
+        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
         if (keysResult.isErr) {
             return keysResult.error.asErrorResult()
         }

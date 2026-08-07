@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -10,7 +12,7 @@ import com.sphereon.openid.fed.openapi.models.SubordinateMetadata
 
 data class FindSubordinateMetadataArgs(val tenantId: String, val subordinateId: String)
 
-interface FindSubordinateMetadataCommand : ServiceCommand<FindSubordinateMetadataArgs, Array<SubordinateMetadata>>, PublicApiCommand {
+interface FindSubordinateMetadataCommand : ServiceCommand<FindSubordinateMetadataArgs, Array<SubordinateMetadata>, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.subordinate.find-metadata"
 

@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<FindMetadataPolicyByAccountCommand>())
 class FindMetadataPolicyByAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<FindMetadataPolicyByAccountArgs, List<MetadataPolicy>>(
+) : TypedServiceCommandAdapter<FindMetadataPolicyByAccountArgs, List<MetadataPolicy>, FederationError>(
     commandId = FindMetadataPolicyByAccountCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<FindMetadataPolicyByAccountArgs>(),
@@ -39,7 +41,7 @@ class FindMetadataPolicyByAccountCommandImpl(
     override suspend fun doExecute(
         args: FindMetadataPolicyByAccountArgs,
         applyDuring: (FindMetadataPolicyByAccountArgs) -> FindMetadataPolicyByAccountArgs
-    ): IdkResult<List<MetadataPolicy>, IdkError> {
+    ): IdkResult<List<MetadataPolicy>, FederationError> {
         val (tenantId) = applyDuring(args)
 
         logger.debug("Finding metadata policy for account: ${tenantId}")

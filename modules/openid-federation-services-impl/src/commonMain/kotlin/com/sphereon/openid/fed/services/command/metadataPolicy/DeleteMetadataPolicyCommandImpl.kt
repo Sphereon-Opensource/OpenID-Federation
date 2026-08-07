@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataPolicyCommand>())
 class DeleteMetadataPolicyCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteMetadataPolicyArgs, MetadataPolicy>(
+) : TypedServiceCommandAdapter<DeleteMetadataPolicyArgs, MetadataPolicy, FederationError>(
     commandId = DeleteMetadataPolicyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteMetadataPolicyArgs>(),
@@ -41,7 +43,7 @@ class DeleteMetadataPolicyCommandImpl(
     override suspend fun doExecute(
         args: DeleteMetadataPolicyArgs,
         applyDuring: (DeleteMetadataPolicyArgs) -> DeleteMetadataPolicyArgs
-    ): IdkResult<MetadataPolicy, IdkError> {
+    ): IdkResult<MetadataPolicy, FederationError> {
         val (tenantId, id) = applyDuring(args)
 
         logger.info("Deleting metadata policy ID: $id for account: ${tenantId}")

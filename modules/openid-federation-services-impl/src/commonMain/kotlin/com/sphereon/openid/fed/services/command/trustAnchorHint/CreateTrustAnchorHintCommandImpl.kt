@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustAnchorHint
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -24,7 +26,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustAnchorHintCommand>())
 class CreateTrustAnchorHintCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateTrustAnchorHintArgs, TrustAnchorHint>(
+) : TypedServiceCommandAdapter<CreateTrustAnchorHintArgs, TrustAnchorHint, FederationError>(
     commandId = CreateTrustAnchorHintCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateTrustAnchorHintArgs>(),
@@ -37,7 +39,7 @@ class CreateTrustAnchorHintCommandImpl(
     override suspend fun doExecute(
         args: CreateTrustAnchorHintArgs,
         applyDuring: (CreateTrustAnchorHintArgs) -> CreateTrustAnchorHintArgs
-    ): IdkResult<TrustAnchorHint, IdkError> {
+    ): IdkResult<TrustAnchorHint, FederationError> {
         val (tenantId, identifier) = applyDuring(args)
 
         logger.debug("Attempting to create trust anchor hint for account: $tenantId with identifier: $identifier")

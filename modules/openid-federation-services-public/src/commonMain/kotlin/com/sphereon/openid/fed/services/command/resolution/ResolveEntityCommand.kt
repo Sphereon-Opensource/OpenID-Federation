@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.service.ServiceCommand
 
 import com.sphereon.openid.fed.openapi.models.ResolveResponse
@@ -33,7 +35,7 @@ data class ResolveEntityArgs(
     }
 }
 
-interface ResolveEntityCommand : ServiceCommand<ResolveEntityArgs, ResolveResponse> {
+interface ResolveEntityCommand : ServiceCommand<ResolveEntityArgs, ResolveResponse, FederationError> {
     companion object {
         const val COMMAND_ID = "fed.resolution.resolve-entity"
     }

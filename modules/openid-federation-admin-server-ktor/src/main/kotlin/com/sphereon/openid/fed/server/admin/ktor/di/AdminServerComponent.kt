@@ -53,7 +53,7 @@ data class AdminServerConfig(
 @DependencyGraph(AppScope::class)
 abstract class AdminServerAppGraph : AbstractAppGraph() {
     abstract val configBinder: OidfConfigBinder
-    abstract override val kmsProviderConfigBinder: KmsProviderConfigBinder
+    abstract val kmsProviderConfigBinder: KmsProviderConfigBinder
     abstract val memoryKeyStoreBackingStorage: MemoryKeyStoreBackingStorage
     abstract val serverConfig: AdminServerConfig
 

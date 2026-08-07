@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -13,7 +15,7 @@ data class DeleteMetadataPolicyArgs(
     val id: String
 )
 
-interface DeleteMetadataPolicyCommand : ServiceCommand<DeleteMetadataPolicyArgs, MetadataPolicy>, PublicApiCommand {
+interface DeleteMetadataPolicyCommand : ServiceCommand<DeleteMetadataPolicyArgs, MetadataPolicy, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.metadata-policy.delete"
 

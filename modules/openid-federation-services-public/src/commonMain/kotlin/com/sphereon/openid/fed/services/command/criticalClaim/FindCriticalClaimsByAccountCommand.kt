@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
@@ -12,7 +14,7 @@ data class FindCriticalClaimsByAccountArgs(
     val tenantId: String
 )
 
-interface FindCriticalClaimsByAccountCommand : ServiceCommand<FindCriticalClaimsByAccountArgs, Array<CritEntity>>, PublicApiCommand {
+interface FindCriticalClaimsByAccountCommand : ServiceCommand<FindCriticalClaimsByAccountArgs, Array<CritEntity>, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.critical-claim.find-by-account"
 

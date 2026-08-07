@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.account.command
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -23,7 +25,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<GetAccountByUsernameCommand>())
 class GetAccountByUsernameCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetAccountByUsernameArgs, Account>(
+) : TypedServiceCommandAdapter<GetAccountByUsernameArgs, Account, FederationError>(
     commandId = GetAccountByUsernameCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetAccountByUsernameArgs>(),
@@ -36,7 +38,7 @@ class GetAccountByUsernameCommandImpl(
     override suspend fun doExecute(
         args: GetAccountByUsernameArgs,
         applyDuring: (GetAccountByUsernameArgs) -> GetAccountByUsernameArgs
-    ): IdkResult<Account, IdkError> {
+    ): IdkResult<Account, FederationError> {
         val request = applyDuring(args)
         logger.debug("Getting account by username: ${request.username}")
         return try {

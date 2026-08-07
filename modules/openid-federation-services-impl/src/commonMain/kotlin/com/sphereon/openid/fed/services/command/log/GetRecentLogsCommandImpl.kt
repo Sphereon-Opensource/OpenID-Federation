@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.log
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import com.sphereon.openid.fed.openapi.models.Log as LogDTO
 @ContributesBinding(SessionScope::class, binding = binding<GetRecentLogsCommand>())
 class GetRecentLogsCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetRecentLogsArgs, List<LogDTO>>(
+) : TypedServiceCommandAdapter<GetRecentLogsArgs, List<LogDTO>, FederationError>(
     commandId = GetRecentLogsCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetRecentLogsArgs>(),
@@ -39,7 +41,7 @@ class GetRecentLogsCommandImpl(
     override suspend fun doExecute(
         args: GetRecentLogsArgs,
         applyDuring: (GetRecentLogsArgs) -> GetRecentLogsArgs
-    ): IdkResult<List<LogDTO>, IdkError> {
+    ): IdkResult<List<LogDTO>, FederationError> {
         val (limit) = applyDuring(args)
 
         logger.debug("Retrieving recent logs with limit: $limit")

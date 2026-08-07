@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
@@ -29,7 +31,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<RevokeKeyCommand>())
 class RevokeKeyCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<RevokeKeyArgs, AccountJwk>(
+) : TypedServiceCommandAdapter<RevokeKeyArgs, AccountJwk, FederationError>(
     commandId = RevokeKeyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<RevokeKeyArgs>(),
@@ -42,7 +44,7 @@ class RevokeKeyCommandImpl(
     override suspend fun doExecute(
         args: RevokeKeyArgs,
         applyDuring: (RevokeKeyArgs) -> RevokeKeyArgs
-    ): IdkResult<AccountJwk, IdkError> {
+    ): IdkResult<AccountJwk, FederationError> {
         val (tenantId, keyId, reason) = applyDuring(args)
 
         logger.info("Attempting to revoke key ID: $keyId for account: $tenantId")
@@ -73,7 +75,7 @@ class RevokeKeyCommandImpl(
         }
     }
 
-    private fun ensureKeyOwnership(jwk: Jwk, tenantId: String): IdkResult<Unit, IdkError> {
+    private fun ensureKeyOwnership(jwk: Jwk, tenantId: String): IdkResult<Unit, FederationError> {
         if (jwk.account_id != tenantId) {
             logger.error("Key does not belong to account: $tenantId")
             return federationErr(KeyNotFoundError(jwk.id))

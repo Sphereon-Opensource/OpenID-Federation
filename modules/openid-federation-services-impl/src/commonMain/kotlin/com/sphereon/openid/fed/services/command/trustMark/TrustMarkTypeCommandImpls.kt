@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -26,7 +28,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkTypeCommand>())
 class CreateTrustMarkTypeCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<CreateTrustMarkTypeArgs, TrustMarkType>(
+) : TypedServiceCommandAdapter<CreateTrustMarkTypeArgs, TrustMarkType, FederationError>(
     commandId = CreateTrustMarkTypeCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<CreateTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkType>()
@@ -34,7 +36,7 @@ class CreateTrustMarkTypeCommandImpl(
     private val logger = execution.federationLogger("CreateTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
-    override suspend fun doExecute(args: CreateTrustMarkTypeArgs, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
+    override suspend fun doExecute(args: CreateTrustMarkTypeArgs, applyDuring: (CreateTrustMarkTypeArgs) -> CreateTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
         val (tenantId, createDto) = applyDuring(args)
         logger.info("Creating trust mark type ${createDto.identifier} for username: ${tenantId}")
 
@@ -60,7 +62,7 @@ class CreateTrustMarkTypeCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<FindAllTrustMarkTypesByAccountCommand>())
 class FindAllTrustMarkTypesByAccountCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<FindAllTrustMarkTypesByAccountArgs, List<TrustMarkType>>(
+) : TypedServiceCommandAdapter<FindAllTrustMarkTypesByAccountArgs, List<TrustMarkType>, FederationError>(
     commandId = FindAllTrustMarkTypesByAccountCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<FindAllTrustMarkTypesByAccountArgs>(),
     outputTypeToken = typeToken<List<TrustMarkType>>()
@@ -68,7 +70,7 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
     private val logger = execution.federationLogger("FindAllTrustMarkTypesByAccountCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
-    override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, IdkError> {
+    override suspend fun doExecute(args: FindAllTrustMarkTypesByAccountArgs, applyDuring: (FindAllTrustMarkTypesByAccountArgs) -> FindAllTrustMarkTypesByAccountArgs): IdkResult<List<TrustMarkType>, FederationError> {
         val (tenantId) = applyDuring(args)
         return try {
             IdkResult.ok(trustMarkTypeQueries.findByAccountId(tenantId).executeAsList().map { it.toDTO() })
@@ -85,14 +87,14 @@ class FindAllTrustMarkTypesByAccountCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<FindTrustMarkTypeByIdCommand>())
 class FindTrustMarkTypeByIdCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<FindTrustMarkTypeByIdArgs, TrustMarkType>(
+) : TypedServiceCommandAdapter<FindTrustMarkTypeByIdArgs, TrustMarkType, FederationError>(
     commandId = FindTrustMarkTypeByIdCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<FindTrustMarkTypeByIdArgs>(),
     outputTypeToken = typeToken<TrustMarkType>()
 ), FindTrustMarkTypeByIdCommand {
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
-    override suspend fun doExecute(args: FindTrustMarkTypeByIdArgs, applyDuring: (FindTrustMarkTypeByIdArgs) -> FindTrustMarkTypeByIdArgs): IdkResult<TrustMarkType, IdkError> {
+    override suspend fun doExecute(args: FindTrustMarkTypeByIdArgs, applyDuring: (FindTrustMarkTypeByIdArgs) -> FindTrustMarkTypeByIdArgs): IdkResult<TrustMarkType, FederationError> {
         val (tenantId, id) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, id).executeAsOneOrNull()
         return if (type == null) federationErr(TrustMarkTypeNotFoundError(id)) else IdkResult.ok(type.toDTO())
@@ -105,7 +107,7 @@ class FindTrustMarkTypeByIdCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkTypeCommand>())
 class DeleteTrustMarkTypeCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteTrustMarkTypeArgs, TrustMarkType>(
+) : TypedServiceCommandAdapter<DeleteTrustMarkTypeArgs, TrustMarkType, FederationError>(
     commandId = DeleteTrustMarkTypeCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<DeleteTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkType>()
@@ -113,7 +115,7 @@ class DeleteTrustMarkTypeCommandImpl(
     private val logger = execution.federationLogger("DeleteTrustMarkTypeCommand")
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
 
-    override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, IdkError> {
+    override suspend fun doExecute(args: DeleteTrustMarkTypeArgs, applyDuring: (DeleteTrustMarkTypeArgs) -> DeleteTrustMarkTypeArgs): IdkResult<TrustMarkType, FederationError> {
         val (tenantId, id) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, id).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(id))
@@ -133,7 +135,7 @@ class DeleteTrustMarkTypeCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<GetIssuersForTrustMarkTypeCommand>())
 class GetIssuersForTrustMarkTypeCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetIssuersForTrustMarkTypeArgs, Array<TrustMarkIssuer>>(
+) : TypedServiceCommandAdapter<GetIssuersForTrustMarkTypeArgs, Array<TrustMarkIssuer>, FederationError>(
     commandId = GetIssuersForTrustMarkTypeCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetIssuersForTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<Array<TrustMarkIssuer>>()
@@ -141,7 +143,7 @@ class GetIssuersForTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
-    override suspend fun doExecute(args: GetIssuersForTrustMarkTypeArgs, applyDuring: (GetIssuersForTrustMarkTypeArgs) -> GetIssuersForTrustMarkTypeArgs): IdkResult<Array<TrustMarkIssuer>, IdkError> {
+    override suspend fun doExecute(args: GetIssuersForTrustMarkTypeArgs, applyDuring: (GetIssuersForTrustMarkTypeArgs) -> GetIssuersForTrustMarkTypeArgs): IdkResult<Array<TrustMarkIssuer>, FederationError> {
         val (tenantId, trustMarkTypeId) = applyDuring(args)
         val type = trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))
@@ -155,7 +157,7 @@ class GetIssuersForTrustMarkTypeCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<AddIssuerToTrustMarkTypeCommand>())
 class AddIssuerToTrustMarkTypeCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<AddIssuerToTrustMarkTypeArgs, TrustMarkIssuer>(
+) : TypedServiceCommandAdapter<AddIssuerToTrustMarkTypeArgs, TrustMarkIssuer, FederationError>(
     commandId = AddIssuerToTrustMarkTypeCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<AddIssuerToTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkIssuer>()
@@ -164,7 +166,7 @@ class AddIssuerToTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
-    override suspend fun doExecute(args: AddIssuerToTrustMarkTypeArgs, applyDuring: (AddIssuerToTrustMarkTypeArgs) -> AddIssuerToTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, IdkError> {
+    override suspend fun doExecute(args: AddIssuerToTrustMarkTypeArgs, applyDuring: (AddIssuerToTrustMarkTypeArgs) -> AddIssuerToTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
         val (tenantId, trustMarkTypeId, issuerIdentifier) = applyDuring(args)
         trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))
@@ -188,7 +190,7 @@ class AddIssuerToTrustMarkTypeCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<RemoveIssuerFromTrustMarkTypeCommand>())
 class RemoveIssuerFromTrustMarkTypeCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<RemoveIssuerFromTrustMarkTypeArgs, TrustMarkIssuer>(
+) : TypedServiceCommandAdapter<RemoveIssuerFromTrustMarkTypeArgs, TrustMarkIssuer, FederationError>(
     commandId = RemoveIssuerFromTrustMarkTypeCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<RemoveIssuerFromTrustMarkTypeArgs>(),
     outputTypeToken = typeToken<TrustMarkIssuer>()
@@ -197,7 +199,7 @@ class RemoveIssuerFromTrustMarkTypeCommandImpl(
     private val trustMarkTypeQueries = Persistence.trustMarkTypeQueries
     private val trustMarkIssuerQueries = Persistence.trustMarkIssuerQueries
 
-    override suspend fun doExecute(args: RemoveIssuerFromTrustMarkTypeArgs, applyDuring: (RemoveIssuerFromTrustMarkTypeArgs) -> RemoveIssuerFromTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, IdkError> {
+    override suspend fun doExecute(args: RemoveIssuerFromTrustMarkTypeArgs, applyDuring: (RemoveIssuerFromTrustMarkTypeArgs) -> RemoveIssuerFromTrustMarkTypeArgs): IdkResult<TrustMarkIssuer, FederationError> {
         val (tenantId, trustMarkTypeId, issuerId) = applyDuring(args)
         trustMarkTypeQueries.findByAccountIdAndId(tenantId, trustMarkTypeId).executeAsOneOrNull()
             ?: return federationErr(TrustMarkTypeNotFoundError(trustMarkTypeId))

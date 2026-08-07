@@ -46,7 +46,10 @@ class OidfEntityIdExternalIdentifierResolutionServiceE2eTest {
         )
 
         val context = app.userContextManager.getAnonymous()
-        session = context.sessionContextManager.createOrGetFromId("oidf-entity-id-test")
+        session = context.sessionContextManager.createOrGetFromId(
+            sessionId = "oidf-entity-id-test",
+            principalType = com.sphereon.di.context.PrincipalType.ANONYMOUS,
+        )
         federationClient = session.asFederationClientGraph().federationClient
         oidfResolutionService = (session.graph as OidfEntityIdExternalIdentifierResolutionServiceImpl.Graph)
             .oidfEntityIdExternalIdentifierResolutionService

@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadata
 
+import com.sphereon.openid.fed.core.error.FederationError
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataCommand>())
 class DeleteMetadataCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<DeleteMetadataArgs, Metadata>(
+) : TypedServiceCommandAdapter<DeleteMetadataArgs, Metadata, FederationError>(
     commandId = DeleteMetadataCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<DeleteMetadataArgs>(),
@@ -41,7 +43,7 @@ class DeleteMetadataCommandImpl(
     override suspend fun doExecute(
         args: DeleteMetadataArgs,
         applyDuring: (DeleteMetadataArgs) -> DeleteMetadataArgs
-    ): IdkResult<Metadata, IdkError> {
+    ): IdkResult<Metadata, FederationError> {
         val (tenantId, id) = applyDuring(args)
 
         logger.info("Deleting metadata ID: $id for account: ${tenantId}")
