@@ -127,7 +127,7 @@ fun createFederationServerAppGraph(
     application: Any,
     appId: String = "openid-federation-server",
     profile: String = "default",
-    version: String = "1.0.0"
+    version: String = "0.26.0"
 ): FederationServerAppGraph {
     val graph = createGraphFactory<FederationServerAppGraph.Factory>().create(
         application = application,

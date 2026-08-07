@@ -55,8 +55,6 @@ kotlin {
                 api(projects.modules.openidFederationOpenapi)
                 // Core module for OidfConfigKeys used by LegacyEnvMappingPropertySource
                 api(projects.modules.openidFederationCorePublic)
-                // IDK compat annotations for @JsExportCompat
-                api(idklib.sphereon.idk.lib.core.compat)
                 implementation(sphereonlib.io.ktor.client.core)
                 implementation(sphereonlib.io.ktor.client.logging)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)

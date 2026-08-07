@@ -45,9 +45,6 @@ kotlin {
                 // IDK core API (for Command interface and logging)
                 api(idklib.sphereon.idk.lib.core.api.public)
 
-                // IDK compat annotations for @JsExportCompat
-                api(idklib.sphereon.idk.lib.core.compat)
-
                 // Standard library
                 implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)

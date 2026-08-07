@@ -3,7 +3,7 @@ changelog = "3.0.6"
 bom = "1.0.0.Final"
 kover = "0.9.1"
 node-gradle = "7.1.0"
-metro = "0.11.4"
+metro = "1.1.1"
 
 android-compileSdk = "34"
 android-minSdk = "24"

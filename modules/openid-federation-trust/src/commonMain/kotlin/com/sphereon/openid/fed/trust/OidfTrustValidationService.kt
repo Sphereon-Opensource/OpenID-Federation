@@ -57,7 +57,8 @@ class OidfTrustValidationService(
     private val getEntityConfigurationCommand: GetEntityConfigurationCommand,
     private val trustConfigProvider: TrustConfigProvider,
     private val cacheService: CacheService,
-    private val execution: SessionExecution
+    private val execution: SessionExecution,
+    private val entityInfoExtractor: OidfEntityInfoExtractor
 ) : AbstractTrustValidationService("openid_federation", setOf(TrustContext.TYPE_OPENID_FEDERATION)) {
 
     private val logger = execution.log.logManager.withTagAsync("OidfTrustValidationService")
@@ -156,13 +157,14 @@ class OidfTrustValidationService(
             }
 
             // All checks passed
-            cacheAndReturn(cacheKey, TrustValidationResult(
+            val result = TrustValidationResult(
                 trusted = true,
                 status = TrustStatus.TRUSTED,
                 validationPath = trustChain,
                 details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links)",
                 validatedAt = Clock.System.now()
-            ))
+            )
+            cacheAndReturn(cacheKey, enrichWithEntityInfo(result, request, entityInfoExtractor))
         } catch (e: Exception) {
             logger.error("OpenID Federation trust validation failed", exception = e)
             TrustValidationResult(

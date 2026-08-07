@@ -45,9 +45,6 @@ kotlin {
                 // IDK core API (for Command interface and logging)
                 api(idklib.sphereon.idk.lib.core.api.public)
 
-                // IDK compat annotations for @JsExportCompat
-                api(idklib.sphereon.idk.lib.core.compat)
-
                 // IDK crypto libraries (for JwtService interface)
                 api(idklib.sphereon.idk.lib.crypto.core.public)
 

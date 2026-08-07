@@ -3,12 +3,6 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
-        // Maven local first for Sphereon artifacts (local builds take priority over remote SNAPSHOTs)
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-            }
-        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -19,50 +13,56 @@ pluginManagement {
         mavenCentral()
         maven {
             url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+            mavenContent { snapshotsOnly() }
         }
         maven {
             url = uri("https://aws.oss.sonatype.org/content/repositories/snapshots/")
+            mavenContent { snapshotsOnly() }
+            content { includeGroupAndSubgroups("software.amazon") }
         }
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots/")
+            mavenContent { snapshotsOnly() }
         }
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases/")
+            mavenContent { releasesOnly() }
         }
-        gradlePluginPortal()
         maven {
             url = uri("https://jitpack.io")
+        }
+        gradlePluginPortal()
+
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+
+            }
         }
     }
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
 }
 
 dependencyResolutionManagement {
     versionCatalogs {
         create("sphereonplug") {
-            from("com.sphereon.gradle:gradle-plugin-bom:0.8.0-SNAPSHOT@toml" as String)
+            from("com.sphereon.gradle:gradle-plugin-bom:0.9.0-SNAPSHOT@toml" as String)
         }
         create("sphereonlib") {
-            from("com.sphereon.gradle:library-bom:0.8.0-SNAPSHOT@toml" as String)
+            from("com.sphereon.gradle:library-bom:0.9.0-SNAPSHOT@toml" as String)
         }
         create("idklib") {
             from("com.sphereon.idk:idk-bom:0.25.0-SNAPSHOT@toml" as String)
         }
         // TODO: Move aws sdk to our bom
         create("awssdk") {
-            from("aws.sdk.kotlin:version-catalog:1.4.31" as String)
+            from("aws.sdk.kotlin:version-catalog:1.6.107" as String)
         }
     }
     repositories {
-        // Maven local first for Sphereon artifacts (local builds take priority over remote SNAPSHOTs)
-        mavenLocal {
-            content {
-                includeGroupAndSubgroups("com.sphereon")
-            }
-        }
         google {
             mavenContent {
                 includeGroupAndSubgroups("androidx")
@@ -70,23 +70,37 @@ dependencyResolutionManagement {
                 includeGroupAndSubgroups("com.google")
             }
         }
-        gradlePluginPortal()
         mavenCentral()
+        // Nexus repos also proxy/cache external deps (e.g. software.amazon) — no group filter
         maven {
-            url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-        }
-        maven {
-            url = uri("https://aws.oss.sonatype.org/content/repositories/snapshots/")
+            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+            mavenContent { releasesOnly() }
         }
         maven {
             url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots")
+            mavenContent { snapshotsOnly() }
         }
         maven {
-            url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases")
+            url = uri("https://aws.oss.sonatype.org/content/repositories/snapshots/")
+            mavenContent { snapshotsOnly() }
+            content { includeGroupAndSubgroups("software.amazon") }
+        }
+        maven {
+            url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+            mavenContent { snapshotsOnly() }
         }
         maven {
             url = uri("https://jitpack.io")
         }
+        gradlePluginPortal()
+
+        mavenLocal {
+            content {
+                includeGroupAndSubgroups("com.sphereon")
+
+            }
+        }
+
     }
 }
 

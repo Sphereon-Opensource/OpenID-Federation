@@ -39,15 +39,8 @@ publishing {
 
                 developers {
                     developer {
-                        id.set("4sure")
-                        name.set("Niels Klomp")
-                        email.set("nklomp@4sure.tech")
-                    }
-
-                    developer {
-                        id.set("4sure")
-                        name.set("John Melati")
-                        email.set("jmelati@4sure.tech")
+                        id.set("Sphereon International BV")
+                        email.set("support@sphereon.com")
                     }
                 }
 

@@ -222,8 +222,7 @@ customField("type", "module")
 
             kotlin.srcDir("$projectDir/build/copy/src/commonMain/kotlin")
             dependencies {
-                // IDK compat annotations for @JsExportCompat
-                api(idklib.sphereon.idk.lib.core.compat)
+                api(idklib.sphereon.idk.lib.core.api.public)
                 implementation(sphereonlib.io.ktor.client.core)
                 implementation(sphereonlib.io.ktor.client.content.negotiation)
                 implementation(sphereonlib.io.ktor.serialization.kotlinx.json)

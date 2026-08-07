@@ -335,7 +335,8 @@ class OidfTrustValidationServiceTest {
             getEntityConfigurationCommand = getEntityConfigCmd,
             trustConfigProvider = configProvider,
             cacheService = NoOpCacheService(),
-            execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test"))
+            execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test")),
+            entityInfoExtractor = OidfEntityInfoExtractor(getEntityConfigCmd)
         )
     }
 

@@ -37,6 +37,7 @@ kotlin {
                 // OID-Fed client commands (ResolveTrustChain, VerifyTrustChain, VerifyTrustMark)
                 api(projects.modules.openidFederationClientPublic)
                 api(projects.modules.openidFederationCorePublic)
+                implementation(projects.modules.openidFederationCommon)
 
                 // IDK trust framework
                 api(idklib.sphereon.idk.lib.trust.core.public)
@@ -44,7 +45,6 @@ kotlin {
 
                 // IDK core
                 api(idklib.sphereon.idk.lib.core.api.public)
-                api(idklib.sphereon.idk.lib.core.compat)
 
                 // IDK cache
                 implementation(idklib.sphereon.idk.lib.core.api.public)
