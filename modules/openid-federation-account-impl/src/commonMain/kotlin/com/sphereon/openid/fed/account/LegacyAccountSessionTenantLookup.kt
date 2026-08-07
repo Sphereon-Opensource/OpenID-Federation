@@ -9,14 +9,10 @@ import com.sphereon.openid.fed.persistence.Persistence
  *
  * ## Boundary
  * IDK [com.sphereon.ktor.server.inject.resolver.TenantResolver.resolve] is **synchronous**.
- * Business [com.sphereon.openid.fed.core.tenant.TenantContextResolver] remains suspend-based.
- * This helper bridges LEGACY multi-entity selection (`X-Account-Username`) to a tenant id
- * string suitable for [com.sphereon.core.defaults.context.DefaultTenantInputString].
+ * Business [TenantContextResolver] is session-based. This helper is for **admin ingress**
+ * (JWT-first open / ACCOUNT rebind) only — maps username → Account.id.
  *
- * Uses SQLDelight queries directly (same DB as Account commands) — not header spoofing
- * of platform tenants: only call this path when [com.sphereon.openid.fed.core.tenant.IdentityMode.LEGACY].
- *
- * @see ModeAwareTenantContextResolver for business-layer resolution (must stay consistent)
+ * Only use when [com.sphereon.openid.fed.core.tenant.IdentityMode.ACCOUNT].
  */
 object LegacyAccountSessionTenantLookup {
 
@@ -38,6 +34,10 @@ object LegacyAccountSessionTenantLookup {
 
     /**
      * Extract legacy account username from HTTP header map (case-insensitive keys).
+     *
+     * Defaults to [Constants.DEFAULT_ROOT_USERNAME] when the header is absent.
+     * Prefer [com.sphereon.openid.fed.core.tenant.AccountEntityHeaderAuth] when enforcing
+     * **root-only** header switch (do not use this default for authorization decisions).
      */
     fun usernameFromHeaders(headers: (String) -> String?): String {
         return headers(AccountConstants.ACCOUNT_HEADER)
@@ -45,5 +45,19 @@ object LegacyAccountSessionTenantLookup {
             ?: headers(Constants.ACCOUNT_HEADER)
             ?: headers(Constants.ACCOUNT_HEADER.lowercase())
             ?: Constants.DEFAULT_ROOT_USERNAME
+    }
+
+    /**
+     * Header value only — null when the client did not send entity selection.
+     */
+    fun rawUsernameFromHeaders(headers: (String) -> String?): String? {
+        return headers(AccountConstants.ACCOUNT_HEADER)
+            ?.trim()?.takeIf { it.isNotEmpty() }
+            ?: headers(AccountConstants.ACCOUNT_HEADER.lowercase())
+                ?.trim()?.takeIf { it.isNotEmpty() }
+            ?: headers(Constants.ACCOUNT_HEADER)
+                ?.trim()?.takeIf { it.isNotEmpty() }
+            ?: headers(Constants.ACCOUNT_HEADER.lowercase())
+                ?.trim()?.takeIf { it.isNotEmpty() }
     }
 }

@@ -8,18 +8,14 @@ import com.sphereon.ktor.server.inject.resolver.FixedTenantResolver
 import com.sphereon.ktor.server.inject.resolver.TenantResolver
 import com.sphereon.openid.fed.account.LegacyAccountSessionTenantLookup
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.tenant.AccountEntityHeaderAuth
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import com.sphereon.openid.fed.core.tenant.PlatformJwtTenantClaims
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.request.header
 
 /**
- * IDK session [TenantResolver] for the public federation server (L2 + PLATFORM JWT).
- *
- * Same contract as the admin-server resolver. Path-based public entity selection still
- * uses [com.sphereon.openid.fed.core.tenant.TenantContextResolver] separately.
- *
- * @see com.sphereon.openid.fed.server.admin.ktor.session.OidfSessionTenantResolver
+ * IDK session [TenantResolver] for the public federation server (JWT-first open).
+ * ACCOUNT header entity switch is admin-only rebind; public stays JWT-first / root default.
  */
 class OidfSessionTenantResolver(
     private val configBinder: OidfConfigBinder,
@@ -36,37 +32,30 @@ class OidfSessionTenantResolver(
         }
 
         return when (identity.mode) {
-            IdentityMode.PLATFORM -> resolvePlatform(call, fixedId)
-            IdentityMode.LEGACY -> resolveLegacy(call, fixedId)
+            IdentityMode.EXTERNAL -> resolveExternal(call, fixedId)
+            IdentityMode.ACCOUNT -> resolveAccountJwtFirst(call, fixedId)
         }
     }
 
-    private fun resolvePlatform(call: ApplicationCall, fixedId: String): TenantInput {
+    private fun resolveExternal(call: ApplicationCall, fixedId: String): TenantInput {
         val fromJwt = tenantIdFromValidatedJwt(call)
         if (fromJwt != null) {
-            logger.debug("PLATFORM session tenant from validated JWT claims: $fromJwt")
             return DefaultTenantInputString(fromJwt)
-        }
-        val configured = configBinder.getIdentityConfig().platformRootTenantId
-            ?.takeIf { it.isNotBlank() }
-        if (configured != null) {
-            return DefaultTenantInputString(configured)
         }
         return DefaultTenantInputString(fixedId)
     }
 
-    private fun resolveLegacy(call: ApplicationCall, fixedId: String): TenantInput {
-        val username = LegacyAccountSessionTenantLookup.usernameFromHeaders { name ->
-            call.request.header(name)
+    private fun resolveAccountJwtFirst(call: ApplicationCall, fixedId: String): TenantInput {
+        val fromJwt = tenantIdFromValidatedJwt(call)
+        if (fromJwt != null) {
+            return DefaultTenantInputString(fromJwt)
         }
-        val accountId = LegacyAccountSessionTenantLookup.resolveAccountId(username)
-        if (accountId != null) {
-            logger.debug("L2 session tenant aligned: username=$username → accountId=$accountId")
-            return DefaultTenantInputString(accountId)
+        val rootId =
+            LegacyAccountSessionTenantLookup.resolveAccountId(AccountEntityHeaderAuth.ROOT_USERNAME)
+        if (rootId != null) {
+            return DefaultTenantInputString(rootId)
         }
-        logger.warn(
-            "L2 account lookup failed for username=$username; falling back to '$fixedId'",
-        )
+        logger.warn("ACCOUNT root Account missing; fixed session tenant '$fixedId'")
         return DefaultTenantInputString(fixedId)
     }
 

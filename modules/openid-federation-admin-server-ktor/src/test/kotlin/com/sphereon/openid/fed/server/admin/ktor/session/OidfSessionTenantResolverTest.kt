@@ -33,10 +33,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Tests for [OidfSessionTenantResolver] L1/L2/PLATFORM branches.
+ * Tests for [OidfSessionTenantResolver] PLATFORM JWT vs bootstrap and LEGACY fixed alignment.
  *
- * LEGACY L2 Account DB lookup is covered by HTTP integration tests
- * (`SessionAlignmentApiTest`) against a live admin server.
+ * LEGACY root header policy is unit-tested in [com.sphereon.openid.fed.core.tenant.AccountEntityHeaderAuthTest]
+ * and enforced on admin Setup; L2 Account DB lookup is covered by integration tests.
  */
 class OidfSessionTenantResolverTest {
 
@@ -59,35 +59,11 @@ class OidfSessionTenantResolverTest {
     }
 
     @Test
-    fun platform_mode_resolves_configured_platform_root_tenant() = testApplication {
-        val resolver = OidfSessionTenantResolver(
-            FakeBinder(
-                IdentityConfig(
-                    mode = IdentityMode.PLATFORM,
-                    platformRootTenantId = "platform-root",
-                    sessionAlignment = SessionAlignment.ACCOUNT,
-                    sessionFixedTenantId = "default",
-                ),
-            ),
-        )
-        application {
-            routing {
-                get("/probe") {
-                    val input = resolver.resolve(call)
-                    call.respondText((input as TenantInputString).tenant)
-                }
-            }
-        }
-        val response = client.get("/probe")
-        assertEquals("platform-root", response.bodyAsText())
-    }
-
-    @Test
     fun fixed_alignment_ignores_account_header_and_uses_fixed_id() = testApplication {
         val resolver = OidfSessionTenantResolver(
             FakeBinder(
                 IdentityConfig(
-                    mode = IdentityMode.LEGACY,
+                    mode = IdentityMode.ACCOUNT,
                     sessionAlignment = SessionAlignment.FIXED,
                     sessionFixedTenantId = "locked-tenant",
                 ),
@@ -108,13 +84,13 @@ class OidfSessionTenantResolverTest {
     }
 
     @Test
-    fun platform_without_root_falls_back_to_fixed_tenant_id() = testApplication {
+    fun platform_without_jwt_uses_fixed_bootstrap_not_platform_root_config() = testApplication {
         val resolver = OidfSessionTenantResolver(
             FakeBinder(
                 IdentityConfig(
-                    mode = IdentityMode.PLATFORM,
-                    platformRootTenantId = null,
-                    sessionFixedTenantId = "default",
+                    mode = IdentityMode.EXTERNAL,
+                    externalRootTenantId = "must-not-be-session-tenant",
+                    sessionFixedTenantId = "bootstrap-fixed",
                 ),
             ),
         )
@@ -126,16 +102,17 @@ class OidfSessionTenantResolverTest {
                 }
             }
         }
-        assertEquals("default", client.get("/probe").bodyAsText())
+        // platform.root.tenant.id is entity-URL mapping only — never session identity fallback
+        assertEquals("bootstrap-fixed", client.get("/probe").bodyAsText())
     }
 
     @Test
-    fun platform_uses_validated_jwt_tenant_claim_over_config_root() = testApplication {
+    fun platform_uses_validated_jwt_tenant_claim() = testApplication {
         val resolver = OidfSessionTenantResolver(
             FakeBinder(
                 IdentityConfig(
-                    mode = IdentityMode.PLATFORM,
-                    platformRootTenantId = "config-root",
+                    mode = IdentityMode.EXTERNAL,
+                    externalRootTenantId = "config-root-ignored-for-session",
                     sessionAlignment = SessionAlignment.ACCOUNT,
                 ),
             ),
@@ -143,7 +120,6 @@ class OidfSessionTenantResolverTest {
         application {
             routing {
                 get("/probe") {
-                    // Simulate host jwt-auth plugin stamping validated claims
                     call.attributes.put(
                         ValidatedJwtClaimsAttribute,
                         JwtClaimsInput(
@@ -164,14 +140,21 @@ class OidfSessionTenantResolverTest {
         val resolver = OidfSessionTenantResolver(
             FakeBinder(
                 IdentityConfig(
-                    mode = IdentityMode.PLATFORM,
-                    platformRootTenantId = "platform-only",
+                    mode = IdentityMode.EXTERNAL,
+                    sessionFixedTenantId = "bootstrap-only",
                 ),
             ),
         )
         application {
             routing {
                 get("/probe") {
+                    call.attributes.put(
+                        ValidatedJwtClaimsAttribute,
+                        JwtClaimsInput(
+                            claims = mapOf("tenant_id" to JsonPrimitive("token-tenant")),
+                            rawToken = "t",
+                        ).markValidated(),
+                    )
                     val input = resolver.resolve(call)
                     call.respondText((input as TenantInputString).tenant)
                 }
@@ -180,7 +163,7 @@ class OidfSessionTenantResolverTest {
         val response = client.get("/probe") {
             header("X-Account-Username", "should-not-apply")
         }
-        assertEquals("platform-only", response.bodyAsText())
+        assertEquals("token-tenant", response.bodyAsText())
     }
 
     @Test

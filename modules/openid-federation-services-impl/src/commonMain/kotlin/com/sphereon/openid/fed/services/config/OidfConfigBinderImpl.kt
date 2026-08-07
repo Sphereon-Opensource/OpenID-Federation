@@ -124,8 +124,9 @@ class OidfConfigBinderImpl(
 
     override fun getIdentityConfig(): IdentityConfig {
         val mode = IdentityMode.parse(getPropertyOrNull(OidfConfigKeys.Identity.MODE))
-        val rootTenant = getPropertyOrNull(OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID)
-        val allowAnonymous = getBooleanProperty(OidfConfigKeys.Identity.ALLOW_ANONYMOUS_ADMIN, false)
+        val rootTenant =
+            getPropertyOrNull(OidfConfigKeys.Identity.EXTERNAL_ROOT_TENANT_ID)
+                ?: getPropertyOrNull(OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID)
         val sessionAlignment = SessionAlignment.parse(
             getPropertyOrNull(OidfConfigKeys.Identity.SESSION_ALIGNMENT),
         )
@@ -133,12 +134,25 @@ class OidfConfigBinderImpl(
             OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID,
             "default",
         )
+        val headerClaim =
+            getProperty(OidfConfigKeys.Identity.ACCOUNT_HEADER_PRINCIPAL_CLAIM, "sub")
+                .trim()
+                .ifEmpty { "sub" }
+        // Default empty = deny header rebind (must configure operators explicitly).
+        // Do not treat blank as wildcard — only an explicit "*" entry enables any-authn.
+        val allowedRaw =
+            getProperty(OidfConfigKeys.Identity.ACCOUNT_HEADER_ALLOWED_PRINCIPALS, "")
+        val allowedPrincipals =
+            allowedRaw.split(',')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
         return IdentityConfig(
             mode = mode,
-            platformRootTenantId = rootTenant,
-            allowAnonymousAdmin = allowAnonymous,
+            externalRootTenantId = rootTenant,
             sessionAlignment = sessionAlignment,
             sessionFixedTenantId = sessionFixed.ifBlank { "default" },
+            accountHeaderPrincipalClaim = headerClaim,
+            accountHeaderAllowedPrincipals = allowedPrincipals,
         )
     }
 

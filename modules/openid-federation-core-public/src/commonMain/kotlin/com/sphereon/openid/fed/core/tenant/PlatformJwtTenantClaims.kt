@@ -9,7 +9,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * ## Boundary
  * Mirrors IDK [com.sphereon.core.defaults.context.OidcTenantResolver] claim order so
- * OIDFed session resolution matches host OIDC/JWT conventions used by EDK/VDX embeds.
+ * OIDFed session resolution matches host OIDC/JWT conventions.
  *
  * Claim names checked in order:
  * `tenant_id`, `tid`, `tenantId`, `org_id`, `organization_id`, `tenant`

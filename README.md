@@ -144,8 +144,14 @@ These images can be used to quickly deploy the services in a containerized envir
 ### API Endpoints (via Docker)
 
 - **Federation API**: Accessible at http://localhost:8080
-- **Admin Server API**: Accessible at http://localhost:8081
-- **Default Keycloak Server**: Accessible at http://localhost:8082
+- **Admin Server API**: Accessible at http://localhost:8081 (always requires `Authorization: Bearer …`)
+- **Default Keycloak Server** (JWT issuer for admin): Accessible at http://localhost:8082
+
+Admin compose service waits for **db** and **keycloak** (healthy). Issuer defaults to
+`http://keycloak:8080/realms/openid-federation` via `OIDF_OAUTH2_ISSUER_URI` /
+`OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI` (see `.env.example`). Compose local stacks use **account** mode by
+default. There is no configuration switch to run the admin API without authentication; see
+[Identity modes](#identity-modes-account-and-external) below.
 
 # OpenID Federation Configuration Guide
 
@@ -171,9 +177,130 @@ purposes. **It is not intended for use in production environments** due to signi
 
 ## Introduction
 
-The system comes with a preconfigured "root" account entity that responds to the root URL identifier's endpoints (
-e.g., `/.well-known/openid-federation`) and not tenant account endpoints. This account is used for managing
-configurations specific to the root entity.
+The federation service stores configuration, keys, and trust data per **entity context**. How that context is chosen,
+and who is allowed to call the admin API, depends on the **identity mode**. From 0.25.0 there are two modes:
+**account** (the historical standalone model, and still the default) and **external** (an OAuth2 / OIDC authorization
+server owns subjects and tenants). Both modes require a valid Bearer access token on every admin call except health and
+debug endpoints. There is no longer a configuration switch to turn admin authentication off.
+
+Detailed design notes live in [docs/IDENTITY_AND_IDK_ALIGNMENT.md](docs/IDENTITY_AND_IDK_ALIGNMENT.md). End-to-end
+testing with an in-process IDK authorization server is described in [docs/PLATFORM_E2E.md](docs/PLATFORM_E2E.md).
+
+---
+
+## Identity modes: account and external
+
+Admin authentication is always JWT-based. The identity mode controls **where the federation entity (tenant) context
+comes from**, not whether a token is required.
+
+Set the mode with `OIDF_IDENTITY_MODE` (or the config key `oidf.identity.mode`):
+
+| Value | Meaning |
+|-------|---------|
+| `account` (default) | Pre-0.25.0 standalone model. Federation entities are `Account` rows managed via `/accounts`. |
+| `external` | Host or platform embedding. Tenant id comes only from claims on the access token. |
+| `legacy` | Accepted alias for `account`. |
+| `platform` | Accepted alias for `external`. |
+
+### Account mode (standalone, pre-0.25.0 model)
+
+This is the original open-source multi-entity model and remains the default.
+
+The database seeds a special **root** account. Its federation entity identifier is `ROOT_IDENTIFIER` /
+`OIDF_FEDERATION_ROOT_IDENTIFIER` (for example `http://localhost:8080`). The root account serves the federation
+well-known document at that base URL. Additional entities are ordinary accounts created through `POST /accounts`.
+Each non-root account gets an identifier such as `{root}/{username}` unless you supply an explicit identifier.
+
+Every admin request must present `Authorization: Bearer <access_token>`. After the token is validated, the server
+opens a session bound to an entity context (normally the root account when the token does not name another tenant).
+To operate on a different account you may send `X-Account-Username` with the target username. That header is **entity
+selection**, not authentication. It only succeeds when the authenticated principal appears on a configured allow-list
+(see below). If the username is unknown the server returns 404; if the principal is not allowed to rebind, 403.
+
+By default the allow-list is **empty**, so header rebind is denied for everyone until you list the operators who may
+switch entity context. Matching uses a JWT claim (default `sub`) against
+`OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS`. A single `*` allows any authenticated principal and is intended only for
+local tests, not production.
+
+Account REST (`GET` / `POST` / `DELETE /accounts`) is registered only in this mode (and only when the
+`openid-federation-account-http` module is on the classpath, which it is for the all-in-one admin server in this repo).
+
+Typical Docker Compose and Keycloak setup in this README assumes **account** mode.
+
+### External mode (authorization server / OIDC host)
+
+External mode is for deployments where an external authorization server (or the Sphereon IDK OAuth2 AS) already
+manages users, organizations, and which caller may act as which tenant. OpenID Federation does not run its own
+account registry in this mode: `/accounts` is not registered (and returns 410 if hit), and `X-Account-Username` is
+never used for identity.
+
+The access token is still required and validated against `OIDF_OAUTH2_ISSUER_URI`. After validation the server reads
+tenant claims from the token (`tenant_id`, `tid`, and related IDK claim names) and sets `SessionExecution.tenantId` to
+that value. All domain data for the request is isolated under that tenant. If a protected admin route receives a
+token with no usable tenant claim, the request fails closed with 401.
+
+On first contact with a new token tenant id the server can auto-provision a federation row
+(`FederationTenantProvisioner`, `tenant_source = idk`). Party, user, and organization management stay in the host
+identity product; OIDFed only stores federation material (keys, entity configuration, subordinates, trust marks)
+keyed by that tenant id.
+
+#### Root entity URL versus token tenants (external)
+
+In external mode there is **no privileged root login account** inside OIDFed. What remains is a mapping for the
+federation **root entity URL**:
+
+`OIDF_EXTERNAL_ROOT_TENANT_ID` / `oidf.identity.external.root.tenant.id` names which token tenant id owns the
+federation root identifier (`ROOT_IDENTIFIER`). Other tenants typically receive entity identifiers under
+`{root}/tenants/{tenantId}` unless your host overrides that layout.
+
+That mapping only answers “which validated session tenant publishes as the root entity URL?”. It is not a back door
+to elevate an unauthenticated caller, and it is not a substitute for the access token.
+
+#### Delegation and STS (external)
+
+If operator A must act as tenant B, that is expressed **by the authorization server**, for example through token
+exchange, on-behalf-of / STS flows, or actor and delegation claims the AS puts on the access token. OIDFed fully
+trusts the validated token’s tenant (and related) claims. It does not implement its own impersonation API, does not
+accept client-supplied headers to change tenant, and does not re-check AS policy beyond JWT validation and the
+required tenant claim.
+
+Configure the issuer so tokens carry a stable tenant claim your host already uses. Automated EXTERNAL e2e tests mint
+such tokens with the in-process IDK OAuth2 AS; see [docs/PLATFORM_E2E.md](docs/PLATFORM_E2E.md).
+
+### Admin authentication is always on
+
+Earlier versions allowed an “anonymous admin” / no-auth style configuration for local development. That escape hatch
+has been **removed for security**. Related environment variables and config keys (including anything that disabled
+JWT requirement on the admin server) are gone. The admin server requires a non-blank OAuth2 issuer at startup and
+installs JWT authentication with `requireAuth=true`.
+
+Integration tests obtain Bearer tokens from an in-process IDK OAuth2 AS rather than disabling auth. Compose-based
+local development continues to use Keycloak (or any OIDC issuer you point `OIDF_OAUTH2_ISSUER_URI` at).
+
+Public federation protocol endpoints on the federation server remain open by design (entity configuration,
+subordinate listing, trust mark endpoints as specified by OpenID Federation). Only the **admin** API always requires
+Bearer tokens.
+
+### Useful identity-related variables
+
+```env
+# account (default) or external. Aliases: legacy, platform
+OIDF_IDENTITY_MODE=account
+
+# ACCOUNT: JWT claim used to match the header allow-list (default sub)
+# OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM=sub
+
+# ACCOUNT: comma-separated principals allowed to send X-Account-Username.
+# Default empty = deny rebind for everyone. Use * only in tests.
+# OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS=
+
+# EXTERNAL: token tenant id that owns the federation root entity URL
+# OIDF_EXTERNAL_ROOT_TENANT_ID=
+
+# Required for admin JWT validation (startup fails if blank)
+OIDF_OAUTH2_ISSUER_URI=http://keycloak:8080/realms/openid-federation
+# OIDF_OAUTH2_AUDIENCE=openid-federation-admin
+```
 
 ---
 
@@ -425,27 +552,40 @@ The admin endpoints are protected and require a valid JWT access token. To acqui
 
 5. **Use the Access Token in Subsequent API Requests**:
 
-   Add the `access_token` to the `Authorization` header:
+   **Admin is always authenticated.** Every Admin API call (except `/health`) must include:
 
    ```http
    Authorization: Bearer <access_token>
    ```
 
+   Without a valid Bearer token the admin server returns **401**.
+
 ### Notes
 
-- Replace `client_secret` with a secure value in a production environment.
-- The token expires after a specified duration (`expires_in` field). Acquire a new token as needed.
+Replace `client_secret` with a secure value in a production environment. The token expires after the duration given in
+`expires_in`; acquire a new token when needed.
+
+Set `OIDF_OAUTH2_ISSUER_URI` (or the JVM alias `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI`) so the admin server can
+validate tokens. Startup fails if the issuer is blank. There is no environment variable to skip admin authentication.
+
+The examples below assume **account** mode (the default). After authentication, send `X-Account-Username` when you
+need to work on a non-root account and your principal is allow-listed for that rebind. The header selects the entity
+context; it does not authenticate the caller. In **external** mode omit the header entirely: the token’s tenant claim
+is the only entity context, and `/accounts` is not available.
 
 ---
 
-## Step 4: Create a New Tenant Account
+## Step 4: Create a New Tenant Account (account mode)
 
-To create a new tenant account, follow these steps:
+Account REST applies only when `OIDF_IDENTITY_MODE=account` (or `legacy`). In external mode the host provisions
+tenants outside this API.
 
 1. Send a `POST` request to the following endpoint:
 
    ```http
    POST http://localhost:8081/accounts
+   Authorization: Bearer <access_token>
+   Content-Type: application/json
    ```
 
 2. Include a JSON body with the desired account details. For example:
@@ -457,10 +597,10 @@ To create a new tenant account, follow these steps:
    }
    ```
 
-Note: All subsequent requests will use the `X-Account-Username` header to specify the account context. If not provided,
-it defaults to the root account.
+All admin requests need `Authorization: Bearer <access_token>`. Subsequent requests use `X-Account-Username` to select
+the account context when the caller is allow-listed (defaults to the root account when the header is omitted).
 
-## Step 5: Delete a Tenant Account
+## Step 5: Delete a Tenant Account (account mode)
 
 To delete a tenant account, follow these steps:
 
@@ -468,6 +608,7 @@ To delete a tenant account, follow these steps:
 
    ```http
    DELETE http://localhost:8081/accounts
+   Authorization: Bearer <access_token>
    X-Account-Username: {username} # root account cannot be deleted
    ```
 
@@ -479,6 +620,7 @@ To delete a tenant account, follow these steps:
 
    ```http
    POST http://localhost:8081/keys
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -503,6 +645,7 @@ ES384, ES512
 
    ```http
    GET http://localhost:8081/keys
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -512,6 +655,7 @@ ES384, ES512
 
    ```http
    DELETE http://localhost:8081/keys/{keyId}
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -519,6 +663,7 @@ ES384, ES512
 
    ```http
    DELETE http://localhost:8081/keys/{keyId}?reason=Key+compromised
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -530,6 +675,7 @@ To assign metadata to your entity, follow these steps:
 
    ```http
    POST http://localhost:8081/metadata
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -554,6 +700,7 @@ To assign metadata to your entity, follow these steps:
 
    ```http
    GET http://localhost:8081/metadata
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -563,6 +710,7 @@ To assign metadata to your entity, follow these steps:
 
    ```http
    DELETE http://localhost:8081/metadata/{id}
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -579,6 +727,7 @@ Send a GET request to retrieve all authority hints for an account:
 
 ```http
 GET http://localhost:8081/authority-hints
+Authorization: Bearer <access_token>
 X-Account-Username: {username}  # Optional, defaults to root
 ```
 
@@ -588,6 +737,7 @@ Send a POST request to add a new authority hint:
 
 ```http
 POST http://localhost:8081/authority-hints
+Authorization: Bearer <access_token>
 X-Account-Username: {username}  # Optional, defaults to root
 {
     "identifier": "http://localhost:8081/authority-hints"
@@ -600,6 +750,7 @@ Send a DELETE request to remove an authority hint by its ID:
 
 ```http
 DELETE http://localhost:8081/authority-hints/{id}
+Authorization: Bearer <access_token>
 X-Account-Username: {username}  # Optional, defaults to root
 ```
 
@@ -615,6 +766,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    POST http://localhost:8081/subordinates
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -632,6 +784,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    GET http://localhost:8081/subordinates
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -641,6 +794,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    DELETE http://localhost:8081/subordinates/{id}
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -654,6 +808,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    POST http://localhost:8081/subordinates/{subordinateId}/metadata
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -673,6 +828,7 @@ Remember to publish your entity configuration after making changes to authority 
 1. Send a `GET` request to list all metadata for a subordinate:
    ```http
    GET http://localhost:8081/subordinates/{subordinateId}/metadata
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -681,6 +837,7 @@ Remember to publish your entity configuration after making changes to authority 
 1. Send a `DELETE` request to delete a metadata entry by its ID:
    ```http
    DELETE http://localhost:8081/subordinates/{subordinateId}/metadata/{id}
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -694,6 +851,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    POST http://localhost:8081/subordinates/{id}/jwks
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -713,6 +871,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    GET http://localhost:8081/subordinates/{id}/jwks
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -722,6 +881,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    DELETE http://localhost:8081/subordinates/{id}/jwks/{jwkId}
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -733,6 +893,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    GET http://localhost:8081/subordinates/{id}/statement
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -744,6 +905,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    POST http://localhost:8081/subordinates/{id}/statement
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
@@ -772,6 +934,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    GET http://localhost:8081/entity-statement
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
@@ -781,6 +944,7 @@ Remember to publish your entity configuration after making changes to authority 
 
    ```http
    POST http://localhost:8081/entity-statement
+   Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
@@ -822,6 +986,7 @@ sequenceDiagram
 ```http
 # Create Trust Anchor account
 POST http://localhost:8081/accounts
+Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
@@ -831,10 +996,12 @@ Content-Type: application/json
 
 # Generate Trust Anchor keys
 POST http://localhost:8081/keys
+Authorization: Bearer <access_token>
 X-Account-Username: trust-anchor
 
 # Create Trust Mark type
 POST http://localhost:8081/trust-mark-types
+Authorization: Bearer <access_token>
 X-Account-Username: trust-anchor
 Content-Type: application/json
 
@@ -848,6 +1015,7 @@ Content-Type: application/json
 ```http
 # Create Issuer account
 POST http://localhost:8081/accounts
+Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
@@ -857,10 +1025,12 @@ Content-Type: application/json
 
 # Generate keys for the Issuer
 POST http://localhost:8081/keys
+Authorization: Bearer <access_token>
 X-Account-Username: trust-mark-issuer
 
 # Publish Issuer configuration
 POST http://localhost:8081/entity-statement
+Authorization: Bearer <access_token>
 X-Account-Username: trust-mark-issuer
 ```
 
@@ -869,6 +1039,7 @@ X-Account-Username: trust-mark-issuer
 ```http
 # Authorize Issuer using Trust Anchor account
 POST http://localhost:8081/trust-mark-types/{trust-mark-type-id}/issuers
+Authorization: Bearer <access_token>
 X-Account-Username: trust-anchor
 Content-Type: application/json
 
@@ -878,6 +1049,7 @@ Content-Type: application/json
 
 # Publish Trust Anchor configuration
 POST http://localhost:8081/entity-statement
+Authorization: Bearer <access_token>
 X-Account-Username: trust-anchor
 ```
 
@@ -886,6 +1058,7 @@ X-Account-Username: trust-anchor
 ```http
 # Issue Trust Mark to holder
 POST http://localhost:8081/trust-marks
+Authorization: Bearer <access_token>
 X-Account-Username: trust-mark-issuer
 Content-Type: application/json
 
@@ -900,6 +1073,7 @@ Content-Type: application/json
 ```http
 # Create Holder account
 POST http://localhost:8081/accounts
+Authorization: Bearer <access_token>
 Content-Type: application/json
 
 {
@@ -909,10 +1083,12 @@ Content-Type: application/json
 
 # Generate keys for the Holder
 POST http://localhost:8081/keys
+Authorization: Bearer <access_token>
 X-Account-Username: trust-mark-holder
 
 # Store received Trust Mark
 POST http://localhost:8081/received-trust-marks
+Authorization: Bearer <access_token>
 Content-Type: application/json
 X-Account-Username: trust-mark-holder
 
@@ -923,6 +1099,7 @@ X-Account-Username: trust-mark-holder
 
 # Publish Holder configuration
 POST http://localhost:8081/entity-statement
+Authorization: Bearer <access_token>
 X-Account-Username: trust-mark-holder
 ```
 

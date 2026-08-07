@@ -126,7 +126,7 @@ class AdminHttpAdapter(
 
     override val endpointCommands: List<HttpEndpointCommand> = buildList {
         // Account management REST: only when account-http contributed commands AND LEGACY mode
-        if (configBinder.getIdentityConfig().isLegacy) {
+        if (configBinder.getIdentityConfig().isAccount) {
             accountEndpointContributions.forEach { addAll(it.endpointCommands) }
         }
         add(listKeysEndpoint)

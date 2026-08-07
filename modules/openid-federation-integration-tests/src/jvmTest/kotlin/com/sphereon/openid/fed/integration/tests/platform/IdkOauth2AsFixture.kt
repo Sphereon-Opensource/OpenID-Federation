@@ -88,14 +88,14 @@ class IdkOauth2AsFixture(
     /**
      * Mint a real AS access token via [CreateAccessTokenCommand].
      *
-     * @param tenantId PLATFORM isolation claim (written into `tenant_id`)
+     * @param tenantId PLATFORM isolation claim (`tenant_id`); omit for LEGACY (entity via header)
      * @param subject token `sub`
      * @param clientId OAuth client id claim
      * @param expiresInSeconds lifetime
      * @param extraClaims merged into token payload (does not override [tenantId] unless also set here)
      */
     fun mintAccessToken(
-        tenantId: String,
+        tenantId: String? = null,
         subject: String = "platform-e2e-user",
         clientId: String = DEFAULT_CLIENT_ID,
         expiresInSeconds: Int = 3600,
@@ -115,7 +115,9 @@ class IdkOauth2AsFixture(
 
             val claims = buildMap {
                 putAll(extraClaims)
-                put("tenant_id", tenantId)
+                if (tenantId != null) {
+                    put("tenant_id", tenantId)
+                }
             }
             val result =
                 graph.appCommandInvoker.execute(

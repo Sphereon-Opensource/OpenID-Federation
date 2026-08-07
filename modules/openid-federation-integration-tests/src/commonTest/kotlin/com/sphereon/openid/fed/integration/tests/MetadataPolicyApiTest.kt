@@ -48,16 +48,8 @@ class MetadataPolicyApiTest {
      */
     @BeforeTest
     fun setup() {
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-        client = HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    prettyPrint = true
-                    isLenient = true
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
+        baseUrl = adminTestBaseUrl()
+        client = createAuthenticatedAdminClient()
         testUsername = "m-policy-test-${System.currentTimeMillis()}"
 
         runTest {

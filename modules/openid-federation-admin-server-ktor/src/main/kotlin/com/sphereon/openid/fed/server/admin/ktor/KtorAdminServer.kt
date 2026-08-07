@@ -6,7 +6,7 @@ import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
-import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport.installOidfJwtAuthIfConfigured
+import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerConfig
 import com.sphereon.openid.fed.server.admin.ktor.di.createAdminServerAppGraph
@@ -74,17 +74,27 @@ fun main() {
  * Configure the Ktor application for admin server.
  */
 fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServerConfig) {
-    // Install kotlin-inject plugin with AppGraph.
-    //
-    // ## Session tenant boundary (L2)
-    // IDK no longer allows raw X-Tenant-Id as identity. We still need session.tenantId
-    // to match federation Account.id in LEGACY mode so KMS/config/cache scopes align
-    // with domain account_id FKs. OidfSessionTenantResolver:
-    // - LEGACY + session.alignment=account (default): X-Account-Username → Account.id
-    // - LEGACY + session.alignment=fixed: L1 compat FixedTenantResolver(session.fixed.tenant.id)
-    // - PLATFORM: bootstrap root/fixed; post-JWT rebind aligns session to validated claims
+    // ## Session identity (IDK order — no throwaway validation session)
+    // 1) KotlinInject bootstrap User+Session (fixed/root; principal anonymous until JWT)
+    // 2) JwtAuthentication validates Bearer with request SessionScope JwtValidationService
+    // 3) Post-JWT: stamp claims, EXTERNAL fail-closed, align session to JWT (+ ACCOUNT header rebind)
     val identity = appGraph.configBinder.getIdentityConfig()
     val sessionTenantResolver = OidfSessionTenantResolver(appGraph.configBinder)
+
+    val oauth = appGraph.configBinder.getOAuth2Config()
+    require(oauth.issuerUri.isNotBlank()) {
+        "Admin server requires oidf.oauth2.issuer.uri (OIDF_OAUTH2_ISSUER_URI). " +
+            "Authentication is mandatory — there is no unauthenticated admin mode. " +
+            "Point the issuer at an OAuth2/OIDC AS (in-process IDK AS for tests, or host OP)."
+    }
+    require(OidfJwtAuthSupport.shouldInstall(appGraph.configBinder)) {
+        "Admin server cannot start with JWT auth disabled. " +
+            "Unset oidf.oauth2.jwt.auth.enabled=false or set a non-blank issuer."
+    }
+
+    val anonymousPaths = listOf("/health", "/debug/**")
+
+    // 1) Bootstrap DI session (JwtValidationService lives on this graph for step 2)
     install(KotlinInjectPlugin) {
         this.appGraph = appGraph
         tenantResolver = sessionTenantResolver
@@ -94,13 +104,15 @@ fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServe
             "(identity.mode=${identity.mode}, session.alignment=${identity.sessionAlignment})",
     )
 
-    // PLATFORM (or forced): JwtAuthentication + stamp ValidatedJwtClaims + rebind DI session
-    // so SessionExecution.tenantId matches JWT tenant before HTTP commands run.
-    installOidfJwtAuthIfConfigured(
-        configBinder = appGraph.configBinder,
-        requireAuth = identity.isPlatform && !identity.allowAnonymousAdmin,
-        anonymousPaths = listOf("/health", "/debug/**"),
-    )
+    // 2–3) JwtAuthentication + post-JWT identity alignment (no throwaway session)
+    with(OidfJwtAuthSupport) {
+        installOidfJwtAuthAfterSession(
+            appGraph = appGraph,
+            configBinder = appGraph.configBinder,
+            requireAuth = true,
+            anonymousPaths = anonymousPaths,
+        )
+    }
 
     // Content negotiation
     install(ContentNegotiation) {

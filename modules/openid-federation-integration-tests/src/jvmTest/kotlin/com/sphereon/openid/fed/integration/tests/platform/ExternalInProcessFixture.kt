@@ -12,18 +12,18 @@ import io.ktor.server.engine.embeddedServer
 import kotlinx.coroutines.runBlocking
 
 /**
- * Fully **in-process** PLATFORM stack for e2e:
+ * Fully **in-process** EXTERNAL stack for e2e:
  *
  * 1. [IdkOauth2AsFixture] — real IDK OAuth2 AS (mint + discovery + JWKS)
  * 2. OIDFed admin — [createAdminServerAppGraph] + [configureAdmin] on an ephemeral port,
- *    configured for PLATFORM + JWT issuer = the live AS base URL
+ *    configured for EXTERNAL + JWT issuer = the live AS base URL
  *
  * No standalone admin process, no Keycloak, no fixed-port orchestration.
- * Requires PostgreSQL (same as LEGACY integration tests).
+ * Requires PostgreSQL (same as ACCOUNT integration tests).
  *
- * @see docs/PLATFORM_E2E.md
+ * @see docs/PLATFORM_E2E.md (EXTERNAL e2e)
  */
-class PlatformInProcessFixture(
+class ExternalInProcessFixture(
     audience: String = IdkOauth2AsFixture.DEFAULT_AUDIENCE,
 ) {
     val oauthAs: IdkOauth2AsFixture = IdkOauth2AsFixture(audience = audience)
@@ -42,7 +42,7 @@ class PlatformInProcessFixture(
 
     init {
         // Point admin JWT validation at the already-running in-process AS.
-        seedPlatformAdminConfig(
+        seedExternalAdminConfig(
             issuerUri = oauthAs.issuer,
             audience = audience,
         )
@@ -73,7 +73,7 @@ class PlatformInProcessFixture(
 
     fun mintAccessToken(
         tenantId: String,
-        subject: String = "platform-e2e-user",
+        subject: String = "external-e2e-user",
     ): String = oauthAs.mintAccessToken(tenantId = tenantId, subject = subject)
 
     fun stop() {
@@ -88,13 +88,13 @@ class PlatformInProcessFixture(
         const val ADMIN_APP_ID = "openid-federation-admin-server"
         const val ADMIN_PROFILE = "default"
         /** UUID-shaped root tenant (account_id columns use UUID adapters). */
-        const val PLATFORM_ROOT_TENANT = "00000000-0000-4000-8000-000000000001"
+        const val EXTERNAL_ROOT_TENANT = "00000000-0000-4000-8000-000000000001"
 
         /**
          * Explicit AppMap overrides (highest binder tier after AppConfigService).
          * Datasource falls through to env / file when not set here.
          */
-        fun seedPlatformAdminConfig(
+        fun seedExternalAdminConfig(
             issuerUri: String,
             audience: String,
         ) {
@@ -120,9 +120,8 @@ class PlatformInProcessFixture(
 
             val props =
                 mapOf(
-                    OidfConfigKeys.Identity.MODE to "platform",
-                    OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID to PLATFORM_ROOT_TENANT,
-                    OidfConfigKeys.Identity.ALLOW_ANONYMOUS_ADMIN to "false",
+                    OidfConfigKeys.Identity.MODE to "external",
+                    OidfConfigKeys.Identity.EXTERNAL_ROOT_TENANT_ID to EXTERNAL_ROOT_TENANT,
                     OidfConfigKeys.OAuth2.ISSUER_URI to issuerUri,
                     OidfConfigKeys.OAuth2.AUDIENCE to audience,
                     OidfConfigKeys.OAuth2.JWT_AUTH_ENABLED to "true",

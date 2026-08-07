@@ -5,7 +5,7 @@ plugins {
 
 
 kotlin {
-    // Align with admin-server-ktor (JVM 21) so PlatformInProcessFixture can depend on it.
+    // Align with admin-server-ktor (JVM 21) so ExternalInProcessFixture can depend on it.
     jvm {
         compilations.configureEach {
             compileTaskProvider.configure {
@@ -61,8 +61,9 @@ kotlin {
                 // PLATFORM e2e: tenant claim helpers + OpenAPI models + in-process admin
                 implementation(projects.modules.openidFederationCorePublic)
                 implementation(projects.modules.openidFederationOpenapi)
-                // Full admin Ktor graph for PlatformInProcessFixture (AS + admin same JVM)
+                // Full admin + federation Ktor graphs for in-process fixtures (AS + servers same JVM)
                 implementation(projects.modules.openidFederationAdminServerKtor)
+                implementation(projects.modules.openidFederationPublicServerKtor)
                 // Metro graph supertypes for AdminServerAppGraph (JWT auth extension)
                 implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
                 implementation(sphereonlib.io.ktor.client.cio)
@@ -120,14 +121,14 @@ val integrationTests by tasks.registering {
 }
 
 /**
- * PLATFORM e2e: in-process IDK AS + in-process admin (see PlatformInProcessFixture).
- * Postgres required; no standalone PLATFORM server.
- * See docs/PLATFORM_E2E.md.
+ * EXTERNAL e2e: in-process IDK AS + in-process admin (see ExternalInProcessFixture).
+ * Postgres required; no standalone EXTERNAL server.
+ * See docs/PLATFORM_E2E.md (EXTERNAL e2e; historical filename).
  */
 val platformIntegrationTests by tasks.registering {
     group = "verification"
     description =
-        "PLATFORM e2e (in-process AS + admin). Prefer --tests …platform.* on jvmTest."
+        "EXTERNAL e2e (in-process AS + admin). Prefer --tests …platform.External* on jvmTest."
 }
 
 /** Always-on smoke: boot in-process IDK AS, discovery, CreateAccessTokenCommand mint. */

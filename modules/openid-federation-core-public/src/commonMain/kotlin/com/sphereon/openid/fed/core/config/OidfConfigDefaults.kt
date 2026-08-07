@@ -23,7 +23,6 @@ object OidfConfigDefaults {
         OidfConfigKeys.Logger.INCLUDE_TIMESTAMP to "false",
         OidfConfigKeys.Kms.DEFAULT_PROVIDER to "memory",
         OidfConfigKeys.Identity.MODE to "legacy",
-        OidfConfigKeys.Identity.ALLOW_ANONYMOUS_ADMIN to "false",
         OidfConfigKeys.Identity.SESSION_ALIGNMENT to "account",
         OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID to "default",
     )

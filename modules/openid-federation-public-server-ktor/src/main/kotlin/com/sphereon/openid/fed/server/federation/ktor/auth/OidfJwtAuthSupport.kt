@@ -3,45 +3,36 @@ package com.sphereon.openid.fed.server.federation.ktor.auth
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.defaults.context.JwtClaimsParser
 import com.sphereon.core.defaults.context.markValidated
-import com.sphereon.di.context.IdentityConstants
-import com.sphereon.di.session.SessionInstance
-import com.sphereon.ktor.server.inject.BaseTenantIdAttribute
 import com.sphereon.ktor.server.inject.ValidatedJwtClaimsAttribute
-import com.sphereon.ktor.server.inject.interceptor.UserContextInterceptor
-import com.sphereon.ktor.server.inject.kotlinInject
 import com.sphereon.ktor.server.jwt.JwtAuthentication
 import com.sphereon.ktor.server.jwt.SessionContextAttributeKey
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.tenant.BearerTokenSupport
 import com.sphereon.openid.fed.core.tenant.IdentityMode
-import com.sphereon.openid.fed.core.tenant.PlatformJwtTenantClaims
 import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.ApplicationCallPipeline
-import io.ktor.server.application.call
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
 import io.ktor.server.request.header
-import io.ktor.util.AttributeKey
 
 private val logger = Log.app().withTag("OidfJwtAuthSupport")
 
 /**
- * Install IDK [JwtAuthentication] for PLATFORM (or forced) deployments.
+ * Optional JWT for the public federation server.
  *
- * Federation public protocol stays open when [requireAuth] is false (default for this server).
- * Post-JWT DI session rebind matches admin-server (see that module’s KDoc for full boundary).
+ * Public protocol stays open when [requireAuth] is false and [anonymousPaths] cover
+ * federation endpoints. No session rebind — when a Bearer is present and validated,
+ * claims may be stamped for optional authenticated flows after the DI session exists.
+ *
+ * For admin-style “claims before session open”, see the admin server’s pre-session stamp.
  */
 object OidfJwtAuthSupport {
 
     fun shouldInstall(configBinder: OidfConfigBinder): Boolean {
         val oauth = configBinder.getOAuth2Config()
-        val identity = configBinder.getIdentityConfig()
         return when (oauth.jwtAuthEnabled.trim().lowercase()) {
-            "true", "1", "yes", "on" -> oauth.issuerUri.isNotBlank()
             "false", "0", "no", "off" -> false
-            else -> identity.mode == IdentityMode.PLATFORM && oauth.issuerUri.isNotBlank()
+            else -> oauth.issuerUri.isNotBlank()
         }
     }
 
@@ -60,7 +51,7 @@ object OidfJwtAuthSupport {
         }
         val oauth = configBinder.getOAuth2Config()
         logger.info(
-            "Installing IDK JwtAuthentication + post-JWT session rebind " +
+            "Installing IDK JwtAuthentication " +
                 "(issuer=${oauth.issuerUri}, requireAuth=$requireAuth)",
         )
         install(JwtAuthentication) {
@@ -71,8 +62,6 @@ object OidfJwtAuthSupport {
             }
         }
         install(OidfStampValidatedJwtClaimsPlugin)
-        install(OidfJwtSessionRebindPlugin)
-        installOidfReboundSessionCleanup()
     }
 }
 
@@ -88,63 +77,3 @@ val OidfStampValidatedJwtClaimsPlugin =
             call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
         }
     }
-
-val OidfReboundSessionAttribute: AttributeKey<SessionInstance> =
-    AttributeKey("oidf.auth.reboundSessionInstance")
-
-val OidfJwtSessionRebindPlugin =
-    createApplicationPlugin(name = "OidfJwtSessionRebind") {
-        onCall { call ->
-            call.rebindKotlinInjectSessionToValidatedJwtTenant()
-        }
-    }
-
-suspend fun ApplicationCall.rebindKotlinInjectSessionToValidatedJwtTenant(): Boolean {
-    val validated = attributes.getOrNull(ValidatedJwtClaimsAttribute) ?: return false
-    val jwtTenant = PlatformJwtTenantClaims.extractTenantId(validated.claimsInput.claims)
-        ?.takeUnless { it.isAnonymousTenantId() }
-        ?: return false
-
-    val existing = attributes.getOrNull(UserContextInterceptor.RequestContextKey) ?: return false
-    val bootstrapTenant = existing.userInstance.context.tenant.tenantId
-    if (bootstrapTenant == jwtTenant) {
-        logger.debug("DI session tenant already matches JWT tenant=$jwtTenant; skip rebind")
-        return false
-    }
-
-    logger.info(
-        "Rebinding kotlin-inject session after JWT: bootstrapTenant=$bootstrapTenant → jwtTenant=$jwtTenant",
-    )
-
-    attributes.remove(BaseTenantIdAttribute)
-
-    val inject = application.kotlinInject
-    val interceptor = UserContextInterceptor(
-        appGraph = inject.appGraph,
-        tenantResolver = inject.tenantResolver,
-        principalResolver = inject.principalResolver,
-    )
-    val rebound = interceptor.intercept(this)
-    attributes.put(OidfReboundSessionAttribute, rebound.sessionInstance)
-    return true
-}
-
-fun Application.installOidfReboundSessionCleanup() {
-    intercept(ApplicationCallPipeline.Fallback) {
-        try {
-            proceed()
-        } finally {
-            call.attributes.getOrNull(OidfReboundSessionAttribute)?.let { session ->
-                try {
-                    session.destroy()
-                    logger.debug("Destroyed post-JWT rebound session ${session.sessionId}")
-                } catch (e: Exception) {
-                    logger.warn("Failed to destroy rebound session: ${e.message}")
-                }
-            }
-        }
-    }
-}
-
-private fun String.isAnonymousTenantId(): Boolean =
-    this == IdentityConstants.ANONYMOUS_TENANT_ID || this.equals("anonymous", ignoreCase = true)

@@ -53,16 +53,8 @@ class SubordinateMetadataApiTest {
      */
     @BeforeTest
     fun setup() {
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-        client = HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    prettyPrint = true
-                    isLenient = true
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
+        baseUrl = adminTestBaseUrl()
+        client = createAuthenticatedAdminClient()
         testUsername = "sub-metadata-test-${System.currentTimeMillis()}"
         // Create a test account to be used in subordinate metadata tests
         runTest {

@@ -6,12 +6,12 @@ import com.sphereon.core.api.http.GenericHttpRequest
  * SPI for resolving federation entity/tenant context from HTTP requests and names.
  *
  * ## Modes
- * Bound by [com.sphereon.openid.fed.core.tenant.ModeAwareTenantContextResolver] (impl):
- * - **LEGACY:** `AccountBasedTenantContextResolver` — `X-Account-Username` → Account.id
- * - **PLATFORM:** `SessionTenantContextResolver` — IDK session tenant (JWT-resolved by host)
+ * Bound by mode-aware impl in account-impl:
+ * - **ACCOUNT:** session [SessionExecution.tenantId] (JWT open + optional header rebind) —
+ *   not a re-read of `X-Account-Username` at the business layer
+ * - **EXTERNAL:** session tenant from JWT only (no identity headers)
  *
- * Do **not** use caller-controlled `X-Tenant-Id` / `X-Principal-Id` headers as identity
- * in PLATFORM mode (IDK AuthHeaders reject those for identity establishment).
+ * Do **not** use caller-controlled `X-Tenant-Id` / `X-Principal-Id` as identity.
  *
  * Note: OIDFed **Subordinates** are OpenID Federation trust-hierarchy entities, not
  * IDK sub-tenants or parties.
@@ -19,13 +19,13 @@ import com.sphereon.core.api.http.GenericHttpRequest
 interface TenantContextResolver {
 
     /**
-     * Resolve tenantId from an HTTP request. Returns null if unresolvable.
+     * Resolve tenantId for the current request (prefer DI session after auth ingress).
      */
     suspend fun resolveTenantId(request: GenericHttpRequest): String?
 
     /**
-     * Resolve tenantId from a name/username (for path-based resolution).
-     * LEGACY: account username. PLATFORM: typically the tenant id itself or a configured alias.
+     * Resolve tenantId from a name (path-based public entity selection).
+     * ACCOUNT: account username. EXTERNAL: typically the tenant id itself.
      */
     suspend fun resolveTenantIdByName(name: String): String?
 

@@ -64,11 +64,9 @@ class FederationEndpointApiTest {
 
     @BeforeTest
     fun setup() {
-        adminBaseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-        fedBaseUrl = System.getenv("FEDERATION_SERVER_BASE_URL") ?: "http://localhost:8080"
-        client = HttpClient {
-            install(ContentNegotiation) { json(json) }
-        }
+        adminBaseUrl = adminTestBaseUrl()
+        fedBaseUrl = federationTestBaseUrl()
+        client = createAuthenticatedAdminClient(json)
 
         testUsername = "fed-test-${System.currentTimeMillis()}"
         testAccountIdentifier = "https://federation-test.example.com/${testUsername}"

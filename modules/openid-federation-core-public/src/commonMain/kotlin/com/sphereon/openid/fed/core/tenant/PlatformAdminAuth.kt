@@ -11,19 +11,17 @@ import com.sphereon.openid.fed.core.error.UnauthorizedError
 import com.sphereon.openid.fed.core.error.federationErr
 
 /**
- * Fail-closed auth checks for PLATFORM identity mode admin mutations.
+ * Fail-closed auth checks for admin mutations.
  *
- * ## Mode boundary
- * | Mode | Behaviour |
- * |------|-----------|
- * | **LEGACY** | No-op here — historical header-selected account; optional OAuth is separate |
- * | **PLATFORM** | Requires a non-anonymous IDK session unless `oidf.identity.allow.anonymous.admin=true` |
+ * ## Policy
+ * Admin always requires Bearer at the JWT plugin (`requireAuth=true`, issuer required).
  *
- * PLATFORM does **not** accept caller-controlled `X-Tenant-Id` / `X-Principal-Id` as identity;
- * the host must populate session via JWT (or FixedTenantResolver for single-tenant embeds).
+ * | Mode | Mutation guard |
+ * |------|----------------|
+ * | **ACCOUNT** | No-op here — JWT + optional header rebind at ingress |
+ * | **EXTERNAL** | Rejects anonymous DI sessions; tenant must come from the access token |
  *
  * Apply [denyUnlessAdminAllowed] at the start of admin HTTP mutation handlers (POST/PUT/DELETE).
- * Reads may remain more permissive depending on product policy.
  */
 object PlatformAdminAuth {
 
@@ -37,17 +35,15 @@ object PlatformAdminAuth {
         configBinder: OidfConfigBinder,
     ): IdkResult<GenericHttpResponse, IdkError>? {
         val identity = configBinder.getIdentityConfig()
-        // LEGACY: account header model; do not enforce session principal here.
-        if (!identity.isPlatform) return null
-        // Explicit escape hatch for local single-tenant embeds without JWT.
-        if (identity.allowAnonymousAdmin) return null
+        if (!identity.isExternal) return null
+
         if (!execution.isAnonymous()) return null
 
         return Ok(
             errorResponse(
                 401,
-                "Authentication required: PLATFORM identity mode rejects anonymous admin mutations. " +
-                    "Provide a validated host JWT/session, or set oidf.identity.allow.anonymous.admin=true for local embeds.",
+                "Authentication required: EXTERNAL admin rejects anonymous sessions. " +
+                    "Provide a validated Bearer access token with tenant claims.",
             ),
         )
     }
@@ -61,13 +57,10 @@ object PlatformAdminAuth {
         execution: SessionExecution,
         configBinder: OidfConfigBinder,
     ): IdkResult<Nothing, com.sphereon.openid.fed.core.error.FederationError>? {
-        val identity = configBinder.getIdentityConfig()
-        if (!identity.isPlatform) return null
-        if (identity.allowAnonymousAdmin) return null
-        if (!execution.isAnonymous()) return null
+        if (denyUnlessAdminAllowed(execution, configBinder) == null) return null
         return federationErr(
             UnauthorizedError(
-                "PLATFORM identity mode requires an authenticated session for admin operations",
+                "EXTERNAL admin operations require an authenticated session with tenant claims",
             ),
         )
     }

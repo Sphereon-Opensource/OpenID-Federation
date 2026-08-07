@@ -1,89 +1,88 @@
 package com.sphereon.openid.fed.server.admin.ktor.auth
 
+import com.sphereon.core.api.app.CoreApiAppExtensionGraph
 import com.sphereon.core.api.log.Log
+import com.sphereon.core.defaults.context.DefaultPrincipalInputString
+import com.sphereon.core.defaults.context.DefaultTenantInputString
 import com.sphereon.core.defaults.context.JwtClaimsParser
 import com.sphereon.core.defaults.context.markValidated
-import com.sphereon.di.context.IdentityConstants
-import com.sphereon.di.session.SessionInstance
+import com.sphereon.core.defaults.context.toSecuredDetails
+import com.sphereon.di.context.IdentityMetadata
+import com.sphereon.di.context.IdentityResolutionInput
+import com.sphereon.di.context.IdentityResolutionResult
+import com.sphereon.di.context.PrincipalType
+import com.sphereon.di.context.ResolutionSource
 import com.sphereon.ktor.server.inject.BaseTenantIdAttribute
 import com.sphereon.ktor.server.inject.ValidatedJwtClaimsAttribute
+import com.sphereon.ktor.server.inject.context.RequestScopedContext
 import com.sphereon.ktor.server.inject.interceptor.UserContextInterceptor
-import com.sphereon.ktor.server.inject.kotlinInject
 import com.sphereon.ktor.server.jwt.JwtAuthentication
 import com.sphereon.ktor.server.jwt.SessionContextAttributeKey
+import com.sphereon.openid.fed.account.LegacyAccountSessionTenantLookup
 import com.sphereon.openid.fed.core.config.OAuth2Config
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.tenant.AccountEntityHeaderAuth
 import com.sphereon.openid.fed.core.tenant.BearerTokenSupport
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import com.sphereon.openid.fed.core.tenant.PlatformJwtTenantClaims
+import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
+import dev.zacsweers.metro.asContribution
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.ApplicationCallPipeline
-import io.ktor.server.application.call
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
 import io.ktor.server.request.header
-import io.ktor.util.AttributeKey
+import io.ktor.server.request.path
+import io.ktor.server.response.header
+import io.ktor.server.response.respond
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 private val logger = Log.app().withTag("OidfJwtAuthSupport")
 
 /**
- * Install IDK [JwtAuthentication] for PLATFORM (or forced) deployments.
+ * Admin JWT auth (IDK only) — **no throwaway validation session**.
  *
- * ## Plugin order (required)
- * 1. [com.sphereon.ktor.server.inject.KotlinInjectPlugin] — bootstrap session graph
- *    (tenant may be platform root / fixed — JWT claims not stamped yet)
- * 2. [JwtAuthentication] — validates bearer, builds [SessionContextAttributeKey]
- * 3. [OidfStampValidatedJwtClaimsPlugin] — stamps [ValidatedJwtClaimsAttribute]
- * 4. [OidfJwtSessionRebindPlugin] — if JWT tenant ≠ bootstrap DI tenant, recreate
- *    the kotlin-inject user/session graph so [com.sphereon.core.api.context.SessionExecution.tenantId]
- *    matches the validated JWT tenant (KMS/config/cache scopes follow JWT)
- * 5. Fallback cleanup destroys the rebound session (bootstrap session is still
- *    destroyed by KotlinInjectPlugin's finally block)
- *
- * ## When enabled
- * - `oidf.oauth2.jwt.auth.enabled=true`, or
- * - `auto` (default) and identity.mode=platform and issuer URI is non-blank
- *
- * LEGACY open-source defaults leave JWT auth **off** so existing integration tests
- * keep working without an IdP.
+ * ## Order (matches IDK BYO)
+ * 1. [com.sphereon.ktor.server.inject.KotlinInjectPlugin] — bootstrap User+Session
+ *    (fixed/root tenant; principal still anonymous until claims exist)
+ * 2. [JwtAuthentication] — validate Bearer with **request** SessionScope
+ *    [com.sphereon.oauth2.jwt.validation.JwtValidationService]
+ * 3. [OidfPostJwtIdentityPlugin] — stamp [ValidatedJwtClaimsAttribute] from the
+ *    already-validated token; EXTERNAL fail-closed without tenant claim; align
+ *    DI session to JWT principal + tenant; ACCOUNT header rebind when allowed
  */
 object OidfJwtAuthSupport {
 
     fun shouldInstall(configBinder: OidfConfigBinder): Boolean {
         val oauth = configBinder.getOAuth2Config()
-        val identity = configBinder.getIdentityConfig()
         return when (oauth.jwtAuthEnabled.trim().lowercase()) {
-            "true", "1", "yes", "on" -> oauth.issuerUri.isNotBlank()
             "false", "0", "no", "off" -> false
-            else -> // auto
-                identity.mode == IdentityMode.PLATFORM && oauth.issuerUri.isNotBlank()
+            else -> oauth.issuerUri.isNotBlank()
         }
     }
 
     /**
-     * @param requireAuth When true, missing/invalid tokens yield 401 (admin default).
-     * @param anonymousPaths Paths that skip validation (always include /health).
+     * JwtAuthentication + post-JWT identity alignment.
+     * Must install **after** [com.sphereon.ktor.server.inject.KotlinInjectPlugin].
      */
-    fun Application.installOidfJwtAuthIfConfigured(
+    fun Application.installOidfJwtAuthAfterSession(
+        appGraph: AdminServerAppGraph,
         configBinder: OidfConfigBinder,
-        requireAuth: Boolean,
-        anonymousPaths: List<String> = listOf("/health"),
+        requireAuth: Boolean = true,
+        anonymousPaths: List<String> = listOf("/health", "/debug/**"),
     ) {
-        if (!shouldInstall(configBinder)) {
-            logger.info(
-                "JWT authentication not installed " +
-                    "(mode=${configBinder.getIdentityConfig().mode}, " +
-                    "jwtAuth=${configBinder.getOAuth2Config().jwtAuthEnabled}, " +
-                    "issuerBlank=${configBinder.getOAuth2Config().issuerUri.isBlank()})",
-            )
-            return
-        }
+        if (!shouldInstall(configBinder)) return
         val oauth = configBinder.getOAuth2Config()
         logger.info(
-            "Installing IDK JwtAuthentication + post-JWT session rebind " +
-                "(issuer=${oauth.issuerUri}, requireAuth=$requireAuth, audience=${oauth.audience})",
+            "Installing JwtAuthentication + post-JWT identity alignment " +
+                "(issuer=${oauth.issuerUri}, requireAuth=$requireAuth, " +
+                "mode=${configBinder.getIdentityConfig().mode})",
         )
         install(JwtAuthentication) {
             this.requireAuth = requireAuth
@@ -92,126 +91,248 @@ object OidfJwtAuthSupport {
                 this.expectedAudience = oauth.audience
             }
         }
-        // Stamp validated claims, then rebind DI session if JWT tenant diverged
-        install(OidfStampValidatedJwtClaimsPlugin)
-        install(OidfJwtSessionRebindPlugin)
-        installOidfReboundSessionCleanup()
+        install(
+            OidfPostJwtIdentityPlugin(
+                appGraph = appGraph,
+                configBinder = configBinder,
+                anonymousPaths = anonymousPaths,
+            ),
+        )
     }
 }
 
 /**
- * After [JwtAuthentication] builds a non-anonymous session, stamp
- * [ValidatedJwtClaimsAttribute] from the Authorization bearer payload.
- *
- * Safe only because [JwtAuthentication] already rejected invalid tokens
- * (or allowed anonymous paths without a session principal).
+ * After [JwtAuthentication]: stamp claims, EXTERNAL tenant claim gate, session align + ACCOUNT rebind.
  */
-val OidfStampValidatedJwtClaimsPlugin =
-    createApplicationPlugin(name = "OidfStampValidatedJwtClaims") {
-        onCall { call ->
-            if (call.attributes.contains(ValidatedJwtClaimsAttribute)) return@onCall
-            val session = call.attributes.getOrNull(SessionContextAttributeKey) ?: return@onCall
-            if (session.isAnonymous()) return@onCall
-            val auth = call.request.header(HttpHeaders.Authorization)
-            val token = BearerTokenSupport.extractAccessToken(auth) ?: return@onCall
+@OptIn(ExperimentalUuidApi::class)
+fun OidfPostJwtIdentityPlugin(
+    appGraph: AdminServerAppGraph,
+    configBinder: OidfConfigBinder,
+    anonymousPaths: List<String>,
+) = createApplicationPlugin(name = "OidfPostJwtIdentity") {
+    onCall { call ->
+        if (matchesAnonymousPath(call.request.path(), anonymousPaths)) return@onCall
+
+        val jwtSession = call.attributes.getOrNull(SessionContextAttributeKey)
+        if (jwtSession == null || jwtSession.isAnonymous()) {
+            // JwtAuthentication already 401'd when requireAuth=true
+            return@onCall
+        }
+
+        // Stamp claims only after JwtAuthentication accepted the token (signature/iss/exp).
+        if (!call.attributes.contains(ValidatedJwtClaimsAttribute)) {
+            val token =
+                BearerTokenSupport.extractAccessToken(call.request.header(HttpHeaders.Authorization))
+                    ?: return@onCall
             val claimsInput = JwtClaimsParser.toJwtClaimsInput(token) ?: return@onCall
             call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
         }
-    }
 
-/**
- * Attribute holding a kotlin-inject [SessionInstance] created by post-JWT rebind.
- * Destroyed in [ApplicationCallPipeline.Fallback] after KotlinInjectPlugin has
- * torn down the bootstrap session.
- */
-val OidfReboundSessionAttribute: AttributeKey<SessionInstance> =
-    AttributeKey("oidf.auth.reboundSessionInstance")
+        val validated = call.attributes[ValidatedJwtClaimsAttribute]
+        val claims = validated.claimsInput.claims
+        val identity = configBinder.getIdentityConfig()
+        val headerLookup: (String) -> String? = { name -> call.request.header(name) }
 
-/**
- * When validated JWT tenant claims differ from the bootstrap DI session tenant
- * (platform root / fixed), recreate user+session graphs via [UserContextInterceptor]
- * so SessionScope services see the JWT tenant.
- *
- * Requires [ValidatedJwtClaimsAttribute] (stamp plugin) and an existing
- * [UserContextInterceptor.RequestContextKey] from KotlinInjectPlugin.
- */
-val OidfJwtSessionRebindPlugin =
-    createApplicationPlugin(name = "OidfJwtSessionRebind") {
-        onCall { call ->
-            call.rebindKotlinInjectSessionToValidatedJwtTenant()
+        if (identity.isExternal) {
+            val jwtTenant = PlatformJwtTenantClaims.extractTenantId(claims)
+            if (jwtTenant.isNullOrBlank()) {
+                call.respondUnauthorized(
+                    "EXTERNAL mode requires a tenant claim on the access token " +
+                        "(tenant_id / tid / …). Impersonation must be expressed by the AS in the token.",
+                )
+                return@onCall
+            }
+            call.alignSessionToIdentity(
+                appGraph = appGraph,
+                targetTenantId = jwtTenant,
+                claims = claims,
+                principalClaim = identity.accountHeaderPrincipalClaim,
+                validated = validated,
+                reason = "EXTERNAL JWT tenant",
+            )
+            return@onCall
         }
+
+        // ACCOUNT mode
+        if (!identity.isAccount || !identity.isSessionAccountAligned) return@onCall
+
+        if (AccountEntityHeaderAuth.hasEntitySelectionHeader(headerLookup)) {
+            val denied =
+                AccountEntityHeaderAuth.denyReasonIfHeaderForbidden(claims, headerLookup, identity)
+            if (denied != null) {
+                call.respondForbidden(denied)
+                return@onCall
+            }
+            val entityUsername =
+                AccountEntityHeaderAuth.entityUsernameFromHeaders(headerLookup)
+                    ?: return@onCall
+            val targetAccountId =
+                LegacyAccountSessionTenantLookup.resolveAccountId(entityUsername)
+            if (targetAccountId == null) {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    """{"error":"not_found","error_description":"Unknown account username for entity selection: $entityUsername"}""",
+                )
+                return@onCall
+            }
+            call.alignSessionToIdentity(
+                appGraph = appGraph,
+                targetTenantId = targetAccountId,
+                claims = claims,
+                principalClaim = identity.accountHeaderPrincipalClaim,
+                validated = validated,
+                reason = "ACCOUNT header rebind username=$entityUsername",
+            )
+            return@onCall
+        }
+
+        // No header: align to JWT tenant claim if any, else seeded root Account.id.
+        // Never demote an already-aligned Account UUID to bootstrap "default".
+        val jwtTenant = PlatformJwtTenantClaims.extractTenantId(claims)
+        val rootAccountId =
+            LegacyAccountSessionTenantLookup.resolveAccountId(AccountEntityHeaderAuth.ROOT_USERNAME)
+        val requestContext =
+            call.attributes.getOrNull(UserContextInterceptor.RequestContextKey)
+        val currentTenantId =
+            requestContext?.sessionInstance?.sessionExecution?.tenantId
+        val targetTenantId =
+            jwtTenant
+                ?: rootAccountId
+                ?: currentTenantId?.takeUnless {
+                    it.equals("default", ignoreCase = true) ||
+                        it.equals("anonymous", ignoreCase = true)
+                }
+                ?: identity.sessionFixedTenantId.ifBlank { "default" }
+        call.alignSessionToIdentity(
+            appGraph = appGraph,
+            targetTenantId = targetTenantId,
+            claims = claims,
+            principalClaim = identity.accountHeaderPrincipalClaim,
+            validated = validated,
+            reason = "ACCOUNT JWT-first entity",
+        )
     }
+}
 
-/**
- * Recreate the per-request kotlin-inject session when JWT tenant ≠ bootstrap tenant.
- *
- * @return true if a rebind was performed
- */
-suspend fun ApplicationCall.rebindKotlinInjectSessionToValidatedJwtTenant(): Boolean {
-    val validated = attributes.getOrNull(ValidatedJwtClaimsAttribute) ?: return false
-    val jwtTenant = PlatformJwtTenantClaims.extractTenantId(validated.claimsInput.claims)
-        ?.takeUnless { it.isAnonymousTenantId() }
-        ?: return false
+@OptIn(ExperimentalUuidApi::class)
+private suspend fun ApplicationCall.alignSessionToIdentity(
+    appGraph: AdminServerAppGraph,
+    targetTenantId: String,
+    claims: Map<String, JsonElement>,
+    principalClaim: String,
+    validated: com.sphereon.core.defaults.context.ValidatedJwtClaimsInput,
+    reason: String,
+) {
+    val requestContext =
+        attributes.getOrNull(UserContextInterceptor.RequestContextKey) ?: return
+    val currentTenantId = requestContext.sessionInstance.sessionExecution.tenantId
+    val principalId =
+        AccountEntityHeaderAuth.principalFromClaims(claims, principalClaim)
+            ?: claims["sub"]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "authenticated"
 
-    val existing = attributes.getOrNull(UserContextInterceptor.RequestContextKey) ?: return false
-    val bootstrapTenant = existing.userInstance.context.tenant.tenantId
-    if (bootstrapTenant == jwtTenant) {
-        logger.debug("DI session tenant already matches JWT tenant=$jwtTenant; skip rebind")
-        return false
+    // Always realign when bootstrap session is still anonymous; otherwise skip if tenant matches.
+    if (currentTenantId == targetTenantId &&
+        !requestContext.sessionInstance.sessionExecution.isAnonymous()
+    ) {
+        logger.debug("Session already aligned ($reason tenant=$targetTenantId)")
+        return
     }
 
     logger.info(
-        "Rebinding kotlin-inject session after JWT: bootstrapTenant=$bootstrapTenant → jwtTenant=$jwtTenant",
+        "Align session: $currentTenantId → $targetTenantId ($reason, principal=$principalId)",
     )
 
-    // UserContextInterceptor requires BaseTenantIdAttribute to match re-resolved tenant
-    // or be absent — clear bootstrap stamp so re-create can succeed.
-    attributes.remove(BaseTenantIdAttribute)
+    val core = appGraph.asContribution<CoreApiAppExtensionGraph>()
+    val identityResolution =
+        runCatching {
+            core.identityResolutionPipeline.resolve(
+                IdentityResolutionInput(tokenClaims = claims),
+            )
+        }.getOrNull()
 
-    val inject = application.kotlinInject
-    val interceptor = UserContextInterceptor(
-        appGraph = inject.appGraph,
-        tenantResolver = inject.tenantResolver,
-        principalResolver = inject.principalResolver,
+    val resolvedPrincipalId =
+        identityResolution?.principalId?.takeIf { it.isNotBlank() } ?: principalId
+
+    val effectiveResolution =
+        IdentityResolutionResult(
+            tenantId = targetTenantId,
+            principalId = resolvedPrincipalId,
+            principalType = identityResolution?.principalType ?: PrincipalType.USER,
+            metadata =
+                identityResolution?.metadata
+                    ?: IdentityMetadata(resolvedFrom = ResolutionSource.TOKEN),
+        )
+
+    requestContext.sessionInstance.destroy()
+
+    val userInstance =
+        core.userContextManager.createOrGetFromResolvedInputs(
+            tenantInput = DefaultTenantInputString(targetTenantId),
+            principalInput = DefaultPrincipalInputString(resolvedPrincipalId),
+            identityResolution = effectiveResolution,
+            makeActive = false,
+        )
+
+    val sessionId = Uuid.random().toString()
+    val correlationId = request.header("X-Correlation-Id") ?: sessionId
+    val sessionInstance =
+        userInstance.sessionContextManager.createOrGetFromId(
+            sessionId = sessionId,
+            correlationId = correlationId,
+            makeActive = false,
+            secureDetails = validated.toSecuredDetails(),
+            principalType = effectiveResolution.principalType,
+        )
+
+    attributes.put(
+        UserContextInterceptor.RequestContextKey,
+        RequestScopedContext(
+            userInstance = userInstance,
+            sessionInstance = sessionInstance,
+        ),
     )
-    // OidfSessionTenantResolver now sees ValidatedJwtClaimsAttribute → JWT tenant
-    val rebound = interceptor.intercept(this)
-
-    // Bootstrap session is still destroyed by KotlinInjectPlugin.finally;
-    // schedule destroy for the rebound session after the call fully completes.
-    attributes.put(OidfReboundSessionAttribute, rebound.sessionInstance)
-    return true
+    attributes.put(BaseTenantIdAttribute, targetTenantId)
+    logger.debug("Session aligned: session=${sessionInstance.sessionId} tenant=$targetTenantId")
 }
 
-/**
- * Destroy rebound sessions after the request completes (after Plugins finally
- * has destroyed the bootstrap session).
- */
-fun Application.installOidfReboundSessionCleanup() {
-    intercept(ApplicationCallPipeline.Fallback) {
-        try {
-            proceed()
-        } finally {
-            call.attributes.getOrNull(OidfReboundSessionAttribute)?.let { session ->
-                try {
-                    session.destroy()
-                    logger.debug("Destroyed post-JWT rebound session ${session.sessionId}")
-                } catch (e: Exception) {
-                    logger.warn("Failed to destroy rebound session: ${e.message}")
-                }
+fun OAuth2Config.isJwtAuthAutoEligible(mode: IdentityMode): Boolean =
+    jwtAuthEnabled.trim().lowercase() !in setOf("false", "0", "no", "off") &&
+        issuerUri.isNotBlank()
+
+internal fun matchesAnonymousPath(
+    path: String,
+    patterns: List<String>,
+): Boolean {
+    val normalized = path.trimEnd('/').ifEmpty { "/" }
+    return patterns.any { pattern ->
+        when {
+            pattern.endsWith("/**") -> {
+                val prefix = pattern.removeSuffix("/**").trimEnd('/')
+                normalized == prefix || normalized.startsWith("$prefix/")
             }
+            pattern.endsWith("/*") -> {
+                val prefix = pattern.removeSuffix("/*").trimEnd('/')
+                val rest = normalized.removePrefix(prefix).removePrefix("/")
+                rest.isNotEmpty() && !rest.contains('/')
+            }
+            else -> normalized == pattern.trimEnd('/').ifEmpty { "/" } || path == pattern
         }
     }
 }
 
-/**
- * Whether JWT auth should be considered active for the current binder config.
- */
-fun OAuth2Config.isJwtAuthAutoEligible(mode: IdentityMode): Boolean =
-    jwtAuthEnabled.trim().lowercase() in setOf("true", "1", "yes", "on") ||
-        (jwtAuthEnabled.trim().lowercase() !in setOf("false", "0", "no", "off") &&
-            mode == IdentityMode.PLATFORM &&
-            issuerUri.isNotBlank())
+internal suspend fun ApplicationCall.respondUnauthorized(description: String) {
+    val sanitized = description.replace('"', '\'')
+    response.header(
+        HttpHeaders.WWWAuthenticate,
+        """Bearer error="invalid_token", error_description="$sanitized"""",
+    )
+    respond(HttpStatusCode.Unauthorized)
+}
 
-private fun String.isAnonymousTenantId(): Boolean =
-    this == IdentityConstants.ANONYMOUS_TENANT_ID || this.equals("anonymous", ignoreCase = true)
+internal suspend fun ApplicationCall.respondForbidden(description: String) {
+    respond(
+        HttpStatusCode.Forbidden,
+        """{"error":"forbidden","error_description":"${description.replace('"', '\'')}"}""",
+    )
+}

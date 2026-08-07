@@ -51,12 +51,8 @@ class KeyApiTest {
         @BeforeAll
         @JvmStatic
         fun setupClass() {
-            baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-            setupClient = HttpClient {
-                install(ContentNegotiation) {
-                    json(jsonConfig)
-                }
-            }
+            baseUrl = adminTestBaseUrl()
+            setupClient = createAuthenticatedAdminClient(jsonConfig)
             println("Attempting to create account '$ACCOUNT_USERNAME' before tests...")
             runBlocking {
                 try {
@@ -131,15 +127,7 @@ class KeyApiTest {
      */
     @BeforeTest
     fun setup() {
-        client = HttpClient {
-            install(ContentNegotiation) {
-                json(jsonConfig)
-            }
-            defaultRequest {
-                url(baseUrl)
-                header("X-Account-Username", ACCOUNT_USERNAME)
-            }
-        }
+        client = createAuthenticatedAdminClient(jsonConfig) { defaultRequest { url(baseUrl); header("X-Account-Username", ACCOUNT_USERNAME) } }
     }
 
     /**

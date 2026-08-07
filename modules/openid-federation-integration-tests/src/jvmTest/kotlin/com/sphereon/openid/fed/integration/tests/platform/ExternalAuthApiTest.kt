@@ -29,23 +29,23 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * PLATFORM e2e with **everything in-process**:
+ * EXTERNAL e2e with **everything in-process**:
  * - IDK OAuth2 AS ([IdkOauth2AsFixture] / `services-oauth2-as-rest`)
- * - OIDFed admin ([PlatformInProcessFixture] / `configureAdmin`)
+ * - OIDFed admin ([ExternalInProcessFixture] / `configureAdmin`)
  *
- * No standalone PLATFORM admin process. No Keycloak.
- * Requires PostgreSQL (same DB as LEGACY integration tests).
+ * No standalone EXTERNAL admin process. No Keycloak.
+ * Requires PostgreSQL (same DB as ACCOUNT integration tests).
  *
  * ```bash
  * ./gradlew :modules:openid-federation-integration-tests:platformIntegrationTests \
  *   :modules:openid-federation-integration-tests:jvmTest \
- *   --tests "…platform.PlatformAuthApiTest"
+ *   --tests "…platform.ExternalAuthApiTest"
  * ```
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class PlatformAuthApiTest {
+class ExternalAuthApiTest {
 
-    private lateinit var stack: PlatformInProcessFixture
+    private lateinit var stack: ExternalInProcessFixture
     private lateinit var client: HttpClient
     private val createdKeyIds = mutableListOf<Pair<String, String>>()
 
@@ -59,13 +59,13 @@ class PlatformAuthApiTest {
     @BeforeAll
     fun bootInProcessStack() {
         try {
-            stack = PlatformInProcessFixture()
+            stack = ExternalInProcessFixture()
             println(
-                "PLATFORM in-process stack: AS=${stack.asBaseUrl} admin=${stack.adminBaseUrl}",
+                "EXTERNAL in-process stack: AS=${stack.asBaseUrl} admin=${stack.adminBaseUrl}",
             )
         } catch (e: Exception) {
             fail(
-                "Failed to boot in-process PLATFORM stack (Postgres required): ${e.message}\n" +
+                "Failed to boot in-process EXTERNAL stack (Postgres required): ${e.message}\n" +
                     e.stackTraceToString(),
             )
         }
@@ -204,8 +204,8 @@ class PlatformAuthApiTest {
     }
 
     @Test
-    fun `6 accounts endpoint not usable in PLATFORM`() = runTest {
-        val token = stack.mintAccessToken(PlatformInProcessFixture.PLATFORM_ROOT_TENANT)
+    fun `6 accounts endpoint not usable in EXTERNAL`() = runTest {
+        val token = stack.mintAccessToken(ExternalInProcessFixture.EXTERNAL_ROOT_TENANT)
         val response = client.get("$baseUrl/accounts") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
@@ -214,7 +214,7 @@ class PlatformAuthApiTest {
                 response.status == HttpStatusCode.MethodNotAllowed ||
                 response.status == HttpStatusCode.Gone ||
                 response.status == HttpStatusCode.Unauthorized,
-            "PLATFORM must not expose usable /accounts. Status=${response.status} Body=${response.bodyAsText()}",
+            "EXTERNAL must not expose usable /accounts. Status=${response.status} Body=${response.bodyAsText()}",
         )
     }
 

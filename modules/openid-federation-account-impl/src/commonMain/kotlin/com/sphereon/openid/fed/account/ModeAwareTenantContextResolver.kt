@@ -13,8 +13,8 @@ import dev.zacsweers.metro.binding
 /**
  * Single DI binding for [TenantContextResolver] that delegates by [IdentityMode].
  *
- * - [IdentityMode.LEGACY] → [AccountBasedTenantContextResolver]
- * - [IdentityMode.PLATFORM] → [SessionTenantContextResolver]
+ * - [IdentityMode.ACCOUNT] → [AccountBasedTenantContextResolver] (session Account.id after JWT/rebind)
+ * - [IdentityMode.EXTERNAL] → [SessionTenantContextResolver] (session tenant from JWT)
  */
 @Inject
 @SingleIn(SessionScope::class)
@@ -27,8 +27,8 @@ class ModeAwareTenantContextResolver(
 
     private val delegate: TenantContextResolver
         get() = when (configBinder.getIdentityConfig().mode) {
-            IdentityMode.LEGACY -> accountBased
-            IdentityMode.PLATFORM -> sessionBased
+            IdentityMode.ACCOUNT -> accountBased
+            IdentityMode.EXTERNAL -> sessionBased
         }
 
     override suspend fun resolveTenantId(request: GenericHttpRequest): String? =

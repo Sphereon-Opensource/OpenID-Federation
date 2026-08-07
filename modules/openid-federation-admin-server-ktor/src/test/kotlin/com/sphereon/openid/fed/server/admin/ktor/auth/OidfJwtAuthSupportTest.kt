@@ -17,7 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Unit tests for [OidfJwtAuthSupport.shouldInstall] install gating.
+ * Unit tests for [OidfJwtAuthSupport.shouldInstall] — admin always auth when issuer set.
  */
 class OidfJwtAuthSupportTest {
 
@@ -43,21 +43,21 @@ class OidfJwtAuthSupportTest {
     }
 
     @Test
-    fun legacy_auto_does_not_install_even_with_issuer() {
+    fun legacy_auto_installs_when_issuer_set() {
         val binder = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.LEGACY),
+            identity = IdentityConfig(mode = IdentityMode.ACCOUNT),
             oauth = OAuth2Config(
                 issuerUri = "https://idk-test-issuer.local/oidc",
                 jwtAuthEnabled = "auto",
             ),
         )
-        assertFalse(OidfJwtAuthSupport.shouldInstall(binder))
+        assertTrue(OidfJwtAuthSupport.shouldInstall(binder))
     }
 
     @Test
     fun platform_auto_installs_when_issuer_set() {
         val binder = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.PLATFORM),
+            identity = IdentityConfig(mode = IdentityMode.EXTERNAL),
             oauth = OAuth2Config(
                 issuerUri = "https://idk-test-issuer.local/oidc",
                 audience = "openid-federation-admin",
@@ -68,9 +68,9 @@ class OidfJwtAuthSupportTest {
     }
 
     @Test
-    fun platform_auto_skips_when_issuer_blank() {
+    fun auto_skips_when_issuer_blank() {
         val binder = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.PLATFORM),
+            identity = IdentityConfig(mode = IdentityMode.EXTERNAL),
             oauth = OAuth2Config(issuerUri = "", jwtAuthEnabled = "auto"),
         )
         assertFalse(OidfJwtAuthSupport.shouldInstall(binder))
@@ -79,13 +79,13 @@ class OidfJwtAuthSupportTest {
     @Test
     fun forced_true_requires_issuer() {
         val noIssuer = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.LEGACY),
+            identity = IdentityConfig(mode = IdentityMode.ACCOUNT),
             oauth = OAuth2Config(issuerUri = "", jwtAuthEnabled = "true"),
         )
         assertFalse(OidfJwtAuthSupport.shouldInstall(noIssuer))
 
         val withIssuer = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.LEGACY),
+            identity = IdentityConfig(mode = IdentityMode.ACCOUNT),
             oauth = OAuth2Config(
                 issuerUri = "https://idk-test-issuer.local/oidc",
                 jwtAuthEnabled = "true",
@@ -97,7 +97,7 @@ class OidfJwtAuthSupportTest {
     @Test
     fun forced_false_never_installs() {
         val binder = FakeBinder(
-            identity = IdentityConfig(mode = IdentityMode.PLATFORM),
+            identity = IdentityConfig(mode = IdentityMode.EXTERNAL),
             oauth = OAuth2Config(
                 issuerUri = "https://idk-test-issuer.local/oidc",
                 jwtAuthEnabled = "false",

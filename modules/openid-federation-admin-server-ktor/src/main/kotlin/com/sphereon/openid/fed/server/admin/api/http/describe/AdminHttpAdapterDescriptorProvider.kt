@@ -72,7 +72,7 @@ private fun buildAdminEndpoints(
     configBinder: OidfConfigBinder,
     accountDescriptors: Set<AdminAccountDescriptorContribution>,
 ): List<HttpEndpointDescriptor> = buildList {
-    if (configBinder.getIdentityConfig().isLegacy) {
+        if (configBinder.getIdentityConfig().isAccount) {
         accountDescriptors.forEach { addAll(it.endpointDescriptors) }
     }
     addAll(

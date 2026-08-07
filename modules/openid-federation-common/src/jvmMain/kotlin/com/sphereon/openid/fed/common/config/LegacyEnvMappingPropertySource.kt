@@ -83,7 +83,10 @@ object LegacyEnvMappingPropertySource {
         // Identity / multi-tenancy mode
         "OIDF_IDENTITY_MODE" to OidfConfigKeys.Identity.MODE,
         "IDENTITY_MODE" to OidfConfigKeys.Identity.MODE,
+        "OIDF_EXTERNAL_ROOT_TENANT_ID" to OidfConfigKeys.Identity.EXTERNAL_ROOT_TENANT_ID,
         "OIDF_PLATFORM_ROOT_TENANT_ID" to OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID,
+        "OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM" to OidfConfigKeys.Identity.ACCOUNT_HEADER_PRINCIPAL_CLAIM,
+        "OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS" to OidfConfigKeys.Identity.ACCOUNT_HEADER_ALLOWED_PRINCIPALS,
         "OIDF_SESSION_ALIGNMENT" to OidfConfigKeys.Identity.SESSION_ALIGNMENT,
         "OIDF_SESSION_FIXED_TENANT_ID" to OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID,
 

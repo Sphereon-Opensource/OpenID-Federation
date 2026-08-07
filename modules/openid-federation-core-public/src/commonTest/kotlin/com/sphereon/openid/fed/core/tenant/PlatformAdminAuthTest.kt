@@ -15,11 +15,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Contract tests for PLATFORM vs LEGACY admin auth policy.
- *
- * Full [com.sphereon.core.api.context.SessionExecution] integration is covered by
- * server-level tests; here we lock the config-driven branch conditions used by
- * [PlatformAdminAuth] before it consults session anonymity.
+ * Config contract for admin identity modes.
+ * Admin always requires Bearer; there is no anonymous-admin flag.
  */
 class PlatformAdminAuthTest {
 
@@ -42,28 +39,12 @@ class PlatformAdminAuthTest {
     }
 
     @Test
-    fun legacy_mode_skips_platform_auth_enforcement() {
-        val cfg = FakeBinder(IdentityConfig(mode = IdentityMode.LEGACY)).getIdentityConfig()
-        // PlatformAdminAuth returns null immediately when !isPlatform
-        assertFalse(cfg.isPlatform)
-        assertTrue(cfg.isLegacy)
-    }
-
-    @Test
-    fun platform_defaults_to_rejecting_anonymous_admins() {
-        val cfg = FakeBinder(
-            IdentityConfig(mode = IdentityMode.PLATFORM, allowAnonymousAdmin = false),
-        ).getIdentityConfig()
-        assertTrue(cfg.isPlatform)
-        assertFalse(cfg.allowAnonymousAdmin)
-    }
-
-    @Test
-    fun platform_can_allow_anonymous_for_local_embeds() {
-        val cfg = FakeBinder(
-            IdentityConfig(mode = IdentityMode.PLATFORM, allowAnonymousAdmin = true),
-        ).getIdentityConfig()
-        assertTrue(cfg.isPlatform)
-        assertTrue(cfg.allowAnonymousAdmin)
+    fun account_and_external_modes_remain_distinct_for_tenant_selection() {
+        val account = FakeBinder(IdentityConfig(mode = IdentityMode.ACCOUNT)).getIdentityConfig()
+        val external = FakeBinder(IdentityConfig(mode = IdentityMode.EXTERNAL)).getIdentityConfig()
+        assertTrue(account.isAccount)
+        assertFalse(account.isExternal)
+        assertTrue(external.isExternal)
+        assertFalse(external.isAccount)
     }
 }

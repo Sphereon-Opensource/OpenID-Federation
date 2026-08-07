@@ -55,18 +55,10 @@ class EntityStatementApiTest {
     @BeforeTest
     fun setup() {
         // Configure base URL from environment variable or use default localhost
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
+        baseUrl = adminTestBaseUrl()
 
         // Initialize HTTP client with JSON content negotiation
-        client = HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    prettyPrint = true
-                    isLenient = true
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
+        client = createAuthenticatedAdminClient()
 
         // Generate unique test identifiers with timestamps
         testUsername = "entity-test-${System.currentTimeMillis()}"

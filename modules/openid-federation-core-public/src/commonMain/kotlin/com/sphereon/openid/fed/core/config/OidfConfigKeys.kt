@@ -195,30 +195,26 @@ object OidfConfigKeys {
         const val PREFIX = "$OIDF_PREFIX.identity"
 
         /**
-         * Identity mode: `legacy` (default) or `platform`.
+         * Identity mode: `account` (default) or `external`.
+         * Aliases: `legacy`→account, `platform`→external.
          * @see com.sphereon.openid.fed.core.tenant.IdentityMode
          */
         const val MODE = "$PREFIX.mode"
 
         /**
-         * Optional IDK tenant id that owns the federation root entity identifier.
-         * Used in PLATFORM mode when resolving entity identifiers.
+         * Optional token tenant id that owns the federation root **entity URL**
+         * (EXTERNAL mode identifier mapping only — not login, not session fallback).
          */
-        const val PLATFORM_ROOT_TENANT_ID = "$PREFIX.platform.root.tenant.id"
+        const val EXTERNAL_ROOT_TENANT_ID = "$PREFIX.external.root.tenant.id"
 
-        /**
-         * When false (default), PLATFORM admin mutations require a non-anonymous session.
-         */
-        const val ALLOW_ANONYMOUS_ADMIN = "$PREFIX.allow.anonymous.admin"
+        /** Compat alias for [EXTERNAL_ROOT_TENANT_ID]. */
+        const val PLATFORM_ROOT_TENANT_ID = "$PREFIX.platform.root.tenant.id"
 
         /**
          * IDK session tenant alignment strategy (L1 vs L2).
          *
-         * - `account` (default): LEGACY binds session tenant to Account.id (L2)
-         * - `fixed`: always use a fixed session tenant id (L1 compat, typically `"default"`)
-         *
-         * PLATFORM mode ignores this for account-header logic; it uses
-         * [PLATFORM_ROOT_TENANT_ID] or `"default"`.
+         * - `account` (default): ACCOUNT mode binds session tenant to Account.id (L2)
+         * - `fixed`: always use a fixed session tenant id (L1 compat)
          */
         const val SESSION_ALIGNMENT = "$PREFIX.session.alignment"
 
@@ -226,6 +222,19 @@ object OidfConfigKeys {
          * Fixed session tenant id when [SESSION_ALIGNMENT] is `fixed`, or lookup fallback (default `default`).
          */
         const val SESSION_FIXED_TENANT_ID = "$PREFIX.session.fixed.tenant.id"
+
+        /**
+         * ACCOUNT mode: JWT claim name matched against [ACCOUNT_HEADER_ALLOWED_PRINCIPALS]
+         * when authorizing `X-Account-Username` (default `sub`).
+         */
+        const val ACCOUNT_HEADER_PRINCIPAL_CLAIM = "$PREFIX.account.header.principal.claim"
+
+        /**
+         * ACCOUNT mode: comma-separated principal values allowed to use `X-Account-Username`.
+         * Default blank = **nobody** (no header rebind). Explicit `*` = any authenticated
+         * (test/dev only). Example production: `ops-admin,service-bot`.
+         */
+        const val ACCOUNT_HEADER_ALLOWED_PRINCIPALS = "$PREFIX.account.header.allowed.principals"
     }
 
     // ========================================================================

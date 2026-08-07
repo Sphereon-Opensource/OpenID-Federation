@@ -11,20 +11,14 @@ import com.sphereon.openid.fed.persistence.Persistence
 import dev.zacsweers.metro.Inject
 
 /**
- * PLATFORM-mode [TenantContextResolver]: IDK session tenant (post-JWT rebind).
+ * EXTERNAL-mode [TenantContextResolver]: IDK session tenant from the access token.
  *
  * ## Resolution
- * Uses [SessionExecution.tenantId] only — the single source of truth after
- * admin/federation servers rebind the kotlin-inject session to validated JWT
- * tenant claims ([OidfJwtSessionRebindPlugin] / stamp plugin).
+ * Uses [SessionExecution.tenantId] only — set from validated JWT tenant claims at
+ * session open (admin pre-session stamp + EXTERNAL fail-closed without tenant claim).
  *
- * Does **not** re-decode the Authorization Bearer payload. Unverified claim
- * parsing was removed so business isolation cannot diverge from DI session
- * (KMS/config/cache). PLATFORM multi-tenant requires JWT auth + rebind (or a
- * host that sets session tenant correctly before commands run).
- *
- * Does **not** read `X-Account-Username` / `X-Tenant-Id`. Auto-provisions a
- * federation tenant row on first resolution so domain FKs work.
+ * Does **not** re-decode the Authorization Bearer payload or read identity headers.
+ * Auto-provisions a federation tenant row on first resolution so domain FKs work.
  */
 @Inject
 class SessionTenantContextResolver(
@@ -36,14 +30,14 @@ class SessionTenantContextResolver(
     private val accountQueries = Persistence.accountQueries
 
     override suspend fun resolveTenantId(request: GenericHttpRequest): String? {
-        // Single source: DI session tenant (aligned to JWT after post-auth rebind)
+        // Single source: DI session tenant (JWT claims at open)
         val tenantId = execution.tenantId.takeUnless { it.isAnonymousTenant() } ?: return null
         tenantProvisioner.ensureTenantExists(tenantId, TenantSource.IDK)
         return tenantId
     }
 
     override suspend fun resolveTenantIdByName(name: String): String? {
-        // In platform mode, "name" is expected to be the tenant id itself (or configured alias later).
+        // EXTERNAL: "name" is typically the tenant id itself (or a configured alias later).
         if (name.isBlank() || name.isAnonymousTenant()) return null
         if (tenantProvisioner.tenantExists(name) ||
             tenantProvisioner.ensureTenantExists(name, TenantSource.IDK)
@@ -69,15 +63,16 @@ class SessionTenantContextResolver(
 
         val federation = configBinder.getFederationConfig()
         val identity = configBinder.getIdentityConfig()
-        val rootTenantId = identity.platformRootTenantId
+        // Entity-URL mapping only — not session/login identity.
+        val rootEntityOwnerTenantId = identity.externalRootTenantId
 
-        // Configured platform root tenant → federation root identifier
-        if (rootTenantId != null && rootTenantId == tenantId) {
+        // Token tenant that owns the federation root entity identifier URL
+        if (rootEntityOwnerTenantId != null && rootEntityOwnerTenantId == tenantId) {
             return federation.rootIdentifier
         }
 
-        // Single-tenant embeds often use FixedTenantResolver("default")
-        if (rootTenantId == null && tenantId == "default") {
+        // Compat: single-tenant embeds using fixed "default" without explicit mapping
+        if (rootEntityOwnerTenantId == null && tenantId == "default") {
             return federation.rootIdentifier
         }
 

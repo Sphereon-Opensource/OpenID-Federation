@@ -38,16 +38,8 @@ class TrustMarkIssuerApiTest {
 
     @BeforeTest
     fun setup() {
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-        client = HttpClient {
-            install(ContentNegotiation) {
-                json(Json {
-                    prettyPrint = true
-                    isLenient = true
-                    ignoreUnknownKeys = true
-                })
-            }
-        }
+        baseUrl = adminTestBaseUrl()
+        client = createAuthenticatedAdminClient()
         testUsername = "tm-issuer-test-${System.currentTimeMillis()}"
         testIssuerIdentifier = "https://test-issuer.com/${System.currentTimeMillis()}"
 

@@ -27,11 +27,11 @@ import dev.zacsweers.metro.SingleIn
 import com.sphereon.di.session.SessionScope
 
 private fun platformAccountApiDisabled(configBinder: OidfConfigBinder): IdkResult<GenericHttpResponse, IdkError>? {
-    if (configBinder.getIdentityConfig().isPlatform) {
+    if (configBinder.getIdentityConfig().isExternal) {
         return Ok(
             errorResponse(
                 410,
-                "Account management APIs are disabled in PLATFORM identity mode. " +
+                "Account management APIs are disabled in EXTERNAL identity mode. " +
                     "Use the host platform (IDK/EDK/VDX) for tenants, parties, and identities."
             )
         )

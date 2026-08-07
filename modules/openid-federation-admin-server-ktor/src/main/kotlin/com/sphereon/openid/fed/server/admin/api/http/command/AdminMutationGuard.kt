@@ -13,10 +13,9 @@ import dev.zacsweers.metro.SingleIn
 /**
  * Session-scoped guard for admin HTTP **mutations** (POST/PUT/DELETE).
  *
- * ## Boundary
- * - **LEGACY** identity mode: no-op (header-selected accounts; optional OAuth elsewhere).
- * - **PLATFORM** identity mode: rejects anonymous IDK sessions unless
- *   `oidf.identity.allow.anonymous.admin=true`.
+ * Admin is always authenticated (LEGACY and PLATFORM). Rejects anonymous sessions
+ * as defense in depth after the JWT plugin. Tenant selection remains mode-specific
+ * (`X-Account-Username` vs JWT tenant claims).
  *
  * Inject into mutation endpoint command impls and call [denyIfUnauthorized] as the
  * first line of [com.sphereon.core.api.http.command.HttpEndpointCommandAdapter.doExecute]:

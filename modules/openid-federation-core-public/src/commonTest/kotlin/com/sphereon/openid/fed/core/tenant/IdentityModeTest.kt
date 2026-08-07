@@ -8,61 +8,54 @@ import kotlin.test.assertTrue
 class IdentityModeTest {
 
     @Test
-    fun parse_defaults_to_legacy_when_null_or_blank() {
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse(null))
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse(""))
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("   "))
+    fun parse_defaults_to_account() {
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse(null))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse(""))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("   "))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("banana"))
     }
 
     @Test
-    fun parse_legacy_aliases() {
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("legacy"))
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("LEGACY"))
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("account"))
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("accounts"))
+    fun parse_account_and_aliases() {
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("account"))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("ACCOUNT"))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("accounts"))
+        assertEquals(IdentityMode.ACCOUNT, IdentityMode.parse("legacy"))
     }
 
     @Test
-    fun parse_platform_aliases() {
-        assertEquals(IdentityMode.PLATFORM, IdentityMode.parse("platform"))
-        assertEquals(IdentityMode.PLATFORM, IdentityMode.parse("PLATFORM"))
-        assertEquals(IdentityMode.PLATFORM, IdentityMode.parse("idk"))
-        assertEquals(IdentityMode.PLATFORM, IdentityMode.parse("session"))
-    }
-
-    @Test
-    fun parse_unknown_falls_back_to_legacy() {
-        assertEquals(IdentityMode.LEGACY, IdentityMode.parse("banana"))
+    fun parse_external_and_aliases() {
+        assertEquals(IdentityMode.EXTERNAL, IdentityMode.parse("external"))
+        assertEquals(IdentityMode.EXTERNAL, IdentityMode.parse("EXTERNAL"))
+        assertEquals(IdentityMode.EXTERNAL, IdentityMode.parse("platform"))
+        assertEquals(IdentityMode.EXTERNAL, IdentityMode.parse("idk"))
+        assertEquals(IdentityMode.EXTERNAL, IdentityMode.parse("session"))
     }
 
     @Test
     fun identity_config_flags() {
-        val legacy = IdentityConfig(mode = IdentityMode.LEGACY)
-        assertTrue(legacy.isLegacy)
-        assertFalse(legacy.isPlatform)
-        assertTrue(legacy.isSessionAccountAligned)
+        val account = IdentityConfig(mode = IdentityMode.ACCOUNT)
+        assertTrue(account.isAccount)
+        assertFalse(account.isExternal)
 
-        val platform = IdentityConfig(mode = IdentityMode.PLATFORM, platformRootTenantId = "default")
-        assertTrue(platform.isPlatform)
-        assertFalse(platform.isLegacy)
-        assertEquals("default", platform.platformRootTenantId)
+        val external = IdentityConfig(mode = IdentityMode.EXTERNAL, externalRootTenantId = "default")
+        assertTrue(external.isExternal)
+        assertFalse(external.isAccount)
+        assertEquals("default", external.externalRootTenantId)
+    }
+
+    @Test
+    fun header_allow_list_defaults_to_empty_deny() {
+        val cfg = IdentityConfig()
+        assertFalse(cfg.accountHeaderAllowsAnyAuthenticated)
+        assertTrue(cfg.accountHeaderAllowedPrincipals.isEmpty())
+        assertEquals("sub", cfg.accountHeaderPrincipalClaim)
     }
 
     @Test
     fun session_alignment_parse() {
         assertEquals(SessionAlignment.ACCOUNT, SessionAlignment.parse(null))
-        assertEquals(SessionAlignment.ACCOUNT, SessionAlignment.parse("account"))
-        assertEquals(SessionAlignment.ACCOUNT, SessionAlignment.parse("l2"))
         assertEquals(SessionAlignment.FIXED, SessionAlignment.parse("fixed"))
-        assertEquals(SessionAlignment.FIXED, SessionAlignment.parse("l1"))
-    }
-
-    @Test
-    fun session_alignment_fixed_disables_account_align_flag() {
-        val cfg = IdentityConfig(
-            mode = IdentityMode.LEGACY,
-            sessionAlignment = SessionAlignment.FIXED,
-        )
-        assertFalse(cfg.isSessionAccountAligned)
+        assertEquals(SessionAlignment.ACCOUNT, SessionAlignment.parse("l2"))
     }
 }

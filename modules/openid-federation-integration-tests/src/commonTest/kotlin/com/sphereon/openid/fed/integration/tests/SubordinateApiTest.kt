@@ -72,8 +72,8 @@ class SubordinateApiTest {
      */
     @BeforeTest
     fun setup() {
-        baseUrl = System.getenv("ADMIN_SERVER_BASE_URL") ?: "http://localhost:8081"
-        client = HttpClient { install(ContentNegotiation) { json(json) } }
+        baseUrl = adminTestBaseUrl()
+        client = createAuthenticatedAdminClient(json)
         testUsername = "subordinate-test-${System.currentTimeMillis()}"
     }
 
