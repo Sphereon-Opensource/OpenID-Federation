@@ -66,6 +66,7 @@ class ListKeysEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateKeyEndpointCommand>())
 class CreateKeyEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val jwkService: JwkService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -79,6 +80,9 @@ class CreateKeyEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -116,6 +120,7 @@ class CreateKeyEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<RevokeKeyEndpointCommand>())
 class RevokeKeyEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val jwkService: JwkService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -129,6 +134,9 @@ class RevokeKeyEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

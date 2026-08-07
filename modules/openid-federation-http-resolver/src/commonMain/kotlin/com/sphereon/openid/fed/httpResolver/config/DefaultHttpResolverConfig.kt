@@ -7,8 +7,8 @@ package com.sphereon.openid.fed.httpResolver.config
  * This data class encapsulates HTTP settings used for fetching remote resources,
  * retry logic, and controlling HTTP behavior.
  *
- * Note: Cache configuration (TTL, max size, etc.) is now managed by the
- * CacheRequirements and CacheManager infrastructure in core-impl.
+ * Note: Cache configuration (TTL, max size, etc.) is managed by IDK
+ * CacheRequirements / CacheManager (see FederationCacheRequirements).
  */
 data class DefaultHttpResolverConfig(
     override val enableHttpCaching: Boolean = HttpResolverDefaults.DEFAULT_ENABLE_HTTP_CACHING,

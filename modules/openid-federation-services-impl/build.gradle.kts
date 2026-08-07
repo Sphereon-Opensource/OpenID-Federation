@@ -38,6 +38,9 @@ kotlin {
                 implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
                 implementation(sphereonlib.dev.whyoleg.cryptography.core)
 
+                // IDK AppConfigService / default config pipeline for OidfConfigBinder
+                api(idklib.sphereon.idk.lib.core.api.default)
+
             }
         }
 

@@ -13,8 +13,8 @@ package com.sphereon.openid.fed.httpResolver.config
  *   - `httpTimeoutMs`: Configures the timeout duration for HTTP requests, in milliseconds.
  *   - `httpRetries`: Determines the number of retry attempts for failed HTTP requests.
  *
- * Note: Cache configuration (TTL, max size, etc.) is now managed by the
- * CacheRequirements and CacheManager infrastructure in core-impl.
+ * Note: Cache configuration (TTL, max size, etc.) is managed by IDK
+ * [com.sphereon.core.api.cache.CacheRequirements] / [com.sphereon.core.api.cache.CacheManager].
  */
 interface HttpResolverConfig {
     // HTTP settings

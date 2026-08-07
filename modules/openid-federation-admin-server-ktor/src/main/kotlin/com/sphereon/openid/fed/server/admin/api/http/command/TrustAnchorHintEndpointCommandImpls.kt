@@ -65,6 +65,7 @@ class ListTrustAnchorHintsEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustAnchorHintEndpointCommand>())
 class CreateTrustAnchorHintEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val trustAnchorHintService: TrustAnchorHintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -78,6 +79,9 @@ class CreateTrustAnchorHintEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -113,6 +117,7 @@ class CreateTrustAnchorHintEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteTrustAnchorHintEndpointCommand>())
 class DeleteTrustAnchorHintEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val trustAnchorHintService: TrustAnchorHintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -126,6 +131,9 @@ class DeleteTrustAnchorHintEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

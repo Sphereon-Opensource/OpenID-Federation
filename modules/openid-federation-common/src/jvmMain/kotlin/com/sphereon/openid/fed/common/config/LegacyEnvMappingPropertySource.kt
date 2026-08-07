@@ -58,8 +58,11 @@ object LegacyEnvMappingPropertySource {
         "DATASOURCE_PASSWORD" to OidfConfigKeys.Datasource.PASSWORD,
         "DATASOURCE_DB" to OidfConfigKeys.Datasource.DB,
 
-        // OAuth2 settings
+        // OAuth2 / JWT settings
         "OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI" to OidfConfigKeys.OAuth2.ISSUER_URI,
+        "OIDF_OAUTH2_ISSUER_URI" to OidfConfigKeys.OAuth2.ISSUER_URI,
+        "OIDF_OAUTH2_AUDIENCE" to OidfConfigKeys.OAuth2.AUDIENCE,
+        "OIDF_OAUTH2_JWT_AUTH_ENABLED" to OidfConfigKeys.OAuth2.JWT_AUTH_ENABLED,
 
         // Logger settings
         "LOGGER_SEVERITY" to OidfConfigKeys.Logger.SEVERITY,
@@ -76,6 +79,13 @@ object LegacyEnvMappingPropertySource {
 
         // KMS provider selection
         "KMS_PROVIDER" to OidfConfigKeys.Kms.DEFAULT_PROVIDER,
+
+        // Identity / multi-tenancy mode
+        "OIDF_IDENTITY_MODE" to OidfConfigKeys.Identity.MODE,
+        "IDENTITY_MODE" to OidfConfigKeys.Identity.MODE,
+        "OIDF_PLATFORM_ROOT_TENANT_ID" to OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID,
+        "OIDF_SESSION_ALIGNMENT" to OidfConfigKeys.Identity.SESSION_ALIGNMENT,
+        "OIDF_SESSION_FIXED_TENANT_ID" to OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID,
 
         // Azure Key Vault settings
         "AZURE_KEYVAULT_APPLICATION_ID" to "kms.providers.azure.applicationid",

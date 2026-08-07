@@ -68,6 +68,7 @@ class GetSubordinateConstraintsEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<SetSubordinateConstraintsEndpointCommand>())
 class SetSubordinateConstraintsEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val subordinateConstraintService: SubordinateConstraintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -81,6 +82,9 @@ class SetSubordinateConstraintsEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -122,6 +126,7 @@ class SetSubordinateConstraintsEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateConstraintsEndpointCommand>())
 class DeleteSubordinateConstraintsEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val subordinateConstraintService: SubordinateConstraintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -135,6 +140,9 @@ class DeleteSubordinateConstraintsEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

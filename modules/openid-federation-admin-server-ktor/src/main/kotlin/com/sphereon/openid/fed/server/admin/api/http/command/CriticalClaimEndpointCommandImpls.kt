@@ -64,6 +64,7 @@ class ListCriticalClaimsEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateCriticalClaimEndpointCommand>())
 class CreateCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val criticalClaimService: CriticalClaimService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -77,6 +78,9 @@ class CreateCriticalClaimEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -112,6 +116,7 @@ class CreateCriticalClaimEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteCriticalClaimEndpointCommand>())
 class DeleteCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val criticalClaimService: CriticalClaimService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -125,6 +130,9 @@ class DeleteCriticalClaimEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

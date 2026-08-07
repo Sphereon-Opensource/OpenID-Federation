@@ -1,8 +1,8 @@
 package com.sphereon.openid.fed.client.context
 
+import com.sphereon.core.api.cache.CacheManager
+import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.openid.fed.core.cache.CacheManager
-import com.sphereon.openid.fed.core.cache.ScopedCache
 import com.sphereon.openid.fed.httpResolver.HttpResolver
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.log.LogService
@@ -17,8 +17,8 @@ import kotlinx.serialization.json.Json
  *
  * @param jwtService IDK's JwtService for JWT verification (required)
  * @param httpResolver HTTP resolver for fetching federation data (required)
- * @param cacheManager Cache manager for creating and managing caches (optional, for statistics)
- * @param trustChainCache Scoped cache for trust chain deduplication (optional)
+ * @param cacheManager IDK cache manager (optional, for statistics / extra namespaces)
+ * @param trustChainCache IDK scoped cache for trust chain deduplication (optional)
  * @param json JSON serializer (optional, defaults to lenient configuration)
  * @param logger Log service (optional, defaults to federation client logger)
  */

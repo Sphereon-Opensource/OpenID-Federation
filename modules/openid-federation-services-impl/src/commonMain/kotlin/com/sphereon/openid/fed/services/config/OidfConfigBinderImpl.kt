@@ -1,44 +1,51 @@
 package com.sphereon.openid.fed.services.config
 
+import com.sphereon.core.api.conf.AppConfigService
 import com.sphereon.openid.fed.common.config.getEnvironmentVariable
-import com.sphereon.openid.fed.common.config.normalizeKeyForEnv
-import com.sphereon.openid.fed.core.config.*
-import dev.zacsweers.metro.Inject
+import com.sphereon.openid.fed.core.config.CorsConfig
+import com.sphereon.openid.fed.core.config.DatasourceConfig
+import com.sphereon.openid.fed.core.config.FederationConfig
+import com.sphereon.openid.fed.core.config.KmsConfig
+import com.sphereon.openid.fed.core.config.LoggerConfig
+import com.sphereon.openid.fed.core.config.OAuth2Config
+import com.sphereon.openid.fed.core.config.OidfAppConfig
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.config.OidfConfigKeys
+import com.sphereon.openid.fed.core.config.OidfPropertyResolution
+import com.sphereon.openid.fed.core.config.ServerConfig
+import com.sphereon.openid.fed.core.config.TenantConfig
+import com.sphereon.openid.fed.core.tenant.IdentityConfig
+import com.sphereon.openid.fed.core.tenant.IdentityMode
+import com.sphereon.openid.fed.core.tenant.SessionAlignment
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
-import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 
 /**
- * Implementation of OidfConfigBinder that provides typed configuration access.
+ * Typed OIDF configuration binder.
  *
- * ## Configuration Sources (in order of precedence):
+ * ## Resolution precedence (via [OidfPropertyResolution])
  *
- * 1. **IDK-normalized environment variables** (e.g., `OIDF_FEDERATION_ROOT_IDENTIFIER`)
- *    - Property key `oidf.federation.root.identifier` becomes env var `OIDF_FEDERATION_ROOT_IDENTIFIER`
+ * 1. IDK [AppConfigService] (full property pipeline when the app graph provides it)
+ * 2. [com.sphereon.core.api.conf.DefaultAppMapPropertySource] (explicit / KMS bootstrap)
+ * 3. Environment variables (IDK-normalized + legacy aliases)
+ * 4. [com.sphereon.openid.fed.core.config.OidfFilePropertySource] (reference/application files)
+ * 5. [com.sphereon.openid.fed.core.config.OidfConfigDefaults]
  *
- * 2. **Legacy environment variables** (JVM only, for backwards compatibility)
- *    - Existing deployments using `ROOT_IDENTIFIER`, `DATASOURCE_URL`, etc. continue to work
- *    - Mapped via platform-specific [getEnvironmentVariable] implementation
- *    - JS/Native platforms only support IDK-normalized env vars
+ * Call [com.sphereon.openid.fed.core.config.OidfConfigBootstrap.seed] at server start so
+ * file defaults and software KMS are loaded before AppGraph creation.
  *
- * 3. **Hardcoded defaults** in this class
- *
- * ## Platform Support
- *
- * This implementation is multiplatform (JVM, JS, Native). Legacy environment variable
- * support is only available on JVM - other platforms use IDK-normalized env vars only.
- *
- * ## Note on reference.conf
- *
- * While a `reference.conf` file exists in the common module with the same defaults,
- * HOCON file loading is NOT implemented. The reference.conf serves as documentation
- * of available configuration options. All actual config comes from environment variables.
+ * Sensitive values: prefer `*.secret.id` handles + [com.sphereon.core.api.conf.OpaqueSecretResolver]
+ * at suspend use sites; this binder remains synchronous for DI-friendly access.
  */
 @Inject
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class, binding = binding<OidfConfigBinder>())
-class OidfConfigBinderImpl : OidfConfigBinder {
+class OidfConfigBinderImpl(
+    private val appConfigService: AppConfigService,
+) : OidfConfigBinder {
 
     override fun getFederationConfig(): FederationConfig {
         return FederationConfig(
@@ -103,13 +110,35 @@ class OidfConfigBinderImpl : OidfConfigBinder {
 
     override fun getOAuth2Config(): OAuth2Config {
         return OAuth2Config(
-            issuerUri = getProperty(OidfConfigKeys.OAuth2.ISSUER_URI, "")
+            issuerUri = getProperty(OidfConfigKeys.OAuth2.ISSUER_URI, ""),
+            audience = getProperty(OidfConfigKeys.OAuth2.AUDIENCE, ""),
+            jwtAuthEnabled = getProperty(OidfConfigKeys.OAuth2.JWT_AUTH_ENABLED, "auto"),
         )
     }
 
     override fun getKmsConfig(): KmsConfig {
         return KmsConfig(
             defaultProvider = getProperty(OidfConfigKeys.Kms.DEFAULT_PROVIDER, "memory")
+        )
+    }
+
+    override fun getIdentityConfig(): IdentityConfig {
+        val mode = IdentityMode.parse(getPropertyOrNull(OidfConfigKeys.Identity.MODE))
+        val rootTenant = getPropertyOrNull(OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID)
+        val allowAnonymous = getBooleanProperty(OidfConfigKeys.Identity.ALLOW_ANONYMOUS_ADMIN, false)
+        val sessionAlignment = SessionAlignment.parse(
+            getPropertyOrNull(OidfConfigKeys.Identity.SESSION_ALIGNMENT),
+        )
+        val sessionFixed = getProperty(
+            OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID,
+            "default",
+        )
+        return IdentityConfig(
+            mode = mode,
+            platformRootTenantId = rootTenant,
+            allowAnonymousAdmin = allowAnonymous,
+            sessionAlignment = sessionAlignment,
+            sessionFixedTenantId = sessionFixed.ifBlank { "default" },
         )
     }
 
@@ -122,7 +151,8 @@ class OidfConfigBinderImpl : OidfConfigBinder {
             logger = getLoggerConfig(),
             datasource = getDatasourceConfig(),
             oauth2 = getOAuth2Config(),
-            kms = getKmsConfig()
+            kms = getKmsConfig(),
+            identity = getIdentityConfig()
         )
     }
 
@@ -130,7 +160,6 @@ class OidfConfigBinderImpl : OidfConfigBinder {
         val rootIdentifier = getPropertyOrNull(OidfConfigKeys.Tenant.rootIdentifier(tenantId))
         val kmsProvider = getPropertyOrNull(OidfConfigKeys.Tenant.kmsProvider(tenantId))
 
-        // Only return TenantConfig if at least one override is set
         return if (rootIdentifier != null || kmsProvider != null) {
             TenantConfig(
                 tenantId = tenantId,
@@ -142,12 +171,13 @@ class OidfConfigBinderImpl : OidfConfigBinder {
         }
     }
 
-    // ========================================================================
-    // Raw Property Access
-    // ========================================================================
-
     override fun getProperty(key: String, default: String): String {
-        return getEnvironmentVariable(key) ?: default
+        return OidfPropertyResolution.resolveString(
+            key = key,
+            default = default,
+            envLookup = { getEnvironmentVariable(it) },
+            appConfig = appConfigService,
+        )
     }
 
     override fun getBooleanProperty(key: String, default: Boolean): Boolean {
@@ -173,10 +203,6 @@ class OidfConfigBinderImpl : OidfConfigBinder {
         if (value.isEmpty()) return default
         return value.split(",").map { it.trim() }.filter { it.isNotEmpty() }
     }
-
-    // ========================================================================
-    // Helper Methods
-    // ========================================================================
 
     private fun getPropertyOrNull(key: String): String? {
         val value = getProperty(key, "")

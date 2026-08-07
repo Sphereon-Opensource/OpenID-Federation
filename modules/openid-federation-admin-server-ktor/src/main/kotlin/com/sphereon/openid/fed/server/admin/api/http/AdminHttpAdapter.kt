@@ -7,17 +7,13 @@ import com.sphereon.core.api.http.HttpAdapter
 import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.PublicApiHttpAdapter
 import com.sphereon.core.api.http.describe.HttpAdapterMount
-import com.sphereon.core.api.http.describe.OpenApiHints
 import com.sphereon.core.api.service.ServiceCommand
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
-import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
-import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.server.admin.api.http.command.*
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesIntoSet
 import dev.zacsweers.metro.binding
-import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.SingleIn
 
 /**
@@ -38,10 +34,12 @@ import dev.zacsweers.metro.SingleIn
 @ContributesIntoSet(SessionScope::class, binding = binding<HttpAdapter>())
 class AdminHttpAdapter(
     execution: SessionExecution,
-    // Account endpoints
-    private val listAccountsEndpoint: ListAccountsEndpointCommand,
-    private val createAccountEndpoint: CreateAccountEndpointCommand,
-    private val deleteAccountEndpoint: DeleteAccountEndpointCommand,
+    private val configBinder: OidfConfigBinder,
+    /**
+     * Optional LEGACY `/accounts` endpoints from `account-http`.
+     * Empty when that jar is not on the classpath (deployment = dependency presence only).
+     */
+    private val accountEndpointContributions: Set<AdminAccountEndpointContribution>,
     // Key endpoints
     private val listKeysEndpoint: ListKeysEndpointCommand,
     private val createKeyEndpoint: CreateKeyEndpointCommand,
@@ -126,102 +124,60 @@ class AdminHttpAdapter(
      */
     override val serviceCommands: List<ServiceCommand<*, *, FederationError>> = emptyList()
 
-    override val endpointCommands: List<HttpEndpointCommand> = listOf(
-        // Account endpoints
-        listAccountsEndpoint,
-        createAccountEndpoint,
-        deleteAccountEndpoint,
-        // Key endpoints
-        listKeysEndpoint,
-        createKeyEndpoint,
-        revokeKeyEndpoint,
-        // Subordinate endpoints
-        listSubordinatesEndpoint,
-        createSubordinateEndpoint,
-        deleteSubordinateEndpoint,
-        listSubordinateKeysEndpoint,
-        createSubordinateKeyEndpoint,
-        deleteSubordinateKeyEndpoint,
-        getSubordinateStatementEndpoint,
-        publishSubordinateStatementEndpoint,
-        listSubordinateMetadataEndpoint,
-        createSubordinateMetadataEndpoint,
-        deleteSubordinateMetadataEndpoint,
-        // Trust mark endpoints
-        listTrustMarksEndpoint,
-        createTrustMarkEndpoint,
-        deleteTrustMarkEndpoint,
-        // Trust mark type endpoints
-        listTrustMarkTypesEndpoint,
-        createTrustMarkTypeEndpoint,
-        getTrustMarkTypeEndpoint,
-        deleteTrustMarkTypeEndpoint,
-        getTrustMarkTypeIssuersEndpoint,
-        addTrustMarkTypeIssuerEndpoint,
-        removeTrustMarkTypeIssuerEndpoint,
-        // Entity statement endpoints
-        getEntityStatementEndpoint,
-        publishEntityStatementEndpoint,
-        // Metadata endpoints
-        listMetadataEndpoint,
-        createMetadataEndpoint,
-        deleteMetadataEndpoint,
-        // Authority hint endpoints
-        listAuthorityHintsEndpoint,
-        createAuthorityHintEndpoint,
-        deleteAuthorityHintEndpoint,
-        // Trust anchor hint endpoints
-        listTrustAnchorHintsEndpoint,
-        createTrustAnchorHintEndpoint,
-        deleteTrustAnchorHintEndpoint,
-        // Critical claim endpoints
-        listCriticalClaimsEndpoint,
-        createCriticalClaimEndpoint,
-        deleteCriticalClaimEndpoint,
-        // Metadata policy endpoints
-        listMetadataPoliciesEndpoint,
-        createMetadataPolicyEndpoint,
-        deleteMetadataPolicyEndpoint,
-        // Received trust mark endpoints
-        listReceivedTrustMarksEndpoint,
-        createReceivedTrustMarkEndpoint,
-        deleteReceivedTrustMarkEndpoint,
-        // Subordinate constraint endpoints
-        getSubordinateConstraintsEndpoint,
-        setSubordinateConstraintsEndpoint,
-        deleteSubordinateConstraintsEndpoint,
-        // Log endpoints
-        listLogsEndpoint,
-        // Cache endpoints
-        getCacheStatsEndpoint,
-        clearCacheEndpoint
-    )
-
-    override val openApiHints: OpenApiHints = OpenApiHints(
-        tags = setOf(
-            "accounts",
-            "keys",
-            "subordinates",
-            "trust-marks",
-            "entity-statement",
-            "metadata",
-            "authority-hints",
-            "trust-anchor-hints",
-            "constraints",
-            "critical-claims",
-            "metadata-policy",
-            "received-trust-marks",
-            "logs",
-            "cache"
-        ),
-        operationIdPrefix = "admin"
-    )
-
-    /**
-     * DI Component interface for accessing the AdminHttpAdapter from session context.
-     */
-    @ContributesTo(SessionScope::class)
-    interface Graph {
-        val adminHttpAdapter: AdminHttpAdapter
+    override val endpointCommands: List<HttpEndpointCommand> = buildList {
+        // Account management REST: only when account-http contributed commands AND LEGACY mode
+        if (configBinder.getIdentityConfig().isLegacy) {
+            accountEndpointContributions.forEach { addAll(it.endpointCommands) }
+        }
+        add(listKeysEndpoint)
+        add(createKeyEndpoint)
+        add(revokeKeyEndpoint)
+        add(listSubordinatesEndpoint)
+        add(createSubordinateEndpoint)
+        add(deleteSubordinateEndpoint)
+        add(listSubordinateKeysEndpoint)
+        add(createSubordinateKeyEndpoint)
+        add(deleteSubordinateKeyEndpoint)
+        add(getSubordinateStatementEndpoint)
+        add(publishSubordinateStatementEndpoint)
+        add(listSubordinateMetadataEndpoint)
+        add(createSubordinateMetadataEndpoint)
+        add(deleteSubordinateMetadataEndpoint)
+        add(listTrustMarksEndpoint)
+        add(createTrustMarkEndpoint)
+        add(deleteTrustMarkEndpoint)
+        add(listTrustMarkTypesEndpoint)
+        add(createTrustMarkTypeEndpoint)
+        add(getTrustMarkTypeEndpoint)
+        add(deleteTrustMarkTypeEndpoint)
+        add(getTrustMarkTypeIssuersEndpoint)
+        add(addTrustMarkTypeIssuerEndpoint)
+        add(removeTrustMarkTypeIssuerEndpoint)
+        add(getEntityStatementEndpoint)
+        add(publishEntityStatementEndpoint)
+        add(listMetadataEndpoint)
+        add(createMetadataEndpoint)
+        add(deleteMetadataEndpoint)
+        add(listAuthorityHintsEndpoint)
+        add(createAuthorityHintEndpoint)
+        add(deleteAuthorityHintEndpoint)
+        add(listTrustAnchorHintsEndpoint)
+        add(createTrustAnchorHintEndpoint)
+        add(deleteTrustAnchorHintEndpoint)
+        add(listCriticalClaimsEndpoint)
+        add(createCriticalClaimEndpoint)
+        add(deleteCriticalClaimEndpoint)
+        add(listMetadataPoliciesEndpoint)
+        add(createMetadataPolicyEndpoint)
+        add(deleteMetadataPolicyEndpoint)
+        add(listReceivedTrustMarksEndpoint)
+        add(createReceivedTrustMarkEndpoint)
+        add(deleteReceivedTrustMarkEndpoint)
+        add(getSubordinateConstraintsEndpoint)
+        add(setSubordinateConstraintsEndpoint)
+        add(deleteSubordinateConstraintsEndpoint)
+        add(listLogsEndpoint)
+        add(getCacheStatsEndpoint)
+        add(clearCacheEndpoint)
     }
 }

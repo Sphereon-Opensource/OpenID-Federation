@@ -2,19 +2,19 @@ package com.sphereon.openid.fed.server.federation.ktor
 
 import com.sphereon.ktor.server.inject.KotlinInjectPlugin
 import com.sphereon.ktor.server.inject.installUniversalHttpAdapters
-import com.sphereon.ktor.server.inject.resolver.FixedTenantResolver
 import com.sphereon.openid.fed.common.exceptions.federation.FederationException
-import com.sphereon.core.api.conf.DefaultAppMapPropertySource
-import com.sphereon.core.api.conf.DefaultPrincipalMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.core.api.log.LogLevel
 import com.sphereon.core.api.log.LogOutputFormat
 import com.sphereon.core.api.log.LoggerConfig
 import kotlinx.coroutines.runBlocking
+import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.openapi.models.ErrorResponse
+import com.sphereon.openid.fed.server.federation.ktor.auth.OidfJwtAuthSupport.installOidfJwtAuthIfConfigured
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerAppGraph
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerConfig
 import com.sphereon.openid.fed.server.federation.ktor.di.createFederationServerAppGraph
+import com.sphereon.openid.fed.server.federation.ktor.session.OidfSessionTenantResolver
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -35,14 +35,24 @@ private val logger = Log.app().withTag("Application")
 /**
  * Main entry point for the Federation Server.
  *
- * Configuration is loaded via IDK's OidfConfigBinder which supports:
+ * Configuration is loaded via OidfConfigBinder which supports:
  * - IDK-normalized environment variables (OIDF_SERVER_FEDERATION_PORT)
  * - Legacy environment variables (SERVER_PORT, ROOT_IDENTIFIER, etc.)
- * - reference.conf defaults
+ * - Defaults seeded into IDK DefaultAppMapPropertySource (see [OidfConfigBootstrap])
+ *
+ * ## Bootstrap boundary
+ * KMS + OIDF defaults must be seeded **before** AppGraph creation so session
+ * KeyManagerService and OidfConfigBinder see the same property sources.
+ * appId/profile here must match [createFederationServerAppGraph] defaults.
  */
 fun main() {
-    // Configure default software KMS provider programmatically to ensure it's available
-    configureDefaultKmsProvider()
+    // --- Config / KMS bootstrap (IDK property maps) ---
+    // Seeds oidf.* defaults + default software/memory KMS into DefaultAppMapPropertySource
+    // and un-namespaced kms.providers.* into DefaultPrincipalMapPropertySource.
+    // Session KeyManagerService resolves from principal config; app binders use app map
+    // (including namespaced appId.profile keys). Env/deployer overrides already present win.
+    // See OidfConfigBootstrap KDoc for the full IDK KmsKtor-aligned contract.
+    OidfConfigBootstrap.seed(appId = "openid-federation-server", profile = "default")
 
     // Create IDK graph
     // Configuration is loaded automatically via OidfConfigBinder
@@ -70,13 +80,28 @@ fun main() {
  */
 fun Application.configureFederation(appGraph: FederationServerAppGraph, config: FederationServerConfig) {
     // Install kotlin-inject plugin with AppGraph.
-    // Single-tenant federation deployment: fixed "default" tenant (IDK no longer
-    // allows header-based tenant resolution).
+    //
+    // ## Session tenant boundary (L2)
+    // Align IDK session.tenantId with federation Account.id in LEGACY mode so scoped
+    // IDK resources match domain account_id. See OidfSessionTenantResolver KDoc.
+    // Path-based public entity selection still uses TenantContextResolver separately.
+    val identity = appGraph.configBinder.getIdentityConfig()
     install(KotlinInjectPlugin) {
         this.appGraph = appGraph
-        tenantResolver = FixedTenantResolver("default")
+        tenantResolver = OidfSessionTenantResolver(appGraph.configBinder)
     }
-    logger.info("KotlinInject plugin installed - DI enabled")
+    logger.info(
+        "KotlinInject plugin installed - DI enabled " +
+            "(identity.mode=${identity.mode}, session.alignment=${identity.sessionAlignment})",
+    )
+
+    // PLATFORM: optional JWT validation (requireAuth=false so OpenID Federation public
+    // protocol endpoints remain anonymous when no Bearer is presented)
+    installOidfJwtAuthIfConfigured(
+        configBinder = appGraph.configBinder,
+        requireAuth = false,
+        anonymousPaths = listOf("/health", "/.well-known/**", "/**"),
+    )
 
     // Configure standard plugins
     configurePlugins(config)
@@ -231,36 +256,4 @@ private fun Application.configurePlugins(config: FederationServerConfig) {
     }
 }
 
-/**
- * Configure the default software KMS provider via property sources.
- *
- * Mirrors the IDK Ktor KMS tests: un-namespaced `kms.providers.*` keys on both
- * app and principal maps (session KeyManagerService resolves from principal config).
- */
-private fun configureDefaultKmsProvider() {
-    val namespace = "openid-federation-server.default"
 
-    val providerProps = mapOf(
-        "kms.providers.memory.type" to "software",
-        "kms.providers.memory.id" to "memory",
-        "kms.providers.memory.enabled" to "true",
-        "kms.providers.memory.order" to "100",
-        "kms.providers.memory.persistKeysDuringGeneration" to "true",
-        "kms.providers.memory.exposePrivateKeysDuringGeneration" to "true",
-        "kms.providers.memory.keyStore.type" to "memory",
-        "kms.providers.memory.keyStore.id" to "oidfmemorykeystore",
-        "kms.providers.memory.keyStore.keyVisibility" to "private",
-        "kms.providers.memory.keyStore.scopeBinding" to "app",
-        "kms.providers.memory.keyStore.overwriteAlias" to "true",
-        "kms.keystores.oidfmemorykeystore.type" to "memory",
-        "kms.keystores.oidfmemorykeystore.id" to "oidfmemorykeystore",
-        "kms.keystores.oidfmemorykeystore.keyVisibility" to "private",
-        "kms.keystores.oidfmemorykeystore.scopeBinding" to "app",
-    )
-    val namespacedProps = providerProps.mapKeys { (k, _) -> "$namespace.$k" }
-
-    println("Configuring default software KMS provider (app + principal maps)")
-    DefaultAppMapPropertySource.addProperties(providerProps + namespacedProps)
-    DefaultPrincipalMapPropertySource.addProperties(providerProps)
-    println("Default software KMS provider configured")
-}

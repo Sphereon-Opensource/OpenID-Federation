@@ -65,6 +65,7 @@ class ListReceivedTrustMarksEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateReceivedTrustMarkEndpointCommand>())
 class CreateReceivedTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val receivedTrustMarkService: ReceivedTrustMarkService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -78,6 +79,9 @@ class CreateReceivedTrustMarkEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -113,6 +117,7 @@ class CreateReceivedTrustMarkEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteReceivedTrustMarkEndpointCommand>())
 class DeleteReceivedTrustMarkEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val receivedTrustMarkService: ReceivedTrustMarkService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -126,6 +131,9 @@ class DeleteReceivedTrustMarkEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

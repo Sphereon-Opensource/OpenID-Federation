@@ -1,13 +1,16 @@
 package com.sphereon.openid.fed.client
 
+import com.sphereon.core.api.cache.CacheManager
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.ktor.http.client.provider.HttpClientFactory
 import com.sphereon.ktor.http.client.provider.HttpClientOptions
 import com.sphereon.openid.fed.client.cache.FederationCacheRequirements
 import com.sphereon.openid.fed.client.context.FederationContext
-import com.sphereon.openid.fed.core.cache.CacheManager
-import com.sphereon.openid.fed.httpResolver.HttpMetadata
+import com.sphereon.openid.fed.core.cache.OidfCache
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.config.OidfConfigKeys
+import com.sphereon.openid.fed.httpResolver.HttpMetadataCacheSerializers
 import com.sphereon.openid.fed.httpResolver.HttpResolver
 import io.ktor.client.statement.bodyAsText
 import dev.zacsweers.metro.Inject
@@ -29,7 +32,7 @@ interface FederationContextComponent {
      *
      * @param jwtService IDK's JwtService for JWT verification
      * @param httpClientFactory Factory for creating HTTP clients
-     * @param cacheManager Cache manager for creating scoped caches
+     * @param cacheManager IDK cache manager for creating scoped caches
      * @return Configured FederationContext instance
      */
     @Provides
@@ -37,27 +40,40 @@ interface FederationContextComponent {
     fun provideFederationContext(
         jwtService: JwtService,
         httpClientFactory: HttpClientFactory,
-        cacheManager: CacheManager
+        cacheManager: CacheManager,
+        configBinder: OidfConfigBinder,
     ): FederationContext {
-        // Create HTTP client
         val httpClient = httpClientFactory.createClient(HttpClientOptions.createDefault())
 
-        // Create scoped caches from requirements
-        val httpCache = cacheManager.getOrCreate<String, HttpMetadata<String>>(
-            FederationCacheRequirements.HTTP_RESOLVER
+        val httpReqs = applyLocalityOverride(
+            FederationCacheRequirements.HTTP_RESOLVER,
+            configBinder,
+            OidfConfigKeys.Cache.HTTP_RESOLVER_LOCALITY,
         )
-        val trustChainCache = cacheManager.getOrCreate<String, String>(
-            FederationCacheRequirements.TRUST_CHAIN
+        val trustReqs = applyLocalityOverride(
+            FederationCacheRequirements.TRUST_CHAIN,
+            configBinder,
+            OidfConfigKeys.Cache.TRUST_CHAIN_LOCALITY,
         )
 
-        // Create HTTP resolver with scoped cache
+        // Portable serializers: safe for local + distributed IDK backends
+        val httpCache = OidfCache.createStringKeyCache(
+            manager = cacheManager,
+            requirements = httpReqs,
+            valueSerializer = HttpMetadataCacheSerializers.stringValue,
+        )
+        val trustChainCache = OidfCache.createStringKeyCache(
+            manager = cacheManager,
+            requirements = trustReqs,
+            valueSerializer = com.sphereon.core.api.cache.CacheSerializers.string,
+        )
+
         val httpResolver = HttpResolver(
             httpClient = httpClient,
             cache = httpCache,
             responseMapper = { response -> response.bodyAsText() }
         )
 
-        // Create federation context with all dependencies
         return FederationContext(
             jwtService = jwtService,
             httpResolver = httpResolver,
@@ -65,4 +81,15 @@ interface FederationContextComponent {
             trustChainCache = trustChainCache
         )
     }
+}
+
+private fun applyLocalityOverride(
+    base: com.sphereon.core.api.cache.CacheRequirements,
+    configBinder: OidfConfigBinder,
+    key: String,
+): com.sphereon.core.api.cache.CacheRequirements {
+    val raw = configBinder.getProperty(key, "").trim()
+    if (raw.isEmpty()) return base
+    val locality = FederationCacheRequirements.parseLocality(raw) ?: return base
+    return FederationCacheRequirements.withLocality(base, locality)
 }

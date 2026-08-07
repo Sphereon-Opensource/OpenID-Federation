@@ -15,7 +15,7 @@ import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.mapper.mapEntityStatement
 import com.sphereon.openid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementServiceConst
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
-import com.sphereon.openid.fed.core.cache.ScopedCache
+import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
 import com.sphereon.openid.fed.core.error.ServerError

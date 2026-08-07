@@ -61,6 +61,9 @@ kotlin {
                 // IDK cache infrastructure (provides KacheCacheBackend on non-wasm, MapCacheBackend on wasmJs)
                 api(idklib.sphereon.idk.lib.core.api.default)
 
+                // IDK crypto (optional JWE adapter — IdkOidfJweService)
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+
                 // Serialization
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.core)

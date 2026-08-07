@@ -9,9 +9,8 @@ import com.sphereon.crypto.kms.provider.azure.AzureKeyVaultCryptoProvider
 import com.sphereon.crypto.kms.provider.azure.AzureKmsProviderConfig
 import com.sphereon.di.app.AbstractAppGraph
 import com.sphereon.core.api.log.Log
-import com.sphereon.core.api.cache.CacheBackend
-import com.sphereon.openid.fed.core.cache.CacheManager
-import com.sphereon.openid.fed.core.cache.DefaultCacheManager
+import com.sphereon.oauth2.jwt.validation.IdpConfig
+import com.sphereon.oauth2.jwt.validation.JwtValidationConfig
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import dev.zacsweers.metro.AppScope
@@ -83,13 +82,8 @@ abstract class FederationServerAppGraph : AbstractAppGraph() {
         return TenantServiceConfig(federation.rootIdentifier)
     }
 
-    @Provides
-    @SingleIn(AppScope::class)
-    open fun provideCacheManager(backends: Set<CacheBackend>): CacheManager {
-        val backend = backends.firstOrNull { it.capabilities.isLocal } ?: backends.first()
-        logger.info("Initializing CacheManager for federation server with ${backend.id} backend")
-        return DefaultCacheManager(backend)
-    }
+    // CacheManager: use IDK's CacheManagerInitialization + KacheCacheModule contributions.
+    // Do not re-provide an OIDF facade.
 
     @Provides
     @SingleIn(AppScope::class)
@@ -106,6 +100,26 @@ abstract class FederationServerAppGraph : AbstractAppGraph() {
     @SingleIn(AppScope::class)
     open fun provideAzureKeyVaultCryptoProviderFactory(): (AzureKmsProviderConfig, KeyProviderSettings) -> AzureKeyVaultCryptoProvider {
         return { config, _ -> AzureKeyVaultCryptoProvider(config) }
+    }
+
+    /**
+     * IDK JWT validation config (PLATFORM / forced jwt auth).
+     * Public federation protocol stays anonymous when JWT auth is off (LEGACY).
+     */
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideJwtValidationConfig(): JwtValidationConfig {
+        val oauth = configBinder.getOAuth2Config()
+        val issuer = oauth.issuerUri.trim()
+        if (issuer.isEmpty()) {
+            return JwtValidationConfig(enabled = false)
+        }
+        val audience = oauth.audience.trim().takeIf { it.isNotEmpty() }
+        return JwtValidationConfig(
+            enabled = true,
+            defaultIdp = IdpConfig.oidc(id = "oidf-primary", issuer = issuer, audience = audience),
+            strictIssuerMatching = true,
+        )
     }
 
     @DependencyGraph.Factory

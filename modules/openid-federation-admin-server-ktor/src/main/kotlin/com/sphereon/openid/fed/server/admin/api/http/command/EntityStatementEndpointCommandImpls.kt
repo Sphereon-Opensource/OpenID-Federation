@@ -63,6 +63,7 @@ class GetEntityStatementEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<PublishEntityStatementEndpointCommand>())
 class PublishEntityStatementEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val entityConfigurationStatementService: EntityConfigurationStatementService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -76,6 +77,9 @@ class PublishEntityStatementEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

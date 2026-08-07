@@ -49,8 +49,17 @@ dependencies {
     implementation(idklib.sphereon.idk.lib.data.link.http.client.public)
     implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
 
-    // IDK Ktor server support
+    // IDK Ktor server support + JWT auth (PLATFORM)
+    // Metro aggregates @ContributesBinding from the compile classpath: jwt-validation-impl
+    // needs client + resource-server command impls (they are only runtime-transitive in the POM).
     implementation(idklib.sphereon.idk.ktor.server.kotlin.inject)
+    implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-public:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-impl:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.25.0-SNAPSHOT")
 
     // DI
     implementation(sphereonlib.software.amazon.app.platform.di.common.public)

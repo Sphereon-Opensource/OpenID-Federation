@@ -1,10 +1,10 @@
 package com.sphereon.openid.fed.server.admin.api.http.command
 
+import com.sphereon.core.api.cache.CacheStatistics
 import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
-import com.sphereon.openid.fed.core.cache.CacheStatistics
 import kotlinx.serialization.Serializable
 
 // ==================== Cache Stats Response Models ====================
@@ -21,7 +21,7 @@ data class CacheStatsResponse(
 )
 
 /**
- * Statistics for a single cache namespace.
+ * Statistics for a single cache namespace (API DTO).
  */
 @Serializable
 data class NamespaceCacheStats(
@@ -36,9 +36,9 @@ data class NamespaceCacheStats(
     val expirations: Long = 0
 ) {
     companion object {
-        fun fromCacheStatistics(stats: CacheStatistics): NamespaceCacheStats {
+        fun fromCacheStatistics(namespace: String, stats: CacheStatistics): NamespaceCacheStats {
             return NamespaceCacheStats(
-                namespace = stats.namespace,
+                namespace = namespace,
                 hits = stats.hits,
                 misses = stats.misses,
                 hitRate = stats.hitRate,

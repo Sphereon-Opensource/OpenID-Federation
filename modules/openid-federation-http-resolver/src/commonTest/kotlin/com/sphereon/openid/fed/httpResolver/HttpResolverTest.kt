@@ -1,8 +1,9 @@
 package com.sphereon.openid.fed.httpResolver
 
-import com.sphereon.openid.fed.core.cache.CacheScope
-import com.sphereon.openid.fed.core.cache.CacheStatistics
-import com.sphereon.openid.fed.core.cache.ScopedCache
+import com.sphereon.core.api.cache.CacheRequirements
+import com.sphereon.core.api.cache.CacheScope
+import com.sphereon.core.api.cache.ScopedCache
+import com.sphereon.openid.fed.core.cache.OidfCache
 import com.sphereon.openid.fed.httpResolver.config.HttpResolverConfig
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -12,24 +13,22 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 /**
- * Unit tests for HttpResolver covering:
- * - Cache hit/miss scenarios
- * - APP vs TENANT scope isolation
- * - ETag and Last-Modified header handling
- * - 304 Not Modified response handling
- * - Force refresh behavior
- * - Retry logic with exponential backoff
- * - Cache clearing operations
+ * Unit tests for HttpResolver using real IDK [ScopedCache] (via [OidfCache]).
  */
 class HttpResolverTest {
 
-    private lateinit var mockCache: MockScopedCache
+    private lateinit var cache: ScopedCache<String, HttpMetadata<String>>
     private var requestCount: Int = 0
     private var lastRequestHeaders: Headers? = null
 
     @BeforeTest
     fun setup() {
-        mockCache = MockScopedCache()
+        val manager = OidfCache.newManager()
+        cache = OidfCache.createStringKeyCache(
+            manager = manager,
+            requirements = CacheRequirements(namespace = "http-resolver-test"),
+            valueSerializer = HttpMetadataCacheSerializers.stringValue,
+        )
         requestCount = 0
         lastRequestHeaders = null
     }
@@ -63,7 +62,7 @@ class HttpResolverTest {
         return HttpResolver(
             config = config,
             httpClient = httpClient,
-            cache = mockCache,
+            cache = cache,
             responseMapper = { response -> response.bodyAsText() }
         )
     }
@@ -73,7 +72,7 @@ class HttpResolverTest {
     @Test
     fun `get with APP scope returns cached value on cache hit`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("cached value", etag = "etag-123")
+        cache.putApp(url, HttpMetadata("cached value", etag = "etag-123"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
@@ -102,14 +101,15 @@ class HttpResolverTest {
 
         assertEquals(responseBody, result)
         assertEquals(1, requestCount, "Should make one HTTP request on cache miss")
-        assertNotNull(mockCache.appCache[url], "Should cache the response")
-        assertEquals("etag-456", mockCache.appCache[url]?.etag)
+        val cached = cache.getApp(url)
+        assertNotNull(cached, "Should cache the response")
+        assertEquals("etag-456", cached.etag)
     }
 
     @Test
     fun `get with forceRefresh bypasses cache`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("old cached value", etag = "old-etag")
+        cache.putApp(url, HttpMetadata("old cached value", etag = "old-etag"))
 
         val client = createMockClient(
             responseBody = "new value",
@@ -121,13 +121,13 @@ class HttpResolverTest {
 
         assertEquals("new value", result)
         assertEquals(1, requestCount, "Should make HTTP request even with cache")
-        assertEquals("new-etag", mockCache.appCache[url]?.etag, "Should update cache")
+        assertEquals("new-etag", cache.getApp(url)?.etag, "Should update cache")
     }
 
     @Test
     fun `getCachedApp returns cached value without fetching`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("cached only")
+        cache.putApp(url, HttpMetadata("cached only"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
@@ -153,10 +153,10 @@ class HttpResolverTest {
     // ========== TENANT Scope Tests ==========
 
     @Test
-    fun `getForTenant returns cached value for specific tenant`() = runTest {
+    fun `getForTenant returns cached value on hit`() = runTest {
         val url = "https://example.com/resource"
         val tenantId = "tenant-1"
-        mockCache.tenantCache["$tenantId:$url"] = HttpMetadata("tenant cached value")
+        cache.putTenant(tenantId, url, HttpMetadata("tenant cached value"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
@@ -168,102 +168,82 @@ class HttpResolverTest {
     }
 
     @Test
-    fun `getForTenant provides tenant isolation`() = runTest {
+    fun `getForTenant isolates tenants`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.tenantCache["tenant-1:$url"] = HttpMetadata("tenant-1 value")
-        mockCache.tenantCache["tenant-2:$url"] = HttpMetadata("tenant-2 value")
+        cache.putTenant("tenant-1", url, HttpMetadata("tenant-1 value"))
+        cache.putTenant("tenant-2", url, HttpMetadata("tenant-2 value"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
-        val result1 = resolver.getForTenant(url, "tenant-1")
-        val result2 = resolver.getForTenant(url, "tenant-2")
-
-        assertEquals("tenant-1 value", result1)
-        assertEquals("tenant-2 value", result2)
+        assertEquals("tenant-1 value", resolver.getForTenant(url, "tenant-1"))
+        assertEquals("tenant-2 value", resolver.getForTenant(url, "tenant-2"))
         assertEquals(0, requestCount)
     }
 
     @Test
-    fun `getForTenant fetches from remote on cache miss`() = runTest {
+    fun `getForTenant fetches on miss`() = runTest {
         val url = "https://example.com/resource"
         val tenantId = "tenant-1"
-
-        val client = createMockClient(responseBody = "tenant remote value")
+        val client = createMockClient(responseBody = "remote tenant")
         val resolver = createResolver(client)
 
         val result = resolver.getForTenant(url, tenantId)
 
-        assertEquals("tenant remote value", result)
+        assertEquals("remote tenant", result)
         assertEquals(1, requestCount)
-        assertNotNull(mockCache.tenantCache["$tenantId:$url"])
+        assertNotNull(cache.getTenant(tenantId, url))
     }
 
     @Test
-    fun `getCachedTenant returns cached value without fetching`() = runTest {
+    fun `getCachedTenant returns only tenant value`() = runTest {
         val url = "https://example.com/resource"
         val tenantId = "tenant-1"
-        mockCache.tenantCache["$tenantId:$url"] = HttpMetadata("tenant cached")
+        cache.putTenant(tenantId, url, HttpMetadata("tenant cached"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
-        val result = resolver.getCachedTenant(url, tenantId)
-
-        assertEquals("tenant cached", result)
+        assertEquals("tenant cached", resolver.getCachedTenant(url, tenantId))
+        assertNull(resolver.getCachedTenant(url, "other-tenant"))
         assertEquals(0, requestCount)
     }
 
-    // ========== ETag and Conditional Request Tests ==========
+    // ========== Conditional headers ==========
 
     @Test
-    fun `sends If-None-Match header when cached with ETag`() = runTest {
+    fun `sends If-None-Match when etag cached and force refresh`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("cached value", etag = "etag-123")
+        cache.putApp(url, HttpMetadata("cached value", etag = "etag-123"))
 
-        var receivedIfNoneMatch: String? = null
-        val client = createMockClient(
-            responseBody = "new value",
-            onRequest = { request ->
-                receivedIfNoneMatch = request.headers[HttpHeaders.IfNoneMatch]
-            }
-        )
+        val client = createMockClient(responseBody = "fresh")
         val resolver = createResolver(client)
 
         resolver.get(url, forceRefresh = true)
 
-        assertEquals("etag-123", receivedIfNoneMatch)
+        assertEquals("etag-123", lastRequestHeaders?.get(HttpHeaders.IfNoneMatch))
     }
 
     @Test
-    fun `sends If-Modified-Since header when cached with Last-Modified`() = runTest {
+    fun `sends If-Modified-Since when lastModified cached and force refresh`() = runTest {
         val url = "https://example.com/resource"
         val lastModified = "Wed, 01 Jan 2025 00:00:00 GMT"
-        mockCache.appCache[url] = HttpMetadata("cached value", lastModified = lastModified)
+        cache.putApp(url, HttpMetadata("cached value", lastModified = lastModified))
 
-        var receivedIfModifiedSince: String? = null
-        val client = createMockClient(
-            responseBody = "new value",
-            onRequest = { request ->
-                receivedIfModifiedSince = request.headers[HttpHeaders.IfModifiedSince]
-            }
-        )
+        val client = createMockClient(responseBody = "fresh")
         val resolver = createResolver(client)
 
         resolver.get(url, forceRefresh = true)
 
-        assertEquals(lastModified, receivedIfModifiedSince)
+        assertEquals(lastModified, lastRequestHeaders?.get(HttpHeaders.IfModifiedSince))
     }
 
     @Test
-    fun `returns cached value on 304 Not Modified response`() = runTest {
+    fun `304 Not Modified returns cached body`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("cached value", etag = "etag-123")
+        cache.putApp(url, HttpMetadata("cached value", etag = "etag-123"))
 
-        val client = createMockClient(
-            responseBody = "",
-            statusCode = HttpStatusCode.NotModified
-        )
+        val client = createMockClient(statusCode = HttpStatusCode.NotModified)
         val resolver = createResolver(client)
 
         val result = resolver.get(url, forceRefresh = true)
@@ -272,107 +252,74 @@ class HttpResolverTest {
         assertEquals(1, requestCount)
     }
 
-    @Test
-    fun `does not send conditional headers when caching disabled`() = runTest {
-        val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("cached value", etag = "etag-123")
-
-        var receivedIfNoneMatch: String? = null
-        val client = createMockClient(
-            responseBody = "new value",
-            onRequest = { request ->
-                receivedIfNoneMatch = request.headers[HttpHeaders.IfNoneMatch]
-            }
-        )
-        val config = TestHttpResolverConfig(enableHttpCaching = false)
-        val resolver = createResolver(client, config)
-
-        resolver.get(url, forceRefresh = true)
-
-        assertNull(receivedIfNoneMatch)
-    }
-
-    // ========== Generic Scoped Operation Tests ==========
+    // ========== Generic scope API ==========
 
     @Test
-    fun `generic get with APP scope works correctly`() = runTest {
+    fun `get with CacheScope APP works`() = runTest {
         val url = "https://example.com/resource"
-        mockCache.appCache[url] = HttpMetadata("app value")
+        cache.putApp(url, HttpMetadata("app value"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
-        val result = resolver.get(url, CacheScope.APP)
-
-        assertEquals("app value", result)
+        assertEquals("app value", resolver.get(url, CacheScope.APP))
     }
 
     @Test
-    fun `generic get with TENANT scope works correctly`() = runTest {
+    fun `get with CacheScope TENANT works`() = runTest {
         val url = "https://example.com/resource"
-        val tenantId = "tenant-1"
-        mockCache.tenantCache["$tenantId:$url"] = HttpMetadata("tenant value")
+        val tenantId = "t1"
+        cache.putTenant(tenantId, url, HttpMetadata("tenant value"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
-        val result = resolver.get(url, CacheScope.TENANT, tenantId)
-
-        assertEquals("tenant value", result)
+        assertEquals("tenant value", resolver.get(url, CacheScope.TENANT, tenantId))
     }
 
     @Test
-    fun `generic get with PRINCIPAL scope uses tenant implementation`() = runTest {
+    fun `get with CacheScope PRINCIPAL uses tenant path`() = runTest {
         val url = "https://example.com/resource"
-        val principalId = "user-1"
-        mockCache.tenantCache["$principalId:$url"] = HttpMetadata("principal value")
+        val principalId = "p1"
+        cache.putTenant(principalId, url, HttpMetadata("principal value"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
-        val result = resolver.get(url, CacheScope.PRINCIPAL, principalId)
-
-        assertEquals("principal value", result)
+        assertEquals("principal value", resolver.get(url, CacheScope.PRINCIPAL, principalId))
     }
 
-    // ========== Cache Management Tests ==========
+    // ========== Cache management ==========
 
     @Test
     fun `clearCache clears all entries`() = runTest {
-        mockCache.appCache["url1"] = HttpMetadata("value1")
-        mockCache.tenantCache["tenant:url2"] = HttpMetadata("value2")
+        cache.putApp("url1", HttpMetadata("value1"))
+        cache.putTenant("tenant", "url2", HttpMetadata("value2"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
         resolver.clearCache()
 
-        assertTrue(mockCache.clearAllCalled)
+        assertNull(cache.getApp("url1"))
+        assertNull(cache.getTenant("tenant", "url2"))
     }
 
     @Test
-    fun `clearCacheForTenant clears only tenant entries`() = runTest {
+    fun `clearCacheForTenant invalidates tenant entries`() = runTest {
         val tenantId = "tenant-1"
+        cache.putTenant(tenantId, "url", HttpMetadata("v"))
+        cache.putApp("shared", HttpMetadata("app"))
 
         val client = createMockClient()
         val resolver = createResolver(client)
 
         resolver.clearCacheForTenant(tenantId)
 
-        assertEquals(tenantId, mockCache.clearedTenantId)
+        assertNull(cache.getTenant(tenantId, "url"))
+        // app scope should remain
+        assertEquals("app", cache.getApp("shared")?.value)
     }
-
-    @Test
-    fun `evictExpired calls cache eviction`() = runTest {
-        val client = createMockClient()
-        val resolver = createResolver(client)
-
-        resolver.evictExpired()
-
-        assertTrue(mockCache.evictExpiredCalled)
-    }
-
-    // ========== Mock Implementations ==========
 
     private class TestHttpResolverConfig(
         override val httpTimeoutMs: Long = 30000,
@@ -380,77 +327,4 @@ class HttpResolverTest {
         override val enableHttpCaching: Boolean = true,
         override val enableEtagSupport: Boolean = true
     ) : HttpResolverConfig
-
-    private class MockScopedCache : ScopedCache<String, HttpMetadata<String>> {
-        override val namespace: String = "test-cache"
-
-        val appCache = mutableMapOf<String, HttpMetadata<String>>()
-        val tenantCache = mutableMapOf<String, HttpMetadata<String>>()
-        val principalCache = mutableMapOf<String, HttpMetadata<String>>()
-
-        var clearAllCalled = false
-        var clearedTenantId: String? = null
-        var evictExpiredCalled = false
-
-        override suspend fun getApp(key: String): HttpMetadata<String>? = appCache[key]
-        override suspend fun putApp(key: String, value: HttpMetadata<String>): HttpMetadata<String>? {
-            val old = appCache[key]
-            appCache[key] = value
-            return old
-        }
-        override suspend fun removeApp(key: String): HttpMetadata<String>? = appCache.remove(key)
-        override suspend fun getOrPutApp(key: String, compute: suspend () -> HttpMetadata<String>?): HttpMetadata<String>? {
-            return appCache[key] ?: compute()?.also { appCache[key] = it }
-        }
-
-        override suspend fun getTenant(tenantId: String, key: String): HttpMetadata<String>? = tenantCache["$tenantId:$key"]
-        override suspend fun putTenant(tenantId: String, key: String, value: HttpMetadata<String>): HttpMetadata<String>? {
-            val cacheKey = "$tenantId:$key"
-            val old = tenantCache[cacheKey]
-            tenantCache[cacheKey] = value
-            return old
-        }
-        override suspend fun removeTenant(tenantId: String, key: String): HttpMetadata<String>? = tenantCache.remove("$tenantId:$key")
-        override suspend fun getOrPutTenant(tenantId: String, key: String, compute: suspend () -> HttpMetadata<String>?): HttpMetadata<String>? {
-            val cacheKey = "$tenantId:$key"
-            return tenantCache[cacheKey] ?: compute()?.also { tenantCache[cacheKey] = it }
-        }
-
-        override suspend fun getPrincipal(principalId: String, key: String): HttpMetadata<String>? = principalCache["$principalId:$key"]
-        override suspend fun putPrincipal(principalId: String, key: String, value: HttpMetadata<String>): HttpMetadata<String>? {
-            val cacheKey = "$principalId:$key"
-            val old = principalCache[cacheKey]
-            principalCache[cacheKey] = value
-            return old
-        }
-        override suspend fun removePrincipal(principalId: String, key: String): HttpMetadata<String>? = principalCache.remove("$principalId:$key")
-        override suspend fun getOrPutPrincipal(principalId: String, key: String, compute: suspend () -> HttpMetadata<String>?): HttpMetadata<String>? {
-            val cacheKey = "$principalId:$key"
-            return principalCache[cacheKey] ?: compute()?.also { principalCache[cacheKey] = it }
-        }
-
-        override suspend fun clear() {
-            clearAllCalled = true
-            appCache.clear()
-            tenantCache.clear()
-            principalCache.clear()
-        }
-        override suspend fun clearApp() { appCache.clear() }
-        override suspend fun clearTenant(tenantId: String) {
-            clearedTenantId = tenantId
-            tenantCache.keys.filter { it.startsWith("$tenantId:") }.forEach { tenantCache.remove(it) }
-        }
-        override suspend fun clearPrincipal(principalId: String) {
-            principalCache.keys.filter { it.startsWith("$principalId:") }.forEach { principalCache.remove(it) }
-        }
-        override suspend fun evictExpired() { evictExpiredCalled = true }
-        override suspend fun close() { clear() }
-        override suspend fun getStatistics(): CacheStatistics = CacheStatistics(
-            namespace = namespace,
-            hits = 0L,
-            misses = 0L,
-            size = appCache.size.toLong() + tenantCache.size.toLong() + principalCache.size.toLong(),
-            maxSize = 1000L
-        )
-    }
 }

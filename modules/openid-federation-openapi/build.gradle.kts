@@ -12,7 +12,12 @@ plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
 }
 
-val openApiSpecPath = "$projectDir/src/commonMain/kotlin/com/sphereon/openid/fed/openapi/admin-server.yaml"
+val openApiDir = "$projectDir/src/commonMain/kotlin/com/sphereon/openid/fed/openapi"
+val coreOpenApiSpec = "$openApiDir/admin-server.yaml"
+val accountsOpenApiSpec = "$openApiDir/admin-accounts.yaml"
+// Codegen input: core + optional LEGACY account models/paths (Account, CreateAccount, …).
+// Served/platform contract remains core-only (admin-server.yaml without /accounts).
+val mergedOpenApiSpec = "$projectDir/build/openapi/admin-merged.yaml"
 val kotlinOutputDir = "$projectDir/build/generated"
 val basePackage = "com.sphereon.openid.fed.openapi"
 val kotlinApiPackage = "$basePackage.api"
@@ -28,11 +33,91 @@ repositories {
     mavenCentral()
 }
 
+/**
+ * Merge core admin OpenAPI with optional LEGACY accounts fragment so monorepo codegen
+ * still produces Account / CreateAccount / AccountsResponse while the published core
+ * contract (admin-server.yaml) has no /accounts operations.
+ */
+tasks.register("mergeAdminOpenApiSpecs") {
+    group = "openapi tools"
+    description =
+        "Merges admin-server.yaml + admin-accounts.yaml for codegen (core contract stays split)."
+    inputs.files(coreOpenApiSpec, accountsOpenApiSpec)
+    outputs.file(mergedOpenApiSpec)
+    doLast {
+        val core = file(coreOpenApiSpec).readText()
+        val accounts = file(accountsOpenApiSpec).readText()
+
+        fun extractBlock(text: String, startMarker: String, endMarker: String?): String {
+            val start = text.indexOf(startMarker)
+            require(start >= 0) { "Marker not found: $startMarker" }
+            val from = start + startMarker.length
+            val end = if (endMarker != null) {
+                val e = text.indexOf(endMarker, from)
+                require(e >= 0) { "End marker not found: $endMarker" }
+                e
+            } else {
+                text.length
+            }
+            return text.substring(from, end).trimEnd()
+        }
+
+        // tags: single accounts tag entry
+        val accountsTag = Regex(
+            """  - name: accounts\n    description:.*""",
+            RegexOption.MULTILINE
+        ).find(accounts)?.value
+            ?: error("accounts tag not found in admin-accounts.yaml")
+
+        // paths: from "  /accounts:" through end of that path item (before components:)
+        val accountsPaths = extractBlock(accounts, "paths:\n", "\ncomponents:")
+        // schemas: Account*, CreateAccount only (skip AdminErrorResponse — already in core)
+        val accountsSchemasSection = extractBlock(accounts, "  schemas:\n", null)
+        val accountSchemas = accountsSchemasSection
+            .lineSequence()
+            .takeWhile { line ->
+                // Stop before AdminErrorResponse (core already defines it)
+                !line.startsWith("    AdminErrorResponse:")
+            }
+            .joinToString("\n")
+            .trimEnd()
+            // Drop leading comments that are accounts-file only
+            .lineSequence()
+            .dropWhile { it.trimStart().startsWith("#") || it.isBlank() }
+            .joinToString("\n")
+            .trimEnd()
+
+        var merged = core
+        // Insert accounts tag first under tags:
+        merged = merged.replaceFirst(
+            "tags:\n",
+            "tags:\n$accountsTag\n"
+        )
+        // Insert /accounts under paths:
+        merged = merged.replaceFirst(
+            "paths:\n",
+            "paths:\n$accountsPaths\n"
+        )
+        // Insert account schemas under schemas:
+        merged = merged.replaceFirst(
+            "  schemas:\n",
+            "  schemas:\n$accountSchemas\n"
+        )
+
+        val out = file(mergedOpenApiSpec)
+        out.parentFile.mkdirs()
+        out.writeText(merged)
+        logger.lifecycle("Wrote merged OpenAPI for codegen: ${out.absolutePath}")
+    }
+}
+
 tasks.register<GenerateTask>("openApiGenerateKotlin") {
     group = "openapi tools"
-    description = "Generates Kotlin Multiplatform code from OpenAPI specification."
+    description =
+        "Generates Kotlin Multiplatform code from core admin + optional accounts OpenAPI."
+    dependsOn("mergeAdminOpenApiSpecs")
     generatorName.set("kotlin")
-    inputSpec.set(openApiSpecPath)
+    inputSpec.set(mergedOpenApiSpec)
     outputDir.set(kotlinOutputDir)
     packageName.set(basePackage)
     apiPackage.set(kotlinApiPackage)

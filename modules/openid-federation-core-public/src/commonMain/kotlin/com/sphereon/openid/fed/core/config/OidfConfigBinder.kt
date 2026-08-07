@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.core.config
 
+import com.sphereon.openid.fed.core.tenant.IdentityConfig
+
 /**
  * Configuration binder interface for OpenID Federation.
  *
@@ -7,8 +9,9 @@ package com.sphereon.openid.fed.core.config
  * IDK's configuration patterns with support for scoped configuration
  * (APP, TENANT, PRINCIPAL).
  *
- * Implementations should use IDK's ConfigService for property resolution
- * with proper fallback handling.
+ * Implementations should prefer IDK's ConfigService / property-source pipeline
+ * for resolution. Current default implementation still uses environment
+ * variables (IDK-normalized + legacy aliases) pending full ConfigService migration.
  */
 interface OidfConfigBinder {
 
@@ -33,6 +36,8 @@ interface OidfConfigBinder {
 
     /**
      * Get logger configuration (APP scope).
+     *
+     * Note: prefer mapping into IDK `com.sphereon.core.api.log.LoggerConfig` at bootstrap.
      */
     fun getLoggerConfig(): LoggerConfig
 
@@ -50,6 +55,11 @@ interface OidfConfigBinder {
      * Get KMS configuration (APP scope).
      */
     fun getKmsConfig(): KmsConfig
+
+    /**
+     * Get identity / multi-tenancy mode configuration (APP scope).
+     */
+    fun getIdentityConfig(): IdentityConfig
 
     /**
      * Get the complete application configuration aggregate.

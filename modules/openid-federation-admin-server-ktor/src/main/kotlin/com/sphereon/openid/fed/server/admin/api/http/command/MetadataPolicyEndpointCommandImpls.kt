@@ -66,6 +66,7 @@ class ListMetadataPoliciesEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateMetadataPolicyEndpointCommand>())
 class CreateMetadataPolicyEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val metadataPolicyService: MetadataPolicyService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -79,6 +80,9 @@ class CreateMetadataPolicyEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -118,6 +122,7 @@ class CreateMetadataPolicyEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataPolicyEndpointCommand>())
 class DeleteMetadataPolicyEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val metadataPolicyService: MetadataPolicyService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -131,6 +136,9 @@ class DeleteMetadataPolicyEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

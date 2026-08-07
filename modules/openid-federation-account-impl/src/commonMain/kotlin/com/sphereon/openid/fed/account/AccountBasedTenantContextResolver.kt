@@ -7,19 +7,17 @@ import com.sphereon.openid.fed.account.error.AccountConstants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.ContributesBinding
-import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
 /**
- * TenantContextResolver implementation that resolves tenants via Account DB lookup.
+ * LEGACY-mode tenant resolution via Account DB lookup.
  *
  * Uses the X-Account-Username header to resolve an account, then uses
- * the account's ID as the tenantId.
+ * the account's ID as the tenantId. Bound only indirectly through
+ * [ModeAwareTenantContextResolver] (not as the sole [TenantContextResolver]).
  */
 @Inject
 @SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, binding = binding<TenantContextResolver>())
 class AccountBasedTenantContextResolver(
     private val accountService: AccountService,
     private val config: TenantServiceConfig

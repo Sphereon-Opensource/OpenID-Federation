@@ -1,5 +1,8 @@
 package com.sphereon.openid.fed.core.config
 
+import com.sphereon.openid.fed.core.tenant.IdentityConfig
+import com.sphereon.openid.fed.core.tenant.IdentityMode
+
 /**
  * Federation core configuration settings (APP scope).
  */
@@ -61,11 +64,23 @@ data class DatasourceConfig(
 )
 
 /**
- * OAuth2 configuration for admin API authentication.
+ * OAuth2 / JWT configuration for PLATFORM authentication.
+ *
+ * @property issuerUri OIDC issuer URI for JWT validation (empty = JWT auth not auto-installed)
+ * @property audience Optional expected `aud` claim override
+ * @property jwtAuthEnabled `auto` | `true` | `false` — auto enables when PLATFORM + issuer set
  */
 data class OAuth2Config(
     /** OIDC issuer URI for JWT validation */
-    val issuerUri: String = ""
+    val issuerUri: String = "",
+    /** Optional expected audience for access tokens */
+    val audience: String = "",
+    /**
+     * Whether to install IDK [JwtAuthentication]:
+     * - `auto` (default): enable when identity.mode=platform and issuerUri is non-blank
+     * - `true` / `false`: force on/off
+     */
+    val jwtAuthEnabled: String = "auto",
 )
 
 /**
@@ -100,5 +115,10 @@ data class OidfAppConfig(
     val logger: LoggerConfig = LoggerConfig(),
     val datasource: DatasourceConfig = DatasourceConfig(),
     val oauth2: OAuth2Config = OAuth2Config(),
-    val kms: KmsConfig = KmsConfig()
+    val kms: KmsConfig = KmsConfig(),
+    val identity: IdentityConfig = IdentityConfig()
 )
+
+// Re-export identity types for config consumers
+typealias OidfIdentityMode = IdentityMode
+typealias OidfIdentityConfig = IdentityConfig

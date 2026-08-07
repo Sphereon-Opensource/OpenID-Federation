@@ -109,6 +109,8 @@ include(":modules:openid-federation-core-impl")
 // Account modules (optional account-based multi-tenancy)
 include(":modules:openid-federation-account-public")
 include(":modules:openid-federation-account-impl")
+// LEGACY /accounts REST only — optional dependency (on classpath = REST present)
+include(":modules:openid-federation-account-http")
 
 // Existing modules
 include(":modules:openid-federation-openapi")

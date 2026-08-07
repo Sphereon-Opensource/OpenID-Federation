@@ -81,6 +81,15 @@ object OidfConfigKeys {
 
         /** OIDC issuer URI for JWT validation */
         const val ISSUER_URI = "$PREFIX.issuer.uri"
+
+        /** Expected access-token audience (optional) */
+        const val AUDIENCE = "$PREFIX.audience"
+
+        /**
+         * Install IDK JwtAuthentication plugin: `auto` | `true` | `false`
+         * @see com.sphereon.openid.fed.core.config.OAuth2Config.jwtAuthEnabled
+         */
+        const val JWT_AUTH_ENABLED = "$PREFIX.jwt.auth.enabled"
     }
 
     // ========================================================================
@@ -121,6 +130,38 @@ object OidfConfigKeys {
     }
 
     // ========================================================================
+    // Cache locality overrides (APP scope) — optional distributed deployment
+    // ========================================================================
+
+    object Cache {
+        const val PREFIX = "$OIDF_PREFIX.cache"
+
+        /**
+         * Override IDK [com.sphereon.core.api.cache.CacheLocality] per namespace
+         * (enum name, e.g. LOCAL_ONLY, LOCAL_PREFERRED, DISTRIBUTED_PREFERRED, DISTRIBUTED_ONLY).
+         * Empty = keep [FederationCacheRequirements] defaults.
+         */
+        const val HTTP_RESOLVER_LOCALITY = "$PREFIX.http.resolver.locality"
+        const val ENTITY_CONFIG_LOCALITY = "$PREFIX.entity.config.locality"
+        const val TRUST_CHAIN_LOCALITY = "$PREFIX.trust.chain.locality"
+        const val TRUST_MARK_LOCALITY = "$PREFIX.trust.mark.locality"
+    }
+
+    // ========================================================================
+    // JWE (optional encrypted payloads via IDK JweService)
+    // ========================================================================
+
+    object Jwe {
+        const val PREFIX = "$OIDF_PREFIX.jwe"
+
+        /**
+         * Enable optional JWE helpers for hosts that inject IDK JweService:
+         * `true` | `false` (default false — federation statements stay JWS-only).
+         */
+        const val ENABLED = "$PREFIX.enabled"
+    }
+
+    // ========================================================================
     // KMS Configuration (APP scope)
     // ========================================================================
 
@@ -144,6 +185,47 @@ object OidfConfigKeys {
             fun order(providerId: String) = "$PREFIX.$providerId.order"
             fun id(providerId: String) = "$PREFIX.$providerId.id"
         }
+    }
+
+    // ========================================================================
+    // Identity / multi-tenancy mode (APP scope)
+    // ========================================================================
+
+    object Identity {
+        const val PREFIX = "$OIDF_PREFIX.identity"
+
+        /**
+         * Identity mode: `legacy` (default) or `platform`.
+         * @see com.sphereon.openid.fed.core.tenant.IdentityMode
+         */
+        const val MODE = "$PREFIX.mode"
+
+        /**
+         * Optional IDK tenant id that owns the federation root entity identifier.
+         * Used in PLATFORM mode when resolving entity identifiers.
+         */
+        const val PLATFORM_ROOT_TENANT_ID = "$PREFIX.platform.root.tenant.id"
+
+        /**
+         * When false (default), PLATFORM admin mutations require a non-anonymous session.
+         */
+        const val ALLOW_ANONYMOUS_ADMIN = "$PREFIX.allow.anonymous.admin"
+
+        /**
+         * IDK session tenant alignment strategy (L1 vs L2).
+         *
+         * - `account` (default): LEGACY binds session tenant to Account.id (L2)
+         * - `fixed`: always use a fixed session tenant id (L1 compat, typically `"default"`)
+         *
+         * PLATFORM mode ignores this for account-header logic; it uses
+         * [PLATFORM_ROOT_TENANT_ID] or `"default"`.
+         */
+        const val SESSION_ALIGNMENT = "$PREFIX.session.alignment"
+
+        /**
+         * Fixed session tenant id when [SESSION_ALIGNMENT] is `fixed`, or lookup fallback (default `default`).
+         */
+        const val SESSION_FIXED_TENANT_ID = "$PREFIX.session.fixed.tenant.id"
     }
 
     // ========================================================================

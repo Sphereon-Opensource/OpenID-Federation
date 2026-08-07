@@ -9,7 +9,7 @@ package com.sphereon.openid.fed.core.di
  * - SessionScope: Request/operation lifetime
  *
  * The federation services are scoped appropriately:
- * - AppScope: CacheManager, global configuration
+ * - AppScope: IDK CacheManager, global configuration
  * - SessionScope: All tenant-specific services
  *
  * Note: With IDK's kotlin-inject integration, scopes are represented
@@ -21,7 +21,7 @@ package com.sphereon.openid.fed.core.di
  *
  * App-scoped components are singletons that live for the entire
  * application lifetime. Examples:
- * - FederationCacheManager
+ * - IDK CacheManager (via CacheManagerInitialization)
  * - Global configuration services
  * - HTTP client factories
  */

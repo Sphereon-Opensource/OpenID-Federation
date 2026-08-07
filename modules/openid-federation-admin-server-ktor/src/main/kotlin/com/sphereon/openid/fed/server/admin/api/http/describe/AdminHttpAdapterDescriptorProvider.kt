@@ -2,12 +2,12 @@ package com.sphereon.openid.fed.server.admin.api.http.describe
 
 import com.sphereon.core.api.http.describe.HttpAdapterDescriptorProvider
 import com.sphereon.core.api.http.describe.HttpAdapterMount
+import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.StaticPublicApiDescriptor
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.server.admin.api.http.AdminAccountDescriptorContribution
 import com.sphereon.openid.fed.server.admin.api.http.AdminHttpAdapter
 import com.sphereon.openid.fed.server.admin.api.http.command.*
-import com.sphereon.openid.fed.account.http.command.ListAccountsEndpointCommand
-import com.sphereon.openid.fed.account.http.command.CreateAccountEndpointCommand
-import com.sphereon.openid.fed.account.http.command.DeleteAccountEndpointCommand
 import com.sphereon.openid.fed.services.command.authorityHint.CreateAuthorityHintCommand
 import com.sphereon.openid.fed.services.command.authorityHint.DeleteAuthorityHintCommand
 import com.sphereon.openid.fed.services.command.authorityHint.FindAuthorityHintsByAccountCommand
@@ -48,21 +48,35 @@ import dev.zacsweers.metro.SingleIn
  * Uses StaticPublicApiDescriptor to provide endpoint metadata from service command
  * ENDPOINT descriptors (single source of truth). Non-1:1 endpoints (cache, logs)
  * reference their own endpoint command descriptors.
+ *
+ * Account management endpoints are included only when:
+ * - LEGACY identity mode, and
+ * - [AdminAccountDescriptorContribution] is present (account-http on classpath).
  */
 @Inject
 @SingleIn(AppScope::class)
 @ContributesIntoSet(AppScope::class, binding = binding<HttpAdapterDescriptorProvider>())
-class AdminHttpAdapterDescriptorProvider : StaticPublicApiDescriptor(
+class AdminHttpAdapterDescriptorProvider(
+    configBinder: OidfConfigBinder,
+    accountDescriptors: Set<AdminAccountDescriptorContribution>,
+) : StaticPublicApiDescriptor(
     adapterId = AdminHttpAdapter.ID,
     mount = HttpAdapterMount(
         serverPrefix = "",
         adapterBasePath = ""
     ),
-    endpoints = listOf(
-        // Account endpoints (from endpoint commands)
-        ListAccountsEndpointCommand.ENDPOINT,
-        CreateAccountEndpointCommand.ENDPOINT,
-        DeleteAccountEndpointCommand.ENDPOINT,
+    endpoints = buildAdminEndpoints(configBinder, accountDescriptors)
+)
+
+private fun buildAdminEndpoints(
+    configBinder: OidfConfigBinder,
+    accountDescriptors: Set<AdminAccountDescriptorContribution>,
+): List<HttpEndpointDescriptor> = buildList {
+    if (configBinder.getIdentityConfig().isLegacy) {
+        accountDescriptors.forEach { addAll(it.endpointDescriptors) }
+    }
+    addAll(
+        listOf(
         // Key endpoints (from endpoint commands)
         ListKeysEndpointCommand.ENDPOINT,
         CreateKeyEndpointCommand.ENDPOINT,
@@ -127,5 +141,6 @@ class AdminHttpAdapterDescriptorProvider : StaticPublicApiDescriptor(
         // Cache endpoints (from endpoint commands)
         GetCacheStatsEndpointCommand.ENDPOINT,
         ClearCacheEndpointCommand.ENDPOINT
+        )
     )
-)
+}

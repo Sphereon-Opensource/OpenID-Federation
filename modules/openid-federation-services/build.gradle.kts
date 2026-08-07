@@ -12,6 +12,10 @@ plugins {
  * New code should depend on:
  * - openid-federation-services-public for interfaces only
  * - openid-federation-services-impl for implementations with DI
+ *
+ * LEGACY `/accounts` REST is **not** re-exported here. Apps that want it add
+ * `openid-federation-account-http` on their own classpath (deployment contract =
+ * module present or not — no packaging mode flag).
  */
 kotlin {
     jvm()
@@ -23,7 +27,7 @@ kotlin {
                 api(projects.modules.openidFederationServicesPublic)
                 api(projects.modules.openidFederationServicesImpl)
 
-                // Re-export account modules for backward compatibility
+                // Account service + tenant resolvers (not HTTP REST)
                 api(projects.modules.openidFederationAccountPublic)
                 api(projects.modules.openidFederationAccountImpl)
             }

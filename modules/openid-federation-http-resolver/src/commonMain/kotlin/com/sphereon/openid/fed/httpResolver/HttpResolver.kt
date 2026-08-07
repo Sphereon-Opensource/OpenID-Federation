@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.httpResolver
 
-import com.sphereon.openid.fed.core.cache.CacheScope
-import com.sphereon.openid.fed.core.cache.ScopedCache
+import com.sphereon.core.api.cache.CacheScope
+import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.openid.fed.httpResolver.config.DefaultHttpResolverConfig
 import com.sphereon.openid.fed.httpResolver.config.HttpResolverConfig
 import io.ktor.client.*
@@ -17,7 +17,7 @@ private val logger = HttpResolverConst.LOG
  * A utility class for resolving HTTP resources with scoped caching and retry capabilities.
  *
  * This resolver fetches data from remote URLs, supports conditional request headers for caching
- * (such as ETag and Last-Modified), and uses IDK's ScopedCache for multi-tenant cache isolation.
+ * (such as ETag and Last-Modified), and uses IDK [ScopedCache] for multi-tenant cache isolation.
  *
  * Cache Scoping:
  * - APP scope: Used for shared resources like trust anchor configurations
@@ -26,7 +26,7 @@ private val logger = HttpResolverConst.LOG
  * @param V The type of the response value.
  * @param config Configuration for the HTTP resolver, including timeout and retry settings.
  * @param httpClient The HTTP client used for making requests.
- * @param cache A ScopedCache instance for storing and retrieving HTTP metadata.
+ * @param cache An IDK [ScopedCache] for storing and retrieving HTTP metadata.
  * @param responseMapper A suspend function to map an [HttpResponse] object to the desired value type [V].
  */
 class HttpResolver<V : Any>(
@@ -119,14 +119,12 @@ class HttpResolver<V : Any>(
     suspend fun get(url: String): String {
         logger.debug("Retrieving resource from $url (APP scope)")
 
-        // Try cache first
         val cached = cache.getApp(url)
         if (cached != null) {
             logger.debug("Cache hit for $url (APP scope)")
             return cached.value.toString()
         }
 
-        // Fetch from remote and cache
         logger.debug("Cache miss for $url (APP scope), fetching from remote")
         val metadata = fetchFromRemote(url, null)
         cache.putApp(url, metadata)
@@ -177,14 +175,12 @@ class HttpResolver<V : Any>(
     suspend fun getForTenant(url: String, tenantId: String): String {
         logger.debug("Retrieving resource from $url (TENANT scope: $tenantId)")
 
-        // Try cache first
         val cached = cache.getTenant(tenantId, url)
         if (cached != null) {
             logger.debug("Cache hit for $url (TENANT scope: $tenantId)")
             return cached.value.toString()
         }
 
-        // Fetch from remote and cache
         logger.debug("Cache miss for $url (TENANT scope: $tenantId), fetching from remote")
         val metadata = fetchFromRemote(url, null)
         cache.putTenant(tenantId, url, metadata)
@@ -228,7 +224,7 @@ class HttpResolver<V : Any>(
      * Resolve a URL using the specified scope.
      *
      * @param url The URL of the resource to retrieve.
-     * @param scope The cache scope to use.
+     * @param scope The IDK cache scope to use.
      * @param scopeId The scope identifier (required for TENANT and PRINCIPAL scopes).
      * @param forceRefresh If true, bypass cache and fetch from remote.
      * @return The resource content as a string.
@@ -243,8 +239,7 @@ class HttpResolver<V : Any>(
             CacheScope.APP -> get(url, forceRefresh)
             CacheScope.TENANT -> getForTenant(url, scopeId!!, forceRefresh)
             CacheScope.PRINCIPAL -> {
-                // For now, PRINCIPAL scope uses the same logic as TENANT
-                // Could be extended for user-specific caching in the future
+                // PRINCIPAL uses TENANT isolation path (tenantId = principal id) for now
                 logger.debug("PRINCIPAL scope using TENANT implementation for $url")
                 getForTenant(url, scopeId!!, forceRefresh)
             }
@@ -265,15 +260,7 @@ class HttpResolver<V : Any>(
      * Clear cached entries for a specific tenant.
      */
     suspend fun clearCacheForTenant(tenantId: String) {
-        cache.clearTenant(tenantId)
+        cache.invalidateTenant(tenantId)
         logger.debug("Cleared HTTP resolver cache for tenant: $tenantId")
-    }
-
-    /**
-     * Evict expired entries from the cache.
-     */
-    suspend fun evictExpired() {
-        cache.evictExpired()
-        logger.debug("Evicted expired HTTP resolver cache entries")
     }
 }

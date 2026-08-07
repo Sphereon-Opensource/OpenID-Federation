@@ -65,6 +65,7 @@ class ListAuthorityHintsEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateAuthorityHintEndpointCommand>())
 class CreateAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val authorityHintService: AuthorityHintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -78,6 +79,9 @@ class CreateAuthorityHintEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -113,6 +117,7 @@ class CreateAuthorityHintEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteAuthorityHintEndpointCommand>())
 class DeleteAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val authorityHintService: AuthorityHintService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -126,6 +131,9 @@ class DeleteAuthorityHintEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)

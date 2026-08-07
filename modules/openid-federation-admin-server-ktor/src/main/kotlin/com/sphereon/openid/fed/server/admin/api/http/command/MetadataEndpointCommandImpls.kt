@@ -66,6 +66,7 @@ class ListMetadataEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateMetadataEndpointCommand>())
 class CreateMetadataEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val metadataService: MetadataService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -79,6 +80,9 @@ class CreateMetadataEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
@@ -118,6 +122,7 @@ class CreateMetadataEndpointCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataEndpointCommand>())
 class DeleteMetadataEndpointCommandImpl(
     execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
     private val metadataService: MetadataService,
     private val tenantContextResolver: TenantContextResolver,
     private val json: Json
@@ -131,6 +136,9 @@ class DeleteMetadataEndpointCommandImpl(
         args: GenericHttpRequest,
         applyDuring: (GenericHttpRequest) -> GenericHttpRequest
     ): IdkResult<GenericHttpResponse, IdkError> {
+        // PLATFORM: reject anonymous admin mutations (no-op in LEGACY)
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantId(request)
