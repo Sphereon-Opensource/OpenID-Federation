@@ -13,7 +13,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.Jwk
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -31,11 +31,11 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<RevokeKeyCommand>())
 class RevokeKeyCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<RevokeKeyArgs, AccountJwk, FederationError>(
+) : TypedServiceCommandAdapter<RevokeKeyArgs, TenantJwk, FederationError>(
     commandId = RevokeKeyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<RevokeKeyArgs>(),
-    outputTypeToken = typeToken<AccountJwk>()
+    outputTypeToken = typeToken<TenantJwk>()
 ), RevokeKeyCommand {
 
     private val logger = execution.federationLogger("RevokeKeyCommand")
@@ -44,7 +44,7 @@ class RevokeKeyCommandImpl(
     override suspend fun doExecute(
         args: RevokeKeyArgs,
         applyDuring: (RevokeKeyArgs) -> RevokeKeyArgs
-    ): IdkResult<AccountJwk, FederationError> {
+    ): IdkResult<TenantJwk, FederationError> {
         val (tenantId, keyId, reason) = applyDuring(args)
 
         logger.info("Attempting to revoke key ID: $keyId for account: $tenantId")

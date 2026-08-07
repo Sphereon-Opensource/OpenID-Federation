@@ -3,17 +3,16 @@ package com.sphereon.openid.fed.core.di
 /**
  * OpenID Federation DI Scope Definitions.
  *
- * These scopes follow the IDK's hierarchical scope pattern:
- * - AppScope: Application lifetime (singletons)
- * - UserScope: User/Tenant session lifetime
- * - SessionScope: Request/operation lifetime
+ * Align with IDK’s hierarchical model (see docs/DI_SCOPE_AUDIT.md):
+ * - **AppScope:** Process lifetime — graph roots, config binder, CacheManager, factories
+ * - **UserScope / tenant:** IDK may create tenant layers; **OIDFed does not bind** to UserScope today
+ * - **SessionScope:** Preferred for commands, HTTP adapters, tenant services (request graph)
  *
- * The federation services are scoped appropriately:
- * - AppScope: IDK CacheManager, global configuration
- * - SessionScope: All tenant-specific services
+ * Practice: almost all OIDFed services/commands use `@SingleIn(SessionScope)`.
+ * Do not put tenant-sensitive mutable state on AppScope.
  *
- * Note: With IDK's kotlin-inject integration, scopes are represented
- * by marker annotations and the @SingleIn annotation from kotlin-inject-anvil.
+ * Metro/IDK scopes are used via `@SingleIn(AppScope|SessionScope)` on contributions;
+ * the marker interfaces below are documentation / historical only.
  */
 
 /**

@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.integration.tests
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -91,7 +91,7 @@ class SessionAlignmentApiTest {
                 setBody("{}")
             }
             assertEquals(HttpStatusCode.Created, createA.status, createA.bodyAsText())
-            val keyA = json.decodeFromString<AccountJwk>(createA.bodyAsText())
+            val keyA = json.decodeFromString<TenantJwk>(createA.bodyAsText())
 
             // Account A lists the key
             val listA = client.get("$baseUrl/keys") {
@@ -120,7 +120,7 @@ class SessionAlignmentApiTest {
                 setBody("{}")
             }
             assertEquals(HttpStatusCode.Created, createB.status, createB.bodyAsText())
-            val keyB = json.decodeFromString<AccountJwk>(createB.bodyAsText())
+            val keyB = json.decodeFromString<TenantJwk>(createB.bodyAsText())
 
             val listA2 = client.get("$baseUrl/keys") {
                 header("X-Account-Username", accountA)
@@ -145,7 +145,7 @@ class SessionAlignmentApiTest {
             }
             // Default header → root; L2 session uses root Account.id
             assertEquals(HttpStatusCode.Created, create.status, create.bodyAsText())
-            val key = json.decodeFromString<AccountJwk>(create.bodyAsText())
+            val key = json.decodeFromString<TenantJwk>(create.bodyAsText())
 
             val listRoot = client.get("$baseUrl/keys") {
                 header("X-Account-Username", "root")

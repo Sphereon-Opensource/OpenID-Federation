@@ -82,7 +82,7 @@ fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServe
     // with domain account_id FKs. OidfSessionTenantResolver:
     // - LEGACY + session.alignment=account (default): X-Account-Username → Account.id
     // - LEGACY + session.alignment=fixed: L1 compat FixedTenantResolver(session.fixed.tenant.id)
-    // - PLATFORM: platform.root.tenant.id or fixed id (host JWT can replace this later)
+    // - PLATFORM: bootstrap root/fixed; post-JWT rebind aligns session to validated claims
     val identity = appGraph.configBinder.getIdentityConfig()
     val sessionTenantResolver = OidfSessionTenantResolver(appGraph.configBinder)
     install(KotlinInjectPlugin) {
@@ -94,7 +94,8 @@ fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServe
             "(identity.mode=${identity.mode}, session.alignment=${identity.sessionAlignment})",
     )
 
-    // PLATFORM (or forced): IDK JwtAuthentication after kotlin-inject so session graph exists
+    // PLATFORM (or forced): JwtAuthentication + stamp ValidatedJwtClaims + rebind DI session
+    // so SessionExecution.tenantId matches JWT tenant before HTTP commands run.
     installOidfJwtAuthIfConfigured(
         configBinder = appGraph.configBinder,
         requireAuth = identity.isPlatform && !identity.allowAnonymousAdmin,

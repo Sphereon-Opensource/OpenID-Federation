@@ -13,7 +13,7 @@ import com.sphereon.crypto.core.kms.KeyManagerService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.mappers.toDTO
@@ -35,11 +35,11 @@ class CreateKeyCommandImpl(
     execution: SessionExecution,
     private val keyManagerService: KeyManagerService,
     private val getKeysCommand: GetKeysCommand
-) : TypedServiceCommandAdapter<CreateKeyCommandArgs, AccountJwk, FederationError>(
+) : TypedServiceCommandAdapter<CreateKeyCommandArgs, TenantJwk, FederationError>(
     commandId = CreateKeyCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<CreateKeyCommandArgs>(),
-    outputTypeToken = typeToken<AccountJwk>()
+    outputTypeToken = typeToken<TenantJwk>()
 ), CreateKeyCommand {
 
     private val logger = execution.federationLogger("CreateKeyCommand")
@@ -48,7 +48,7 @@ class CreateKeyCommandImpl(
     override suspend fun doExecute(
         args: CreateKeyCommandArgs,
         applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
-    ): IdkResult<AccountJwk, FederationError> = withContext(Dispatchers.IO) {
+    ): IdkResult<TenantJwk, FederationError> = withContext(Dispatchers.IO) {
         val (tenantId, opts) = applyDuring(args)
 
         try {

@@ -2,7 +2,7 @@ package com.sphereon.openid.fed.services
 
 import com.sphereon.openid.fed.core.error.FederationResult
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 
 /**
  * Service interface responsible for operations related to JSON Web Keys (JWK).
@@ -22,18 +22,18 @@ interface JwkService {
      *
      * @param account The account for which a new JWK is being created.
      * @param opts Options for key creation.
-     * @return FederationResult containing the created AccountJwk or an error.
+     * @return FederationResult containing the created TenantJwk or an error.
      */
-    suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<AccountJwk>
+    suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<TenantJwk>
 
     /**
      * Retrieves the keys associated with a given account.
      *
      * @param account The account for which the keys are to be retrieved.
      * @param includeRevoked Whether to include revoked keys.
-     * @return FederationResult containing an array of AccountJwk or an error.
+     * @return FederationResult containing an array of TenantJwk or an error.
      */
-    suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<AccountJwk>>
+    suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<TenantJwk>>
 
     /**
      * Retrieves the keys associated with the given account or returns an error if no keys are found.
@@ -42,14 +42,14 @@ interface JwkService {
      * @param includeRevoked Whether to include revoked keys.
      * @param kmsKeyRef Optional KMS Key reference filter.
      * @param kid Optional kid filter.
-     * @return FederationResult containing an array of AccountJwk or an error.
+     * @return FederationResult containing an array of TenantJwk or an error.
      */
     suspend fun getAssertedKeysForAccount(
         tenantId: String,
         includeRevoked: Boolean,
         kmsKeyRef: String?,
         kid: String?
-    ): FederationResult<Array<AccountJwk>>
+    ): FederationResult<Array<TenantJwk>>
 
     /**
      * Revokes a specific key associated with the provided account.
@@ -57,9 +57,9 @@ interface JwkService {
      * @param account The account associated with the key to be revoked.
      * @param keyId The unique identifier of the key to be revoked.
      * @param reason An optional reason for revoking the key.
-     * @return FederationResult containing the revoked AccountJwk or an error.
+     * @return FederationResult containing the revoked TenantJwk or an error.
      */
-    suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<AccountJwk>
+    suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<TenantJwk>
 
     /**
      * Generates and returns a JWT representing the historical federation keys.

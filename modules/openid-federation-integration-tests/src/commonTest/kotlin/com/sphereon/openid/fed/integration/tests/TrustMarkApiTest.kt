@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.integration.tests
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
@@ -131,7 +131,7 @@ class TrustMarkApiTest {
     /**
      * Helper method to create a sample key for trust mark operations.
      */
-    private suspend fun createSampleKey(): AccountJwk {
+    private suspend fun createSampleKey(): TenantJwk {
         val response =
             client.post("$baseUrl/keys") {
                 contentType(ContentType.Application.Json)
@@ -139,7 +139,7 @@ class TrustMarkApiTest {
                 setBody(CreateKey()) // Assuming default key creation is sufficient
             }
         assertEquals(HttpStatusCode.Created, response.status, "Key creation failed")
-        return response.body<AccountJwk>()
+        return response.body<TenantJwk>()
     }
 
     /**

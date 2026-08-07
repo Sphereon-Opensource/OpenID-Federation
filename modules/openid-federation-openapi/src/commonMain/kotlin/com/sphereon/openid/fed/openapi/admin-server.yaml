@@ -48,7 +48,7 @@ paths:
       summary: List all keys
       operationId: listKeys
 
-      description: Retrieve all keys associated with the specified account.
+      description: Retrieve all keys associated with the specified tenant (federation entity context).
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -57,7 +57,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountJwksResponse'
+                $ref: '#/components/schemas/TenantJwksResponse'
         '400':
           description: Invalid request
           content:
@@ -81,7 +81,7 @@ paths:
         - keys
       summary: Create a new key
 
-      description: Create a new key for the specified account.
+      description: Create a new key for the specified tenant (federation entity context).
       operationId: createKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -94,11 +94,11 @@ paths:
               $ref: '#/components/schemas/CreateKey'
       responses:
         '201':
-          description: Key created successfully
+          description: Key created successfully (managed TenantJwk record; JSON shape includes id/kms/accountId)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/TenantJwk'
         '400':
           description: Invalid request
           content:
@@ -117,7 +117,7 @@ paths:
         - keys
       summary: Revoke a key
 
-      description: Revoke a key by its ID for the specified account.
+      description: Revoke a key by its ID for the specified tenant (federation entity context).
       operationId: revokeKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -136,11 +136,11 @@ paths:
           description: The reason for revoking the key.
       responses:
         '200':
-          description: Key revoked successfully
+          description: Key revoked successfully (managed TenantJwk record)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/TenantJwk'
         '400':
           description: Invalid request
           content:
@@ -1837,7 +1837,7 @@ components:
                 description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
   schemas:
     # Account / AccountsResponse / CreateAccount live in optional admin-accounts.yaml
-    # (LEGACY account REST). AccountJwk remains here — it is the /keys response type.
+    # (LEGACY account REST). TenantJwk (keys API) lives here; AccountJwk is a schema alias.
     AuthorityHintsResponse:
       type: object
       required:
@@ -1865,15 +1865,21 @@ components:
         - accountId
         - admin
 
-    AccountJwksResponse:
+    TenantJwksResponse:
       type: object
+      description: |
+        List of tenant (federation entity context) keys. Wire shape is unchanged from the
+        historical AccountJwksResponse name (`{ "jwks": [ ... ] }`).
       required:
         - jwks
       properties:
         jwks:
           type: array
           items:
-            $ref: '#/components/schemas/AccountJwk'
+            $ref: '#/components/schemas/TenantJwk'
+    # Deprecated OpenAPI schema name — same object as TenantJwksResponse (clients/tools may still resolve AccountJwksResponse).
+    AccountJwksResponse:
+      $ref: '#/components/schemas/TenantJwksResponse'
     Jwk:
       type: object
       required:
@@ -2344,12 +2350,16 @@ components:
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
 
-    AccountJwk:
+    TenantJwk:
       allOf:
         - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
+          description: |
+            Managed key record for a federation entity context (tenant).
+            JSON property names are stable (including `accountId` for the owner id).
+            The historical OpenAPI schema name was AccountJwk — see schema alias below.
           required:
             - id
           properties:
@@ -2369,7 +2379,9 @@ components:
             accountId:
               type: string
               format: uuid
-              description: The ID of the account associated with this JWK.
+              description: |
+                Owner federation entity context id (LEGACY Account.id / PLATFORM IDK tenant id).
+                JSON name remains `accountId` for wire compatibility.
               example: "123e4567-e89b-12d3-a456-426614174000"
             revokedAt:
               type: string
@@ -2388,6 +2400,9 @@ components:
               description: The timestamp when the JWK was created.
               example: '2024-08-06T12:34:56Z'
               nullable: true
+    # Deprecated OpenAPI schema name — same object as TenantJwk (clients/tools may still resolve AccountJwk).
+    AccountJwk:
+      $ref: '#/components/schemas/TenantJwk'
 
     JwkRevoked:
       type: object

@@ -4,7 +4,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.core.error.toFederationResult
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommand
 import com.sphereon.openid.fed.services.command.jwk.CreateKeyCommandArgs
 import com.sphereon.openid.fed.services.command.jwk.GetAssertedKeysArgs
@@ -42,10 +42,10 @@ class JwkServiceImpl(
     private val getFederationHistoricalKeysJwtCommand: GetFederationHistoricalKeysJwtCommand
 ) : JwkService {
 
-    override suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<AccountJwk> =
+    override suspend fun createKey(tenantId: String, opts: CreateKeyArgs): FederationResult<TenantJwk> =
         createKeyCommand.execute(CreateKeyCommandArgs(tenantId, opts)).toFederationResult()
 
-    override suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<AccountJwk>> =
+    override suspend fun getKeys(tenantId: String, includeRevoked: Boolean): FederationResult<Array<TenantJwk>> =
         getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked)).toFederationResult()
 
     override suspend fun getAssertedKeysForAccount(
@@ -53,10 +53,10 @@ class JwkServiceImpl(
         includeRevoked: Boolean,
         kmsKeyRef: String?,
         kid: String?
-    ): FederationResult<Array<AccountJwk>> =
+    ): FederationResult<Array<TenantJwk>> =
         getAssertedKeysCommand.execute(GetAssertedKeysArgs(tenantId, includeRevoked, kmsKeyRef, kid)).toFederationResult()
 
-    override suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<AccountJwk> =
+    override suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<TenantJwk> =
         revokeKeyCommand.execute(RevokeKeyArgs(tenantId, keyId, reason)).toFederationResult()
 
     override suspend fun getFederationHistoricalKeysJwt(tenantId: String): FederationResult<String> =

@@ -14,7 +14,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Persistence
@@ -100,7 +100,7 @@ class PublishEntityConfigurationCommandImpl(
 
     private suspend fun createSignedJwt(
         statement: EntityConfigurationStatement,
-        key: AccountJwk
+        key: TenantJwk
     ): IdkResult<String, FederationError> {
         return try {
             val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")

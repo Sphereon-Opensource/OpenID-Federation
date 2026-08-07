@@ -104,6 +104,21 @@ tasks.register("mergeAdminOpenApiSpecs") {
             "  schemas:\n$accountSchemas\n"
         )
 
+        // Drop pure-$ref schema aliases from the codegen input. They stay in source
+        // admin-server.yaml so OpenAPI tools still resolve AccountJwk / AccountJwksResponse;
+        // generating them as separate models would duplicate TenantJwk / TenantJwksResponse.
+        // Kotlin binary/source compat uses hand-written typealiases (TenantJwkAliases.kt).
+        fun stripSchemaAlias(source: String, aliasName: String, targetName: String): String {
+            val pattern = Regex(
+                """(?m)^[ \t]*# Deprecated OpenAPI schema name[^\n]*\n""" +
+                    """[ \t]*$aliasName:\n""" +
+                    """[ \t]*${Regex.escape("$" + "ref")}: '#/components/schemas/$targetName'\n?"""
+            )
+            return source.replace(pattern, "")
+        }
+        merged = stripSchemaAlias(merged, "AccountJwksResponse", "TenantJwksResponse")
+        merged = stripSchemaAlias(merged, "AccountJwk", "TenantJwk")
+
         val out = file(mergedOpenApiSpec)
         out.parentFile.mkdirs()
         out.writeText(merged)
@@ -305,7 +320,9 @@ customField("type", "module")
         }
         val commonMain by getting {
 
+            // Generated models (via fixOpenApiKotlinIssues) + hand-written aliases
             kotlin.srcDir("$projectDir/build/copy/src/commonMain/kotlin")
+            kotlin.srcDir("$projectDir/src/commonMain/kotlin-handwritten")
             dependencies {
                 api(idklib.sphereon.idk.lib.core.api.public)
                 implementation(sphereonlib.io.ktor.client.core)

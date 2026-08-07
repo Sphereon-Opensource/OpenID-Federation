@@ -4,7 +4,7 @@ import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.service.ServiceCommand
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 
 data class GetAssertedKeysArgs(
     val tenantId: String,
@@ -13,7 +13,7 @@ data class GetAssertedKeysArgs(
     val kid: String? = null
 )
 
-interface GetAssertedKeysCommand : ServiceCommand<GetAssertedKeysArgs, Array<AccountJwk>, FederationError> {
+interface GetAssertedKeysCommand : ServiceCommand<GetAssertedKeysArgs, Array<TenantJwk>, FederationError> {
     companion object {
         const val COMMAND_ID = "fed.jwk.get-asserted-keys"
     }

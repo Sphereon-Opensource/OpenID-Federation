@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.conformance
 
 import com.sphereon.openid.fed.openapi.models.Account
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.Subordinate
 import io.ktor.client.*
@@ -33,7 +33,7 @@ private val leafEntity = Entity(
 data class Entity(
     var id: String? = null,
     var identifier: String? = null,
-    var jwk: AccountJwk? = null,
+    var jwk: TenantJwk? = null,
     val username: String,
     var subordinates: MutableList<Entity> = mutableListOf(),
     var authorities: MutableList<Entity> = mutableListOf()
@@ -151,7 +151,7 @@ fun Entity.createKey(): Entity {
             headers {
                 append("X-Account-Username", username)
             }
-        }.body<AccountJwk>()
+        }.body<TenantJwk>()
     }
     println("Key created: $key")
     this.jwk = key

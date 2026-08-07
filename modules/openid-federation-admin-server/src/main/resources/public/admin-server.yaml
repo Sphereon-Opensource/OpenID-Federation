@@ -1,7 +1,5 @@
 openapi: 3.0.3
 tags:
-  - name: accounts
-    description: Account management operations
   - name: authority-hints
     description: Authority hint management
   - name: keys
@@ -21,7 +19,14 @@ tags:
 
 info:
   title: OpenID Federation Admin Server API
-  description: This API enables management of federated entity data and metadata within an OpenID Federation environment.
+  description: |
+    Core admin API for federated entity data and metadata within an OpenID Federation environment
+    (keys, metadata, subordinates, trust marks, health, cache stats, …).
+
+    LEGACY account management (`/accounts`) is **not** part of this core surface. It lives in the
+    optional `admin-accounts.yaml` spec and is only contributed at runtime when
+    `openid-federation-account-http` is on the classpath and `identity.mode=legacy`.
+    Platform hosts must not treat Account REST as a required API.
   contact:
     name: Sphereon
     email: info@sphereon.com
@@ -36,97 +41,6 @@ security:
   - oAuth2: [ ]
   - bearerAuth: [ ]
 paths:
-  /accounts:
-    get:
-      tags:
-        - accounts
-      summary: List all accounts
-      operationId: listAccounts
-      description: Retrieve a list of all accounts.
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-      responses:
-        '200':
-          description: Accounts retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountsResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-    post:
-      tags:
-        - accounts
-      summary: Register a new tenant account
-      operationId: registerNewTenantAccount
-
-      description: Endpoint for an admin to create a new account.
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateAccount'
-      responses:
-        '201':
-          description: Account created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
-        '400':
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-        '409':
-          description: 'Conflict (e.g., account already exists)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-    delete:
-      tags:
-        - accounts
-      summary: Delete current account
-      operationId: deleteCurrentAccount
-
-      description: Delete the account.
-      parameters:
-        - $ref: '#/components/parameters/AccountUsername'
-      responses:
-        '200':
-          description: Account deleted successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Account'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminErrorResponse'
-
   '/keys':
     get:
       tags:
@@ -134,7 +48,7 @@ paths:
       summary: List all keys
       operationId: listKeys
 
-      description: Retrieve all keys associated with the specified account.
+      description: Retrieve all keys associated with the specified tenant (federation entity context).
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
       responses:
@@ -143,7 +57,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AccountJwksResponse'
+                $ref: '#/components/schemas/TenantJwksResponse'
         '400':
           description: Invalid request
           content:
@@ -167,7 +81,7 @@ paths:
         - keys
       summary: Create a new key
 
-      description: Create a new key for the specified account.
+      description: Create a new key for the specified tenant (federation entity context).
       operationId: createKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -180,11 +94,11 @@ paths:
               $ref: '#/components/schemas/CreateKey'
       responses:
         '201':
-          description: Key created successfully
+          description: Key created successfully (managed TenantJwk record; JSON shape includes id/kms/accountId)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/TenantJwk'
         '400':
           description: Invalid request
           content:
@@ -203,7 +117,7 @@ paths:
         - keys
       summary: Revoke a key
 
-      description: Revoke a key by its ID for the specified account.
+      description: Revoke a key by its ID for the specified tenant (federation entity context).
       operationId: revokeKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -222,11 +136,11 @@ paths:
           description: The reason for revoking the key.
       responses:
         '200':
-          description: Key revoked successfully
+          description: Key revoked successfully (managed TenantJwk record)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Jwk'
+                $ref: '#/components/schemas/TenantJwk'
         '400':
           description: Invalid request
           content:
@@ -1902,8 +1816,8 @@ components:
                 description: Optional URL to a logo for the Trust Mark entity.
                 example: https://example.com/logo
               exp:
-                type: integer
-                description: Optional expiration time of the Trust Mark in seconds since the epoch
+                type: number
+                description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               ref:
                 type: string
                 format: uri
@@ -1916,41 +1830,14 @@ components:
                 description: 'If true, the request will be executed but not persisted.'
                 example: false
               iat:
+                type: number
+                description: The time for the trust mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
+              trust_mark_lifetime:
                 type: integer
-                format: int32
-                description: The time for the trust mark was issued.
+                description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
   schemas:
-    AccountsResponse:
-      type: object
-      properties:
-        accounts:
-          type: array
-          items:
-            $ref: '#/components/schemas/Account'
-      required:
-        - accounts
-    Account:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: The unique identifier for the account.
-          example: "123e4567-e89b-12d3-a456-426614174000"
-        username:
-          type: string
-          description: The username of the account.
-          example: acmecorp
-        identifier:
-          type: string
-          description: The identifier of the account.
-          format: uri
-          example: "https://www.example.com/oidf"
-          pattern: "^https?:\\/\\/.*$"
-      required:
-        - id
-        - username
-
+    # Account / AccountsResponse / CreateAccount live in optional admin-accounts.yaml
+    # (LEGACY account REST). TenantJwk (keys API) lives here; AccountJwk is a schema alias.
     AuthorityHintsResponse:
       type: object
       required:
@@ -1978,15 +1865,21 @@ components:
         - accountId
         - admin
 
-    AccountJwksResponse:
+    TenantJwksResponse:
       type: object
+      description: |
+        List of tenant (federation entity context) keys. Wire shape is unchanged from the
+        historical AccountJwksResponse name (`{ "jwks": [ ... ] }`).
       required:
         - jwks
       properties:
         jwks:
           type: array
           items:
-            $ref: '#/components/schemas/AccountJwk'
+            $ref: '#/components/schemas/TenantJwk'
+    # Deprecated OpenAPI schema name — same object as TenantJwksResponse (clients/tools may still resolve AccountJwksResponse).
+    AccountJwksResponse:
+      $ref: '#/components/schemas/TenantJwksResponse'
     Jwk:
       type: object
       required:
@@ -2077,12 +1970,11 @@ components:
           type: string
           description: The Entity Identifier of the subject.
         exp:
-          type: integer
-          description: Expiration time after which the statement MUST NOT be accepted for processing.
+          type: number
+          description: Expiration time after which the statement MUST NOT be accepted for processing. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
         iat:
-          type: integer
-          format: int32
-          description: The time the statement was issued.
+          type: number
+          description: The time the statement was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
         jwks:
           type: object
           x-tags:
@@ -2100,22 +1992,6 @@ components:
           type: array
           items:
             type: string
-    CreateAccount:
-      type: object
-      properties:
-        username:
-          type: string
-          description: The username of the account.
-          example: acmeco
-          minLength: 1
-          maxLength: 32
-        identifier:
-          type: string
-          description: The identifier of the tenant account.
-          example: https://www.example.com/oidf
-      required:
-        - username
-
     CreateAuthorityHint:
       type: object
       properties:
@@ -2246,8 +2122,8 @@ components:
           description: Optional URL to a logo for the Trust Mark entity.
           example: https://example.com/logo.png
         exp:
-          type: integer
-          description: Optional expiration time of the Trust Mark in seconds since the epoch.
+          type: number
+          description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         ref:
           type: string
@@ -2289,11 +2165,11 @@ components:
           type: string
           description: The JWT of the Trust Mark.
         iat:
-          type: integer
-          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+          type: number
+          description: 'Time when the signed JWT was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).'
         exp:
-          type: integer
-          description: The time the Trust Mark will expire.
+          type: number
+          description: The time the Trust Mark will expire. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
 
     TrustMarksResponse:
       type: object
@@ -2449,8 +2325,8 @@ components:
           format: uri
           description: The Entity's Entity Identifier.
         iat:
-          type: integer
-          description: 'Time when the signed JWT was issued, using the time format defined for the iat claim in RFC7519.'
+          type: number
+          description: 'Time when the signed JWT was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).'
         keys:
           type: array
           items:
@@ -2465,23 +2341,25 @@ components:
           properties:
             iat:
               type: number
-              format: int32
-              description: The time the key was issued.
+              description: The time the key was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               example: 1629936000
             exp:
               type: number
-              format: int32
-              description: The time the key will expire.
+              description: The time the key will expire. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
               example: 1632528000
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
 
-    AccountJwk:
+    TenantJwk:
       allOf:
         - $ref: '#/components/schemas/Jwk'
         - type: object
           x-tags:
             - federation
+          description: |
+            Managed key record for a federation entity context (tenant).
+            JSON property names are stable (including `accountId` for the owner id).
+            The historical OpenAPI schema name was AccountJwk — see schema alias below.
           required:
             - id
           properties:
@@ -2501,7 +2379,9 @@ components:
             accountId:
               type: string
               format: uuid
-              description: The ID of the account associated with this JWK.
+              description: |
+                Owner federation entity context id (LEGACY Account.id / PLATFORM IDK tenant id).
+                JSON name remains `accountId` for wire compatibility.
               example: "123e4567-e89b-12d3-a456-426614174000"
             revokedAt:
               type: string
@@ -2520,6 +2400,9 @@ components:
               description: The timestamp when the JWK was created.
               example: '2024-08-06T12:34:56Z'
               nullable: true
+    # Deprecated OpenAPI schema name — same object as TenantJwk (clients/tools may still resolve AccountJwk).
+    AccountJwk:
+      $ref: '#/components/schemas/TenantJwk'
 
     JwkRevoked:
       type: object
@@ -2812,12 +2695,12 @@ components:
           format: date-time
           description: Entity Identifier of the subject of the resolve response.
         iat:
-          type: integer
-          description: The time whem this resolution was issued.
+          type: number
+          description: The time when this resolution was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         exp:
-          type: integer
-          description: Time when this resolution is no longer valid. This is expressed as Seconds Since the Epoch.
+          type: number
+          description: Time when this resolution is no longer valid. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         metadata:
           type: object
@@ -3139,16 +3022,16 @@ components:
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         iat:
-          type: integer
-          description: The time the Trust Mark was issued.
+          type: number
+          description: The time the Trust Mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         logo_uri:
           type: string
           description: Optional URL to a logo for the Trust Mark entity.
           example: https://example.com/logo.png
         exp:
-          type: integer
-          description: The time the Trust Mark expires.
+          type: number
+          description: The time the Trust Mark expires. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
         ref:
           type: string
@@ -3158,6 +3041,9 @@ components:
           type: string
           description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark.
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        trust_mark_lifetime:
+          type: integer
+          description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
 
     TrustMarkListRequest:
       type: object
@@ -3200,8 +3086,8 @@ components:
           description: The Trust Mark Type identifier.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
         iat:
-          type: integer
-          description: The time the Trust Mark was issued.
+          type: number
+          description: The time the Trust Mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
           example: 1706031234
       required:
         - sub
@@ -3268,8 +3154,7 @@ components:
       properties:
         trustChain:
           type: array
-          nullable: true
-          description: A list of strings representing the resolved trust chain. Each string contains a JWT.
+          description: A list of strings representing the resolved trust chain. Each string contains a JWT. Empty if resolution failed.
           items:
             type: string
         errorMessage:
@@ -3277,7 +3162,7 @@ components:
           nullable: true
           description: Error message in case of a failure, if any.
       required:
-        - error
+        - trustChain
     TrustMarkValidationResponse:
       type: object
       properties:

@@ -4,6 +4,17 @@ plugins {
     application
 }
 
+// Keep static public OpenAPI in sync with openapi module sources (core + LEGACY accounts).
+tasks.register<Copy>("copyOpenAPI") {
+    from("../openid-federation-openapi/src/commonMain/kotlin/com/sphereon/openid/fed/openapi") {
+        include("admin-server.yaml", "admin-accounts.yaml")
+    }
+    into("src/main/resources/public")
+}
+tasks.named("processResources") {
+    dependsOn("copyOpenAPI")
+}
+
 // Backwards compatibility shim module
 // Re-exports both API and Ktor modules for consumers of the original module
 dependencies {

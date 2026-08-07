@@ -8,14 +8,14 @@ import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 
 data class GetKeysArgs(
     val tenantId: String,
     val includeRevoked: Boolean = false
 )
 
-interface GetKeysCommand : ServiceCommand<GetKeysArgs, Array<AccountJwk>, FederationError>, PublicApiCommand {
+interface GetKeysCommand : ServiceCommand<GetKeysArgs, Array<TenantJwk>, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.jwk.get-keys"
 

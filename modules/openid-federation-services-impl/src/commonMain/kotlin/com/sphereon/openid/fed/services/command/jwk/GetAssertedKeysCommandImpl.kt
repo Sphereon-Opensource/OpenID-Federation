@@ -11,7 +11,7 @@ import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -27,11 +27,11 @@ import dev.zacsweers.metro.SingleIn
 class GetAssertedKeysCommandImpl(
     execution: SessionExecution,
     private val getKeysCommand: GetKeysCommand
-) : TypedServiceCommandAdapter<GetAssertedKeysArgs, Array<AccountJwk>, FederationError>(
+) : TypedServiceCommandAdapter<GetAssertedKeysArgs, Array<TenantJwk>, FederationError>(
     commandId = GetAssertedKeysCommand.COMMAND_ID,
     execution = execution,
     inputTypeToken = typeToken<GetAssertedKeysArgs>(),
-    outputTypeToken = typeToken<Array<AccountJwk>>()
+    outputTypeToken = typeToken<Array<TenantJwk>>()
 ), GetAssertedKeysCommand {
 
     private val logger = execution.federationLogger("GetAssertedKeysCommand")
@@ -39,7 +39,7 @@ class GetAssertedKeysCommandImpl(
     override suspend fun doExecute(
         args: GetAssertedKeysArgs,
         applyDuring: (GetAssertedKeysArgs) -> GetAssertedKeysArgs
-    ): IdkResult<Array<AccountJwk>, FederationError> {
+    ): IdkResult<Array<TenantJwk>, FederationError> {
         val (tenantId, includeRevoked, kmsKeyRef, kid) = applyDuring(args)
 
         val allKeysResult = getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked))

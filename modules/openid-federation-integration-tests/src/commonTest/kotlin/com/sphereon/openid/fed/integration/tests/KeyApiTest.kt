@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.integration.tests
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -201,7 +201,7 @@ class KeyApiTest {
         assertEquals(HttpStatusCode.Created, createResponse.status, "Key creation prerequisite failed")
         val keyIdToDelete: String = try {
             val responseText = createResponse.bodyAsText()
-            Companion.jsonConfig.decodeFromString<AccountJwk>(responseText).id
+            Companion.jsonConfig.decodeFromString<TenantJwk>(responseText).id
         } catch (e: Exception) {
             fail("Failed to parse key ID from creation response: ${e.message}")
         }

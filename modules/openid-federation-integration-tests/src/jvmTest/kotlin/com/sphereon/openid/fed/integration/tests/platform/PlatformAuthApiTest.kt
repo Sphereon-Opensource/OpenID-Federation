@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.integration.tests.platform
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.delete
@@ -136,7 +136,7 @@ class PlatformAuthApiTest {
             response.status == HttpStatusCode.Created || response.status == HttpStatusCode.OK,
             "Expected 2xx create key with AS Bearer. Status=${response.status} Body=${response.bodyAsText()}",
         )
-        val key = json.decodeFromString<AccountJwk>(response.bodyAsText())
+        val key = json.decodeFromString<TenantJwk>(response.bodyAsText())
         createdKeyIds += tenantA to key.id
     }
 
@@ -156,7 +156,7 @@ class PlatformAuthApiTest {
             createA.status == HttpStatusCode.Created || createA.status == HttpStatusCode.OK,
             "Create under A failed: ${createA.status} ${createA.bodyAsText()}",
         )
-        val keyA = json.decodeFromString<AccountJwk>(createA.bodyAsText())
+        val keyA = json.decodeFromString<TenantJwk>(createA.bodyAsText())
         createdKeyIds += tenantA to keyA.id
 
         val listA = client.get("$baseUrl/keys") {

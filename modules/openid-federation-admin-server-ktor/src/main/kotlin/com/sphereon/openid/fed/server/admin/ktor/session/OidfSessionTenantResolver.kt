@@ -29,6 +29,13 @@ import io.ktor.server.request.header
  *   must validate signature/iss/exp and stamp the attribute). Unvalidated bearer tokens
  *   are ignored here.
  *
+ * ## Bootstrap vs rebind
+ * KotlinInject opens the session **before** JWT claims are stamped, so the first
+ * resolve often uses platform root / fixed. After JWT validation,
+ * [com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtSessionRebindPlugin]
+ * re-invokes this resolver with [ValidatedJwtClaimsAttribute] present and recreates
+ * the DI graph when the JWT tenant differs.
+ *
  * ## Fallback
  * Missing Account / missing JWT falls back to fixed tenant so the session graph can open;
  * mutations still fail closed via [com.sphereon.openid.fed.server.admin.api.http.command.AdminMutationGuard]

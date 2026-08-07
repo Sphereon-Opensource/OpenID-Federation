@@ -3,17 +3,17 @@ package com.sphereon.openid.fed.services.mappers
 import com.sphereon.crypto.core.jose.Jwk
 import com.sphereon.crypto.core.jose.Jwk.Companion.serializer
 import com.sphereon.crypto.core.json.cryptoJsonSerializer
-import com.sphereon.openid.fed.openapi.models.AccountJwk
-import com.sphereon.openid.fed.openapi.models.AccountJwksResponse
+import com.sphereon.openid.fed.openapi.models.TenantJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwksResponse
 import com.sphereon.openid.fed.openapi.models.HistoricalKey
 import com.sphereon.openid.fed.openapi.models.JwkRevoked
 import com.sphereon.openid.fed.openapi.models.Jwk as JwkDto
 import com.sphereon.openid.fed.persistence.models.Jwk as JwkEntity
 
-fun JwkEntity.toDTO(): AccountJwk {
+fun JwkEntity.toDTO(): TenantJwk {
     val key: Jwk = cryptoJsonSerializer.decodeFromString<Jwk>(serializer(), this.key)
 
-    return AccountJwk(
+    return TenantJwk(
         id = this.id,
         kms = this.kms,
         kmsKeyRef = this.kms_key_ref,
@@ -59,7 +59,7 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
     )
 }
 
-fun AccountJwk.toJwk(): JwkDto {
+fun TenantJwk.toJwk(): JwkDto {
     return JwkDto(
         e = this.e,
         x = this.x,
@@ -77,4 +77,11 @@ fun AccountJwk.toJwk(): JwkDto {
     )
 }
 
-fun Array<AccountJwk>.toAccountJwksResponse() = AccountJwksResponse(this.toList())
+fun Array<TenantJwk>.toTenantJwksResponse() = TenantJwksResponse(this.toList())
+
+/** @deprecated Use [toTenantJwksResponse]; same JSON `{ "jwks": [...] }`. */
+@Deprecated(
+    message = "Use toTenantJwksResponse",
+    replaceWith = ReplaceWith("toTenantJwksResponse()")
+)
+fun Array<TenantJwk>.toAccountJwksResponse() = toTenantJwksResponse()

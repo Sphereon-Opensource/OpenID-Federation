@@ -428,7 +428,7 @@ class FederationEndpointApiTest {
             "Key creation failed: ${response.bodyAsText()}")
 
         val body = response.bodyAsText()
-        val key = json.decodeFromString<com.sphereon.openid.fed.openapi.models.AccountJwk>(body)
+        val key = json.decodeFromString<com.sphereon.openid.fed.openapi.models.TenantJwk>(body)
         testKeyKid = key.kid
     }
 

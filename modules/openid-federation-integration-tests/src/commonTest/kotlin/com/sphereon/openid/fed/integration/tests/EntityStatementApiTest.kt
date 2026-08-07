@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.integration.tests
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.openapi.models.CreateMetadata
@@ -225,9 +225,9 @@ class EntityStatementApiTest {
      * Creates a key for the test account
      * Keys are used to sign entity statements and other federation documents
      *
-     * @return The created key as an AccountJwk object
+     * @return The created key as a TenantJwk object
      */
-    private suspend fun createKey(): AccountJwk {
+    private suspend fun createKey(): TenantJwk {
         val response = client.post("$baseUrl/keys") {
             contentType(ContentType.Application.Json)
             headers {
@@ -241,7 +241,7 @@ class EntityStatementApiTest {
         val responseBody = response.bodyAsText()
         println("Created key: $responseBody")
 
-        return json.decodeFromString<AccountJwk>(responseBody)
+        return json.decodeFromString<TenantJwk>(responseBody)
     }
 
     /**

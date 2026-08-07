@@ -8,7 +8,7 @@ import com.sphereon.core.api.http.describe.MediaType
 import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
 
-import com.sphereon.openid.fed.openapi.models.AccountJwk
+import com.sphereon.openid.fed.openapi.models.TenantJwk
 
 data class RevokeKeyArgs(
     val tenantId: String,
@@ -16,7 +16,7 @@ data class RevokeKeyArgs(
     val reason: String?
 )
 
-interface RevokeKeyCommand : ServiceCommand<RevokeKeyArgs, AccountJwk, FederationError>, PublicApiCommand {
+interface RevokeKeyCommand : ServiceCommand<RevokeKeyArgs, TenantJwk, FederationError>, PublicApiCommand {
     companion object {
         const val COMMAND_ID = "fed.jwk.revoke-key"
 

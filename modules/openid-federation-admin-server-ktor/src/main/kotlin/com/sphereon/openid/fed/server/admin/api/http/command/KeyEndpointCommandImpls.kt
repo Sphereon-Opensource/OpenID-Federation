@@ -14,7 +14,7 @@ import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.JwkService
-import com.sphereon.openid.fed.services.mappers.toAccountJwksResponse
+import com.sphereon.openid.fed.services.mappers.toTenantJwksResponse
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
@@ -50,7 +50,7 @@ class ListKeysEndpointCommandImpl(
         val result = jwkService.getKeys(tenantId, includeRevoked = false)
 
         return if (result.isOk) {
-            val keys = result.value.toAccountJwksResponse()
+            val keys = result.value.toTenantJwksResponse()
             Ok(jsonResponse(200, json.encodeToString(keys)))
         } else {
             val error = result.error
