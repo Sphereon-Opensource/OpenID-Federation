@@ -81,6 +81,8 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-server:/tmp/logs
+      # Optional file config — see application.yaml.example / docs/CONFIGURATION.md
+      - ./config:/app/config:ro
     networks:
       - openid_network
 
@@ -146,6 +148,9 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-admin-server:/tmp/logs
+      # Optional file config (prefer application.yaml — see application.yaml.example / docs/CONFIGURATION.md).
+      # Env from env_file still overrides these keys.
+      - ./config:/app/config:ro
 
   keycloak:
     image: keycloak/keycloak:26.0

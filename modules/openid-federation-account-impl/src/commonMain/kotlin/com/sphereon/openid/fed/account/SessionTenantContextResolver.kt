@@ -58,12 +58,13 @@ class SessionTenantContextResolver(
             // fall through
         }
 
-        // Tenant-scoped config override
-        configBinder.getTenantConfig(tenantId)?.rootIdentifier?.let { return it }
+        // Tenant-overridable root (oidf.tenant.<id>.* / effective federation config)
+        val federation = configBinder.getEffectiveFederationConfig(tenantId)
+        val explicitRoot = configBinder.getTenantConfig(tenantId)?.rootIdentifier
+        if (!explicitRoot.isNullOrBlank()) return explicitRoot
 
-        val federation = configBinder.getFederationConfig()
         val identity = configBinder.getIdentityConfig()
-        // Entity-URL mapping only — not session/login identity.
+        // Entity-URL mapping only — not session/login identity. APP-fixed.
         val rootEntityOwnerTenantId = identity.externalRootTenantId
 
         // Token tenant that owns the federation root entity identifier URL

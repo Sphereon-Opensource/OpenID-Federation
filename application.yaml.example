@@ -1,0 +1,101 @@
+# Example application configuration for OpenID Federation.
+#
+# Preferred for new installs: copy to application.yaml (working directory or classpath)
+# or application.properties with the equivalent flat keys (oidf.federation.root.identifier=...).
+#
+# Environment variables still work and override these values (see docs/CONFIGURATION.md).
+# Docker Compose typically injects env from .env — that remains fully supported.
+
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+    dev:
+      mode: false
+
+  server:
+    admin:
+      port: 8081
+      host: "0.0.0.0"
+    federation:
+      port: 8080
+      host: "0.0.0.0"
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/openid-federation-db
+    user: openid-federation-db-user
+    password: openid-federation-db-password
+    db: openid-federation-db
+    # Prefer opaque secrets in production:
+    # password.secret.id: db-password   # resolved via OIDF_SECRET_DB_PASSWORD
+
+  oauth2:
+    issuer:
+      uri: http://localhost:8082/realms/openid-federation
+    audience: openid-federation-admin
+    jwt:
+      auth:
+        enabled: auto
+
+  identity:
+    # account (default) | external  (aliases: legacy, platform)
+    mode: account
+    account:
+      header:
+        principal:
+          claim: sub
+        # Empty = deny X-Account-Username rebind. Comma-separated principals, or * for tests only.
+        allowed:
+          principals: ""
+    # external only: token tenant that owns the federation root entity URL
+    # external:
+    #   root:
+    #     tenant:
+    #       id: my-root-tenant
+    session:
+      alignment: account
+      fixed:
+        tenant:
+          id: default
+
+  cors:
+    allowed:
+      origins: "*"
+      methods: GET,POST,PUT,DELETE,OPTIONS
+      headers: Authorization,Content-Type,X-Account-Username
+    max:
+      age: 3600
+
+  logger:
+    severity: INFO
+    output: TEXT
+    include:
+      timestamp: false
+
+  kms:
+    default:
+      provider: memory   # memory | aws | azure
+
+  # Tenant-overridable (not APP-only): root URL, KMS provider, cache locality, header allow-list.
+  # See OidfConfigBinder.getEffective* and docs/CONFIGURATION.md
+  # tenant:
+  #   acme-corp:
+  #     federation:
+  #       root:
+  #         identifier: https://acme.example
+  #     kms:
+  #       provider: azure
+  #     cache:
+  #       http:
+  #         resolver:
+  #           locality: DISTRIBUTED_ONLY
+  #     identity:
+  #       account:
+  #         header:
+  #           principal:
+  #             claim: preferred_username
+  #           allowed:
+  #             principals: ops-acme,bot-acme
+
+# IDK KMS provider blocks (software default is also seeded by OidfConfigBootstrap)
+# kms.providers.memory.type: software

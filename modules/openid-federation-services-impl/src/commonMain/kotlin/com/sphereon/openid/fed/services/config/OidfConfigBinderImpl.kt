@@ -1,7 +1,6 @@
 package com.sphereon.openid.fed.services.config
 
 import com.sphereon.core.api.conf.AppConfigService
-import com.sphereon.openid.fed.common.config.getEnvironmentVariable
 import com.sphereon.openid.fed.core.config.CorsConfig
 import com.sphereon.openid.fed.core.config.DatasourceConfig
 import com.sphereon.openid.fed.core.config.FederationConfig
@@ -24,21 +23,14 @@ import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 
 /**
- * Typed OIDF configuration binder.
+ * OIDF configuration binder (DI: [AppScope]).
  *
- * ## Resolution precedence (via [OidfPropertyResolution])
+ * APP keys resolve via [OidfPropertyResolution] + [AppConfigService].
+ * Tenant-overridable settings use [getTenantConfig] / [getEffective*] (catalog
+ * `oidf.tenant.<id>.*` + optional session [com.sphereon.core.api.conf.ConfigService]).
  *
- * 1. IDK [AppConfigService] (full property pipeline when the app graph provides it)
- * 2. [com.sphereon.core.api.conf.DefaultAppMapPropertySource] (explicit / KMS bootstrap)
- * 3. Environment variables (IDK-normalized + legacy aliases)
- * 4. [com.sphereon.openid.fed.core.config.OidfFilePropertySource] (reference/application files)
- * 5. [com.sphereon.openid.fed.core.config.OidfConfigDefaults]
- *
- * Call [com.sphereon.openid.fed.core.config.OidfConfigBootstrap.seed] at server start so
- * file defaults and software KMS are loaded before AppGraph creation.
- *
- * Sensitive values: prefer `*.secret.id` handles + [com.sphereon.core.api.conf.OpaqueSecretResolver]
- * at suspend use sites; this binder remains synchronous for DI-friendly access.
+ * Process-fixed: ports, datasource, identity.mode, OAuth2 issuer, CORS, logger.
+ * Tenant-overridable: root entity URL, KMS provider, cache localities, header allow-list.
  */
 @Inject
 @SingleIn(AppScope::class)
@@ -171,25 +163,34 @@ class OidfConfigBinderImpl(
     }
 
     override fun getTenantConfig(tenantId: String): TenantConfig? {
-        val rootIdentifier = getPropertyOrNull(OidfConfigKeys.Tenant.rootIdentifier(tenantId))
-        val kmsProvider = getPropertyOrNull(OidfConfigKeys.Tenant.kmsProvider(tenantId))
-
-        return if (rootIdentifier != null || kmsProvider != null) {
-            TenantConfig(
-                tenantId = tenantId,
-                rootIdentifier = rootIdentifier,
-                kmsProvider = kmsProvider
-            )
-        } else {
-            null
-        }
+        if (tenantId.isBlank()) return null
+        val principalsRaw =
+            getPropertyOrNull(OidfConfigKeys.Tenant.accountHeaderAllowedPrincipals(tenantId))
+        val config = TenantConfig(
+            tenantId = tenantId,
+            rootIdentifier = getPropertyOrNull(OidfConfigKeys.Tenant.rootIdentifier(tenantId)),
+            kmsProvider = getPropertyOrNull(OidfConfigKeys.Tenant.kmsProvider(tenantId)),
+            cacheHttpResolverLocality =
+                getPropertyOrNull(OidfConfigKeys.Tenant.cacheHttpResolverLocality(tenantId)),
+            cacheTrustChainLocality =
+                getPropertyOrNull(OidfConfigKeys.Tenant.cacheTrustChainLocality(tenantId)),
+            cacheEntityConfigLocality =
+                getPropertyOrNull(OidfConfigKeys.Tenant.cacheEntityConfigLocality(tenantId)),
+            cacheTrustMarkLocality =
+                getPropertyOrNull(OidfConfigKeys.Tenant.cacheTrustMarkLocality(tenantId)),
+            accountHeaderPrincipalClaim =
+                getPropertyOrNull(OidfConfigKeys.Tenant.accountHeaderPrincipalClaim(tenantId)),
+            accountHeaderAllowedPrincipals = principalsRaw?.let {
+                OidfConfigBinder.parsePrincipalList(it)
+            },
+        )
+        return if (config.hasAnyOverride()) config else null
     }
 
     override fun getProperty(key: String, default: String): String {
         return OidfPropertyResolution.resolveString(
             key = key,
             default = default,
-            envLookup = { getEnvironmentVariable(it) },
             appConfig = appConfigService,
         )
     }

@@ -41,6 +41,10 @@ kotlin {
                 // IDK AppConfigService / default config pipeline for OidfConfigBinder
                 api(idklib.sphereon.idk.lib.core.api.default)
 
+                // IDK YAML property sources (APP + tenant + principal scopes via PropertySourceContribution)
+                // Do not reimplement YAML parsing in OIDFed — use this for application.yaml / tenant YAML.
+                api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+
             }
         }
 
@@ -63,6 +67,7 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
+                implementation(sphereonlib.io.mockk.mockk)
             }
         }
     }

@@ -1,0 +1,12 @@
+# Copy to config/application.yaml (repo root) for docker-compose file-based config.
+# Mounted read-only at /app/config in admin + federation containers.
+# Environment variables from .env still override these keys.
+#
+# Full example: ../application.yaml.example
+# Docs: ../docs/CONFIGURATION.md
+
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+  # datasource / oauth2 / identity — prefer env secrets for compose, or set here for non-secret defaults.

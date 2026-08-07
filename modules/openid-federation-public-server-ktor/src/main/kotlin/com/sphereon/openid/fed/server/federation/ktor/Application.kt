@@ -8,6 +8,7 @@ import com.sphereon.core.api.log.LogLevel
 import com.sphereon.core.api.log.LogOutputFormat
 import com.sphereon.core.api.log.LoggerConfig
 import kotlinx.coroutines.runBlocking
+import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.openapi.models.ErrorResponse
 import com.sphereon.openid.fed.server.federation.ktor.auth.OidfJwtAuthSupport.installOidfJwtAuthIfConfigured
@@ -52,6 +53,7 @@ fun main() {
     // Session KeyManagerService resolves from principal config; app binders use app map
     // (including namespaced appId.profile keys). Env/deployer overrides already present win.
     // See OidfConfigBootstrap KDoc for the full IDK KmsKtor-aligned contract.
+    OidfConfigEnvironment.install()
     OidfConfigBootstrap.seed(appId = "openid-federation-server", profile = "default")
 
     // Create IDK graph
@@ -117,7 +119,9 @@ fun Application.configureFederation(appGraph: FederationServerAppGraph, config: 
     // The FederationHttpAdapter is automatically registered via DI (ContributesBinding)
     // and will handle all federation routes via the command-backed pattern
     installUniversalHttpAdapters {
-        verboseLogging = System.getenv("APP_DEV_MODE")?.toBoolean() ?: false
+        // Prefer config pipeline (OIDF_FEDERATION_DEV_MODE / APP_DEV_MODE / DEV_MODE)
+        // over direct process env — same source as OidfConfigBinder.
+        verboseLogging = appGraph.configBinder.getFederationConfig().devMode
         errorHandler = { call, e ->
             logger.error("Error handling request: ${call.request.uri}", e)
             call.respond(

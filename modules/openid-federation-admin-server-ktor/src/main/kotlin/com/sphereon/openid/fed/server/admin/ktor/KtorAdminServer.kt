@@ -5,6 +5,7 @@ import com.sphereon.ktor.server.inject.installUniversalHttpAdapters
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
+import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
@@ -48,6 +49,7 @@ fun main() {
     // Session KeyManagerService resolves from principal config; app binders use app map
     // (including namespaced appId.profile keys). Env/deployer overrides already present win.
     // See OidfConfigBootstrap KDoc for the full IDK KmsKtor-aligned contract.
+    OidfConfigEnvironment.install()
     OidfConfigBootstrap.seed(appId = "openid-federation-admin-server", profile = "default")
 
     // Create AppGraph with IDK DI

@@ -3,37 +3,41 @@ package com.sphereon.openid.fed.core.config
 import com.sphereon.core.api.log.Log
 
 /**
- * Loads OIDF configuration files into [OidfFilePropertySource].
+ * Loads **OIDFed reference defaults** into [OidfFilePropertySource] (lowest file tier).
  *
- * ## Load order (later wins within the file tier)
- * 1. Classpath `reference.properties` (flat defaults)
+ * ## YAML is IDK, not OIDFed
+ * `application.yaml` / `application.yml` and tenant/principal YAML are loaded by
+ * **IDK `lib-conf-yaml`** ([com.sphereon.conf.yaml.YamlFileAppPropertySource],
+ * tenant/principal variants) into [com.sphereon.core.api.conf.AppConfigService] /
+ * session config services via [com.sphereon.core.api.conf.PropertySourceContribution].
+ * Do not add a second YAML parser here.
+ *
+ * ## What this loader still does
+ * 1. Classpath `reference.properties` (flat packaged defaults)
  * 2. Classpath `reference.conf` (HOCON flatten — fills missing keys only)
- * 3. Classpath `application.properties`
- * 4. Classpath `application-{profile}.properties`
- * 5. Working-directory `application.properties` / `application-{profile}.properties` (if present)
+ * 3. Optional classpath / working-dir **`application.properties`** only (legacy flat files)
  *
- * File tier is still below env and [DefaultAppMapPropertySource] (see [OidfPropertyResolution]).
+ * Deploy YAML belongs under IDK config location (default `./config`, env
+ * `SPHEREON_CONFIG_LOCATION` / `SPHEREON_CONFIG_DIR`).
  *
- * Platform note: classpath/file IO is provided via [ClasspathResourceReader] (expect/actual).
+ * File tier remains below env and [DefaultAppMapPropertySource] in [OidfPropertyResolution].
  */
 object OidfConfigFileLoader {
     private val logger = Log.app().withTag("OidfConfigFileLoader")
     private var loaded = false
 
     /**
-     * Idempotent load into [OidfFilePropertySource].
+     * Idempotent load of reference defaults into [OidfFilePropertySource].
      *
-     * @param profile Active profile for `application-{profile}.properties` (default `default`)
+     * @param profile Active profile for optional `application-{profile}.properties`
      * @param force Reload even if already loaded (tests)
      */
     fun load(profile: String = "default", force: Boolean = false) {
         if (loaded && !force) return
         if (force) OidfFilePropertySource.clear()
 
-        // 1) Flat reference.properties
-        mergeClasspath("reference.properties", overwrite = true)
+        mergeClasspathResource("reference.properties", overwrite = true)
 
-        // 2) HOCON reference.conf — only fill keys not already set by properties
         val confText = ClasspathResourceReader.readText("reference.conf")
             ?: ClasspathResourceReader.readText("com/sphereon/openid/fed/common/reference.conf")
         if (!confText.isNullOrBlank()) {
@@ -43,22 +47,24 @@ object OidfConfigFileLoader {
             logger.info("Loaded ${missing.size} keys from reference.conf (HOCON flatten)")
         }
 
-        // 3–4) application properties (classpath)
-        mergeClasspath("application.properties", overwrite = true)
+        // Legacy flat properties only — YAML is IDK lib-conf-yaml
+        mergeClasspathResource("application.properties", overwrite = true)
         if (profile.isNotBlank() && profile != "default") {
-            mergeClasspath("application-$profile.properties", overwrite = true)
+            mergeClasspathResource("application-$profile.properties", overwrite = true)
         } else {
-            mergeClasspath("application-default.properties", overwrite = true)
+            mergeClasspathResource("application-default.properties", overwrite = true)
         }
 
-        // 5) Working directory overrides
-        mergeFile("application.properties", overwrite = true)
-        mergeFile("application-$profile.properties", overwrite = true)
+        mergeWorkingFile("application.properties", overwrite = true)
+        if (profile.isNotBlank()) {
+            mergeWorkingFile("application-$profile.properties", overwrite = true)
+        }
+        mergeWorkingFile("config/application.properties", overwrite = true)
 
         loaded = true
         logger.info(
-            "OIDF file property source ready: ${OidfFilePropertySource.size()} keys " +
-                "(profile=$profile)",
+            "OIDF reference file property source ready: ${OidfFilePropertySource.size()} keys " +
+                "(profile=$profile). YAML is loaded by IDK lib-conf-yaml on AppConfigService.",
         )
     }
 
@@ -67,34 +73,49 @@ object OidfConfigFileLoader {
         OidfFilePropertySource.clear()
     }
 
-    private fun mergeClasspath(name: String, overwrite: Boolean) {
-        val text = ClasspathResourceReader.readText(name) ?: return
-        val parsed = parsePropertiesText(text)
-        if (overwrite) {
-            OidfFilePropertySource.putAll(parsed)
-        } else {
-            OidfFilePropertySource.putAll(parsed.filterKeys { OidfFilePropertySource.get(it) == null })
-        }
-        if (parsed.isNotEmpty()) {
-            logger.debug("Merged classpath $name (${parsed.size} keys)")
-        }
+    /**
+     * Tenant ids that have at least one `oidf.tenant.<id>.*` key in the reference file tier.
+     * (IDK tenant YAML scopes are separate — use TenantConfigService at runtime.)
+     */
+    fun tenantIdsFromFileSource(): Set<String> {
+        val prefix = "${OidfConfigKeys.Tenant.PREFIX}."
+        return OidfFilePropertySource.snapshot().keys
+            .mapNotNull { key ->
+                if (!key.startsWith(prefix)) return@mapNotNull null
+                val rest = key.removePrefix(prefix)
+                val id = rest.substringBefore('.')
+                id.takeIf { it.isNotBlank() && rest.contains('.') }
+            }
+            .toSet()
     }
 
-    private fun mergeFile(path: String, overwrite: Boolean) {
+    private fun mergeClasspathResource(name: String, overwrite: Boolean) {
+        val text = ClasspathResourceReader.readText(name) ?: return
+        mergeParsed(name, parsePropertiesText(text), overwrite, sourceLabel = "classpath")
+    }
+
+    private fun mergeWorkingFile(path: String, overwrite: Boolean) {
         val text = ClasspathResourceReader.readWorkingDirectoryFile(path) ?: return
-        val parsed = parsePropertiesText(text)
+        mergeParsed(path, parsePropertiesText(text), overwrite, sourceLabel = "working-dir")
+    }
+
+    private fun mergeParsed(
+        name: String,
+        parsed: Map<String, String>,
+        overwrite: Boolean,
+        sourceLabel: String,
+    ) {
+        if (parsed.isEmpty()) return
         if (overwrite) {
             OidfFilePropertySource.putAll(parsed)
         } else {
             OidfFilePropertySource.putAll(parsed.filterKeys { OidfFilePropertySource.get(it) == null })
         }
-        if (parsed.isNotEmpty()) {
-            logger.info("Merged working-dir $path (${parsed.size} keys)")
-        }
+        logger.info("Merged $sourceLabel $name (${parsed.size} keys)")
     }
 
     /**
-     * Minimal .properties parser (key=value, # comments). Sufficient for OIDF defaults.
+     * Minimal .properties parser (key=value, # comments).
      */
     fun parsePropertiesText(text: String): Map<String, String> {
         val out = linkedMapOf<String, String>()
@@ -111,7 +132,7 @@ object OidfConfigFileLoader {
 }
 
 /**
- * Platform classpath / filesystem reads for config files.
+ * Platform classpath / filesystem reads for reference property files.
  */
 expect object ClasspathResourceReader {
     fun readText(resourceName: String): String?

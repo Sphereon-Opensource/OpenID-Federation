@@ -6,29 +6,31 @@ import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 /**
  * Shared property resolution for OIDF configuration.
  *
+ * Application code must not call `System.getenv` / `System.getProperty` for OIDF settings —
+ * use [OidfConfigBinder] or this resolver.
+ *
  * ## Precedence (highest first)
- * 1. Optional [AppConfigService] (full IDK config pipeline when the host graph provides it)
- * 2. [DefaultAppMapPropertySource] — **explicit programmatic** overrides only
- *    (KMS provider maps, test injects). Must not hold silent oidf.* defaults that
- *    would shadow environment variables.
- * 3. Environment variables (IDK-normalized + legacy aliases via [envLookup])
- * 4. [OidfFilePropertySource] — classpath/file defaults (`reference.properties`,
- *    `reference.conf`, `application.properties`)
- * 5. [OidfConfigDefaults] hardcoded map
+ * 1. [AppConfigService] — from argument or [OidfConfigSources.appConfig]
+ *    (IDK Env, [com.sphereon.core.api.conf.PropertySourceContribution]s e.g. oidf-legacy-env, cloud, …)
+ * 2. [DefaultAppMapPropertySource] — programmatic overrides (KMS bootstrap, tests)
+ * 3. Environment tier via [OidfConfigSources.environment] — installed once at process start
+ *    (not a per-call envLookup parameter)
+ * 4. [OidfFilePropertySource] — OIDFed reference defaults only (`reference.properties` / `.conf`)
+ * 5. [OidfConfigDefaults]
  *
- * ## Secrets boundary
- * Sensitive keys (passwords, client secrets) should prefer opaque secret handles
- * (`oidf.*.secret.id`) resolved by [com.sphereon.core.api.conf.OpaqueSecretResolver]
- * at use sites that can suspend (e.g. DatabaseConfig). This helper stays **synchronous**
+ * Nested `application.yaml` is **not** parsed here — IDK `lib-conf-yaml` contributes it
+ * into [AppConfigService] (and tenant/principal YAML into session config services).
+ *
+ * ## Tenant / principal
+ * Session-scoped overrides are IDK's job ([TenantConfigService] / [PrincipalConfigService]).
+ * This resolver is the APP-level pipeline used by [OidfConfigBinder].
+ *
+ * ## Secrets
+ * Prefer opaque secret handles (`oidf.*.secret.id`) at suspend use sites. This helper is synchronous
  * and must not log values for keys matching [isSensitiveKey].
- *
- * Do not reintroduce a parallel HOCON/env stack — extend this pipeline or IDK property sources.
  */
 object OidfPropertyResolution {
 
-    /**
-     * Suffixes / fragments that mark a property as sensitive (never log cleartext values).
-     */
     val sensitiveKeySuffixes: Set<String> = setOf(
         "password",
         "clientsecret",
@@ -45,20 +47,24 @@ object OidfPropertyResolution {
         }
     }
 
+    /**
+     * @param appConfig Prefer the injected AppConfigService; falls back to [OidfConfigSources.appConfig]
+     */
     fun resolveString(
         key: String,
         default: String = "",
-        envLookup: (String) -> String?,
         appConfig: AppConfigService? = null,
     ): String {
-        // 1) Full IDK AppConfigService when host injects one
-        appConfig?.getPropertyAsString(key, null)?.takeIf { it.isNotEmpty() }?.let { return it }
+        val config = appConfig ?: OidfConfigSources.appConfig
+
+        // 1) Full IDK AppConfigService (Env + contributions when registered)
+        config?.getPropertyAsString(key, null)?.takeIf { it.isNotEmpty() }?.let { return it }
 
         // 2) Explicit app-map overrides (KMS bootstrap, tests)
         DefaultAppMapPropertySource.getPropertyAsString(key)?.takeIf { it.isNotEmpty() }?.let { return it }
 
-        // 3) Environment (deployer wins over packaged file defaults)
-        envLookup(key)?.takeIf { it.isNotEmpty() }?.let { return it }
+        // 3) Installed environment source (config system tier — not ad-hoc getenv)
+        OidfConfigSources.environment(key)?.takeIf { it.isNotEmpty() }?.let { return it }
 
         // 4) File / classpath tier
         OidfFilePropertySource.get(key)?.let { return it }
@@ -69,10 +75,9 @@ object OidfPropertyResolution {
 
     fun resolveStringOrNull(
         key: String,
-        envLookup: (String) -> String?,
         appConfig: AppConfigService? = null,
     ): String? {
-        val value = resolveString(key, default = "", envLookup = envLookup, appConfig = appConfig)
+        val value = resolveString(key, default = "", appConfig = appConfig)
         return value.takeIf { it.isNotEmpty() }
     }
 }

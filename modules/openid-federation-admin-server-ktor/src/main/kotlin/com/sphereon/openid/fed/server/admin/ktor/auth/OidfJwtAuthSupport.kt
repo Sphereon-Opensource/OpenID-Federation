@@ -130,11 +130,14 @@ fun OidfPostJwtIdentityPlugin(
 
         val validated = call.attributes[ValidatedJwtClaimsAttribute]
         val claims = validated.claimsInput.claims
-        val identity = configBinder.getIdentityConfig()
+        val appIdentity = configBinder.getIdentityConfig()
         val headerLookup: (String) -> String? = { name -> call.request.header(name) }
+        // Tenant-overridable header policy uses JWT tenant (or root) as catalog key before rebind.
+        val jwtTenantForPolicy = PlatformJwtTenantClaims.extractTenantId(claims)
+        val identity = configBinder.getEffectiveIdentityConfig(jwtTenantForPolicy)
 
-        if (identity.isExternal) {
-            val jwtTenant = PlatformJwtTenantClaims.extractTenantId(claims)
+        if (appIdentity.isExternal) {
+            val jwtTenant = jwtTenantForPolicy
             if (jwtTenant.isNullOrBlank()) {
                 call.respondUnauthorized(
                     "EXTERNAL mode requires a tenant claim on the access token " +
@@ -153,8 +156,8 @@ fun OidfPostJwtIdentityPlugin(
             return@onCall
         }
 
-        // ACCOUNT mode
-        if (!identity.isAccount || !identity.isSessionAccountAligned) return@onCall
+        // ACCOUNT mode (mode stays APP-fixed)
+        if (!appIdentity.isAccount || !appIdentity.isSessionAccountAligned) return@onCall
 
         if (AccountEntityHeaderAuth.hasEntitySelectionHeader(headerLookup)) {
             val denied =

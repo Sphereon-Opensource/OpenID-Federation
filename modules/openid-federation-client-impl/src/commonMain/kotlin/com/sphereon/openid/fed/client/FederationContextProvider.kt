@@ -1,6 +1,8 @@
 package com.sphereon.openid.fed.client
 
 import com.sphereon.core.api.cache.CacheManager
+import com.sphereon.core.api.conf.TenantConfigService
+import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.ktor.http.client.provider.HttpClientFactory
@@ -42,18 +44,27 @@ interface FederationContextComponent {
         httpClientFactory: HttpClientFactory,
         cacheManager: CacheManager,
         configBinder: OidfConfigBinder,
+        execution: SessionExecution,
+        tenantConfigService: TenantConfigService,
     ): FederationContext {
         val httpClient = httpClientFactory.createClient(HttpClientOptions.createDefault())
+        val tenantId = execution.tenantId.takeUnless {
+            it.isBlank() || it.equals("anonymous", ignoreCase = true)
+        }
 
         val httpReqs = applyLocalityOverride(
             FederationCacheRequirements.HTTP_RESOLVER,
             configBinder,
             OidfConfigKeys.Cache.HTTP_RESOLVER_LOCALITY,
+            tenantId,
+            tenantConfigService,
         )
         val trustReqs = applyLocalityOverride(
             FederationCacheRequirements.TRUST_CHAIN,
             configBinder,
             OidfConfigKeys.Cache.TRUST_CHAIN_LOCALITY,
+            tenantId,
+            tenantConfigService,
         )
 
         // Portable serializers: safe for local + distributed IDK backends
@@ -87,8 +98,14 @@ private fun applyLocalityOverride(
     base: com.sphereon.core.api.cache.CacheRequirements,
     configBinder: OidfConfigBinder,
     key: String,
+    tenantId: String?,
+    tenantConfigService: TenantConfigService,
 ): com.sphereon.core.api.cache.CacheRequirements {
-    val raw = configBinder.getProperty(key, "").trim()
+    val raw = configBinder.getEffectiveCacheLocality(
+        appKey = key,
+        tenantId = tenantId,
+        sessionTenantConfig = tenantConfigService,
+    )
     if (raw.isEmpty()) return base
     val locality = FederationCacheRequirements.parseLocality(raw) ?: return base
     return FederationCacheRequirements.withLocality(base, locality)

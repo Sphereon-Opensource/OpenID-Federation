@@ -31,12 +31,9 @@ class OidfPropertyResolutionTest {
     fun resolve_prefers_app_map_over_env() {
         val key = "oidf.test.resolution.priority"
         DefaultAppMapPropertySource.addProperty(key, "from-map")
+        OidfConfigSources.installEnvironment { if (it == key) "from-env" else null }
 
-        val value = OidfPropertyResolution.resolveString(
-            key = key,
-            default = "from-default",
-            envLookup = { if (it == key) "from-env" else null },
-        )
+        val value = OidfPropertyResolution.resolveString(key = key, default = "from-default")
         assertEquals("from-map", value)
     }
 
@@ -44,11 +41,9 @@ class OidfPropertyResolutionTest {
     fun resolve_env_beats_file_and_hardcoded_defaults() {
         val key = OidfConfigKeys.Identity.MODE
         OidfFilePropertySource.putAll(mapOf(key to "platform"))
-        val value = OidfPropertyResolution.resolveString(
-            key = key,
-            default = "should-not-use",
-            envLookup = { if (it == key) "legacy" else null },
-        )
+        OidfConfigSources.installEnvironment { if (it == key) "legacy" else null }
+
+        val value = OidfPropertyResolution.resolveString(key = key, default = "should-not-use")
         assertEquals("legacy", value)
     }
 
@@ -56,31 +51,27 @@ class OidfPropertyResolutionTest {
     fun resolve_file_beats_hardcoded_defaults() {
         val key = "oidf.test.file.only"
         OidfFilePropertySource.putAll(mapOf(key to "from-file"))
-        val value = OidfPropertyResolution.resolveString(
-            key = key,
-            default = "from-default",
-            envLookup = { null },
-        )
+        OidfConfigSources.installEnvironment { null }
+
+        val value = OidfPropertyResolution.resolveString(key = key, default = "from-default")
         assertEquals("from-file", value)
     }
 
     @Test
     fun resolve_uses_hardcoded_defaults_for_known_keys() {
+        OidfConfigSources.installEnvironment { null }
         val value = OidfPropertyResolution.resolveString(
             key = OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID,
             default = "should-not-use",
-            envLookup = { null },
         )
         assertEquals("default", value)
     }
 
     @Test
     fun resolveStringOrNull_returns_null_for_empty() {
+        OidfConfigSources.installEnvironment { null }
         assertNull(
-            OidfPropertyResolution.resolveStringOrNull(
-                key = "oidf.test.missing.completely",
-                envLookup = { null },
-            ),
+            OidfPropertyResolution.resolveStringOrNull(key = "oidf.test.missing.completely"),
         )
     }
 

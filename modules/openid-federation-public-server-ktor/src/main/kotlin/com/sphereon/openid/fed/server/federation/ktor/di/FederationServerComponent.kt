@@ -12,6 +12,7 @@ import com.sphereon.core.api.log.Log
 import com.sphereon.oauth2.jwt.validation.IdpConfig
 import com.sphereon.oauth2.jwt.validation.JwtValidationConfig
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -150,6 +151,8 @@ fun createFederationServerAppGraph(
         version = version,
         rootScopeProvider = DefaultRootScopeProvider()
     )
+    // Registers Scoped instances + PropertySourceBootstrap (IDK Env + oidf-legacy-env bridge, …)
     graph.initRootScopeProvider()
+    OidfConfigBootstrap.ensurePropertySourcesRegistered(graph)
     return graph
 }

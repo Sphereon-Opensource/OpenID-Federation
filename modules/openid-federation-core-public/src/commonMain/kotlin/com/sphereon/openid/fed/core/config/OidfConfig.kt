@@ -92,16 +92,47 @@ data class KmsConfig(
 )
 
 /**
- * Tenant-specific configuration overrides (TENANT scope).
+ * Tenant-level overrides for settings that may differ per federation tenant / IDK tenant.
+ *
+ * Loaded from `oidf.tenant.<tenantId>.*` (APP catalog) and/or session [com.sphereon.core.api.conf.TenantConfigService]
+ * bare keys via [OidfConfigBinder] effective helpers. Process-fixed settings (ports, datasource,
+ * identity **mode**, OAuth2 issuer) are not included.
  */
 data class TenantConfig(
     /** Tenant identifier */
     val tenantId: String,
-    /** Optional tenant-specific root identifier override */
+    /** Override federation root entity identifier URL */
     val rootIdentifier: String? = null,
-    /** Optional tenant-specific KMS provider override */
-    val kmsProvider: String? = null
-)
+    /** Override default KMS provider id */
+    val kmsProvider: String? = null,
+    /** Override cache locality for HTTP resolver (enum name) */
+    val cacheHttpResolverLocality: String? = null,
+    /** Override cache locality for trust chain */
+    val cacheTrustChainLocality: String? = null,
+    /** Override cache locality for entity config */
+    val cacheEntityConfigLocality: String? = null,
+    /** Override cache locality for trust marks */
+    val cacheTrustMarkLocality: String? = null,
+    /**
+     * ACCOUNT mode: JWT claim for header allow-list (override APP default `sub`).
+     * Does **not** change identity.mode.
+     */
+    val accountHeaderPrincipalClaim: String? = null,
+    /**
+     * ACCOUNT mode: principals allowed to use X-Account-Username (comma-separated when from env/file).
+     */
+    val accountHeaderAllowedPrincipals: List<String>? = null,
+) {
+    fun hasAnyOverride(): Boolean =
+        rootIdentifier != null ||
+            kmsProvider != null ||
+            cacheHttpResolverLocality != null ||
+            cacheTrustChainLocality != null ||
+            cacheEntityConfigLocality != null ||
+            cacheTrustMarkLocality != null ||
+            accountHeaderPrincipalClaim != null ||
+            accountHeaderAllowedPrincipals != null
+}
 
 /**
  * Complete application configuration aggregate.

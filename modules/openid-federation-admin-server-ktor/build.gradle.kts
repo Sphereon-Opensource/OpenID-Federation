@@ -52,6 +52,8 @@ dependencies {
     // IDK logging API
     api(idklib.sphereon.idk.lib.core.api.public)
     api(idklib.sphereon.idk.lib.core.api.default)
+    // IDK YAML config (APP/tenant/principal) — Metro contributions on classpath
+    api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
 
     // Kotlin
     implementation(sphereonlib.org.jetbrains.kotlin.stdlib)

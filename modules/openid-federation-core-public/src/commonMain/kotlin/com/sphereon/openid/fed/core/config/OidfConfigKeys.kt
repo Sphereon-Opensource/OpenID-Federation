@@ -241,17 +241,35 @@ object OidfConfigKeys {
     // Tenant Configuration (TENANT scope)
     // ========================================================================
 
+    /**
+     * Per-tenant overrides (APP catalog keys `oidf.tenant.<id>.*`).
+     *
+     * These map to settings that may also be set as bare keys on IDK tenant-scoped
+     * property sources (e.g. `oidf.kms.default.provider` on [TenantConfigService]).
+     * Process-fixed keys (server ports, datasource, identity.mode, oauth2 issuer) are not here.
+     */
     object Tenant {
         const val PREFIX = "$OIDF_PREFIX.tenant"
 
         /** Get tenant-specific property key */
         fun key(tenantId: String, property: String) = "$PREFIX.$tenantId.$property"
 
-        /** Tenant-specific root identifier */
+        /** Tenant-specific root identifier → [Federation.ROOT_IDENTIFIER] */
         fun rootIdentifier(tenantId: String) = key(tenantId, "federation.root.identifier")
 
-        /** Tenant-specific KMS provider */
+        /** Tenant-specific KMS provider → [Kms.DEFAULT_PROVIDER] */
         fun kmsProvider(tenantId: String) = key(tenantId, "kms.provider")
+
+        fun cacheHttpResolverLocality(tenantId: String) = key(tenantId, "cache.http.resolver.locality")
+        fun cacheTrustChainLocality(tenantId: String) = key(tenantId, "cache.trust.chain.locality")
+        fun cacheEntityConfigLocality(tenantId: String) = key(tenantId, "cache.entity.config.locality")
+        fun cacheTrustMarkLocality(tenantId: String) = key(tenantId, "cache.trust.mark.locality")
+
+        fun accountHeaderPrincipalClaim(tenantId: String) =
+            key(tenantId, "identity.account.header.principal.claim")
+
+        fun accountHeaderAllowedPrincipals(tenantId: String) =
+            key(tenantId, "identity.account.header.allowed.principals")
     }
 
     // ========================================================================

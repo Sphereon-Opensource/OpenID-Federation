@@ -1,0 +1,29 @@
+# Packaged APP defaults for the Federation Server (classpath).
+# Overridden by working-dir / config/application.* and by environment variables.
+# See docs/CONFIGURATION.md and application.yaml.example at the repo root.
+
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+    dev:
+      mode: false
+  server:
+    federation:
+      port: 8080
+      host: "0.0.0.0"
+  identity:
+    mode: account
+  cors:
+    allowed:
+      origins: "*"
+      methods: GET,POST,OPTIONS
+      headers: "*"
+    max:
+      age: 3600
+  logger:
+    severity: INFO
+    output: TEXT
+  kms:
+    default:
+      provider: memory

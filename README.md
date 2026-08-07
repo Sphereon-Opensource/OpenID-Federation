@@ -87,14 +87,43 @@ For complete API details, please refer to the following resources:
 
 ## Servers Deployment Instructions
 
-### Environment variables
+### Configuration (files preferred, env still supported)
 
-We are using environment variables to configure certain components, like for instance the key management system. This is
-independent of the deployment you choose, like using the
-docker compose, or running the API servers directly on a JVM. In the root folder you will find
-the [.env.example](.env.example) file. Copy this file to `.env` or `.env.local`.
+OIDFed uses the **IDK configuration pipeline**. Application code resolves settings through `OidfConfigBinder` /
+`OidfPropertyResolution` — not via direct `System.getenv`. Full reference:
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
-The docker compose method should automatically pick up the environment variables you put in there.
+| Method | When to use |
+|--------|-------------|
+| **IDK YAML** (`lib-conf-yaml`) | `config/application.yaml` (+ profile/tenant/principal YAML) via AppConfigService |
+| **Classpath packaged YAML** | Optional defaults in admin/federation jars (IDK classpath fallback) |
+| **OIDFed reference.properties** | Packaged non-YAML defaults only |
+| **Environment variables** | Secrets, CI, Compose; override file values |
+| **Programmatic maps** | Tests / embedders (`DefaultAppMapPropertySource`) |
+| **Host contributions** | Cloud config, K8s ConfigMaps (IDK `PropertySourceContribution`) |
+
+**Precedence (highest first):** AppConfigService (IDK Env + YAML + legacy-env bridge + host sources) →
+programmatic AppMap → env tier → OIDFed reference file tier → hardcoded defaults.
+
+YAML is **only** via IDK — not a second parser inside OIDFed.
+
+| Preference | How |
+|------------|-----|
+| **Recommended** | Copy [application.yaml.example](application.yaml.example) → `application.yaml` or `config/application.yaml` |
+| **Still fully supported** | Env: IDK-normalized `OIDF_*` or legacy `ROOT_IDENTIFIER`, `DATASOURCE_URL`, … — see [.env.example](.env.example) |
+
+**Docker Compose:** copy [.env.example](.env.example) to `.env` / `.env.local` (env overrides files). Optionally place
+file config under `config/` (see [config/application.yaml.example](config/application.yaml.example)); compose mounts
+`./config` read-only into admin and federation containers at `/app/config`.
+
+**File-only stack (no OIDFed env vars on app containers):**
+
+```bash
+docker compose -f docker-compose.file-only.yaml up --build
+```
+
+Uses [config/application.file-only.yaml](config/application.file-only.yaml) mounted as
+`/app/config/application.yaml`.
 
 ### Docker Setup
 
@@ -155,8 +184,10 @@ default. There is no configuration switch to run the admin API without authentic
 
 # OpenID Federation Configuration Guide
 
-This guide will help new users configure and deploy the OpenID Federation service, including setting up environment
-variables, the root entity, and necessary dependencies. Follow the steps outlined below.
+This guide will help new users configure and deploy the OpenID Federation service: **file-based config** (preferred),
+environment overrides, identity modes, the root entity, KMS, and dependencies. Follow the steps below. For a deep
+dive (load order, YAML flattener, tenant keys, property-source bootstrap), see
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## Important Notices
 
@@ -193,7 +224,7 @@ testing with an in-process IDK authorization server is described in [docs/PLATFO
 Admin authentication is always JWT-based. The identity mode controls **where the federation entity (tenant) context
 comes from**, not whether a token is required.
 
-Set the mode with `OIDF_IDENTITY_MODE` (or the config key `oidf.identity.mode`):
+Set the mode with property key `oidf.identity.mode` or env `OIDF_IDENTITY_MODE` (legacy alias `IDENTITY_MODE`):
 
 | Value | Meaning |
 |-------|---------|
@@ -281,23 +312,47 @@ Public federation protocol endpoints on the federation server remain open by des
 subordinate listing, trust mark endpoints as specified by OpenID Federation). Only the **admin** API always requires
 Bearer tokens.
 
-### Useful identity-related variables
+### Useful identity / OAuth2 settings
+
+Prefer `oidf.*` keys in YAML/properties; env forms remain fully supported.
+
+| Property key | Env (preferred) | Legacy env (JVM) |
+|--------------|-----------------|------------------|
+| `oidf.identity.mode` | `OIDF_IDENTITY_MODE` | `IDENTITY_MODE` |
+| `oidf.identity.account.header.principal.claim` | `OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM` | — |
+| `oidf.identity.account.header.allowed.principals` | `OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS` | — |
+| `oidf.identity.external.root.tenant.id` | `OIDF_EXTERNAL_ROOT_TENANT_ID` | `OIDF_PLATFORM_ROOT_TENANT_ID` |
+| `oidf.oauth2.issuer.uri` | `OIDF_OAUTH2_ISSUER_URI` | `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI` |
+| `oidf.oauth2.audience` | `OIDF_OAUTH2_AUDIENCE` | — |
+| `oidf.oauth2.jwt.auth.enabled` | `OIDF_OAUTH2_JWT_AUTH_ENABLED` | — |
+
+```yaml
+oidf:
+  identity:
+    mode: account   # or external
+    account:
+      header:
+        principal:
+          claim: sub
+        # Empty = deny X-Account-Username rebind. Comma list, or * for tests only.
+        allowed:
+          principals: ""
+    # external only:
+    # external:
+    #   root:
+    #     tenant:
+    #       id: my-root-tenant
+  oauth2:
+    issuer:
+      uri: http://keycloak:8080/realms/openid-federation
+    # audience: openid-federation-admin
+```
 
 ```env
-# account (default) or external. Aliases: legacy, platform
 OIDF_IDENTITY_MODE=account
-
-# ACCOUNT: JWT claim used to match the header allow-list (default sub)
 # OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM=sub
-
-# ACCOUNT: comma-separated principals allowed to send X-Account-Username.
-# Default empty = deny rebind for everyone. Use * only in tests.
 # OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS=
-
-# EXTERNAL: token tenant id that owns the federation root entity URL
 # OIDF_EXTERNAL_ROOT_TENANT_ID=
-
-# Required for admin JWT validation (startup fails if blank)
 OIDF_OAUTH2_ISSUER_URI=http://keycloak:8080/realms/openid-federation
 # OIDF_OAUTH2_AUDIENCE=openid-federation-admin
 ```
@@ -313,40 +368,124 @@ examples for most endpoints and also at the toplevel has an
 OAUth2 integration. So you can get an access token from the toplevel folder and then use that token automatically in
 subsequent calls.
 
-## Step 1: Configure Environment Variables
+## Step 1: Configure the service
 
-Set the following environment variables in your deployment environment. These variables are critical for configuring the
-service and connecting to the required resources.
+OIDFed reads configuration through the IDK pipeline (`OidfConfigBinder`). You can mix methods: **files for structure**,
+**env for secrets**, and optional **tenant overrides** in the same YAML.
 
-### General Configuration
+Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Starters:
+[application.yaml.example](application.yaml.example), [config/application.yaml.example](config/application.yaml.example),
+[.env.example](.env.example).
 
-**Note:** See the notes above about copying the .env.example to .env or .env.local first
+### 1a. File config (recommended)
+
+Copy the example to one of these locations (later paths win within the file tier):
+
+| Location | Use |
+|----------|-----|
+| Working directory `application.yaml` / `.properties` | Local JVM runs |
+| `application-{profile}.yaml` | Profile-specific overrides |
+| `config/application.yaml` | Docker Compose (`./config` → `/app/config`) |
+| Classpath `application.*` | Embedded / packaged defaults |
+
+```yaml
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+    dev:
+      mode: false
+  server:
+    admin:
+      port: 8081
+    federation:
+      port: 8080
+  datasource:
+    url: jdbc:postgresql://db:5432/openid-federation-db
+    user: openid-federation-db-user
+    password: openid-federation-db-password
+    db: openid-federation-db
+    # Prefer opaque secrets in production:
+    # password.secret.id: db-password   # → OIDF_SECRET_DB_PASSWORD
+  oauth2:
+    issuer:
+      uri: http://keycloak:8080/realms/openid-federation
+  identity:
+    mode: account
+  cors:
+    allowed:
+      origins: "*"
+      methods: GET,POST,PUT,DELETE,OPTIONS
+      headers: Authorization,Content-Type,X-Account-Username
+  logger:
+    severity: INFO
+    output: TEXT
+  kms:
+    default:
+      provider: memory   # memory | aws | azure
+
+  # Optional per-tenant overrides (property keys oidf.tenant.<id>.*)
+  # tenant:
+  #   acme-corp:
+  #     federation:
+  #       root:
+  #         identifier: https://acme.example
+  #     kms:
+  #       provider: azure
+```
+
+Equivalent flat properties also work, e.g. `oidf.federation.root.identifier=http://localhost:8080`.
+
+### 1b. Environment variables (fully supported)
+
+Compose and many operators still use env. **Env overrides file defaults.**
+
+Copy [.env.example](.env.example) to `.env` / `.env.local` for Docker Compose.
+
+| Property key | Env (IDK-normalized) | Legacy env (JVM) |
+|--------------|----------------------|------------------|
+| `oidf.federation.root.identifier` | `OIDF_FEDERATION_ROOT_IDENTIFIER` | `ROOT_IDENTIFIER` |
+| `oidf.federation.dev.mode` | `OIDF_FEDERATION_DEV_MODE` | `DEV_MODE` / `APP_DEV_MODE` |
+| `oidf.datasource.url` | `OIDF_DATASOURCE_URL` | `DATASOURCE_URL` |
+| `oidf.datasource.user` | `OIDF_DATASOURCE_USER` | `DATASOURCE_USER` |
+| `oidf.datasource.password` | `OIDF_DATASOURCE_PASSWORD` | `DATASOURCE_PASSWORD` |
+| `oidf.datasource.db` | `OIDF_DATASOURCE_DB` | `DATASOURCE_DB` |
+| `oidf.server.admin.port` | `OIDF_SERVER_ADMIN_PORT` | `ADMIN_SERVER_PORT` |
+| `oidf.server.federation.port` | `OIDF_SERVER_FEDERATION_PORT` | `SERVER_PORT` |
+| `oidf.kms.default.provider` | `OIDF_KMS_DEFAULT_PROVIDER` | `KMS_PROVIDER` |
+| `oidf.logger.severity` | `OIDF_LOGGER_SEVERITY` | `LOGGER_SEVERITY` |
+| `oidf.cors.allowed.origins` | `OIDF_CORS_ALLOWED_ORIGINS` | `CORS_ALLOWED_ORIGINS` |
 
 ```env
 APP_KEY=Nit5tWts42QeCynT1Q476LyStDeSd4xb
-# A 32-byte random string that every deployer needs to create. It is used for application-level security.
-
-ROOT_IDENTIFIER=http://localhost:8081
-# The OpenID identifier of the root entity. It must be a valid URL hosting the well-known endpoint.
-
+ROOT_IDENTIFIER=http://localhost:8080
 DATASOURCE_URL=jdbc:postgresql://db:5432/openid-federation-db
-# The database instance URL. Defaults to the Docker Compose PostgreSQL instance.
-
 DATASOURCE_USER=openid-federation-db-user
-# The username for the database.
-
 DATASOURCE_PASSWORD=openid-federation-db-password
-# The password for the database.
-
 DATASOURCE_DB=openid-federation-db
-# The database name.
+# Or IDK form: OIDF_FEDERATION_ROOT_IDENTIFIER=... OIDF_DATASOURCE_URL=...
 ```
 
-See [.env.example](.env.example) for all the allowd values and their explanations
+### 1c. Tenant-overridable settings (not APP-only)
+
+These may differ per tenant via `oidf.tenant.<id>.*` (or bare keys on IDK session tenant config):
+
+| Setting | Example tenant key |
+|---------|-------------------|
+| Root entity URL | `oidf.tenant.acme.federation.root.identifier` |
+| KMS provider | `oidf.tenant.acme.kms.provider` |
+| Cache locality | `oidf.tenant.acme.cache.http.resolver.locality` |
+| Header allow-list | `oidf.tenant.acme.identity.account.header.allowed.principals` |
+
+Still **APP-only**: ports, datasource, `identity.mode`, OAuth2 issuer, CORS, logger.
+
+Use `OidfConfigBinder.getEffectiveFederationConfig` / `getEffectiveKmsConfig` /
+`getEffectiveIdentityConfig` / `getEffectiveCacheLocality`. Details:
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ### Key Management System (KMS)
 
-The service supports multiple KMS providers. Use the environment variable `KMS_PROVIDER` to select the desired provider:
+Select the provider with `oidf.kms.default.provider` or env `OIDF_KMS_DEFAULT_PROVIDER` / legacy `KMS_PROVIDER`:
 
 - `memory`: In-memory KMS (for development and testing only!)
 - `aws`: AWS Key Management Service
@@ -354,9 +493,16 @@ The service supports multiple KMS providers. Use the environment variable `KMS_P
 
 #### In-Memory KMS (Default/testing)
 
+```yaml
+oidf:
+  kms:
+    default:
+      provider: memory
+```
+
 ```env
 KMS_PROVIDER=memory
-# When set to 'memory', the service uses a local in-memory key store for encryption and decryption.
+# Or: OIDF_KMS_DEFAULT_PROVIDER=memory
 ```
 
 **Note:** The memory KMS is not storing any private keys!. It is in memory, which means they will be gone after a
@@ -399,11 +545,11 @@ also need to provide an access key id and secret.
     - **Important:** Save your secret access key securely as it is shown only once. You can download the credentials as
       a CSV file.
 
-Use the values from step 5 to set the Environment variables:
+Use the values from step 5 in env (or map them under IDK `kms.providers.aws.*` property keys):
 
 ```env
 KMS_PROVIDER=aws
-# Use 'aws' to select AWS Key Management Service.
+# Or: OIDF_KMS_DEFAULT_PROVIDER=aws
 
 AWS_APPLICATION_ID=your-own-id
 # The ID is only used internally and is not related to anything in AWS itself
@@ -483,17 +629,18 @@ OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/openid-federat
 
 ### Notes:
 
-1. Replace default values (e.g., `admin`, `localhost`, `password`) with secure values for production environments.
-2. Ensure the `ROOT_IDENTIFIER` is a publicly accessible URL if deploying in a live environment.
-3. Select the appropriate KMS provider based on your environment:
+1. Prefer file config for non-secrets; put secrets in env or opaque secret ids (`oidf.datasource.password.secret.id`).
+2. Replace default values (e.g., `admin`, `localhost`, `password`) with secure values for production environments.
+3. Ensure the root identifier (`oidf.federation.root.identifier` / `ROOT_IDENTIFIER`) is a publicly accessible URL if deploying in a live environment.
+4. Select the appropriate KMS provider based on your environment:
     - For development or testing, the in-memory KMS is sufficient. Note: Keys are ephemeral and thus will be gone after
       a restart/reboot
     - For production, use AWS KMS or Azure Key Vault to ensure robust security for key management.
-4. Never commit sensitive credentials (such as AWS or Azure secrets) into version control.
+5. Never commit sensitive credentials (such as AWS or Azure secrets) into version control.
 
 ## Step 2: Start the Service Stack
 
-Once the environment variables are configured, you can start the OpenID Federation service stack using Docker Compose:
+Once configuration is in place (files and/or env), start the OpenID Federation service stack with Docker Compose:
 
 ```bash
 docker compose up
@@ -565,8 +712,9 @@ The admin endpoints are protected and require a valid JWT access token. To acqui
 Replace `client_secret` with a secure value in a production environment. The token expires after the duration given in
 `expires_in`; acquire a new token when needed.
 
-Set `OIDF_OAUTH2_ISSUER_URI` (or the JVM alias `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI`) so the admin server can
-validate tokens. Startup fails if the issuer is blank. There is no environment variable to skip admin authentication.
+Set `oidf.oauth2.issuer.uri` / `OIDF_OAUTH2_ISSUER_URI` (or the JVM alias `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI`) so
+the admin server can validate tokens. Startup fails if the issuer is blank. There is no setting to skip admin
+authentication.
 
 The examples below assume **account** mode (the default). After authentication, send `X-Account-Username` when you
 need to work on a non-root account and your principal is allow-listed for that rebind. The header selects the entity
@@ -577,7 +725,7 @@ is the only entity context, and `/accounts` is not available.
 
 ## Step 4: Create a New Tenant Account (account mode)
 
-Account REST applies only when `OIDF_IDENTITY_MODE=account` (or `legacy`). In external mode the host provisions
+Account REST applies only when `oidf.identity.mode` / `OIDF_IDENTITY_MODE` is `account` (or `legacy`). In external mode the host provisions
 tenants outside this API.
 
 1. Send a `POST` request to the following endpoint:

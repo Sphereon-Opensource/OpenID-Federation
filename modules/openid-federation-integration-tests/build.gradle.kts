@@ -72,9 +72,7 @@ kotlin {
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
                 implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
                 // Real IDK OAuth2 / OIDC Authorization Server (in-process issuer — not Keycloak).
-                // Source: VDX-infra vdx/edk/idk/services/oauth2-as (services-oauth2-as-rest).
-                // Local:  cd …/vdx/edk/idk && ./gradlew :services-oauth2-as-rest:publishToMavenLocal
-                // CI:     same artifact from snapshot repo (project.publication plugin).
+                // Consumed as a normal IDK dependency; publishing is IDK/VDX-infra ownership, not OIDFed.
                 implementation("com.sphereon.idk:services-oauth2-as-rest:0.25.0-SNAPSHOT")
                 // Compile-time APIs used by IdkOauth2AsFixture (CreateAccessToken*, bootstrap, Ktor).
                 // Runtime graph also pulls these transitively from services-oauth2-as-rest.
@@ -137,6 +135,16 @@ val platformAsSmokeTests by tasks.registering {
     description = "Enables jvmTest for IdkOauth2AsFixtureTest (pass --tests on jvmTest)."
 }
 
+/**
+ * Zero process-env config smoke (YAML only). Prefer:
+ *   --tests "…FileOnlyConfigE2eTest"
+ * Docker: docker compose -f docker-compose.file-only.yaml up
+ */
+val fileOnlyConfigTests by tasks.registering {
+    group = "verification"
+    description = "Enables jvmTest for FileOnlyConfigE2eTest (file config, no OIDFed env)."
+}
+
 tasks.named<Test>("jvmTest") {
     description = "Runs integration tests for the JVM target."
     group = "verification"
@@ -154,10 +162,11 @@ tasks.named<Test>("jvmTest") {
         val graph = gradle.taskGraph
         graph.hasTask(integrationTests.get()) ||
             graph.hasTask(platformIntegrationTests.get()) ||
-            graph.hasTask(platformAsSmokeTests.get())
+            graph.hasTask(platformAsSmokeTests.get()) ||
+            graph.hasTask(fileOnlyConfigTests.get())
     }
 }
 
-listOf(integrationTests, platformIntegrationTests, platformAsSmokeTests).forEach { umbrella ->
+listOf(integrationTests, platformIntegrationTests, platformAsSmokeTests, fileOnlyConfigTests).forEach { umbrella ->
     umbrella.configure { finalizedBy(tasks.named("jvmTest")) }
 }

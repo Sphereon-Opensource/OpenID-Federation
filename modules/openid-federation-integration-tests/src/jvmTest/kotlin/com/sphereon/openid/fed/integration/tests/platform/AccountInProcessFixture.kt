@@ -1,6 +1,8 @@
 package com.sphereon.openid.fed.integration.tests.platform
 
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
+import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
+import com.sphereon.openid.fed.common.config.getEnvironmentVariable
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.server.admin.ktor.configureAdmin
@@ -58,6 +60,7 @@ class AccountInProcessFixture(
             audience = audience,
         )
 
+        OidfConfigEnvironment.install()
         OidfConfigBootstrap.seed(
             appId = ADMIN_APP_ID,
             profile = PROFILE,
@@ -150,9 +153,9 @@ class AccountInProcessFixture(
             issuerUri: String,
             audience: String,
         ) {
+            // Resolve via OIDF config env pipeline (OIDF_* + legacy DATASOURCE_*), not System.getenv.
             val dsUrl =
-                System.getenv("OIDF_DATASOURCE_URL")
-                    ?: System.getenv("DATASOURCE_URL")
+                getEnvironmentVariable(OidfConfigKeys.Datasource.URL)
                     ?: "jdbc:postgresql://localhost:5432/openid-federation-db"
             val hostLocalDs =
                 if (dsUrl.contains("://db:") || dsUrl.contains("@db:")) {
@@ -161,12 +164,10 @@ class AccountInProcessFixture(
                     dsUrl
                 }
             val dsUser =
-                System.getenv("OIDF_DATASOURCE_USER")
-                    ?: System.getenv("DATASOURCE_USER")
+                getEnvironmentVariable(OidfConfigKeys.Datasource.USER)
                     ?: "openid-federation-db-user"
             val dsPass =
-                System.getenv("OIDF_DATASOURCE_PASSWORD")
-                    ?: System.getenv("DATASOURCE_PASSWORD")
+                getEnvironmentVariable(OidfConfigKeys.Datasource.PASSWORD)
                     ?: "openid-federation-db-password"
 
             val props =

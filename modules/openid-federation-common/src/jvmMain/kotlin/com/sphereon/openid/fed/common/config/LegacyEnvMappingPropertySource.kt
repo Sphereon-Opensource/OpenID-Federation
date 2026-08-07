@@ -17,13 +17,14 @@ import com.sphereon.openid.fed.core.config.OidfConfigKeys
  * 2. **Legacy environment variables** (mapped via this class)
  *    - e.g., `ROOT_IDENTIFIER` maps to `oidf.federation.root.identifier`
  *
- * 3. **Hardcoded defaults** in [OidfConfigBinderImpl]
+ * 3. **File / classpath defaults** ([com.sphereon.openid.fed.core.config.OidfFilePropertySource])
+ *
+ * 4. **Hardcoded defaults** in [com.sphereon.openid.fed.core.config.OidfConfigDefaults]
  *
  * ## Note on File-Based Config
  *
- * File-based configuration (application.properties, reference.conf) is NOT currently
- * implemented. The reference.conf file exists as documentation of available options,
- * but is not loaded at runtime. All configuration comes from environment variables.
+ * File defaults are loaded via [com.sphereon.openid.fed.core.config.OidfConfigBootstrap]
+ * into [com.sphereon.openid.fed.core.config.OidfFilePropertySource] (below env).
  *
  * ## Usage Example
  *
@@ -35,12 +36,18 @@ import com.sphereon.openid.fed.core.config.OidfConfigKeys
  * OIDF_FEDERATION_ROOT_IDENTIFIER=https://example.com ./gradlew :modules:openid-federation-server:run
  * ```
  *
- * @see OidfConfigBinderImpl for the main configuration binding implementation
+ * All getenv reads use [rawGetenv] so regression tests can isolate via [OidfEnvOverrides].
+ *
+ * @see com.sphereon.openid.fed.services.config.OidfConfigBinderImpl
  */
 object LegacyEnvMappingPropertySource {
 
     /**
      * Mapping from legacy SCREAMING_CASE env vars to IDK property keys.
+     *
+     * Note: some OIDF_* names also appear here so [getAllLegacyProperties] / reverse
+     * lookups treat them as first-class aliases of the oidf.* keys (they coincide with
+     * the normalized form of those keys).
      */
     val legacyMappings: Map<String, String> = mapOf(
         // Federation core settings
@@ -106,19 +113,33 @@ object LegacyEnvMappingPropertySource {
         "AWS_SECRET_ACCESS_KEY" to "kms.providers.aws.secretaccesskey",
         "AWS_MAX_RETRIES" to "kms.providers.aws.maxretries",
         "AWS_BASE_DELAY" to "kms.providers.aws.basedelayms",
-        "AWS_MAX_DELAY" to "kms.providers.aws.maxdelayms"
+        "AWS_MAX_DELAY" to "kms.providers.aws.maxdelayms",
     )
 
     /**
-     * Reverse mapping from IDK property keys to legacy env var names.
+     * Reverse mapping from IDK property keys to **one** legacy env var name.
+     *
+     * When multiple legacy names map to the same IDK key, the last entry in
+     * [legacyMappings] wins for this reverse map. Prefer [legacyAliasesFor]
+     * when you need every alias for a key.
      */
     val reverseMappings: Map<String, String> by lazy {
         legacyMappings.entries.associate { (legacy, idk) -> idk to legacy }
     }
 
     /**
-     * Get a property value by trying the IDK key first, then falling back to
-     * legacy environment variable lookup.
+     * All legacy / alias env var names that map to the given IDK property key.
+     * Order matches [legacyMappings] insertion order.
+     */
+    fun legacyAliasesFor(idkKey: String): List<String> {
+        return legacyMappings.entries
+            .filter { it.value == idkKey }
+            .map { it.key }
+    }
+
+    /**
+     * Get a property value by trying the IDK key first (normalized env form),
+     * then falling back to **all** legacy environment variable aliases.
      *
      * @param idkKey The IDK-style property key (e.g., "oidf.federation.root.identifier")
      * @param default Default value if not found
@@ -127,12 +148,11 @@ object LegacyEnvMappingPropertySource {
     fun getProperty(idkKey: String, default: String = ""): String {
         // First try direct environment variable with IDK key (normalized)
         val normalizedKey = normalizeForEnv(idkKey)
-        System.getenv(normalizedKey)?.let { return it }
+        rawGetenv(normalizedKey)?.let { return it }
 
-        // Then try legacy environment variable
-        val legacyKey = reverseMappings[idkKey]
-        if (legacyKey != null) {
-            System.getenv(legacyKey)?.let { return it }
+        // Then try every legacy / alias env var for this key
+        for (legacyKey in legacyAliasesFor(idkKey)) {
+            rawGetenv(legacyKey)?.let { return it }
         }
 
         return default
@@ -145,7 +165,7 @@ object LegacyEnvMappingPropertySource {
      */
     fun getAllLegacyProperties(): Map<String, String> {
         return legacyMappings.mapNotNull { (legacyKey, idkKey) ->
-            System.getenv(legacyKey)?.let { value -> idkKey to value }
+            rawGetenv(legacyKey)?.let { value -> idkKey to value }
         }.toMap()
     }
 
@@ -154,14 +174,14 @@ object LegacyEnvMappingPropertySource {
      * Useful for logging deprecation warnings.
      */
     fun hasLegacyEnvVars(): Boolean {
-        return legacyMappings.keys.any { System.getenv(it) != null }
+        return legacyMappings.keys.any { rawGetenv(it) != null }
     }
 
     /**
      * Get list of legacy environment variables that are currently set.
      */
     fun getActiveLegacyEnvVars(): List<String> {
-        return legacyMappings.keys.filter { System.getenv(it) != null }
+        return legacyMappings.keys.filter { rawGetenv(it) != null }
     }
 
     /**

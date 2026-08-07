@@ -1,0 +1,67 @@
+# File-only config for docker-compose.file-only.yaml (no OIDF_* / legacy env on app containers).
+# Postgres/Keycloak images still use compose `environment:` for their own bootstrap (not OIDFed).
+#
+# Usage:
+#   docker compose -f docker-compose.file-only.yaml up --build
+#
+# Copy or mount as config/application.yaml inside the container (compose does this).
+
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+    dev:
+      mode: false
+
+  server:
+    admin:
+      # Container listens on 8080; host maps 8081:8080
+      port: 8080
+      host: "0.0.0.0"
+    federation:
+      port: 8080
+      host: "0.0.0.0"
+
+  datasource:
+    url: jdbc:postgresql://db:5432/openid-federation-db
+    user: openid-federation-db-user
+    password: openid-federation-db-password
+    db: openid-federation-db
+
+  oauth2:
+    # Docker network hostname for compose Keycloak
+    issuer:
+      uri: http://keycloak:8080/realms/openid-federation
+    jwt:
+      auth:
+        enabled: auto
+
+  identity:
+    mode: account
+    account:
+      header:
+        principal:
+          claim: sub
+        allowed:
+          principals: ""
+    session:
+      alignment: account
+      fixed:
+        tenant:
+          id: default
+
+  cors:
+    allowed:
+      origins: "*"
+      methods: GET,POST,PUT,DELETE,OPTIONS
+      headers: Authorization,Content-Type,X-Account-Username
+    max:
+      age: 3600
+
+  logger:
+    severity: INFO
+    output: TEXT
+
+  kms:
+    default:
+      provider: memory
