@@ -155,6 +155,15 @@ npmPublish {
     }
 }
 
+// jsTest currently only has DI fixture helpers (TestComponents.kt), not @Test methods.
+// Gradle 9+ fails AbstractTestTask when sources exist but nothing is discovered (CI jsNodeTest).
+// JVM tests still discover normally; do not disable failOnNoDiscoveredTests for jvmTest.
+tasks.withType<org.gradle.api.tasks.testing.AbstractTestTask>().configureEach {
+    if (name.contains("js", ignoreCase = true) || name.contains("wasm", ignoreCase = true)) {
+        failOnNoDiscoveredTests = false
+    }
+}
+
 // Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
 afterEvaluate {
     listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
