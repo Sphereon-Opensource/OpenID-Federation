@@ -36,7 +36,18 @@ interface TrustMarkService {
     suspend fun createTrustMark(tenantId: String, body: CreateTrustMarkRequest, currentTimeMillis: Long): FederationResult<CreateTrustMarkResult>
     suspend fun deleteTrustMark(tenantId: String, id: String): FederationResult<TrustMarkEntity>
     suspend fun getTrustMarkStatus(tenantId: String, request: TrustMarkStatusRequest): FederationResult<Boolean>
-    suspend fun getSignedTrustMarkStatusJwt(tenantId: String, request: TrustMarkStatusRequest): FederationResult<String>
+    /**
+     * Build signed Trust Mark Status Response JWT (OIDFed 1.1 §8.4).
+     *
+     * @param trustMarkJwt REQUIRED full Trust Mark JWT from the status request (`trust_mark` param).
+     *   When non-null, status is evaluated for **this** JWT (exact match / revocation / exp).
+     *   When null, falls back to [request] sub + trust_mark_type (+ optional iat).
+     */
+    suspend fun getSignedTrustMarkStatusJwt(
+        tenantId: String,
+        request: TrustMarkStatusRequest,
+        trustMarkJwt: String? = null,
+    ): FederationResult<String>
     suspend fun getTrustMarkedSubs(tenantId: String, request: TrustMarkListRequest): FederationResult<Array<String>>
     suspend fun getTrustMark(tenantId: String, request: TrustMarkRequest): FederationResult<String>
 }

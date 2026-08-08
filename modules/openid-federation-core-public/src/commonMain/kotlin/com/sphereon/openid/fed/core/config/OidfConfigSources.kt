@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.core.config
 
 import com.sphereon.core.api.conf.AppConfigService
+import kotlin.concurrent.Volatile
 
 /**
  * Process-wide handles for the OIDF configuration pipeline.

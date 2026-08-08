@@ -259,7 +259,10 @@ class OidfTrustValidationServiceTest {
         val verifyCmd = object : VerifyTrustChainCommand {
             override val isEnabled: Boolean get() = true
             override suspend fun verifyTrustChain(
-                trustChain: Array<String>, trustAnchor: String?, currentTime: Long?
+                trustChain: Array<String>,
+                trustAnchor: String?,
+                currentTime: Long?,
+                trustAnchorPublicKeys: List<com.sphereon.openid.fed.openapi.models.Jwk>?
             ): IdkResult<VerifyTrustChainResponse, FederationError> = verifyResult
             override suspend fun execute(args: VerifyTrustChainArgs): IdkResult<VerifyTrustChainResponse, FederationError> =
                 verifyTrustChain(args.trustChain, args.trustAnchor, args.currentTime)

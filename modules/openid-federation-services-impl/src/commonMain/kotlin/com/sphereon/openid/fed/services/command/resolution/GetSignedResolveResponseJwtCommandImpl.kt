@@ -48,12 +48,14 @@ class GetSignedResolveResponseJwtCommandImpl(
         args: GetSignedResolveResponseJwtArgs,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
     ): IdkResult<String, FederationError> {
-        val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
+        val (tenantId, sub, trustAnchors, entityTypes) = applyDuring(args)
 
         logger.info("Getting signed resolve response JWT for subject: $sub")
 
         // First resolve the entity
-        val resolveResult = resolveEntityCommand.execute(ResolveEntityArgs(tenantId, sub, trustAnchor, entityTypes))
+        val resolveResult = resolveEntityCommand.execute(
+            ResolveEntityArgs(tenantId, sub, trustAnchors, entityTypes)
+        )
 
         return when {
             resolveResult.isErr -> resolveResult.error.asErrorResult()

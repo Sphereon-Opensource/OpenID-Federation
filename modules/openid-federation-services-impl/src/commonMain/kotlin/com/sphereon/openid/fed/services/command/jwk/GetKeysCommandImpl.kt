@@ -47,11 +47,12 @@ class GetKeysCommandImpl(
         logger.debug("Retrieving keys for account: ${tenantId}")
 
         return try {
-            val keys = jwkQueries.findByAccountId(tenantId)
-                .executeAsList()
-                .filter { includeRevoked || it.revoked_at == null }
-                .map { it.toDTO() }
-                .toTypedArray()
+            val records = if (includeRevoked) {
+                jwkQueries.findAllByAccountId(tenantId).executeAsList()
+            } else {
+                jwkQueries.findByAccountId(tenantId).executeAsList()
+            }
+            val keys = records.map { it.toDTO() }.toTypedArray()
             logger.debug("Found ${keys.size} keys for account ID: ${tenantId}, including revoked keys: $includeRevoked")
             IdkResult.ok(keys)
         } catch (e: Exception) {

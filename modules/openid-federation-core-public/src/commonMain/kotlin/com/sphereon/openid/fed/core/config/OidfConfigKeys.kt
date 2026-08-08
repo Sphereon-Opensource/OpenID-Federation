@@ -22,6 +22,62 @@ object OidfConfigKeys {
 
         /** Development mode flag */
         const val DEV_MODE = "$PREFIX.dev.mode"
+
+        /**
+         * Default client authentication methods for all federation endpoints (OIDFed §8.8).
+         * Comma-separated; default `none`. Per-endpoint keys override this.
+         */
+        const val ENDPOINT_AUTH_METHODS_DEFAULT = "$PREFIX.endpoint.auth.methods.default"
+
+        const val ENDPOINT_AUTH_METHODS_FETCH = "$PREFIX.endpoint.auth.methods.fetch"
+        const val ENDPOINT_AUTH_METHODS_LIST = "$PREFIX.endpoint.auth.methods.list"
+        const val ENDPOINT_AUTH_METHODS_RESOLVE = "$PREFIX.endpoint.auth.methods.resolve"
+        const val ENDPOINT_AUTH_METHODS_TRUST_MARK_STATUS = "$PREFIX.endpoint.auth.methods.trust.mark.status"
+        const val ENDPOINT_AUTH_METHODS_TRUST_MARK_LIST = "$PREFIX.endpoint.auth.methods.trust.mark.list"
+        const val ENDPOINT_AUTH_METHODS_TRUST_MARK = "$PREFIX.endpoint.auth.methods.trust.mark"
+        const val ENDPOINT_AUTH_METHODS_HISTORICAL_KEYS = "$PREFIX.endpoint.auth.methods.historical.keys"
+
+        /** Comma-separated JWS algs for private_key_jwt endpoint authentication */
+        const val ENDPOINT_AUTH_SIGNING_ALGS = "$PREFIX.endpoint.auth.signing.algs"
+
+        /**
+         * Membership policy for private_key_jwt clients:
+         * `any_fetchable` | `subordinate_of_self` | `trust_chain_to_ta` | `hybrid` (default).
+         */
+        const val ENDPOINT_AUTH_MEMBERSHIP_POLICY = "$PREFIX.endpoint.auth.membership.policy"
+
+        /**
+         * Comma-separated Trust Anchor Entity Identifiers for trust-chain membership.
+         * Empty = use the host Entity Identifier.
+         */
+        const val ENDPOINT_AUTH_TRUST_ANCHORS = "$PREFIX.endpoint.auth.trust.anchors"
+    }
+
+    // ========================================================================
+    // Client offline Trust Chain freshness (APP / client scope)
+    // ========================================================================
+
+    object Client {
+        const val PREFIX = "$OIDF_PREFIX.client"
+
+        object OfflineTrustChain {
+            const val PREFIX = "${Client.PREFIX}.offline.trust.chain"
+
+            /**
+             * Max age of an offline chain snapshot in seconds (`now - max(iat)`).
+             * Empty / absent = no max-age limit beyond statement validation.
+             */
+            const val MAX_AGE_SECONDS = "$PREFIX.max.age.seconds"
+
+            /**
+             * Minimum remaining lifetime until earliest statement `exp` (seconds).
+             * Empty / absent = no min-remaining limit beyond statement `exp`.
+             */
+            const val MIN_REMAINING_SECONDS = "$PREFIX.min.remaining.seconds"
+
+            /** Clock skew for offline policy bounds (default 5). */
+            const val CLOCK_SKEW_SECONDS = "$PREFIX.clock.skew.seconds"
+        }
     }
 
     // ========================================================================

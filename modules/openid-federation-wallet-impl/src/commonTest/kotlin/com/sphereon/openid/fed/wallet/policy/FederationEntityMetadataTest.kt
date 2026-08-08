@@ -175,7 +175,7 @@ class FederationEntityMetadataTest {
     }
 
     // =========================================================================
-    // getDisplayName tests
+    // getDisplayName / organization_name tests
     // =========================================================================
 
     @Test
@@ -202,6 +202,85 @@ class FederationEntityMetadataTest {
     fun testGetDisplayNameNoFederationEntity() {
         val metadata = JsonObject(emptyMap())
         assertNull(FederationEntityMetadata.getDisplayName(metadata))
+    }
+
+    @Test
+    fun testGetOrganizationName() {
+        val metadata = JsonObject(mapOf(
+            "federation_entity" to JsonObject(mapOf(
+                "organization_name" to JsonPrimitive("Org Name")
+            ))
+        ))
+        assertEquals("Org Name", FederationEntityMetadata.getOrganizationName(metadata))
+    }
+
+    @Test
+    fun testGetOrganizationOrDisplayNamePrefersOrganization() {
+        val metadata = JsonObject(mapOf(
+            "federation_entity" to JsonObject(mapOf(
+                "organization_name" to JsonPrimitive("Org"),
+                "display_name" to JsonPrimitive("Display")
+            ))
+        ))
+        assertEquals("Org", FederationEntityMetadata.getOrganizationOrDisplayName(metadata))
+    }
+
+    @Test
+    fun testGetOrganizationOrDisplayNameFallsBackToDisplay() {
+        val metadata = JsonObject(mapOf(
+            "federation_entity" to JsonObject(mapOf(
+                "display_name" to JsonPrimitive("Display")
+            ))
+        ))
+        assertEquals("Display", FederationEntityMetadata.getOrganizationOrDisplayName(metadata))
+    }
+
+    // =========================================================================
+    // extractCredentialIssuerKeys dual-profile
+    // =========================================================================
+
+    @Test
+    fun testExtractCredentialIssuerKeysPrefersOpenidCredentialIssuer() {
+        val openidKey = buildJsonKey("oci-1", "EC", "ES256")
+        val vcKey = buildJsonKey("vc-1", "EC", "ES256")
+        val metadata = JsonObject(mapOf(
+            "openid_credential_issuer" to JsonObject(mapOf(
+                "jwks" to JsonObject(mapOf(
+                    "keys" to JsonArray(listOf(openidKey))
+                ))
+            )),
+            "vc_issuer" to JsonObject(mapOf(
+                "jwks" to JsonObject(mapOf(
+                    "keys" to JsonArray(listOf(vcKey))
+                ))
+            ))
+        ))
+        val keys = FederationEntityMetadata.extractCredentialIssuerKeys(metadata)
+        assertEquals(1, keys.size)
+        assertEquals("oci-1", keys[0]["kid"]?.jsonPrimitive?.content)
+        assertEquals("openid_credential_issuer.jwks", FederationEntityMetadata.credentialIssuerKeySource(metadata))
+    }
+
+    @Test
+    fun testExtractCredentialIssuerKeysFallsBackToVcIssuer() {
+        val metadata = buildVcIssuerMetadata(listOf(buildJsonKey("vc-1", "EC", "ES256")))
+        val keys = FederationEntityMetadata.extractCredentialIssuerKeys(metadata)
+        assertEquals(1, keys.size)
+        assertEquals("vc_issuer.jwks", FederationEntityMetadata.credentialIssuerKeySource(metadata))
+    }
+
+    @Test
+    fun testFindCredentialIssuerKey() {
+        val metadata = JsonObject(mapOf(
+            "openid_credential_issuer" to JsonObject(mapOf(
+                "jwks" to JsonObject(mapOf(
+                    "keys" to JsonArray(listOf(buildJsonKey("oci-9", "EC", "ES256")))
+                ))
+            ))
+        ))
+        val key = FederationEntityMetadata.findCredentialIssuerKey(metadata, "oci-9")
+        assertEquals("oci-9", key?.get("kid")?.jsonPrimitive?.content)
+        assertNull(FederationEntityMetadata.findCredentialIssuerKey(metadata, "missing"))
     }
 
     // =========================================================================

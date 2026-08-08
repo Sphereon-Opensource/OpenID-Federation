@@ -9,6 +9,7 @@ import com.sphereon.ktor.http.client.provider.HttpClientFactory
 import com.sphereon.ktor.http.client.provider.HttpClientOptions
 import com.sphereon.openid.fed.client.cache.FederationCacheRequirements
 import com.sphereon.openid.fed.client.context.FederationContext
+import com.sphereon.openid.fed.client.helpers.OfflineTrustChainPolicy
 import com.sphereon.openid.fed.core.cache.OidfCache
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
@@ -89,9 +90,40 @@ interface FederationContextComponent {
             jwtService = jwtService,
             httpResolver = httpResolver,
             cacheManager = cacheManager,
-            trustChainCache = trustChainCache
+            trustChainCache = trustChainCache,
+            offlineTrustChainPolicy = offlineTrustChainPolicyFromConfig(configBinder),
         )
     }
+}
+
+/**
+ * Build [OfflineTrustChainPolicy] from `oidf.client.offline.trust.chain.*` properties.
+ * Empty max-age / min-remaining → [OfflineTrustChainPolicy.DISABLED] (no extra bounds).
+ */
+internal fun offlineTrustChainPolicyFromConfig(configBinder: OidfConfigBinder): OfflineTrustChainPolicy {
+    val maxAge = configBinder.getProperty(OidfConfigKeys.Client.OfflineTrustChain.MAX_AGE_SECONDS, "")
+        .trim()
+        .takeIf { it.isNotEmpty() }
+        ?.toLongOrNull()
+        ?.takeIf { it >= 0 }
+    val minRemaining = configBinder.getProperty(OidfConfigKeys.Client.OfflineTrustChain.MIN_REMAINING_SECONDS, "")
+        .trim()
+        .takeIf { it.isNotEmpty() }
+        ?.toLongOrNull()
+        ?.takeIf { it >= 0 }
+    val skew = configBinder.getProperty(OidfConfigKeys.Client.OfflineTrustChain.CLOCK_SKEW_SECONDS, "5")
+        .trim()
+        .toLongOrNull()
+        ?.coerceAtLeast(0)
+        ?: OfflineTrustChainPolicy.DEFAULT_CLOCK_SKEW_SECONDS
+    if (maxAge == null && minRemaining == null) {
+        return OfflineTrustChainPolicy.DISABLED
+    }
+    return OfflineTrustChainPolicy(
+        maxAgeSeconds = maxAge,
+        minRemainingSeconds = minRemaining,
+        clockSkewSeconds = skew,
+    )
 }
 
 private fun applyLocalityOverride(

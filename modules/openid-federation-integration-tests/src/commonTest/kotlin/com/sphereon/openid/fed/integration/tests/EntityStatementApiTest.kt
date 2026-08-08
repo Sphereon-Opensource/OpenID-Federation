@@ -151,10 +151,16 @@ class EntityStatementApiTest {
 
             // Confirm the key ID is included (duplicate check)
             assertTrue(entityStatement.contains(testKeyId!!), "Entity statement does not contain the created key")
-            // Confirm metadata policy type is included
+            // OIDFed 1.1: metadata_policy is Subordinate-Statement-only.
+            // EC builders set metadataPolicy=null (may still serialize as "metadata_policy": null).
+            val parsedEc = json.decodeFromString(EntityConfigurationStatement.serializer(), entityStatement)
             assertTrue(
-                entityStatement.contains(testMetadataPolicyType!!),
-                "Entity statement does not contain the created policy metadata"
+                parsedEc.metadataPolicy == null || parsedEc.metadataPolicy!!.isEmpty(),
+                "Entity Configuration metadata_policy must be null/empty (policy lives on Subordinate Statements)"
+            )
+            assertTrue(
+                !entityStatement.contains(testMetadataPolicyType!!),
+                "Entity Configuration must not embed the created policy type key ${testMetadataPolicyType}"
             )
             // Confirm trust mark type is included
             assertTrue(

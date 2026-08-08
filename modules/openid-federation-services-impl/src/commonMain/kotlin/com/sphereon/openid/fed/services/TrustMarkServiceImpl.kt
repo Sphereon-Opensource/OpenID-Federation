@@ -20,7 +20,33 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkStatusRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkType
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
-import com.sphereon.openid.fed.services.command.trustMark.*
+import com.sphereon.openid.fed.services.command.trustMark.AddIssuerToTrustMarkTypeArgs
+import com.sphereon.openid.fed.services.command.trustMark.AddIssuerToTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkArgs
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkCommand
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkTypeArgs
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.DeleteTrustMarkArgs
+import com.sphereon.openid.fed.services.command.trustMark.DeleteTrustMarkCommand
+import com.sphereon.openid.fed.services.command.trustMark.DeleteTrustMarkTypeArgs
+import com.sphereon.openid.fed.services.command.trustMark.DeleteTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.FindAllTrustMarkTypesByAccountArgs
+import com.sphereon.openid.fed.services.command.trustMark.FindAllTrustMarkTypesByAccountCommand
+import com.sphereon.openid.fed.services.command.trustMark.FindTrustMarkTypeByIdArgs
+import com.sphereon.openid.fed.services.command.trustMark.FindTrustMarkTypeByIdCommand
+import com.sphereon.openid.fed.services.command.trustMark.GetIssuersForTrustMarkTypeArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetIssuersForTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkCommand
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkStatusArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkStatusCommand
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkedSubsArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkedSubsCommand
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarksForAccountArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarksForAccountCommand
+import com.sphereon.openid.fed.services.command.trustMark.RemoveIssuerFromTrustMarkTypeArgs
+import com.sphereon.openid.fed.services.command.trustMark.RemoveIssuerFromTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.TrustMarkStatusValue
 import kotlinx.serialization.Serializable
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -93,25 +119,18 @@ class TrustMarkServiceImpl(
 
     override suspend fun getTrustMarkStatus(tenantId: String, request: TrustMarkStatusRequest): FederationResult<Boolean> =
         getTrustMarkStatusCommand.execute(GetTrustMarkStatusArgs(tenantId, request)).toFederationResult()
-
-    override suspend fun getSignedTrustMarkStatusJwt(tenantId: String, request: TrustMarkStatusRequest): FederationResult<String> {
-        return getTrustMarkStatus(tenantId, request).andThenSuspend { isActive ->
-            // Get the trust mark JWT for inclusion in the response
-            val trustMarkJwt = getTrustMark(tenantId, TrustMarkRequest(
-                sub = request.sub,
-                trustMarkType = request.trustMarkType
-            ))
-
-            val trustMarkValue = if (trustMarkJwt.isOk) trustMarkJwt.value else ""
-            // OIDFed 1.1 §8.4.2 status values: active | expired | revoked | invalid
-            val now = System.currentTimeMillis() / 1000
-            val status = when {
-                isActive -> "active"
-                trustMarkJwt.isOk && isTrustMarkJwtExpired(trustMarkJwt.value, now) -> "expired"
-                trustMarkJwt.isOk -> "revoked" // present in history but not active and not expired → treat as revoked/removed from active set
-                else -> "invalid"
+            .andThenSuspend { detail ->
+                com.sphereon.core.api.IdkResult.ok(detail.status == TrustMarkStatusValue.ACTIVE)
             }
 
+    override suspend fun getSignedTrustMarkStatusJwt(
+        tenantId: String,
+        request: TrustMarkStatusRequest,
+        trustMarkJwt: String?,
+    ): FederationResult<String> {
+        return getTrustMarkStatusCommand.execute(
+            GetTrustMarkStatusArgs(tenantId, request, trustMarkJwt)
+        ).toFederationResult().andThenSuspend { detail ->
             val issuer = tenantContextResolver.resolveIdentifier(tenantId)
                 ?: return@andThenSuspend ServerError("Cannot resolve issuer identifier", null, null).toErr()
 
@@ -119,20 +138,22 @@ class TrustMarkServiceImpl(
             if (keysResult.isErr) {
                 return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
             }
-
             val keys = keysResult.value
             if (keys.isEmpty()) {
                 return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
             }
 
             val key = keys[0]
-            val iat = now.toInt()
+            val now = System.currentTimeMillis() / 1000
+            // Echo the Trust Mark under evaluation (submitted JWT preferred — §8.4.2)
+            val markForResponse = trustMarkJwt?.takeIf { it.isNotBlank() }
+                ?: detail.trustMarkJwt
 
             val payload = TrustMarkStatusResponsePayload(
                 iss = issuer,
-                iat = iat,
-                trust_mark = trustMarkValue,
-                status = status
+                iat = now.toInt(),
+                trust_mark = markForResponse,
+                status = detail.status.wire,
             )
 
             val header = JwtHeader(
@@ -142,22 +163,6 @@ class TrustMarkServiceImpl(
             )
 
             jwtService.signPayload(payload, header, key.kid, key.kmsKeyRef, key.kms)
-        }
-    }
-
-    private fun isTrustMarkJwtExpired(trustMarkJwt: String, nowSeconds: Long): Boolean {
-        return try {
-            val parts = trustMarkJwt.split(".")
-            if (parts.size < 2) return false
-            val payloadJson = kotlin.io.encoding.Base64.UrlSafe
-                .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
-                .decode(parts[1])
-                .decodeToString()
-            val expMatch = Regex("\"exp\"\\s*:\\s*([0-9.]+)").find(payloadJson) ?: return false
-            val exp = expMatch.groupValues[1].toDoubleOrNull()?.toLong() ?: return false
-            exp <= nowSeconds
-        } catch (_: Exception) {
-            false
         }
     }
 

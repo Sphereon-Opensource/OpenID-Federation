@@ -9,6 +9,8 @@ import com.sphereon.openid.fed.core.error.DiipProfileValidationError
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.wallet.policy.DiipProfileValidator
+import com.sphereon.openid.fed.wallet.policy.MetadataValidationCheck
+import com.sphereon.openid.fed.wallet.policy.WalletProfileValidator
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -32,24 +34,32 @@ class ValidateFederationEntityMetadataCommandImpl(
         entityIdentifier: String,
         trustAnchors: Array<String>,
         entityType: String?,
-        currentTime: Long?
+        currentTime: Long?,
+        profileMode: MetadataProfileMode,
     ): IdkResult<FederationEntityMetadataValidationResult, FederationError> {
-        return execute(ValidateFederationEntityMetadataArgs(entityIdentifier, trustAnchors, entityType, currentTime))
+        return execute(
+            ValidateFederationEntityMetadataArgs(
+                entityIdentifier, trustAnchors, entityType, currentTime, profileMode
+            )
+        )
     }
 
     override suspend fun doExecute(
         args: ValidateFederationEntityMetadataArgs,
         applyDuring: (ValidateFederationEntityMetadataArgs) -> ValidateFederationEntityMetadataArgs
     ): IdkResult<FederationEntityMetadataValidationResult, FederationError> {
-        val (entityIdentifier, trustAnchors, entityType, currentTime) = applyDuring(args)
+        val (entityIdentifier, trustAnchors, entityType, currentTime, profileMode) = applyDuring(args)
 
-        logger.debug("Validating DIIP metadata for entity: $entityIdentifier")
+        logger.debug(
+            "Validating federation metadata for entity: $entityIdentifier " +
+                "(type=$entityType, profile=$profileMode)"
+        )
 
         return try {
-            // 1. Evaluate entity trust first
             val trustResult = evaluateEntityTrustCommand.evaluateEntityTrust(
                 entityIdentifier = entityIdentifier,
                 trustAnchors = trustAnchors,
+                entityTypes = entityType?.let { arrayOf(it) },
                 currentTime = currentTime
             )
 
@@ -59,55 +69,82 @@ class ValidateFederationEntityMetadataCommandImpl(
 
             val entityTrustResult = trustResult.value
 
-            // 2. Extract metadata from entity configuration (first JWT in trust chain)
-            val entityConfigJwt = entityTrustResult.trustChain.firstOrNull()
-            if (entityConfigJwt == null) {
-                return IdkResult.err(DiipProfileValidationError(
-                    entityId = entityIdentifier,
-                    failedChecks = listOf("No entity configuration in trust chain")
-                ))
-            }
-
-            val entityConfigPayload = decodeJWTComponents(entityConfigJwt).payload
-            val metadata = entityConfigPayload["metadata"]?.jsonObject
+            // Prefer Resolved Metadata from trust evaluation; fall back to leaf EC metadata
+            val metadata = entityTrustResult.effectiveMetadata
+                ?: run {
+                    val entityConfigJwt = entityTrustResult.trustChain.firstOrNull()
+                        ?: return IdkResult.err(
+                            DiipProfileValidationError(
+                                entityId = entityIdentifier,
+                                failedChecks = listOf("No entity configuration in trust chain")
+                            )
+                        )
+                    decodeJWTComponents(entityConfigJwt).payload["metadata"]?.jsonObject
+                }
 
             if (metadata == null) {
-                return IdkResult.err(DiipProfileValidationError(
-                    entityId = entityIdentifier,
-                    failedChecks = listOf("No metadata in entity configuration")
-                ))
+                return IdkResult.err(
+                    DiipProfileValidationError(
+                        entityId = entityIdentifier,
+                        failedChecks = listOf("No metadata in entity configuration")
+                    )
+                )
             }
 
-            // 3. Run DIIP profile validations
-            val validations = DiipProfileValidator.validate(
-                metadata = metadata,
-                entityIdentifier = entityIdentifier,
-                entityType = entityType
-            )
+            val validations = mutableListOf<MetadataValidationCheck>()
+
+            if (profileMode == MetadataProfileMode.WALLET || profileMode == MetadataProfileMode.BOTH) {
+                validations.addAll(
+                    WalletProfileValidator.validate(
+                        metadata = metadata,
+                        entityIdentifier = entityIdentifier,
+                        entityType = entityType,
+                    )
+                )
+            }
+
+            if (profileMode == MetadataProfileMode.DIIP || profileMode == MetadataProfileMode.BOTH) {
+                validations.addAll(
+                    DiipProfileValidator.validate(
+                        metadata = metadata,
+                        entityIdentifier = entityIdentifier,
+                        entityType = entityType,
+                    ).map { it.toMetadataCheck() }
+                )
+            }
 
             val failedChecks = validations.filter { !it.passed }
             val allPassed = failedChecks.isEmpty()
 
             if (!allPassed) {
                 for (failed in failedChecks) {
-                    logger.warn("DIIP validation failed: ${failed.check} - ${failed.detail}")
+                    logger.warn(
+                        "Metadata validation failed [${failed.profile}]: ${failed.check} - ${failed.detail}"
+                    )
                 }
             }
 
-            logger.debug("DIIP metadata validation ${if (allPassed) "passed" else "failed"} for $entityIdentifier")
+            logger.debug(
+                "Metadata validation ${if (allPassed) "passed" else "failed"} for $entityIdentifier " +
+                    "(${validations.size} checks, profile=$profileMode)"
+            )
 
-            IdkResult.ok(FederationEntityMetadataValidationResult(
-                valid = allPassed,
-                entityIdentifier = entityIdentifier,
-                validations = validations,
-                entityTrustResult = entityTrustResult
-            ))
+            IdkResult.ok(
+                FederationEntityMetadataValidationResult(
+                    valid = allPassed,
+                    entityIdentifier = entityIdentifier,
+                    validations = validations,
+                    entityTrustResult = entityTrustResult
+                )
+            )
         } catch (e: Exception) {
-            logger.error("DIIP metadata validation failed for $entityIdentifier", e)
-            IdkResult.err(DiipProfileValidationError(
-                entityId = entityIdentifier,
-                failedChecks = listOf("Validation error: ${e.message}")
-            ))
+            logger.error("Metadata validation failed for $entityIdentifier", e)
+            IdkResult.err(
+                DiipProfileValidationError(
+                    entityId = entityIdentifier,
+                    failedChecks = listOf("Validation error: ${e.message}")
+                )
+            )
         }
     }
 }

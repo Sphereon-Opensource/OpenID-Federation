@@ -4,6 +4,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
 import dev.zacsweers.metro.Inject
@@ -56,7 +57,8 @@ class TrustChainServiceImpl(
     override suspend fun verifyTrustChain(
         trustChain: Array<String>,
         trustAnchor: String?,
-        currentTime: Long?
+        currentTime: Long?,
+        trustAnchorPublicKeys: List<Jwk>?
     ): FederationResult<VerifyTrustChainResponse> =
-        verifyTrustChainCommand.verifyTrustChain(trustChain, trustAnchor, currentTime)
+        verifyTrustChainCommand.verifyTrustChain(trustChain, trustAnchor, currentTime, trustAnchorPublicKeys)
 }

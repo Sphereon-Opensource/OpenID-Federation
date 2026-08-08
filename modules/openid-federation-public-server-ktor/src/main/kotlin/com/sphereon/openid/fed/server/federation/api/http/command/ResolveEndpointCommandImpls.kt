@@ -7,7 +7,12 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
+import com.sphereon.openid.fed.server.federation.api.http.MultiValueParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
+import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.enforceFederationClientAuth
+import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
@@ -25,7 +30,8 @@ import dev.zacsweers.metro.SingleIn
 class ResolveRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val resolutionService: ResolutionService
+    private val resolutionService: ResolutionService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = ResolveRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -39,20 +45,22 @@ class ResolveRootEndpointCommandImpl(
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.RESOLVE, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val sub = request.queryParameters["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
-        val trustAnchor = request.queryParameters["trust_anchor"]
-
-        // Handle multiple entity_type parameters
-        val entityTypes = request.queryParameters.entries
-            .filter { it.key == "entity_type" }
-            .mapNotNull { it.value }
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
+        val trustAnchors = MultiValueParams.fromMap(request.queryParameters, "trust_anchor")
+        val entityTypes = MultiValueParams.fromMap(request.queryParameters, "entity_type")
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchor, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
     }
 }
 
@@ -64,7 +72,8 @@ class ResolveRootEndpointCommandImpl(
 class PostResolveRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val resolutionService: ResolutionService
+    private val resolutionService: ResolutionService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostResolveRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -78,21 +87,25 @@ class PostResolveRootEndpointCommandImpl(
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
-        val params = parseResolveFormParams(body)
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
+        val multi = MultiValueParams.parseFormMulti(body)
 
-        val sub = params["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
-        val trustAnchor = params["trust_anchor"]
-        val entityTypes = params.entries
-            .filter { it.key == "entity_type" }
-            .map { it.value }
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.RESOLVE, methodIsPost = true,
+            params = multi.mapValues { it.value.lastOrNull().orEmpty() },
+        )?.let { return Ok(it) }
+
+        val sub = MultiValueParams.first(multi, "sub")
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
+        val trustAnchors = MultiValueParams.all(multi, "trust_anchor")
+        val entityTypes = MultiValueParams.all(multi, "entity_type")
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchor, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
     }
 }
 
@@ -104,7 +117,8 @@ class PostResolveRootEndpointCommandImpl(
 class ResolveAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val resolutionService: ResolutionService
+    private val resolutionService: ResolutionService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = ResolveAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -118,23 +132,25 @@ class ResolveAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.RESOLVE, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val sub = request.queryParameters["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
-        val trustAnchor = request.queryParameters["trust_anchor"]
-
-        // Handle multiple entity_type parameters
-        val entityTypes = request.queryParameters.entries
-            .filter { it.key == "entity_type" }
-            .mapNotNull { it.value }
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
+        val trustAnchors = MultiValueParams.fromMap(request.queryParameters, "trust_anchor")
+        val entityTypes = MultiValueParams.fromMap(request.queryParameters, "entity_type")
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchor, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
     }
 }
 
@@ -146,7 +162,8 @@ class ResolveAccountEndpointCommandImpl(
 class PostResolveAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val resolutionService: ResolutionService
+    private val resolutionService: ResolutionService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostResolveAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -160,24 +177,28 @@ class PostResolveAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
-        val params = parseResolveFormParams(body)
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
+        val multi = MultiValueParams.parseFormMulti(body)
 
-        val sub = params["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
-        val trustAnchor = params["trust_anchor"]
-        val entityTypes = params.entries
-            .filter { it.key == "entity_type" }
-            .map { it.value }
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.RESOLVE, methodIsPost = true,
+            params = multi.mapValues { it.value.lastOrNull().orEmpty() },
+        )?.let { return Ok(it) }
+
+        val sub = MultiValueParams.first(multi, "sub")
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
+        val trustAnchors = MultiValueParams.all(multi, "trust_anchor")
+        val entityTypes = MultiValueParams.all(multi, "entity_type")
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchor, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
     }
 }
 
@@ -187,19 +208,21 @@ private suspend fun resolveChain(
     resolutionService: ResolutionService,
     tenantId: String,
     sub: String,
-    trustAnchor: String?,
+    trustAnchors: List<String>,
     entityTypes: Array<String>?
 ): IdkResult<GenericHttpResponse, IdkError> {
-    // Per 1.1 spec, trust_anchor is optional. When not provided, return an error
-    // as the resolution service currently requires it. In a future version, the service
-    // could resolve using configured default trust anchors.
-    val anchor = trustAnchor
-        ?: return Ok(errorResponse(400, "Missing 'trust_anchor' parameter (required for resolution)"))
+    if (trustAnchors.isEmpty()) {
+        return Ok(
+            FederationErrorResponses.invalidTrustAnchor(
+                "Missing 'trust_anchor' parameter (one or more Trust Anchor Entity Identifiers required)"
+            )
+        )
+    }
 
     val result = resolutionService.getSignedResolveResponseJwt(
         tenantId = tenantId,
         sub = sub,
-        trustAnchor = anchor,
+        trustAnchors = trustAnchors.toTypedArray(),
         entityTypes = entityTypes
     )
 
@@ -211,20 +234,6 @@ private suspend fun resolveChain(
         ))
     } else {
         val error = result.error
-        Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
-    }
-}
-
-/**
- * Parse form-urlencoded body parameters. Supports multiple values for the same key
- * by returning the last value (use entries for multi-value iteration).
- */
-private fun parseResolveFormParams(body: String): Map<String, String> {
-    if (body.isBlank()) return emptyMap()
-    return body.split("&").associate { param ->
-        val parts = param.split("=", limit = 2)
-        val key = java.net.URLDecoder.decode(parts[0], "UTF-8")
-        val value = if (parts.size > 1) java.net.URLDecoder.decode(parts[1], "UTF-8") else ""
-        key to value
+        Ok(FederationErrorResponses.fromServiceError(error))
     }
 }

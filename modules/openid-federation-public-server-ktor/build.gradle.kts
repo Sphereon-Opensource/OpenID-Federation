@@ -58,6 +58,7 @@ dependencies {
     implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
     implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.25.0-SNAPSHOT")
     implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-common-public:0.25.0-SNAPSHOT")
     implementation("com.sphereon.idk:lib-oauth2-client-public:0.25.0-SNAPSHOT")
     implementation("com.sphereon.idk:lib-oauth2-client-impl:0.25.0-SNAPSHOT")
     implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.25.0-SNAPSHOT")

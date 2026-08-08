@@ -7,7 +7,11 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
+import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
+import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.enforceFederationClientAuth
+import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.core.api.http.response.jsonResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
@@ -40,7 +44,8 @@ class ListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = ListSubordinatesRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -54,7 +59,13 @@ class ListSubordinatesRootEndpointCommandImpl(
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.LIST, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val filters = ListFilters(
             entityType = request.queryParameters["entity_type"],
@@ -76,7 +87,8 @@ class PostListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostListSubordinatesRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -90,9 +102,14 @@ class PostListSubordinatesRootEndpointCommandImpl(
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
         val params = request.body?.let { parseListFormParams(it) } ?: emptyMap()
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.LIST, methodIsPost = true,
+            params = params,
+        )?.let { return Ok(it) }
         val filters = ListFilters(
             entityType = params["entity_type"],
             trustMarked = params["trust_marked"]?.toBooleanStrictOrNull(),
@@ -113,7 +130,8 @@ class ListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = ListSubordinatesAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -127,10 +145,16 @@ class ListSubordinatesAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.LIST, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val filters = ListFilters(
             entityType = request.queryParameters["entity_type"],
@@ -152,7 +176,8 @@ class PostListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val subordinateService: SubordinateService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostListSubordinatesAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -166,12 +191,17 @@ class PostListSubordinatesAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
         val params = request.body?.let { parseListFormParams(it) } ?: emptyMap()
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.LIST, methodIsPost = true,
+            params = params,
+        )?.let { return Ok(it) }
         val filters = ListFilters(
             entityType = params["entity_type"],
             trustMarked = params["trust_marked"]?.toBooleanStrictOrNull(),
@@ -201,7 +231,7 @@ private suspend fun listSubordinatesFiltered(
             Ok(jsonResponse(200, json.encodeToString(result.value)))
         } else {
             val error = result.error
-            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+            Ok(FederationErrorResponses.fromServiceError(error))
         }
     }
 
@@ -209,7 +239,7 @@ private suspend fun listSubordinatesFiltered(
     val result = subordinateService.findSubordinatesByAccount(tenantId)
     if (result.isErr) {
         val error = result.error
-        return Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        return Ok(FederationErrorResponses.fromServiceError(error))
     }
 
     var subordinates = result.value.toList()

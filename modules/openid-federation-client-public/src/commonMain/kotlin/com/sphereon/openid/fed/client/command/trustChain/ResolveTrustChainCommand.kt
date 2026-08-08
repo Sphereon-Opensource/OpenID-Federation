@@ -44,10 +44,13 @@ data class ResolveTrustChainArgs(
 interface ResolveTrustChainCommandService {
     /**
      * Builds a trust chain for the given entity identifier using the provided trust anchors.
-     * It returns the first trust chain that is successfully resolved.
+     *
+     * Explores all `authority_hints` paths (OIDFed 1.1 §10.3). Uses leaf
+     * `trust_anchor_hints` to refine Trust Anchor preference. When multiple valid chains
+     * exist, selects by effective Trust Anchor order, then shortest path length.
      *
      * @param entityIdentifier The entity identifier for which to build the trust chain.
-     * @param trustAnchors The trust anchors to use for building the trust chain.
+     * @param trustAnchors The trust anchors to use for building the trust chain (preference order).
      * @param maxDepth The maximum depth to search for trust chain links.
      * @return IdkResult containing the TrustChainResolveResponse or an error.
      */

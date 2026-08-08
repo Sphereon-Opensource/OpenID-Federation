@@ -65,3 +65,23 @@ WHERE account_id = ?
   AND (exp IS NULL OR exp > CAST(date_part('epoch', CURRENT_TIMESTAMP) AS BIGINT))
 ORDER BY iat DESC
 LIMIT 1;
+
+-- Exact Trust Mark JWT match, including soft-deleted rows (status endpoint §8.4)
+findByAccountIdAndTrustMarkValueIncludingDeleted:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_value = ?
+ORDER BY iat DESC
+LIMIT 1;
+
+-- Soft-deleted marks for sub+type (revocation detection without exact JWT)
+findDeletedByAccountIdAndSubAndTrustMarkTypeIdentifier:
+SELECT *
+FROM TrustMark
+WHERE account_id = ?
+  AND trust_mark_id = ?
+  AND sub = ?
+  AND deleted_at IS NOT NULL
+ORDER BY deleted_at DESC
+LIMIT 1;

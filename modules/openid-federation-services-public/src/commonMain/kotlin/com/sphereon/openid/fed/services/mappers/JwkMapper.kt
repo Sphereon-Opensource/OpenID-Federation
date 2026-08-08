@@ -9,6 +9,8 @@ import com.sphereon.openid.fed.openapi.models.HistoricalKey
 import com.sphereon.openid.fed.openapi.models.JwkRevoked
 import com.sphereon.openid.fed.openapi.models.Jwk as JwkDto
 import com.sphereon.openid.fed.persistence.models.Jwk as JwkEntity
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 fun JwkEntity.toDTO(): TenantJwk {
     val key: Jwk = cryptoJsonSerializer.decodeFromString<Jwk>(serializer(), this.key)
@@ -30,13 +32,29 @@ fun JwkEntity.toDTO(): TenantJwk {
         x5t = key.x5t,
         x5u = key.x5u,
         x5tS256 = key.x5t_S256,
-        revokedAt = this.revoked_at?.toString(),
+        revokedAt = this.revoked_at?.toEpochSecondString(),
         revokedReason = this.revoked_reason,
     )
 }
 
-fun JwkEntity.toHistoricalKey(): HistoricalKey {
+/**
+ * Map a DB key row to a federation historical key (OIDFed 1.1 §8.7.2).
+ *
+ * - [HistoricalKey.exp] is REQUIRED: revoked keys use [revoked_at]; active keys use a far-future default
+ * - [HistoricalKey.revoked] only when the key is actually revoked
+ * - [revokedAt] is Seconds Since the Epoch (as a decimal string for JSON numeric compatibility)
+ */
+fun JwkEntity.toHistoricalKey(
+    nowEpochSeconds: Long = System.currentTimeMillis() / 1000,
+    activeKeyDefaultTtlSeconds: Long = 10L * 365 * 24 * 3600
+): HistoricalKey {
     val key: Jwk = cryptoJsonSerializer.decodeFromString(this.key)
+    val iat = this.created_at?.toEpochSecond()
+    val revokedAtEpoch = this.revoked_at?.toEpochSecond()
+    val exp = when {
+        revokedAtEpoch != null -> revokedAtEpoch
+        else -> nowEpochSeconds + activeKeyDefaultTtlSeconds
+    }
 
     return HistoricalKey(
         e = key.e,
@@ -52,10 +70,16 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
         x5t = key.x5t,
         x5u = key.x5u,
         x5tS256 = key.x5t_S256,
-        revoked = JwkRevoked(
-            reason = this.revoked_reason,
-            revokedAt = this.revoked_at.toString()
-        )
+        iat = iat?.toDouble(),
+        exp = exp.toDouble(),
+        revoked = if (revokedAtEpoch != null) {
+            JwkRevoked(
+                revokedAt = revokedAtEpoch.toString(),
+                reason = this.revoked_reason
+            )
+        } else {
+            null
+        }
     )
 }
 
@@ -85,3 +109,9 @@ fun Array<TenantJwk>.toTenantJwksResponse() = TenantJwksResponse(this.toList())
     replaceWith = ReplaceWith("toTenantJwksResponse()")
 )
 fun Array<TenantJwk>.toAccountJwksResponse() = toTenantJwksResponse()
+
+private fun LocalDateTime.toEpochSecond(): Long =
+    this.toInstant(ZoneOffset.UTC).epochSecond
+
+private fun LocalDateTime.toEpochSecondString(): String =
+    toEpochSecond().toString()

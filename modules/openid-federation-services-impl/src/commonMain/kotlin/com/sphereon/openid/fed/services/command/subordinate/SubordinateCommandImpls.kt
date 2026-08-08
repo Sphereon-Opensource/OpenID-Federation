@@ -12,6 +12,7 @@ import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
+import com.sphereon.openid.fed.common.builder.FederationEndpointUrls
 import com.sphereon.openid.fed.common.builder.SubordinateStatementObjectBuilder
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
@@ -236,7 +237,8 @@ class GetSubordinateStatementCommandImpl(
             .sub(subordinate.identifier)
             .iat(currentTimeSeconds)
             .exp(expirationTime)
-            .sourceEndpoint("$accountIdentifier/fetch")
+            // Must equal published federation_fetch_endpoint (OIDFed 1.1 §3.1.3 / §5.1.1)
+            .sourceEndpoint(FederationEndpointUrls.fetch(accountIdentifier))
 
         subordinateJwks.forEach { statement.jwks(it) }
         subordinateMetadataList.forEach {

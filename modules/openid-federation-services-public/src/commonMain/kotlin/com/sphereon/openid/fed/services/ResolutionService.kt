@@ -18,35 +18,28 @@ import com.sphereon.openid.fed.openapi.models.ResolveResponse
 interface ResolutionService {
 
     /**
-     * Resolves and retrieves information for a specified entity based on the given parameters,
-     * including trust chain resolution, metadata filtering, and trust mark verification.
+     * Resolves entity metadata and Trust Marks under the given Trust Anchor(s).
      *
-     * @param account The account information of the user initiating the resolution.
-     * @param sub The entity identifier (subject) whose information is to be resolved.
-     * @param trustAnchor The trust anchor against which the entity's trust chain is validated.
-     * @param entityTypes Array of entity types used for filtering metadata; can be null to include all types.
-     * @return FederationResult containing the ResolveResponse or an error.
+     * @param tenantId Tenant performing resolution (signer of the resolve response).
+     * @param sub Entity Identifier of the subject.
+     * @param trustAnchors Trust Anchor Entity Identifiers in preference order
+     *   (OIDFed 1.1 §8.3 — request parameter may be repeated).
+     * @param entityTypes Optional Entity Type Identifiers to include (may be repeated on the wire).
      */
     suspend fun resolveEntity(
         tenantId: String,
         sub: String,
-        trustAnchor: String,
+        trustAnchors: Array<String>,
         entityTypes: Array<String>?
     ): FederationResult<ResolveResponse>
 
     /**
-     * Resolves an entity and returns a signed JWT containing the resolve response.
-     *
-     * @param account The account information of the user initiating the resolution.
-     * @param sub The entity identifier (subject) whose information is to be resolved.
-     * @param trustAnchor The trust anchor against which the entity's trust chain is validated.
-     * @param entityTypes Array of entity types used for filtering metadata; can be null to include all types.
-     * @return FederationResult containing the signed JWT or an error.
+     * Same as [resolveEntity] then signs the response as `resolve-response+jwt`.
      */
     suspend fun getSignedResolveResponseJwt(
         tenantId: String,
         sub: String,
-        trustAnchor: String,
+        trustAnchors: Array<String>,
         entityTypes: Array<String>?
     ): FederationResult<String>
 }

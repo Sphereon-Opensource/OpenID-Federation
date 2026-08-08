@@ -12,6 +12,8 @@ import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.builder.EntityConfigurationStatementObjectBuilder
 import com.sphereon.openid.fed.common.builder.FederationEntityMetadataObjectBuilder
+import com.sphereon.openid.fed.core.config.FederationEndpointKind
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
@@ -25,6 +27,10 @@ import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.mappers.toTrustMark
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -41,7 +47,8 @@ import dev.zacsweers.metro.SingleIn
 class FindEntityConfigurationByAccountCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val jwkService: JwkService
+    private val jwkService: JwkService,
+    private val configBinder: OidfConfigBinder,
 ) : TypedServiceCommandAdapter<FindEntityConfigurationByAccountArgs, EntityConfigurationStatement, FederationError>(
     commandId = FindEntityConfigurationByAccountCommand.COMMAND_ID,
     execution = execution,
@@ -122,26 +129,78 @@ class FindEntityConfigurationByAccountCommandImpl(
         addReceivedTrustMarks(tenantId, builder)
     }
 
+    /**
+     * Auto-inject `federation_entity` metadata per OIDFed 1.1 §5.1.1:
+     * - Trust Anchors / Intermediates MUST publish fetch + list (authority endpoints).
+     * - Leaves MUST NOT publish fetch/list.
+     * - Trust Mark Issuers SHOULD publish status endpoints (even as leaves).
+     *
+     * Classification:
+     * - Authority: has subordinates, OR has no authority_hints (federation root / TA bootstrap)
+     * - Leaf: has authority_hints and no subordinates
+     */
     private fun addFederationEntityMetadata(
         tenantId: String,
         builder: EntityConfigurationStatementObjectBuilder,
         identifier: String
     ) {
         val hasSubordinates = queries.subordinateQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
+        val hasAuthorityHints = queries.authorityHintQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
         val issuedTrustMarks = queries.trustMarkQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
 
-        if (hasSubordinates || issuedTrustMarks) {
-            val federationEntityMetadata = FederationEntityMetadataObjectBuilder()
-                .identifier(identifier)
-                .build()
+        // Authority = Intermediate (has subordinates) or Trust Anchor bootstrap (no authority_hints)
+        val isAuthority = hasSubordinates || !hasAuthorityHints
 
-            builder.metadata(
-                Pair(
-                    "federation_entity",
-                    Json.encodeToJsonElement(FederationEntityMetadata.serializer(), federationEntityMetadata).jsonObject
-                )
-            )
+        if (!isAuthority && !issuedTrustMarks) {
+            // Pure leaf with no TM issuance: do not auto-inject federation_entity
+            return
         }
+
+        val fedConfig = configBinder.getFederationConfig()
+        val authMethods = fedConfig.endpointAuthMethods
+        val federationEntityMetadata = FederationEntityMetadataObjectBuilder()
+            .identifier(identifier)
+            .authorityEndpoints(enabled = isAuthority) // leaves never get fetch/list
+            .trustMarkEndpoints(enabled = issuedTrustMarks || isAuthority)
+            .resolveEndpoint(enabled = true)
+            .historicalKeysEndpoint(enabled = true)
+            .endpointAuthSigningAlgValuesSupported(
+                // Only advertise algs when private_key_jwt is enabled somewhere (OIDFed §8.8.1)
+                if (authMethods.anyPrivateKeyJwt()) fedConfig.endpointAuthSigningAlgs else null
+            )
+            .build()
+
+        val base = Json.encodeToJsonElement(
+            FederationEntityMetadata.serializer(),
+            federationEntityMetadata
+        ).jsonObject.toMutableMap()
+
+        // OIDFed §8.8.1: advertise non-default *_auth_methods (default ["none"] is omit-able)
+        fun putAuthMethods(kind: FederationEndpointKind, methods: List<String>) {
+            val normalized = methods.map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+            if (normalized.isEmpty() || normalized == listOf("none")) return
+            // Only advertise for endpoints we actually publish
+            val endpointUrlPresent = when (kind) {
+                FederationEndpointKind.FETCH -> federationEntityMetadata.federationFetchEndpoint != null
+                FederationEndpointKind.LIST -> federationEntityMetadata.federationListEndpoint != null
+                FederationEndpointKind.RESOLVE -> federationEntityMetadata.federationResolveEndpoint != null
+                FederationEndpointKind.TRUST_MARK_STATUS -> federationEntityMetadata.federationTrustMarkStatusEndpoint != null
+                FederationEndpointKind.TRUST_MARK_LIST -> federationEntityMetadata.federationTrustMarkListEndpoint != null
+                FederationEndpointKind.TRUST_MARK -> federationEntityMetadata.federationTrustMarkEndpoint != null
+                FederationEndpointKind.HISTORICAL_KEYS -> federationEntityMetadata.federationHistoricalKeysEndpoint != null
+            }
+            if (!endpointUrlPresent) return
+            base[kind.authMethodsMetadataName] = JsonArray(normalized.map { JsonPrimitive(it) })
+        }
+        putAuthMethods(FederationEndpointKind.FETCH, authMethods.fetch)
+        putAuthMethods(FederationEndpointKind.LIST, authMethods.list)
+        putAuthMethods(FederationEndpointKind.RESOLVE, authMethods.resolve)
+        putAuthMethods(FederationEndpointKind.TRUST_MARK_STATUS, authMethods.trustMarkStatus)
+        putAuthMethods(FederationEndpointKind.TRUST_MARK_LIST, authMethods.trustMarkList)
+        putAuthMethods(FederationEndpointKind.TRUST_MARK, authMethods.trustMark)
+        putAuthMethods(FederationEndpointKind.HISTORICAL_KEYS, authMethods.historicalKeys)
+
+        builder.metadata(Pair("federation_entity", JsonObject(base)))
     }
 
     private fun addAuthorityHints(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {

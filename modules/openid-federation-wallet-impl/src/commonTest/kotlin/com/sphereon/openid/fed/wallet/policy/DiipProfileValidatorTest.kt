@@ -38,6 +38,20 @@ class DiipProfileValidatorTest {
     }
 
     @Test
+    fun testOrganizationNameAcceptedAsDualProfile() {
+        val metadata = JsonObject(mapOf(
+            "federation_entity" to JsonObject(mapOf(
+                "organization_name" to JsonPrimitive("Wallet Org")
+            ))
+        ))
+
+        val results = DiipProfileValidator.validate(metadata, "https://issuer.example")
+        val displayNameCheck = results.first { it.check == "federation_entity.display_name" }
+        assertTrue(displayNameCheck.passed)
+        assertTrue(displayNameCheck.detail!!.contains("organization_name"))
+    }
+
+    @Test
     fun testDisplayNameBlank() {
         val metadata = JsonObject(mapOf(
             "federation_entity" to JsonObject(mapOf(
@@ -127,12 +141,38 @@ class DiipProfileValidatorTest {
             "openid_credential_issuer" to JsonObject(mapOf(
                 "credential_issuer" to JsonPrimitive("https://issuer.example")
             ))
-            // No vc_issuer
+            // No vc_issuer and no openid_credential_issuer.jwks
         ))
 
         val results = DiipProfileValidator.validate(metadata, "https://issuer.example", "openid_credential_issuer")
         val keysCheck = results.first { it.check == "vc_issuer_signing_keys" }
         assertFalse(keysCheck.passed)
+    }
+
+    @Test
+    fun testIssuerAcceptsOpenidCredentialIssuerJwksDualProfile() {
+        val metadata = JsonObject(mapOf(
+            "federation_entity" to JsonObject(mapOf(
+                "organization_name" to JsonPrimitive("Wallet Issuer")
+            )),
+            "openid_credential_issuer" to JsonObject(mapOf(
+                "credential_issuer" to JsonPrimitive("https://issuer.example"),
+                "jwks" to JsonObject(mapOf(
+                    "keys" to JsonArray(listOf(
+                        JsonObject(mapOf(
+                            "kid" to JsonPrimitive("ci-1"),
+                            "kty" to JsonPrimitive("EC"),
+                            "use" to JsonPrimitive("sig")
+                        ))
+                    ))
+                ))
+            ))
+        ))
+
+        val results = DiipProfileValidator.validate(metadata, "https://issuer.example", "openid_credential_issuer")
+        assertTrue(results.all { it.passed }, "failed: ${results.filter { !it.passed }}")
+        val keysCheck = results.first { it.check == "vc_issuer_signing_keys" }
+        assertTrue(keysCheck.detail!!.contains("openid_credential_issuer.jwks"))
     }
 
     @Test

@@ -58,17 +58,29 @@ class ResolveEntityCommandImpl(
         args: ResolveEntityArgs,
         applyDuring: (ResolveEntityArgs) -> ResolveEntityArgs
     ): IdkResult<ResolveResponse, FederationError> {
-        val (tenantId, sub, trustAnchor, entityTypes) = applyDuring(args)
+        val (tenantId, sub, trustAnchors, entityTypes) = applyDuring(args)
 
-        logger.info("Resolving entity for subject: $sub, trust anchor: $trustAnchor")
+        logger.info(
+            "Resolving entity for subject: $sub, trust anchors: ${trustAnchors.joinToString()}"
+        )
 
         return try {
+            if (trustAnchors.isEmpty()) {
+                return federationErr(
+                    TrustChainValidationFailedError(
+                        entityId = sub,
+                        reason = "At least one trust_anchor is required",
+                    )
+                )
+            }
             logger.debug("Using tenant: $tenantId")
             logger.debug("Entity types filter: ${entityTypes?.joinToString(", ") ?: "none"}")
 
-            // 1. Resolve Trust Chain (bottom-up discovery)
-            logger.debug("Resolving trust chain from $sub to trust anchor: $trustAnchor")
-            val trustChainResult = federationClient.trustChainResolve(sub, arrayOf(trustAnchor))
+            // 1. Resolve Trust Chain (bottom-up discovery) — multi-TA preference order
+            logger.debug(
+                "Resolving trust chain from $sub to trust anchors: ${trustAnchors.joinToString()}"
+            )
+            val trustChainResult = federationClient.trustChainResolve(sub, trustAnchors)
             if (trustChainResult.isErr) {
                 logger.error("Trust chain resolution failed for entity: $sub")
                 return federationErr(trustChainResult.error)
@@ -81,13 +93,17 @@ class ResolveEntityCommandImpl(
                 ))
             }
             val trustChainArray = trustChain.toTypedArray()
-            logger.debug("Trust chain resolution completed (${trustChain.size} statements)")
+            // Selected TA: last EC iss/sub on the chain if present, else first requested TA
+            val selectedTrustAnchor = selectedTrustAnchorFromChain(trustChain, trustAnchors)
+            logger.debug(
+                "Trust chain resolution completed (${trustChain.size} statements, ta=$selectedTrustAnchor)"
+            )
 
             // 2. Verify Trust Chain cryptographically (§10.2)
             logger.debug("Verifying trust chain for subject: $sub")
             val verifyResult = federationClient.trustChainVerify(
                 trustChain = trustChainArray,
-                trustAnchor = trustAnchor,
+                trustAnchor = selectedTrustAnchor,
                 currentTime = System.currentTimeMillis() / 1000
             )
             if (verifyResult.isErr) {
@@ -132,7 +148,7 @@ class ResolveEntityCommandImpl(
             logger.debug("Verifying trust marks for subject: $sub")
             val leafConfigResult = federationClient.entityConfigurationStatementGet(sub)
             val trustMarks = if (leafConfigResult.isOk) {
-                getVerifiedTrustMarks(leafConfigResult.value, trustAnchor)
+                getVerifiedTrustMarks(leafConfigResult.value, selectedTrustAnchor)
             } else {
                 logger.warn("Could not re-fetch leaf EC for trust marks: ${leafConfigResult.error.message.defaultMessage}")
                 emptyArray()
@@ -200,6 +216,29 @@ class ResolveEntityCommandImpl(
             minExp = if (minExp == null) exp else min(minExp, exp)
         }
         return minExp
+    }
+
+    /**
+     * Prefer the last statement's `iss` when it is one of the requested Trust Anchors
+     * (TA Entity Configuration). Fall back to the first requested TA.
+     */
+    private fun selectedTrustAnchorFromChain(
+        trustChain: List<String>,
+        requested: Array<String>,
+    ): String {
+        if (trustChain.isNotEmpty()) {
+            try {
+                val last = decodeJWTComponents(trustChain.last()).payload
+                val iss = last["iss"]?.jsonPrimitive?.contentOrNull
+                val sub = last["sub"]?.jsonPrimitive?.contentOrNull
+                if (iss != null && iss == sub && iss in requested) return iss
+                // Intermediate topology: SS about intermediate from TA — TA is iss of last SS
+                if (iss != null && iss in requested) return iss
+            } catch (_: Exception) {
+                // fall through
+            }
+        }
+        return requested.first()
     }
 
     /**

@@ -7,7 +7,11 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
+import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
+import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.enforceFederationClientAuth
+import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
@@ -23,7 +27,8 @@ import dev.zacsweers.metro.SingleIn
 class HistoricalKeysRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val jwkService: JwkService
+    private val jwkService: JwkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = HistoricalKeysRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -37,7 +42,13 @@ class HistoricalKeysRootEndpointCommandImpl(
         val request = applyDuring(args)
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.HISTORICAL_KEYS, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val result = jwkService.getFederationHistoricalKeysJwt(tenantId)
 
@@ -49,7 +60,7 @@ class HistoricalKeysRootEndpointCommandImpl(
             ))
         } else {
             val error = result.error
-            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+            Ok(FederationErrorResponses.fromServiceError(error))
         }
     }
 }
@@ -60,7 +71,8 @@ class HistoricalKeysRootEndpointCommandImpl(
 class HistoricalKeysAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val jwkService: JwkService
+    private val jwkService: JwkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = HistoricalKeysAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -74,10 +86,16 @@ class HistoricalKeysAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.HISTORICAL_KEYS, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val result = jwkService.getFederationHistoricalKeysJwt(tenantId)
 
@@ -89,7 +107,7 @@ class HistoricalKeysAccountEndpointCommandImpl(
             ))
         } else {
             val error = result.error
-            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+            Ok(FederationErrorResponses.fromServiceError(error))
         }
     }
 }

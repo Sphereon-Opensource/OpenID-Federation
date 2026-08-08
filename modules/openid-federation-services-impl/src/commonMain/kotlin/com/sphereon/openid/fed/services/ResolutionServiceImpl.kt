@@ -36,16 +36,18 @@ class ResolutionServiceImpl(
     override suspend fun resolveEntity(
         tenantId: String,
         sub: String,
-        trustAnchor: String,
+        trustAnchors: Array<String>,
         entityTypes: Array<String>?
     ): FederationResult<ResolveResponse> =
-        resolveEntityCommand.execute(ResolveEntityArgs(tenantId, sub, trustAnchor, entityTypes)).toFederationResult()
+        resolveEntityCommand.execute(ResolveEntityArgs(tenantId, sub, trustAnchors, entityTypes)).toFederationResult()
 
     override suspend fun getSignedResolveResponseJwt(
         tenantId: String,
         sub: String,
-        trustAnchor: String,
+        trustAnchors: Array<String>,
         entityTypes: Array<String>?
     ): FederationResult<String> =
-        getSignedResolveResponseJwtCommand.execute(GetSignedResolveResponseJwtArgs(tenantId, sub, trustAnchor, entityTypes)).toFederationResult()
+        getSignedResolveResponseJwtCommand.execute(
+            GetSignedResolveResponseJwtArgs(tenantId, sub, trustAnchors, entityTypes)
+        ).toFederationResult()
 }

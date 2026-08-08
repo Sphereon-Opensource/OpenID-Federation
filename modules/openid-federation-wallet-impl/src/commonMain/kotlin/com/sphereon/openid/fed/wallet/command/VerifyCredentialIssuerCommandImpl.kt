@@ -84,29 +84,32 @@ class VerifyCredentialIssuerCommandImpl(
 
             val entityTrustResult = trustResult.value
 
-            // 4. Extract vc_issuer signing keys from entity configuration metadata
+            // 4. Extract credential issuer signing keys from Resolved Metadata or leaf EC
             val entityConfigJwt = entityTrustResult.trustChain.firstOrNull()
                 ?: return IdkResult.err(CredentialIssuerVerificationError(
                     issuerId = issuerIdentifier,
                     reason = "No entity configuration in trust chain"
                 ))
 
-            val metadata = decodeJWTComponents(entityConfigJwt).payload["metadata"]?.jsonObject
+            val metadata = entityTrustResult.effectiveMetadata
+                ?: decodeJWTComponents(entityConfigJwt).payload["metadata"]?.jsonObject
                 ?: return IdkResult.err(CredentialIssuerVerificationError(
                     issuerId = issuerIdentifier,
                     reason = "No metadata in entity configuration"
                 ))
 
-            // 5. Find matching key in vc_issuer.jwks by kid
-            val vcIssuerKeyJson = FederationEntityMetadata.findVcIssuerKey(metadata, kid)
+            // 5. Find matching key: openid_credential_issuer.jwks (wallet) then vc_issuer.jwks (DIIP)
+            val issuerKeyJson = FederationEntityMetadata.findCredentialIssuerKey(metadata, kid)
                 ?: return IdkResult.err(CredentialIssuerVerificationError(
                     issuerId = issuerIdentifier,
-                    reason = "No key with kid '$kid' found in vc_issuer.jwks"
+                    reason = "No key with kid '$kid' found in openid_credential_issuer.jwks or vc_issuer.jwks"
                 ))
+
+            val keySource = FederationEntityMetadata.credentialIssuerKeySource(metadata) ?: "unknown"
 
             // 6. Verify credential signature using IDK identifier resolution
             val cryptoJwk: CryptoJwk = cryptoJsonSerializer.decodeFromString(
-                CryptoJwk.serializer(), vcIssuerKeyJson.toString()
+                CryptoJwk.serializer(), issuerKeyJson.toString()
             )
 
             val verifyResult = context.jwtService.verifyJws(
@@ -118,7 +121,7 @@ class VerifyCredentialIssuerCommandImpl(
 
             if (verifyResult.isErr || !verifyResult.value.isValid) {
                 return IdkResult.err(SignatureVerificationFailedError(
-                    reason = "Credential signature verification failed against vc_issuer key",
+                    reason = "Credential signature verification failed against $keySource key",
                     keyId = kid
                 ))
             }

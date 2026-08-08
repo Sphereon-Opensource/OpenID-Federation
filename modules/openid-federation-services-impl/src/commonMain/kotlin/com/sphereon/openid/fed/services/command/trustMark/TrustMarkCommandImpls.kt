@@ -151,26 +151,139 @@ class DeleteTrustMarkCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusCommand>())
 class GetTrustMarkStatusCommandImpl(
     execution: SessionExecution
-) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, Boolean, FederationError>(
+) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, TrustMarkStatusDetail, FederationError>(
     commandId = GetTrustMarkStatusCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarkStatusArgs>(),
-    outputTypeToken = typeToken<Boolean>()
+    outputTypeToken = typeToken<TrustMarkStatusDetail>()
 ), GetTrustMarkStatusCommand {
     private val logger = execution.federationLogger("GetTrustMarkStatusCommand")
     private val trustMarkQueries = Persistence.trustMarkQueries
 
-    override suspend fun doExecute(args: GetTrustMarkStatusArgs, applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs): IdkResult<Boolean, FederationError> {
-        val (tenantId, statusRequest) = applyDuring(args)
+    override suspend fun doExecute(
+        args: GetTrustMarkStatusArgs,
+        applyDuring: (GetTrustMarkStatusArgs) -> GetTrustMarkStatusArgs
+    ): IdkResult<TrustMarkStatusDetail, FederationError> {
+        val applied = applyDuring(args)
+        val tenantId = applied.tenantId
+        val statusRequest = applied.request
+        val submittedJwt = applied.trustMarkJwt?.takeIf { it.isNotBlank() }
+
         return try {
-            val trustMarks = trustMarkQueries.findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(tenantId, statusRequest.trustMarkType, statusRequest.sub).executeAsList()
-            if (statusRequest.iat != null) {
-                IdkResult.ok(trustMarks.any { it.iat.toDouble() == statusRequest.iat })
-            } else {
-                IdkResult.ok(trustMarks.isNotEmpty())
-            }
+            val nowSeconds = System.currentTimeMillis() / 1000
+            val detail = evaluateTrustMarkStatus(
+                tenantId = tenantId,
+                sub = statusRequest.sub,
+                trustMarkType = statusRequest.trustMarkType,
+                iat = statusRequest.iat,
+                submittedJwt = submittedJwt,
+                nowSeconds = nowSeconds,
+            )
+            IdkResult.ok(detail)
         } catch (e: Exception) {
             logger.error("Failed to check trust mark status", e)
             federationErr(ServerError("Failed to check trust mark status", e.message, e))
+        }
+    }
+
+    /**
+     * OIDFed 1.1 §8.4.2: active | expired | revoked | invalid for the Trust Mark under evaluation.
+     *
+     * Prefer exact match on the submitted Trust Mark JWT (`trust_mark` request param).
+     * Fall back to sub + trust_mark_type (+ optional iat) when no JWT is provided.
+     */
+    private fun evaluateTrustMarkStatus(
+        tenantId: String,
+        sub: String,
+        trustMarkType: String,
+        iat: Double?,
+        submittedJwt: String?,
+        nowSeconds: Long,
+    ): TrustMarkStatusDetail {
+        val echoJwt = submittedJwt.orEmpty()
+
+        if (submittedJwt != null) {
+            // Structural JWT check
+            if (submittedJwt.count { it == '.' } < 2) {
+                return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, submittedJwt)
+            }
+
+            val jwtExp = readJwtExpSeconds(submittedJwt)
+            val jwtExpired = jwtExp != null && jwtExp <= nowSeconds
+
+            val byValue = trustMarkQueries
+                .findByAccountIdAndTrustMarkValueIncludingDeleted(tenantId, submittedJwt)
+                .executeAsOneOrNull()
+
+            if (byValue != null) {
+                val rowExp = byValue.exp
+                return when {
+                    byValue.deleted_at != null ->
+                        TrustMarkStatusDetail(TrustMarkStatusValue.REVOKED, submittedJwt)
+                    jwtExpired || (rowExp != null && rowExp <= nowSeconds) ->
+                        TrustMarkStatusDetail(TrustMarkStatusValue.EXPIRED, submittedJwt)
+                    else ->
+                        TrustMarkStatusDetail(TrustMarkStatusValue.ACTIVE, submittedJwt)
+                }
+            }
+
+            // Not in our store as this exact JWT: check if we issued any for sub+type that were revoked
+            val deleted = trustMarkQueries
+                .findDeletedByAccountIdAndSubAndTrustMarkTypeIdentifier(tenantId, trustMarkType, sub)
+                .executeAsOneOrNull()
+            if (deleted != null) {
+                return TrustMarkStatusDetail(TrustMarkStatusValue.REVOKED, submittedJwt)
+            }
+
+            // Expired JWT we never stored, or unknown mark
+            if (jwtExpired) {
+                return TrustMarkStatusDetail(TrustMarkStatusValue.EXPIRED, submittedJwt)
+            }
+
+            return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, submittedJwt)
+        }
+
+        // Legacy path: sub + trust_mark_type (+ optional iat) without full JWT
+        val active = trustMarkQueries
+            .findByAccountIdAndAndSubAndTrustMarkTypeIdentifier(tenantId, trustMarkType, sub)
+            .executeAsList()
+        val match = if (iat != null) {
+            active.filter { it.iat.toDouble() == iat }
+        } else {
+            active
+        }
+        if (match.isNotEmpty()) {
+            val latest = match.maxByOrNull { it.iat }!!
+            return TrustMarkStatusDetail(
+                TrustMarkStatusValue.ACTIVE,
+                latest.trust_mark_value,
+            )
+        }
+
+        val deleted = trustMarkQueries
+            .findDeletedByAccountIdAndSubAndTrustMarkTypeIdentifier(tenantId, trustMarkType, sub)
+            .executeAsOneOrNull()
+        if (deleted != null) {
+            return TrustMarkStatusDetail(
+                TrustMarkStatusValue.REVOKED,
+                deleted.trust_mark_value,
+            )
+        }
+
+        return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, "")
+    }
+
+    private fun readJwtExpSeconds(jwt: String): Long? {
+        return try {
+            val parts = jwt.split(".")
+            if (parts.size < 2) return null
+            val payloadJson = kotlin.io.encoding.Base64.UrlSafe
+                .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
+                .decode(parts[1])
+                .decodeToString()
+            val expMatch = Regex("\"exp\"\\s*:\\s*([0-9.]+)").find(payloadJson) ?: return null
+            expMatch.groupValues[1].toDoubleOrNull()?.toLong()
+        } catch (_: Exception) {
+            null
         }
     }
 }

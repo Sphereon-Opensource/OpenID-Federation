@@ -10,8 +10,120 @@ data class FederationConfig(
     /** Base URL identifier for the federation root entity */
     val rootIdentifier: String = "http://localhost:8080",
     /** Enable development mode with verbose logging */
-    val devMode: Boolean = false
+    val devMode: Boolean = false,
+    /**
+     * Client authentication methods accepted at federation protocol endpoints (OIDFed §8.8).
+     * Default per-endpoint is `["none"]` when omitted from config.
+     * Values: `none`, `private_key_jwt` (comma-separated when multiple).
+     */
+    val endpointAuthMethods: FederationEndpointAuthMethods = FederationEndpointAuthMethods(),
+    /**
+     * JWS algs advertised/accepted for `private_key_jwt` endpoint authentication
+     * (`endpoint_auth_signing_alg_values_supported`).
+     */
+    val endpointAuthSigningAlgs: List<String> = listOf("RS256", "ES256", "PS256"),
+    /**
+     * How a `private_key_jwt` client is accepted as a federation participant
+     * (OIDFed §8.8 — ClientRegistry analogue for Entity Identifiers).
+     */
+    val endpointAuthMembershipPolicy: FederationClientAuthMembershipPolicy =
+        FederationClientAuthMembershipPolicy.HYBRID,
+    /**
+     * Trust Anchors used when membership policy requires a trust chain.
+     * Empty = use the host Entity Identifier as the sole Trust Anchor.
+     */
+    val endpointAuthTrustAnchors: List<String> = emptyList(),
 )
+
+/**
+ * Membership check for entities authenticating to federation endpoints (§8.8).
+ *
+ * Analogous to OAuth AS [ClientRegistry] membership, but the authority is the
+ * federation graph rather than OAuth client registration.
+ */
+enum class FederationClientAuthMembershipPolicy {
+    /** Any entity whose Entity Configuration can be fetched (keys only). */
+    ANY_FETCHABLE,
+
+    /** Client Entity Identifier must be an Immediate Subordinate of the host tenant. */
+    SUBORDINATE_OF_SELF,
+
+    /** Client must have a valid Trust Chain to a configured Trust Anchor. */
+    TRUST_CHAIN_TO_TA,
+
+    /**
+     * Prefer Immediate Subordinate of the host; otherwise require Trust Chain to TA.
+     * Recommended default for TA/intermediate endpoints.
+     */
+    HYBRID,
+    ;
+
+    companion object {
+        fun fromConfig(raw: String): FederationClientAuthMembershipPolicy {
+            val n = raw.trim().lowercase().replace('-', '_')
+            return when (n) {
+                "any_fetchable", "any", "open" -> ANY_FETCHABLE
+                "subordinate_of_self", "subordinate", "local" -> SUBORDINATE_OF_SELF
+                "trust_chain_to_ta", "trust_chain", "chain" -> TRUST_CHAIN_TO_TA
+                "hybrid", "subordinate_or_chain" -> HYBRID
+                else -> HYBRID
+            }
+        }
+    }
+}
+
+/**
+ * Per-endpoint client authentication methods (OIDFed §8.8 `*_auth_methods`).
+ * Spec default when omitted from metadata is `["none"]`.
+ */
+data class FederationEndpointAuthMethods(
+    val fetch: List<String> = listOf("none"),
+    val list: List<String> = listOf("none"),
+    val resolve: List<String> = listOf("none"),
+    val trustMarkStatus: List<String> = listOf("none"),
+    val trustMarkList: List<String> = listOf("none"),
+    val trustMark: List<String> = listOf("none"),
+    val historicalKeys: List<String> = listOf("none"),
+) {
+    fun forEndpoint(endpoint: FederationEndpointKind): List<String> = when (endpoint) {
+        FederationEndpointKind.FETCH -> fetch
+        FederationEndpointKind.LIST -> list
+        FederationEndpointKind.RESOLVE -> resolve
+        FederationEndpointKind.TRUST_MARK_STATUS -> trustMarkStatus
+        FederationEndpointKind.TRUST_MARK_LIST -> trustMarkList
+        FederationEndpointKind.TRUST_MARK -> trustMark
+        FederationEndpointKind.HISTORICAL_KEYS -> historicalKeys
+    }
+
+    /** True if any endpoint accepts `private_key_jwt`. */
+    fun anyPrivateKeyJwt(): Boolean =
+        listOf(fetch, list, resolve, trustMarkStatus, trustMarkList, trustMark, historicalKeys)
+            .any { methods -> methods.any { it.equals("private_key_jwt", ignoreCase = true) } }
+}
+
+/** Federation protocol endpoints that may declare `*_auth_methods` (OIDFed §8.8.1). */
+enum class FederationEndpointKind {
+    FETCH,
+    LIST,
+    RESOLVE,
+    TRUST_MARK_STATUS,
+    TRUST_MARK_LIST,
+    TRUST_MARK,
+    HISTORICAL_KEYS,
+    ;
+
+    /** Metadata parameter name, e.g. `federation_fetch_endpoint_auth_methods`. */
+    val authMethodsMetadataName: String
+        get() = when (this) {
+            FETCH -> "federation_fetch_endpoint_auth_methods"
+            LIST -> "federation_list_endpoint_auth_methods"
+            RESOLVE -> "federation_resolve_endpoint_auth_methods"
+            TRUST_MARK_STATUS -> "federation_trust_mark_status_endpoint_auth_methods"
+            TRUST_MARK_LIST -> "federation_trust_mark_list_endpoint_auth_methods"
+            TRUST_MARK -> "federation_trust_mark_endpoint_auth_methods"
+            HISTORICAL_KEYS -> "federation_historical_keys_endpoint_auth_methods"
+        }
+}
 
 /**
  * Server configuration for admin or federation server.

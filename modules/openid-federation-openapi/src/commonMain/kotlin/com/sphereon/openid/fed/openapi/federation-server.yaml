@@ -8,7 +8,7 @@ info:
   license:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-  version: 0.25.0-1.1-d4
+  version: 0.25.0-1.1
 servers:
   - url: http://localhost:8080
     description: Federation Server
@@ -214,7 +214,10 @@ paths:
       tags:
         - federation
       summary: Resolve Entity Statement
-      description: Resolve metadata and Trust Marks for an Entity.
+      description: |
+        Resolve metadata and Trust Marks for an Entity (OIDFed 1.1 §8.3).
+        Parameters `trust_anchor` and `entity_type` MAY be repeated. When the HTTP
+        adapter joins repeated query keys, comma-separated values are also accepted.
       parameters:
         - name: sub
           in: query
@@ -224,16 +227,28 @@ paths:
             type: string
         - name: trust_anchor
           in: query
-          description: The Trust Anchor that the resolve endpoint MUST use when resolving the metadata. The value is an Entity Identifier.
-          required: false
+          description: |
+            Trust Anchor Entity Identifier(s) to use when resolving. MAY be repeated
+            (preference order). At least one value is required by this implementation.
+          required: true
           schema:
-            type: string
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
         - name: entity_type
           in: query
-          description: 'A specific Entity Type to resolve. Its value is an Entity Type Identifier. If this parameter is not present, then all Entity Types are returned.'
+          description: |
+            Entity Type Identifier(s) to include in Resolved Metadata. MAY be repeated.
+            If omitted, all Entity Types are returned.
           required: false
           schema:
-            type: string
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
       responses:
         '200':
           description: Successful resolve of Entity metadata
@@ -250,7 +265,9 @@ paths:
       tags:
         - federation
       summary: Resolve Entity Statement (POST)
-      description: Resolve metadata and Trust Marks for an Entity using POST.
+      description: |
+        Resolve metadata and Trust Marks for an Entity using POST (OIDFed 1.1 §8.3).
+        Form fields `trust_anchor` and `entity_type` MAY be repeated.
       requestBody:
         required: true
         content:
@@ -259,16 +276,28 @@ paths:
               type: object
               required:
                 - sub
+                - trust_anchor
               properties:
                 sub:
                   type: string
                   description: The Entity Identifier of the Entity whose resolved data is requested.
                 trust_anchor:
-                  type: string
-                  description: The Trust Anchor to use when resolving the metadata.
+                  type: array
+                  items:
+                    type: string
+                  description: Trust Anchor Entity Identifier(s), preference order (may be repeated).
                 entity_type:
-                  type: string
-                  description: A specific Entity Type to resolve.
+                  type: array
+                  items:
+                    type: string
+                  description: Entity Type Identifier(s) to resolve (may be repeated).
+            encoding:
+              trust_anchor:
+                style: form
+                explode: true
+              entity_type:
+                style: form
+                explode: true
       responses:
         '200':
           description: Successful resolve of Entity metadata
@@ -354,14 +383,43 @@ paths:
       tags:
         - federation
       summary: Check Trust Mark Status
-      description: Check if a Trust Mark is still active.
+      description: |
+        Check if a Trust Mark is still active (OIDFed 1.1 §8.4).
+        The specification primarily defines POST; GET is supported with the same parameters
+        for interoperability (query string instead of form body).
+        Provide either `trust_mark` (full JWT) **or** `sub` + type (`i` or `trust_mark_type`)
+        with optional `iat`.
       parameters:
         - name: trust_mark
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: The Trust Mark to be validated (full JWT).
+          description: The Trust Mark JWT to check. When set, sub/type/iat are taken from claims.
+        - name: sub
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Entity Identifier the Trust Mark was issued to (required when trust_mark omitted).
+        - name: i
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Trust Mark Type identifier (OIDFed short name). Alias of trust_mark_type.
+        - name: trust_mark_type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Trust Mark Type identifier (alias of i).
+        - name: iat
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Issued-at of the Trust Mark (NumericDate), optional disambiguator.
       responses:
         '200':
           description: Trust Mark status as a signed JWT
@@ -381,19 +439,32 @@ paths:
       tags:
         - federation
       summary: Check Trust Mark Status (POST)
-      description: Check if a Trust Mark is still active using POST.
+      description: |
+        Check if a Trust Mark is still active (OIDFed 1.1 §8.4 primary method).
+        Provide either `trust_mark` (full JWT) **or** `sub` + type (`i` or `trust_mark_type`)
+        with optional `iat`.
       requestBody:
         required: true
         content:
           application/x-www-form-urlencoded:
             schema:
               type: object
-              required:
-                - trust_mark
               properties:
                 trust_mark:
                   type: string
-                  description: The Trust Mark to be validated (full JWT).
+                  description: The Trust Mark JWT to check.
+                sub:
+                  type: string
+                  description: Subject Entity Identifier (when trust_mark omitted).
+                i:
+                  type: string
+                  description: Trust Mark Type identifier (short name).
+                trust_mark_type:
+                  type: string
+                  description: Trust Mark Type identifier (alias of i).
+                iat:
+                  type: number
+                  description: Optional issued-at NumericDate.
       responses:
         '200':
           description: Trust Mark status as a signed JWT

@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.common.config
 
+import kotlin.concurrent.Volatile
+
 /**
  * Test-only process-environment override for OIDF configuration.
  *

@@ -10,6 +10,7 @@ import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.InvalidEntityConfigurationError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.FederationEntityMetadata
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding

@@ -10,6 +10,9 @@ object OidfConfigDefaults {
     val appProperties: Map<String, String> = mapOf(
         OidfConfigKeys.Federation.ROOT_IDENTIFIER to "http://localhost:8080",
         OidfConfigKeys.Federation.DEV_MODE to "false",
+        OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_DEFAULT to "none",
+        OidfConfigKeys.Federation.ENDPOINT_AUTH_SIGNING_ALGS to "RS256,ES256,PS256",
+        OidfConfigKeys.Federation.ENDPOINT_AUTH_MEMBERSHIP_POLICY to "hybrid",
         OidfConfigKeys.Server.Admin.PORT to "8081",
         OidfConfigKeys.Server.Admin.HOST to "0.0.0.0",
         OidfConfigKeys.Server.Federation.PORT to "8080",

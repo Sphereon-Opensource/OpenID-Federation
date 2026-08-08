@@ -58,28 +58,58 @@ object FederationEntityMetadata {
     }
 
     // =========================================================================
-    // vc_issuer key extraction
+    // Credential issuer / vc_issuer key extraction (wallet + DIIP dual-profile)
     // =========================================================================
 
     /**
-     * Extract signing keys from `vc_issuer.jwks.keys` in entity configuration metadata.
+     * Extract signing keys for a Credential Issuer.
+     *
+     * Preference order (wallet architecture / OpenID4VCI first):
+     * 1. `openid_credential_issuer.jwks.keys`
+     * 2. `vc_issuer.jwks.keys` (DIIP dual-profile fallback)
+     */
+    fun extractCredentialIssuerKeys(metadata: JsonObject): List<JsonObject> {
+        val fromOpenid = extractJwksKeys(metadata[WalletEntityTypes.OPENID_CREDENTIAL_ISSUER]?.jsonObject)
+        if (fromOpenid.isNotEmpty()) return fromOpenid
+        return extractVcIssuerKeys(metadata)
+    }
+
+    /**
+     * Which key source [extractCredentialIssuerKeys] would use, for validation messaging.
+     *
+     * @return `"openid_credential_issuer.jwks"`, `"vc_issuer.jwks"`, or `null` if none
+     */
+    fun credentialIssuerKeySource(metadata: JsonObject): String? {
+        if (extractJwksKeys(metadata[WalletEntityTypes.OPENID_CREDENTIAL_ISSUER]?.jsonObject).isNotEmpty()) {
+            return "openid_credential_issuer.jwks"
+        }
+        if (extractVcIssuerKeys(metadata).isNotEmpty()) {
+            return "vc_issuer.jwks"
+        }
+        return null
+    }
+
+    /**
+     * Find a key matching [kid] in credential issuer JWKS (wallet then DIIP fallback).
+     */
+    fun findCredentialIssuerKey(metadata: JsonObject, kid: String): JsonObject? {
+        return extractCredentialIssuerKeys(metadata).firstOrNull { key ->
+            key["kid"]?.jsonPrimitive?.contentOrNull?.trim() == kid.trim()
+        }
+    }
+
+    /**
+     * Extract signing keys from `vc_issuer.jwks.keys` in entity configuration metadata (DIIP).
      *
      * @param metadata The entity configuration's `metadata` object
      * @return List of key objects from vc_issuer, or empty if not present
      */
     fun extractVcIssuerKeys(metadata: JsonObject): List<JsonObject> {
-        val vcIssuer = metadata["vc_issuer"]?.jsonObject ?: return emptyList()
-        val jwks = vcIssuer["jwks"]?.jsonObject ?: return emptyList()
-        val keys = jwks["keys"]?.jsonArray ?: return emptyList()
-        return keys.mapNotNull { it as? JsonObject }
+        return extractJwksKeys(metadata["vc_issuer"]?.jsonObject)
     }
 
     /**
      * Find a key matching the given kid in the vc_issuer JWKS.
-     *
-     * @param metadata The entity configuration's `metadata` object
-     * @param kid The key ID to match
-     * @return The matching key as JsonObject, or null
      */
     fun findVcIssuerKey(metadata: JsonObject, kid: String): JsonObject? {
         return extractVcIssuerKeys(metadata).firstOrNull { key ->
@@ -87,16 +117,39 @@ object FederationEntityMetadata {
         }
     }
 
+    private fun extractJwksKeys(container: JsonObject?): List<JsonObject> {
+        if (container == null) return emptyList()
+        val jwks = container["jwks"]?.jsonObject ?: return emptyList()
+        val keys = jwks["keys"]?.jsonArray ?: return emptyList()
+        return keys.mapNotNull { it as? JsonObject }
+    }
+
     // =========================================================================
     // Metadata helpers
     // =========================================================================
 
     /**
-     * Get the display_name from federation_entity metadata.
+     * Get `organization_name` from `federation_entity` metadata (OIDFed 1.1 recommended).
+     */
+    fun getOrganizationName(metadata: JsonObject): String? {
+        return metadata[WalletEntityTypes.FEDERATION_ENTITY]?.jsonObject
+            ?.get("organization_name")?.jsonPrimitive?.contentOrNull
+    }
+
+    /**
+     * Get the display_name from federation_entity metadata (DIIP / legacy).
      */
     fun getDisplayName(metadata: JsonObject): String? {
-        return metadata["federation_entity"]?.jsonObject
+        return metadata[WalletEntityTypes.FEDERATION_ENTITY]?.jsonObject
             ?.get("display_name")?.jsonPrimitive?.contentOrNull
+    }
+
+    /**
+     * Prefer `organization_name`, fall back to `display_name` for dual-profile acceptance.
+     */
+    fun getOrganizationOrDisplayName(metadata: JsonObject): String? {
+        return getOrganizationName(metadata)?.takeIf { it.isNotBlank() }
+            ?: getDisplayName(metadata)?.takeIf { it.isNotBlank() }
     }
 
     /**
@@ -106,7 +159,7 @@ object FederationEntityMetadata {
      * wallets MUST use only this metadata and ignore regular issuer metadata.
      */
     fun hasFederationIssuerMetadata(metadata: JsonObject): Boolean {
-        return metadata.containsKey("openid_credential_issuer")
+        return metadata.containsKey(WalletEntityTypes.OPENID_CREDENTIAL_ISSUER)
     }
 
     /**

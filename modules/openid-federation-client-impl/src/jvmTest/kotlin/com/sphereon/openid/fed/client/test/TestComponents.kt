@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.client.test
 import com.sphereon.core.defaults.app.DefaultRootScopeProvider
 import com.sphereon.di.app.RootScopeProvider
 import com.sphereon.di.app.AbstractAppGraph
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.DependencyGraph
@@ -19,6 +20,11 @@ import dev.zacsweers.metro.createGraphFactory
 @SingleIn(AppScope::class)
 @DependencyGraph(AppScope::class)
 abstract class ClientImplTestAppGraph : AbstractAppGraph() {
+
+    /** Required by [com.sphereon.openid.fed.client.FederationContextComponent] for cache locality. */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun provideOidfConfigBinder(): OidfConfigBinder = TestOidfConfigBinder()
 
     @DependencyGraph.Factory
     fun interface Factory {

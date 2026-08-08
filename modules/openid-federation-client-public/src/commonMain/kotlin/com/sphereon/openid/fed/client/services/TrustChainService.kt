@@ -5,6 +5,7 @@ import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainComman
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommandService
 import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
 
@@ -53,16 +54,18 @@ interface TrustChainService :
     ): FederationResult<TrustChainResolveResponse>
 
     /**
-     * Verifies the trust chain.
+     * Verifies the trust chain (OIDFed 1.1 §10.2).
      *
      * @param trustChain The trust chain to verify.
-     * @param trustAnchor The trust anchor to use for verification. Optional.
-     * @param currentTime The current time to use for verification. Defaults to the current epoch time in seconds.
+     * @param trustAnchor The Trust Anchor Entity Identifier. Optional.
+     * @param currentTime Validation time (epoch seconds).
+     * @param trustAnchorPublicKeys Optional out-of-band Trust Anchor public keys.
      * @return FederationResult containing the VerifyTrustChainResponse or an error.
      */
     override suspend fun verifyTrustChain(
         trustChain: Array<String>,
         trustAnchor: String?,
-        currentTime: Long?
+        currentTime: Long?,
+        trustAnchorPublicKeys: List<Jwk>?
     ): FederationResult<VerifyTrustChainResponse>
 }

@@ -7,7 +7,11 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
-import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
+import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
+import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.enforceFederationClientAuth
+import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.core.api.http.response.jsonResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
@@ -35,7 +39,8 @@ class GetTrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkStatusRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -48,22 +53,25 @@ class GetTrustMarkStatusRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK_STATUS, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
+
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val trustMarkJwt = request.queryParameters["trust_mark"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark' parameter"))
+        val status = parseTrustMarkStatusParams(request.queryParameters.mapValues { it.value ?: "" })
+            ?: return Ok(
+                FederationErrorResponses.invalidRequest(
+                    "Provide trust_mark (JWT), or sub + trust_mark_type (alias i) [+ optional iat]"
+                )
+            )
 
-        val payload = decodeTrustMarkJwtPayload(trustMarkJwt)
-            ?: return Ok(errorResponse(400, "Invalid trust_mark JWT: cannot decode claims"))
-
-        val statusRequest = TrustMarkStatusRequest(
-            sub = payload.sub ?: return Ok(errorResponse(400, "Trust mark JWT missing 'sub' claim")),
-            trustMarkType = payload.getString("trust_mark_type")
-                ?: return Ok(errorResponse(400, "Trust mark JWT missing 'trust_mark_type' claim"))
+        return handleTrustMarkStatusResponse(
+            tenantId, status.request, trustMarkService, status.trustMarkJwt
         )
-
-        return handleTrustMarkStatusResponse(tenantId, statusRequest, trustMarkService, json)
     }
 }
 
@@ -76,7 +84,8 @@ class TrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = TrustMarkStatusRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -89,25 +98,27 @@ class TrustMarkStatusRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK_STATUS, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
+
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
+        val status = parseTrustMarkStatusParams(params)
+            ?: return Ok(
+                FederationErrorResponses.invalidRequest(
+                    "Provide trust_mark (JWT), or sub + trust_mark_type (alias i) [+ optional iat]"
+                )
+            )
 
-        val trustMarkJwt = params["trust_mark"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark' parameter"))
-
-        val payload = decodeTrustMarkJwtPayload(trustMarkJwt)
-            ?: return Ok(errorResponse(400, "Invalid trust_mark JWT: cannot decode claims"))
-
-        val statusRequest = TrustMarkStatusRequest(
-            sub = payload.sub ?: return Ok(errorResponse(400, "Trust mark JWT missing 'sub' claim")),
-            trustMarkType = payload.getString("trust_mark_type")
-                ?: return Ok(errorResponse(400, "Trust mark JWT missing 'trust_mark_type' claim"))
+        return handleTrustMarkStatusResponse(
+            tenantId, status.request, trustMarkService, status.trustMarkJwt
         )
-
-        return handleTrustMarkStatusResponse(tenantId, statusRequest, trustMarkService, json)
     }
 }
 
@@ -120,7 +131,8 @@ class GetTrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkStatusAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -134,24 +146,27 @@ class GetTrustMarkStatusAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val trustMarkJwt = request.queryParameters["trust_mark"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark' parameter"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK_STATUS, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
-        val payload = decodeTrustMarkJwtPayload(trustMarkJwt)
-            ?: return Ok(errorResponse(400, "Invalid trust_mark JWT: cannot decode claims"))
+        val status = parseTrustMarkStatusParams(request.queryParameters.mapValues { it.value ?: "" })
+            ?: return Ok(
+                FederationErrorResponses.invalidRequest(
+                    "Provide trust_mark (JWT), or sub + trust_mark_type (alias i) [+ optional iat]"
+                )
+            )
 
-        val statusRequest = TrustMarkStatusRequest(
-            sub = payload.sub ?: return Ok(errorResponse(400, "Trust mark JWT missing 'sub' claim")),
-            trustMarkType = payload.getString("trust_mark_type")
-                ?: return Ok(errorResponse(400, "Trust mark JWT missing 'trust_mark_type' claim"))
+        return handleTrustMarkStatusResponse(
+            tenantId, status.request, trustMarkService, status.trustMarkJwt
         )
-
-        return handleTrustMarkStatusResponse(tenantId, statusRequest, trustMarkService, json)
     }
 }
 
@@ -164,7 +179,8 @@ class TrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = TrustMarkStatusAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -178,39 +194,78 @@ class TrustMarkStatusAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK_STATUS, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
+
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
+        val status = parseTrustMarkStatusParams(params)
+            ?: return Ok(
+                FederationErrorResponses.invalidRequest(
+                    "Provide trust_mark (JWT), or sub + trust_mark_type (alias i) [+ optional iat]"
+                )
+            )
 
-        val trustMarkJwt = params["trust_mark"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark' parameter"))
-
-        val payload = decodeTrustMarkJwtPayload(trustMarkJwt)
-            ?: return Ok(errorResponse(400, "Invalid trust_mark JWT: cannot decode claims"))
-
-        val statusRequest = TrustMarkStatusRequest(
-            sub = payload.sub ?: return Ok(errorResponse(400, "Trust mark JWT missing 'sub' claim")),
-            trustMarkType = payload.getString("trust_mark_type")
-                ?: return Ok(errorResponse(400, "Trust mark JWT missing 'trust_mark_type' claim"))
+        return handleTrustMarkStatusResponse(
+            tenantId, status.request, trustMarkService, status.trustMarkJwt
         )
-
-        return handleTrustMarkStatusResponse(tenantId, statusRequest, trustMarkService, json)
     }
 }
 
 // ==================== Trust Mark Status Response Helper ====================
 
+/**
+ * OIDFed 1.1 §8.4.1: either `trust_mark` (JWT) **or** discrete `sub` + type (`i` / `trust_mark_type`) + optional `iat`.
+ */
+private data class ParsedTrustMarkStatus(
+    val request: TrustMarkStatusRequest,
+    val trustMarkJwt: String?,
+)
+
+private fun parseTrustMarkStatusParams(params: Map<String, String>): ParsedTrustMarkStatus? {
+    val trustMarkJwt = params["trust_mark"]?.takeIf { it.isNotBlank() }
+    if (trustMarkJwt != null) {
+        val payload = decodeTrustMarkJwtPayload(trustMarkJwt) ?: return null
+        val sub = payload.sub?.takeIf { it.isNotBlank() } ?: return null
+        val type = payload.getString("trust_mark_type")?.takeIf { it.isNotBlank() } ?: return null
+        return ParsedTrustMarkStatus(
+            request = TrustMarkStatusRequest(
+                sub = sub,
+                trustMarkType = type,
+                iat = readIatClaim(payload),
+            ),
+            trustMarkJwt = trustMarkJwt,
+        )
+    }
+
+    val sub = params["sub"]?.takeIf { it.isNotBlank() } ?: return null
+    // Spec short name `i` = Trust Mark type identifier; also accept trust_mark_type
+    val type = params["i"]?.takeIf { it.isNotBlank() }
+        ?: params["trust_mark_type"]?.takeIf { it.isNotBlank() }
+        ?: return null
+    val iat = params["iat"]?.toDoubleOrNull()
+    return ParsedTrustMarkStatus(
+        request = TrustMarkStatusRequest(sub = sub, trustMarkType = type, iat = iat),
+        trustMarkJwt = null,
+    )
+}
+
 private suspend fun handleTrustMarkStatusResponse(
     tenantId: String,
     statusRequest: TrustMarkStatusRequest,
     trustMarkService: TrustMarkService,
-    json: Json
+    trustMarkJwt: String?,
 ): IdkResult<GenericHttpResponse, IdkError> {
-    val result = trustMarkService.getSignedTrustMarkStatusJwt(tenantId, statusRequest)
+    // OIDFed 1.1 §8.4.1: primary input is the Trust Mark JWT when provided
+    val result = trustMarkService.getSignedTrustMarkStatusJwt(tenantId, statusRequest, trustMarkJwt)
 
     return if (result.isOk) {
         Ok(GenericHttpResponse(
@@ -220,9 +275,17 @@ private suspend fun handleTrustMarkStatusResponse(
         ))
     } else {
         val error = result.error
-        Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        Ok(FederationErrorResponses.fromServiceError(error))
     }
 }
+
+private fun readIatClaim(payload: JwtPayload): Double? =
+    try {
+        payload.getString("iat")?.toDoubleOrNull()
+            ?: payload.getPrimitive("iat")?.content?.toDoubleOrNull()
+    } catch (_: Exception) {
+        null
+    }
 
 // ==================== Trust Mark List GET (Root) ====================
 
@@ -233,7 +296,8 @@ class TrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = TrustMarkListRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -246,11 +310,17 @@ class TrustMarkListRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK_LIST, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
+
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = request.queryParameters["sub"]
 
         return handleTrustMarkList(tenantId, trustMarkId, sub, trustMarkService, json)
@@ -266,7 +336,8 @@ class PostTrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostTrustMarkListRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -279,14 +350,20 @@ class PostTrustMarkListRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK_LIST, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
 
         val trustMarkId = params["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = params["sub"]
 
         return handleTrustMarkList(tenantId, trustMarkId, sub, trustMarkService, json)
@@ -302,7 +379,8 @@ class TrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = TrustMarkListAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -316,13 +394,19 @@ class TrustMarkListAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK_LIST, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val trustMarkId = request.queryParameters["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = request.queryParameters["sub"]
 
         return handleTrustMarkList(tenantId, trustMarkId, sub, trustMarkService, json)
@@ -338,7 +422,8 @@ class PostTrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val trustMarkService: TrustMarkService,
-    private val json: Json
+    private val json: Json,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostTrustMarkListAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -352,16 +437,22 @@ class PostTrustMarkListAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK_LIST, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
+
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
 
         val trustMarkId = params["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = params["sub"]
 
         return handleTrustMarkList(tenantId, trustMarkId, sub, trustMarkService, json)
@@ -376,7 +467,8 @@ class PostTrustMarkListAccountEndpointCommandImpl(
 class GetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val trustMarkService: TrustMarkService
+    private val trustMarkService: TrustMarkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -389,13 +481,19 @@ class GetTrustMarkRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
+
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
         val trustMarkId = request.queryParameters["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = request.queryParameters["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
 
         return handleGetTrustMark(tenantId, trustMarkId, sub, trustMarkService)
     }
@@ -409,7 +507,8 @@ class GetTrustMarkRootEndpointCommandImpl(
 class PostGetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val trustMarkService: TrustMarkService
+    private val trustMarkService: TrustMarkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostGetTrustMarkRootEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -422,16 +521,22 @@ class PostGetTrustMarkRootEndpointCommandImpl(
     ): IdkResult<GenericHttpResponse, IdkError> {
         val request = applyDuring(args)
 
-        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.TRUST_MARK, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
 
         val trustMarkId = params["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = params["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
 
         return handleGetTrustMark(tenantId, trustMarkId, sub, trustMarkService)
     }
@@ -445,7 +550,8 @@ class PostGetTrustMarkRootEndpointCommandImpl(
 class GetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val trustMarkService: TrustMarkService
+    private val trustMarkService: TrustMarkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = GetTrustMarkAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -459,15 +565,21 @@ class GetTrustMarkAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK, methodIsPost = false,
+            params = request.queryParameters.asAuthParams(),
+        )?.let { return Ok(it) }
 
         val trustMarkId = request.queryParameters["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = request.queryParameters["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
 
         return handleGetTrustMark(tenantId, trustMarkId, sub, trustMarkService)
     }
@@ -481,7 +593,8 @@ class GetTrustMarkAccountEndpointCommandImpl(
 class PostGetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val trustMarkService: TrustMarkService
+    private val trustMarkService: TrustMarkService,
+    private val clientAuth: FederationEndpointClientAuthService,
 ) : HttpEndpointCommandAdapter(
     id = PostGetTrustMarkAccountEndpointCommand.COMMAND_ID,
     execution = execution,
@@ -495,18 +608,24 @@ class PostGetTrustMarkAccountEndpointCommandImpl(
         val request = applyDuring(args)
         val requestWithParams = request.withExtractedParams(endpoint.pathPattern)
         val username = requestWithParams.pathParams["username"]
-            ?: return Ok(errorResponse(400, "Username parameter required"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
 
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
-            ?: return Ok(errorResponse(404, "Tenant not found"))
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
 
-        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.TRUST_MARK, methodIsPost = true,
+            params = request.body?.let { parseTrustMarkFormParams(it) } ?: emptyMap(),
+        )?.let { return Ok(it) }
+
+        val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val params = parseTrustMarkFormParams(body)
 
         val trustMarkId = params["trust_mark_type"]
-            ?: return Ok(errorResponse(400, "Missing 'trust_mark_type' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'trust_mark_type' parameter"))
         val sub = params["sub"]
-            ?: return Ok(errorResponse(400, "Missing 'sub' parameter"))
+            ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
 
         return handleGetTrustMark(tenantId, trustMarkId, sub, trustMarkService)
     }
@@ -532,7 +651,7 @@ private suspend fun handleTrustMarkList(
         Ok(jsonResponse(200, json.encodeToString(result.value)))
     } else {
         val error = result.error
-        Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        Ok(FederationErrorResponses.fromServiceError(error))
     }
 }
 
@@ -557,7 +676,7 @@ private suspend fun handleGetTrustMark(
         ))
     } else {
         val error = result.error
-        Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        Ok(FederationErrorResponses.fromServiceError(error))
     }
 }
 

@@ -3,7 +3,9 @@ package com.sphereon.openid.fed.services.config
 import com.sphereon.core.api.conf.AppConfigService
 import com.sphereon.openid.fed.core.config.CorsConfig
 import com.sphereon.openid.fed.core.config.DatasourceConfig
+import com.sphereon.openid.fed.core.config.FederationClientAuthMembershipPolicy
 import com.sphereon.openid.fed.core.config.FederationConfig
+import com.sphereon.openid.fed.core.config.FederationEndpointAuthMethods
 import com.sphereon.openid.fed.core.config.KmsConfig
 import com.sphereon.openid.fed.core.config.LoggerConfig
 import com.sphereon.openid.fed.core.config.OAuth2Config
@@ -40,6 +42,14 @@ class OidfConfigBinderImpl(
 ) : OidfConfigBinder {
 
     override fun getFederationConfig(): FederationConfig {
+        val defaultAuthMethods = getListProperty(
+            OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_DEFAULT,
+            listOf("none")
+        )
+        fun authMethods(key: String): List<String> {
+            val raw = getProperty(key, "")
+            return if (raw.isBlank()) defaultAuthMethods else getListProperty(key, defaultAuthMethods)
+        }
         return FederationConfig(
             rootIdentifier = getProperty(
                 OidfConfigKeys.Federation.ROOT_IDENTIFIER,
@@ -48,7 +58,30 @@ class OidfConfigBinderImpl(
             devMode = getBooleanProperty(
                 OidfConfigKeys.Federation.DEV_MODE,
                 false
-            )
+            ),
+            endpointAuthMethods = FederationEndpointAuthMethods(
+                fetch = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_FETCH),
+                list = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_LIST),
+                resolve = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_RESOLVE),
+                trustMarkStatus = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_TRUST_MARK_STATUS),
+                trustMarkList = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_TRUST_MARK_LIST),
+                trustMark = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_TRUST_MARK),
+                historicalKeys = authMethods(OidfConfigKeys.Federation.ENDPOINT_AUTH_METHODS_HISTORICAL_KEYS),
+            ),
+            endpointAuthSigningAlgs = getListProperty(
+                OidfConfigKeys.Federation.ENDPOINT_AUTH_SIGNING_ALGS,
+                listOf("RS256", "ES256", "PS256")
+            ),
+            endpointAuthMembershipPolicy = FederationClientAuthMembershipPolicy.fromConfig(
+                getProperty(
+                    OidfConfigKeys.Federation.ENDPOINT_AUTH_MEMBERSHIP_POLICY,
+                    "hybrid",
+                )
+            ),
+            endpointAuthTrustAnchors = getListProperty(
+                OidfConfigKeys.Federation.ENDPOINT_AUTH_TRUST_ANCHORS,
+                emptyList(),
+            ),
         )
     }
 
