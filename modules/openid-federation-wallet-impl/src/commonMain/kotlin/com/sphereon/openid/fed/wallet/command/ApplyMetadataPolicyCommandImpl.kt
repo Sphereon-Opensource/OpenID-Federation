@@ -9,12 +9,15 @@ import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.MetadataPolicyApplicationError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
-import kotlinx.serialization.json.*
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
+/**
+ * Applies OpenID Federation 1.1 metadata policies from a Trust Chain.
+ * Delegates to [MetadataPolicyOperators.resolveFromTrustChainPayloads].
+ */
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ApplyMetadataPolicyCommand>())
@@ -50,54 +53,36 @@ class ApplyMetadataPolicyCommandImpl(
         }
 
         return try {
-            // Decode all statements in the trust chain
             val decodedStatements = trustChain.map { jwt ->
                 decodeJWTComponents(jwt).payload
             }
+            val entityId = decodedStatements.first()["sub"]
+                ?.toString()
+                ?.trim('"')
+                ?: "unknown"
 
-            // The first statement is the leaf entity's configuration
-            val leafMetadata = decodedStatements.first()["metadata"]?.jsonObject
-                ?: return IdkResult.ok(EffectiveMetadataResult(
-                    metadata = JsonObject(emptyMap()),
-                    entityType = entityType,
-                    policiesApplied = 0
+            val result = MetadataPolicyOperators.resolveFromTrustChainPayloads(
+                decodedStatements = decodedStatements,
+                entityType = entityType
+            )
+
+            if (!result.isValid) {
+                return IdkResult.err(MetadataPolicyApplicationError(
+                    entityId = entityId,
+                    reason = result.errors.joinToString("; ")
                 ))
-
-            // Collect metadata policies from intermediate entities and trust anchor
-            // Walk from trust anchor (last) to leaf (first), collecting policies
-            var policiesApplied = 0
-            var combinedPolicy = JsonObject(emptyMap())
-
-            for (i in decodedStatements.size - 1 downTo 1) {
-                val statement = decodedStatements[i]
-                val metadataPolicy = statement["metadata_policy"]?.jsonObject
-                if (metadataPolicy != null) {
-                    combinedPolicy = MetadataPolicyOperators.mergePolicies(combinedPolicy, metadataPolicy)
-                    policiesApplied++
-                }
             }
 
-            // Apply the combined policy to the leaf metadata
-            val effectiveMetadata = if (policiesApplied > 0) {
-                val result = MetadataPolicyOperators.applyPolicy(leafMetadata, combinedPolicy, entityType)
-                for (warning in result.warnings) {
-                    logger.warn(warning)
-                }
-                result.metadata
-            } else {
-                if (entityType != null) {
-                    leafMetadata[entityType]?.jsonObject ?: leafMetadata
-                } else {
-                    leafMetadata
-                }
+            for (warning in result.warnings) {
+                logger.warn(warning)
             }
 
-            logger.debug("Applied $policiesApplied metadata policies")
+            logger.debug("Applied ${result.policiesApplied} metadata policies")
 
             IdkResult.ok(EffectiveMetadataResult(
-                metadata = effectiveMetadata,
+                metadata = result.metadata,
                 entityType = entityType,
-                policiesApplied = policiesApplied
+                policiesApplied = result.policiesApplied
             ))
         } catch (e: Exception) {
             logger.error("Failed to apply metadata policies", e)

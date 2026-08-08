@@ -244,6 +244,21 @@ class GetSubordinateStatementCommandImpl(
             statement.metadata(Pair(it.key, metadataJson))
         }
 
+        // Account-level metadata policies → Subordinate Statement metadata_policy (OIDFed 1.1 §3.1.3)
+        // Each stored policy key is an Entity Type Identifier; policy body is claim → operators.
+        Persistence.metadataPolicyQueries.findByAccountId(tenantId)
+            .executeAsList()
+            .forEach { policyRow ->
+                try {
+                    val policyJson = Json.parseToJsonElement(policyRow.policy).jsonObject
+                    statement.metadataPolicy(Pair(policyRow.key, policyJson))
+                } catch (e: Exception) {
+                    logger.warn(
+                        "Skipping invalid metadata policy key=${policyRow.key} for account=$tenantId: ${e.message}"
+                    )
+                }
+            }
+
         if (constraints != null) {
             statement.constraints(constraints)
         }

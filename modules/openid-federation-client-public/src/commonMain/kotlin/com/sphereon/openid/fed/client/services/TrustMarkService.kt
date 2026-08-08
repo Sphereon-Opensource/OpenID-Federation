@@ -34,16 +34,20 @@ interface TrustMarkService :
     }
 
     /**
-     * Verifies a Trust Mark according to the OpenID Federation specification.
+     * Verifies a Trust Mark under a federation Trust Anchor (OIDFed 1.1 §7.3).
      *
      * @param trustMark The Trust Mark JWT string to validate.
-     * @param trustAnchorConfig The Trust Anchor's Entity Configuration.
+     * @param trustAnchorConfig The Trust Anchor's Entity Configuration for the evaluating federation.
      * @param currentTime Optional timestamp for validation (defaults to current time).
+     * @param subject Optional Entity Identifier that must match the Trust Mark `sub` claim.
      * @return FederationResult containing the TrustMarkValidationResponse or an error.
+     *   [com.sphereon.openid.fed.core.error.TrustMarkNotRecognizedError] when the mark type
+     *   is not recognized by this federation (filter out for cross-federation use).
      */
     override suspend fun verifyTrustMark(
         trustMark: String,
         trustAnchorConfig: EntityConfigurationStatement,
-        currentTime: Long?
+        currentTime: Long?,
+        subject: String?
     ): FederationResult<TrustMarkValidationResponse>
 }

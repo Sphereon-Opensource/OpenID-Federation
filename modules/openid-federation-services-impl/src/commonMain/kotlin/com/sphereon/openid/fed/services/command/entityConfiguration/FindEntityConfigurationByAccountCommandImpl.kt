@@ -114,7 +114,7 @@ class FindEntityConfigurationByAccountCommandImpl(
     ) {
         addFederationEntityMetadata(tenantId, builder, identifier)
         addMetadata(tenantId, builder)
-        addMetadataPolicy(tenantId, builder)
+        // metadata_policy belongs only on Subordinate Statements (OIDFed 1.1 §3.1.3)
         addAuthorityHints(tenantId, builder)
         addTrustAnchorHints(tenantId, builder)
         addCrits(tenantId, builder)
@@ -163,14 +163,6 @@ class FindEntityConfigurationByAccountCommandImpl(
             .executeAsList()
             .forEach {
                 builder.metadata(Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject))
-            }
-    }
-
-    private fun addMetadataPolicy(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
-        queries.metadataPolicyQueries.findByAccountId(tenantId)
-            .executeAsList()
-            .forEach {
-                builder.metadataPolicy(Pair(it.key, Json.parseToJsonElement(it.policy).jsonObject))
             }
     }
 

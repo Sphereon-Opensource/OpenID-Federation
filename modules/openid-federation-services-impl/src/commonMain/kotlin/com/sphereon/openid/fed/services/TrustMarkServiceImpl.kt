@@ -103,7 +103,14 @@ class TrustMarkServiceImpl(
             ))
 
             val trustMarkValue = if (trustMarkJwt.isOk) trustMarkJwt.value else ""
-            val status = if (isActive) "active" else "invalid"
+            // OIDFed 1.1 §8.4.2 status values: active | expired | revoked | invalid
+            val now = System.currentTimeMillis() / 1000
+            val status = when {
+                isActive -> "active"
+                trustMarkJwt.isOk && isTrustMarkJwtExpired(trustMarkJwt.value, now) -> "expired"
+                trustMarkJwt.isOk -> "revoked" // present in history but not active and not expired → treat as revoked/removed from active set
+                else -> "invalid"
+            }
 
             val issuer = tenantContextResolver.resolveIdentifier(tenantId)
                 ?: return@andThenSuspend ServerError("Cannot resolve issuer identifier", null, null).toErr()
@@ -119,7 +126,7 @@ class TrustMarkServiceImpl(
             }
 
             val key = keys[0]
-            val iat = (System.currentTimeMillis() / 1000).toInt()
+            val iat = now.toInt()
 
             val payload = TrustMarkStatusResponsePayload(
                 iss = issuer,
@@ -135,6 +142,22 @@ class TrustMarkServiceImpl(
             )
 
             jwtService.signPayload(payload, header, key.kid, key.kmsKeyRef, key.kms)
+        }
+    }
+
+    private fun isTrustMarkJwtExpired(trustMarkJwt: String, nowSeconds: Long): Boolean {
+        return try {
+            val parts = trustMarkJwt.split(".")
+            if (parts.size < 2) return false
+            val payloadJson = kotlin.io.encoding.Base64.UrlSafe
+                .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
+                .decode(parts[1])
+                .decodeToString()
+            val expMatch = Regex("\"exp\"\\s*:\\s*([0-9.]+)").find(payloadJson) ?: return false
+            val exp = expMatch.groupValues[1].toDoubleOrNull()?.toLong() ?: return false
+            exp <= nowSeconds
+        } catch (_: Exception) {
+            false
         }
     }
 

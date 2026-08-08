@@ -44,7 +44,8 @@ class TrustMarkServiceImpl(
     override suspend fun verifyTrustMark(
         trustMark: String,
         trustAnchorConfig: EntityConfigurationStatement,
-        currentTime: Long?
+        currentTime: Long?,
+        subject: String?
     ): FederationResult<TrustMarkValidationResponse> =
-        verifyTrustMarkCommand.verifyTrustMark(trustMark, trustAnchorConfig, currentTime)
+        verifyTrustMarkCommand.verifyTrustMark(trustMark, trustAnchorConfig, currentTime, subject)
 }

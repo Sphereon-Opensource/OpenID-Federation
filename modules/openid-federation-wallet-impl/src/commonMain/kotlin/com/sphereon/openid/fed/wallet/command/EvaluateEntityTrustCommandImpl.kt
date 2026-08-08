@@ -9,13 +9,21 @@ import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.core.error.*
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.openapi.models.TrustMark
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
+import com.sphereon.openid.fed.core.error.TrustMarkNotRecognizedError
 
+/**
+ * Evaluates whether an entity is trusted in the federation (wallet architecture).
+ *
+ * Resolves and verifies a Trust Chain, derives full Resolved Metadata (entity-type keyed),
+ * checks required Entity Types against that full metadata, and validates Trust Marks.
+ */
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<EvaluateEntityTrustCommand>())
@@ -59,8 +67,7 @@ class EvaluateEntityTrustCommandImpl(
                     reason = "Trust chain resolution failed: ${trustChainResult.error.message.defaultMessage}"
                 ))
             }
-            val trustChainResponse = trustChainResult.value
-            val trustChain = trustChainResponse.trustChain
+            val trustChain = trustChainResult.value.trustChain
 
             if (trustChain.isEmpty()) {
                 return IdkResult.err(EntityNotTrustedError(
@@ -69,11 +76,14 @@ class EvaluateEntityTrustCommandImpl(
                 ))
             }
 
+            val trustChainArray = trustChain.toTypedArray()
+            val trustAnchor = determineTrustAnchor(trustChain)
+
             // 2. Verify trust chain cryptographically
-            logger.debug("Verifying trust chain for $entityIdentifier")
+            logger.debug("Verifying trust chain for $entityIdentifier against $trustAnchor")
             val verifyResult = federationClient.trustChainVerify(
-                trustChain = trustChain.toTypedArray(),
-                trustAnchor = null,
+                trustChain = trustChainArray,
+                trustAnchor = trustAnchor.takeIf { it != "unknown" },
                 currentTime = currentTime
             )
             if (verifyResult.isErr) {
@@ -83,27 +93,50 @@ class EvaluateEntityTrustCommandImpl(
                     reason = "Trust chain verification failed: ${verifyResult.error.message.defaultMessage}"
                 ))
             }
+            if (!verifyResult.value.isValid) {
+                return IdkResult.err(EntityNotTrustedError(
+                    entityId = entityIdentifier,
+                    reason = verifyResult.value.errorMessage
+                        ?: "Trust chain verification returned invalid"
+                ))
+            }
 
-            // 3. Apply metadata policies
+            // 3. Apply metadata policies for full Resolved Metadata (entity-type keyed).
+            // Must use entityType = null so the result is { "openid_wallet_provider": {...}, ... }
+            // and not a scoped type-internal object (which broke containsKey(type) checks).
             logger.debug("Applying metadata policies for $entityIdentifier")
             val policyResult = applyMetadataPolicyCommand.applyMetadataPolicy(
-                trustChain = trustChain.toTypedArray(),
-                entityType = entityTypes?.firstOrNull()
+                trustChain = trustChainArray,
+                entityType = null
             )
-            val effectiveMetadata = if (policyResult.isOk) policyResult.value.metadata else null
+            if (policyResult.isErr) {
+                logger.error("Metadata policy application failed for $entityIdentifier")
+                return IdkResult.err(EntityNotTrustedError(
+                    entityId = entityIdentifier,
+                    reason = "Metadata policy application failed: ${policyResult.error.message.defaultMessage}"
+                ))
+            }
+            val fullResolvedMetadata = policyResult.value.metadata
 
-            // 4. Check entity types if specified
-            if (entityTypes != null && effectiveMetadata != null) {
-                val hasMatchingType = entityTypes.any { type ->
-                    effectiveMetadata.containsKey(type)
-                }
-                if (!hasMatchingType) {
+            // 4. Check required entity types against full Resolved Metadata keys
+            if (entityTypes != null && entityTypes.isNotEmpty()) {
+                val presentTypes = entityTypes.filter { fullResolvedMetadata.containsKey(it) }
+                if (presentTypes.isEmpty()) {
+                    val available = fullResolvedMetadata.keys.joinToString(", ").ifEmpty { "(none)" }
                     return IdkResult.err(EntityNotTrustedError(
                         entityId = entityIdentifier,
-                        reason = "Entity does not have any of the required entity types: ${entityTypes.joinToString(", ")}"
+                        reason = "Entity does not have any of the required entity types: " +
+                            "${entityTypes.joinToString(", ")} (available: $available)"
                     ))
                 }
+                logger.debug("Required entity types present: ${presentTypes.joinToString(", ")}")
             }
+
+            // Return full resolved metadata, optionally filtered to requested types only
+            val effectiveMetadata = MetadataPolicyOperators.filterEntityTypes(
+                metadata = fullResolvedMetadata,
+                entityTypes = entityTypes?.toList()
+            )
 
             // 5. Get entity configuration for trust mark verification
             logger.debug("Fetching entity configuration for trust mark verification")
@@ -114,27 +147,47 @@ class EvaluateEntityTrustCommandImpl(
                 emptyList()
             }
 
-            // 6. Verify trust marks
+            // 6. Verify trust marks against THIS federation's Trust Anchor only.
+            // Cross-federation marks (not recognized by this TA) are filtered out — they do not
+            // fail the entity and are not included in verifiedTrustMarks.
             val verifiedTrustMarks = mutableListOf<TrustMark>()
-            if (entityTrustMarks.isNotEmpty() && entityConfigResult.isOk) {
-                // Get trust anchor config for trust mark validation context
-                val trustAnchorIdentifier = determineTrustAnchor(trustChain)
-                val taConfigResult = federationClient.entityConfigurationStatementGet(trustAnchorIdentifier)
+            if (entityTrustMarks.isNotEmpty()) {
+                val taConfigResult = federationClient.entityConfigurationStatementGet(trustAnchor)
 
                 if (taConfigResult.isOk) {
                     for (trustMark in entityTrustMarks) {
                         val tmResult = federationClient.trustMarksVerify(
                             trustMark = trustMark.trustMark,
                             trustAnchorConfig = taConfigResult.value,
-                            currentTime = currentTime
+                            currentTime = currentTime,
+                            subject = entityIdentifier
                         )
-                        if (tmResult.isOk) {
-                            verifiedTrustMarks.add(trustMark)
-                            logger.debug("Trust mark ${trustMark.trustMarkType} verified successfully")
-                        } else {
-                            logger.debug("Trust mark ${trustMark.trustMarkType} verification failed: ${tmResult.error.message.defaultMessage}")
+                        when {
+                            tmResult.isOk -> {
+                                verifiedTrustMarks.add(trustMark)
+                                logger.debug(
+                                    "Trust mark ${trustMark.trustMarkType} verified for federation TA $trustAnchor"
+                                )
+                            }
+                            tmResult.error is TrustMarkNotRecognizedError -> {
+                                logger.debug(
+                                    "Trust mark ${trustMark.trustMarkType} not recognized by " +
+                                        "federation TA $trustAnchor — filtered out (cross-federation mark)"
+                                )
+                            }
+                            else -> {
+                                logger.debug(
+                                    "Trust mark ${trustMark.trustMarkType} invalid under TA $trustAnchor: " +
+                                        tmResult.error.message.defaultMessage
+                                )
+                            }
                         }
                     }
+                } else {
+                    logger.warn(
+                        "Could not fetch Trust Anchor config for trust mark verification: " +
+                            taConfigResult.error.message.defaultMessage
+                    )
                 }
             }
 
@@ -150,7 +203,6 @@ class EvaluateEntityTrustCommandImpl(
                 }
             }
 
-            val trustAnchor = determineTrustAnchor(trustChain)
             logger.info("Entity $entityIdentifier is trusted via trust anchor $trustAnchor")
 
             IdkResult.ok(EntityTrustResult(
@@ -172,14 +224,13 @@ class EvaluateEntityTrustCommandImpl(
     }
 
     /**
-     * Determines the trust anchor from a trust chain.
-     * The trust anchor is the last entity in the chain.
+     * Trust Anchor is the issuer of the last statement in the chain (TA Entity Configuration).
      */
     private fun determineTrustAnchor(trustChain: List<String>): String {
         val lastJwt = trustChain.last()
         return try {
             val decoded = decodeJWTComponents(lastJwt)
-            decoded.payload["iss"]?.toString()?.trim('"') ?: "unknown"
+            decoded.payload["iss"]?.jsonPrimitive?.contentOrNull ?: "unknown"
         } catch (_: Exception) {
             "unknown"
         }

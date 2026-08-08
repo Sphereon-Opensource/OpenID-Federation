@@ -54,16 +54,22 @@ interface FederationClient {
     suspend fun entityConfigurationStatementGet(entityIdentifier: String): FederationResult<EntityConfigurationStatement>
 
     /**
-     * Verifies a Trust Mark according to the OpenID Federation specification.
+     * Verifies a Trust Mark under a federation Trust Anchor (OIDFed 1.1 §7.3).
+     *
+     * Marks not recognized by this TA return
+     * [com.sphereon.openid.fed.core.error.TrustMarkNotRecognizedError] so callers can
+     * filter them for cross-federation Entity Configurations.
      *
      * @param trustMark The Trust Mark JWT string to validate
-     * @param trustAnchorConfig The Trust Anchor's Entity Configuration
+     * @param trustAnchorConfig The Trust Anchor's Entity Configuration for the evaluating federation
      * @param currentTime Optional timestamp for validation (defaults to current time)
+     * @param subject Optional Entity Identifier that must match the Trust Mark `sub` claim
      * @return Ok with [TrustMarkValidationResponse] on success, Err with [FederationError] on failure.
      */
     suspend fun trustMarksVerify(
         trustMark: String,
         trustAnchorConfig: EntityConfigurationStatement,
-        currentTime: Long? = null
+        currentTime: Long? = null,
+        subject: String? = null
     ): FederationResult<TrustMarkValidationResponse>
 }

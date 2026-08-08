@@ -14,7 +14,8 @@ class SubordinateStatementObjectBuilder {
     private var jwks: MutableList<Jwk> = mutableListOf()
     private var metadata: MutableMap<String, JsonObject> = mutableMapOf()
     private var metadata_policy: MutableMap<String, JsonObject> = mutableMapOf()
-    private var metadata_policy_crit: MutableMap<String, JsonObject> = mutableMapOf()
+    /** Critical non-standard policy operator names (OIDFed 1.1 §3.1.3 — array of strings). */
+    private val metadata_policy_crit: MutableList<String> = mutableListOf()
     private val crit: MutableList<String> = mutableListOf()
     private var source_endpoint: String? = null
     private var constraints: Constraints? = null
@@ -32,8 +33,14 @@ class SubordinateStatementObjectBuilder {
         this.metadata_policy[metadataPolicy.first] = metadataPolicy.second
     }
 
-    fun metadataPolicyCrit(metadataPolicyCrit: Pair<String, JsonObject>) = apply {
-        this.metadata_policy_crit[metadataPolicyCrit.first] = metadataPolicyCrit.second
+    fun metadataPolicyCrit(operatorName: String) = apply {
+        if (operatorName.isNotBlank() && operatorName !in metadata_policy_crit) {
+            this.metadata_policy_crit.add(operatorName)
+        }
+    }
+
+    fun metadataPolicyCrit(operatorNames: Collection<String>) = apply {
+        operatorNames.forEach { metadataPolicyCrit(it) }
     }
 
     fun crit(claim: String) = apply {
@@ -62,9 +69,10 @@ class SubordinateStatementObjectBuilder {
                 propertyKeys = jwks
             ),
             crit = if (crit.isNotEmpty()) crit else null,
-            metadata = JsonObject(metadata),
-            metadataPolicy = JsonObject(metadata_policy),
-            metadataPolicyCrit = JsonObject(metadata_policy_crit),
+            metadata = if (metadata.isNotEmpty()) JsonObject(metadata) else null,
+            metadataPolicy = if (metadata_policy.isNotEmpty()) JsonObject(metadata_policy) else null,
+            // Spec: MUST NOT be the empty array when present
+            metadataPolicyCrit = if (metadata_policy_crit.isNotEmpty()) metadata_policy_crit.toList() else null,
             sourceEndpoint = source_endpoint,
             constraints = constraints,
         )

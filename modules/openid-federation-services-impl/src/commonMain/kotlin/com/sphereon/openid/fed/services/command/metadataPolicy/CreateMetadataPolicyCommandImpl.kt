@@ -46,7 +46,7 @@ class CreateMetadataPolicyCommandImpl(
     ): IdkResult<MetadataPolicy, FederationError> {
         val (tenantId, key, policy) = applyDuring(args)
 
-        logger.info("Creating entity configuration metadata policy for account: ${tenantId}, key: $key")
+        logger.info("Creating subordinate metadata policy for account: ${tenantId}, key: $key")
         logger.debug("Using account with ID: ${tenantId}")
 
         val policyAlreadyExists = metadataPolicyQueries

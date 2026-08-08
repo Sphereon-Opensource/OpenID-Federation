@@ -1988,6 +1988,9 @@ components:
           additionalProperties: true
         metadata_policy:
           additionalProperties: true
+          description: >
+            Present only on Subordinate Statements per OIDFed 1.1 §3.1.3.
+            Entity Configurations published by this server omit this claim.
         crit:
           type: array
           items:
@@ -2859,12 +2862,20 @@ components:
           properties:
             metadata_policy:
               additionalProperties: true
+              description: >
+                Metadata policy applying to the subject and its Subordinates (OIDFed 1.1 §3.1.3 / §6.1).
+                Must only appear in Subordinate Statements, not Entity Configurations.
             crit:
               type: array
               items:
                 type: string
             metadata_policy_crit:
-              additionalProperties: true
+              type: array
+              items:
+                type: string
+              description: >
+                Critical non-standard metadata policy operator names that MUST be understood
+                (OIDFed 1.1 §3.1.3). MUST NOT be the empty array when present.
             source_endpoint:
               type: string
               format: uri
@@ -2885,12 +2896,19 @@ components:
           properties:
             metadata_policy:
               additionalProperties: true
+              description: >
+                Metadata policy applying to the subject and its Subordinates (OIDFed 1.1 §3.1.3 / §6.1).
             crit:
               type: array
               items:
                 type: string
             metadata_policy_crit:
-              additionalProperties: true
+              type: array
+              items:
+                type: string
+              description: >
+                Critical non-standard metadata policy operator names that MUST be understood
+                (OIDFed 1.1 §3.1.3). MUST NOT be the empty array when present.
             source_endpoint:
               type: string
               format: uri

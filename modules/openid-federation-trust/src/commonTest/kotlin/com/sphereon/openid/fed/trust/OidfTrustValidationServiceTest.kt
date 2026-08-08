@@ -270,7 +270,10 @@ class OidfTrustValidationServiceTest {
         val trustMarkCmd = object : VerifyTrustMarkCommand {
             override val isEnabled: Boolean get() = true
             override suspend fun verifyTrustMark(
-                trustMark: String, trustAnchorConfig: EntityConfigurationStatement, currentTime: Long?
+                trustMark: String,
+                trustAnchorConfig: EntityConfigurationStatement,
+                currentTime: Long?,
+                subject: String?
             ): IdkResult<TrustMarkValidationResponse, FederationError> = throw NotImplementedError()
             override suspend fun execute(args: VerifyTrustMarkArgs): IdkResult<TrustMarkValidationResponse, FederationError> =
                 throw NotImplementedError()

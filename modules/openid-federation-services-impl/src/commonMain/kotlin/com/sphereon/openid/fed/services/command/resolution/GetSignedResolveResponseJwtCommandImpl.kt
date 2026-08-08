@@ -76,10 +76,12 @@ class GetSignedResolveResponseJwtCommandImpl(
                     val key = keys[0]
                     logger.debug("Using key with kid: ${key.kid}")
 
+                    // OIDFed 1.1 §8.3.2 / §15.3: typ is "resolve-response+jwt"
+                    // (media type is application/resolve-response+jwt on the HTTP response)
                     val jwtHeader = JwtHeader(
                         kid = key.kid,
                         alg = key.alg ?: "RS256",
-                        typ = "application/resolve-response+jwt"
+                        typ = "resolve-response+jwt"
                     )
 
                     jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)

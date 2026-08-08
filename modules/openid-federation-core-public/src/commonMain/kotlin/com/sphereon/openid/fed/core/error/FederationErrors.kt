@@ -316,6 +316,38 @@ data class TrustMarkIssuerNotAuthorizedError(
     }
 }
 
+/**
+ * Trust Mark type is not recognized by the evaluating federation's Trust Anchor.
+ *
+ * This is expected for cross-federation scenarios: an Entity Configuration may publish
+ * Trust Marks that other federations trust, while this federation ignores them.
+ * Callers SHOULD filter these out rather than treating the subject Entity as untrusted.
+ */
+data class TrustMarkNotRecognizedError(
+    val trustMarkId: String,
+    val trustAnchorId: String? = null,
+    val reason: String = "Trust Mark type is not recognized by this federation's Trust Anchor",
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.UnprocessableEntity
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.trust-mark-not-recognized",
+        i18nParams = mapOf(
+            "trustMarkId" to trustMarkId,
+            "trustAnchorId" to (trustAnchorId ?: ""),
+            "reason" to reason
+        ),
+        defaultMessage = "Trust mark $trustMarkId not recognized by federation" +
+            (trustAnchorId?.let { " (TA $it)" } ?: "") + ": $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "trust_mark_not_recognized"
+    }
+}
+
 // =============================================================================
 // Signature and JWT Errors
 // =============================================================================

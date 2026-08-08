@@ -24,6 +24,9 @@ kotlin {
                 api(projects.modules.openidFederationClient)
                 api(projects.modules.openidFederationCommon)
 
+                // Metadata policy operators (Resolved Metadata for /resolve — OIDFed 1.1 §6.1 / §8.3)
+                api(projects.modules.openidFederationWalletPublic)
+
                 implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
                 implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
                 implementation(sphereonlib.io.ktor.serialization.kotlinx.json)

@@ -20,6 +20,7 @@
  * - [TrustMarkInvalidError] - Trust mark validation failed
  * - [TrustMarkExpiredError] - Trust mark has expired
  * - [TrustMarkIssuerNotAuthorizedError] - Issuer not authorized
+ * - [TrustMarkNotRecognizedError] - Mark type not recognized by evaluating federation (filter, do not fail entity)
  *
  * ### JWT/Signature Errors
  * - [SignatureVerificationFailedError] - Signature verification failed
