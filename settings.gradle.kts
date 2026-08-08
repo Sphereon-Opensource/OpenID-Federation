@@ -102,9 +102,10 @@ dependencyResolutionManagement {
         }
         gradlePluginPortal()
 
-        // Kotlin/JS + node-gradle download Node/Yarn via Ivy, not Maven.
+        // Kotlin JS/Wasm + node-gradle download tooling via Ivy (not Maven).
         // With PREFER_SETTINGS, project.repositories.ivy { } is ignored for resolution
-        // (see KT-55620 / kotlinNodeJsSetup), so these must live in settings.
+        // (KT-55620), so every AbstractSetupTask distro must be listed here:
+        // Node, Yarn, Binaryen, D8.
         ivy {
             name = "Node.js distributions"
             url = uri("https://nodejs.org/dist")
@@ -122,6 +123,24 @@ dependencyResolutionManagement {
             }
             metadataSources { artifact() }
             content { includeModule("com.yarnpkg", "yarn") }
+        }
+        ivy {
+            name = "Binaryen distributions"
+            url = uri("https://github.com/WebAssembly/binaryen/releases/download")
+            patternLayout {
+                artifact("version_[revision]/binaryen-version_[revision]-[classifier].[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeModule("com.github.webassembly", "binaryen") }
+        }
+        ivy {
+            name = "D8 distributions"
+            url = uri("https://storage.googleapis.com/chromium-v8/official/canary")
+            patternLayout {
+                artifact("[artifact]-[revision].[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeModule("google.d8", "v8") }
         }
     }
 }
