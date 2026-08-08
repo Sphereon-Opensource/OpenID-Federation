@@ -101,6 +101,28 @@ dependencyResolutionManagement {
             url = uri("https://jitpack.io")
         }
         gradlePluginPortal()
+
+        // Kotlin/JS + node-gradle download Node/Yarn via Ivy, not Maven.
+        // With PREFER_SETTINGS, project.repositories.ivy { } is ignored for resolution
+        // (see KT-55620 / kotlinNodeJsSetup), so these must live in settings.
+        ivy {
+            name = "Node.js distributions"
+            url = uri("https://nodejs.org/dist")
+            patternLayout {
+                artifact("v[revision]/[artifact](-v[revision]-[classifier]).[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeModule("org.nodejs", "node") }
+        }
+        ivy {
+            name = "Yarn distributions"
+            url = uri("https://github.com/yarnpkg/yarn/releases/download")
+            patternLayout {
+                artifact("v[revision]/[artifact](-v[revision]).[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeModule("com.yarnpkg", "yarn") }
+        }
     }
 }
 
