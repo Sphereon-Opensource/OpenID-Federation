@@ -46,6 +46,9 @@ plugins {
 }
 
 dependencyResolutionManagement {
+    // Project-level repositories {} would replace these (Gradle PREFER_PROJECT default)
+    // and silently drop Sphereon Nexus — that broke openapi CI for IDK SNAPSHOTs.
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     versionCatalogs {
         create("sphereonplug") {
             from("com.sphereon.gradle:gradle-plugin-bom:0.9.0-SNAPSHOT@toml" as String)

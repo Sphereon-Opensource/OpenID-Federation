@@ -28,10 +28,9 @@ project.extra.set("openApiPackage", basePackage)
 val profiles = project.properties["profiles"]?.toString()?.split(",") ?: emptyList()
 val isModelsOnlyProfile = profiles.contains("models-only")
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
+// Repositories come from settings.gradle.kts (dependencyResolutionManagement).
+// Do NOT declare project-level repositories here — with PREFER_PROJECT that would
+// hide Sphereon Nexus and break CI (SNAPSHOT IDK deps only exist on nexus.sphereon.com).
 
 /**
  * Merge core admin OpenAPI with optional LEGACY accounts fragment so monorepo codegen

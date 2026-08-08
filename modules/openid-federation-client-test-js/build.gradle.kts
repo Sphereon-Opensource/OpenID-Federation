@@ -5,15 +5,7 @@ plugins {
     alias(libs.plugins.node.gradle)
 }
 
-repositories {
-    mavenCentral()
-    maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") }
-    maven { url = uri("https://aws.oss.sonatype.org/content/repositories/snapshots/") }
-    maven { url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-snapshots/") }
-    maven { url = uri("https://nexus.sphereon.com/repository/sphereon-opensource-releases/") }
-    maven { url = uri("https://jitpack.io") }
-    mavenLocal { content { includeGroupAndSubgroups("com.sphereon") } }
-}
+// Repositories from settings.gradle.kts (PREFER_SETTINGS). Do not redeclare here.
 
 kotlin {
     js {
