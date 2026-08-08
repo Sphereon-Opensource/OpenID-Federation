@@ -25,7 +25,8 @@ object OidfConfigDefaults {
         OidfConfigKeys.Logger.OUTPUT to "TEXT",
         OidfConfigKeys.Logger.INCLUDE_TIMESTAMP to "false",
         OidfConfigKeys.Kms.DEFAULT_PROVIDER to "memory",
-        OidfConfigKeys.Identity.MODE to "legacy",
+        // identity.mode intentionally omitted → IdentityModeDefaults (upgrade=account,
+        // greenfield+account-http=account, greenfield without account modules=external)
         OidfConfigKeys.Identity.SESSION_ALIGNMENT to "account",
         OidfConfigKeys.Identity.SESSION_FIXED_TENANT_ID to "default",
     )

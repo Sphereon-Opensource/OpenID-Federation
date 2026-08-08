@@ -45,6 +45,15 @@ kotlin {
                 implementation(sphereonlib.org.postgresql.postgresql)
             }
         }
+
+        val jvmTest by getting {
+            dependencies {
+                implementation(kotlin("test-junit"))
+                implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
+                implementation(sphereonlib.com.zaxxer.hikaricp)
+                implementation(sphereonlib.org.postgresql.postgresql)
+            }
+        }
     }
 }
 

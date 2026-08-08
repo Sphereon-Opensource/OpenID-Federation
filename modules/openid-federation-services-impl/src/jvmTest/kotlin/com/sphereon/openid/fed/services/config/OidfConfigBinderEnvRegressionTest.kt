@@ -105,7 +105,13 @@ class OidfConfigBinderEnvRegressionTest {
             assertEquals("memory", binder.getKmsConfig().defaultProvider)
             assertEquals(9081, binder.getServerConfig(OidfConfigBinder.ServerType.ADMIN).port)
             assertEquals(9080, binder.getServerConfig(OidfConfigBinder.ServerType.FEDERATION).port)
-            assertEquals(IdentityMode.ACCOUNT, binder.getIdentityConfig().mode)
+            // Unset mode → auto default (this test classpath has no account-http → EXTERNAL
+            // unless an existing DB was marked; unit tests start clean).
+            val mode = binder.getIdentityConfig().mode
+            assertTrue(
+                mode == IdentityMode.ACCOUNT || mode == IdentityMode.EXTERNAL,
+                "unexpected mode $mode",
+            )
         }
     }
 

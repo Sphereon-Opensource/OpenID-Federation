@@ -16,6 +16,7 @@ import com.sphereon.openid.fed.core.config.OidfPropertyResolution
 import com.sphereon.openid.fed.core.config.ServerConfig
 import com.sphereon.openid.fed.core.config.TenantConfig
 import com.sphereon.openid.fed.core.tenant.IdentityConfig
+import com.sphereon.openid.fed.core.tenant.IdentityModeDefaults
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import com.sphereon.openid.fed.core.tenant.SessionAlignment
 import dev.zacsweers.metro.AppScope
@@ -148,7 +149,10 @@ class OidfConfigBinderImpl(
     }
 
     override fun getIdentityConfig(): IdentityConfig {
-        val mode = IdentityMode.parse(getPropertyOrNull(OidfConfigKeys.Identity.MODE))
+        // Unset mode → auto: upgrade/account-classpath → ACCOUNT; greenfield host → EXTERNAL
+        val mode = IdentityModeDefaults.resolve(
+            explicitMode = getPropertyOrNull(OidfConfigKeys.Identity.MODE),
+        )
         val rootTenant =
             getPropertyOrNull(OidfConfigKeys.Identity.EXTERNAL_ROOT_TENANT_ID)
                 ?: getPropertyOrNull(OidfConfigKeys.Identity.PLATFORM_ROOT_TENANT_ID)

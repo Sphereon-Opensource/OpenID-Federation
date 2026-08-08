@@ -3,16 +3,20 @@ package com.sphereon.openid.fed.core.tenant
 /**
  * How OpenID Federation resolves multi-entity (tenant) isolation and identity.
  *
- * ## ACCOUNT (default open-source standalone)
- * Federation entity context is an [Account] row. Management REST (`/accounts`) enabled.
- * Authn is always Bearer. Entity selection via `X-Account-Username` is an **account-mode**
- * privilege controlled by [IdentityConfig.accountHeaderAllowedPrincipals] (who may switch),
- * not by hard-coded AS `sub=root`.
+ * ## ACCOUNT (standalone / upgrades / account-http packaging)
+ * Federation entity context is an [Account] row. Management REST (`/accounts`) enabled when
+ * `account-http` is on the classpath. Authn is always Bearer. Entity selection via
+ * `X-Account-Username` is an **account-mode** privilege controlled by
+ * [IdentityConfig.accountHeaderAllowedPrincipals] (who may switch).
  *
- * ## EXTERNAL
+ * ## EXTERNAL (greenfield host / platform packaging)
  * Host embeddings with IDK. Session tenant comes from the **validated access token only**.
  * No account-header identity, no root-account login. Impersonation/delegation is entirely
  * the AS (token claims). No account/user/party management APIs in OIDFed.
+ *
+ * ## Default when config is unset
+ * See [IdentityModeDefaults.resolve]: upgrades and account-module classpaths → ACCOUNT;
+ * new empty installs without account modules → EXTERNAL. Explicit `oidf.identity.mode` wins.
  */
 enum class IdentityMode {
     ACCOUNT,
@@ -20,19 +24,54 @@ enum class IdentityMode {
 
     companion object {
         /**
-         * Parse config / env value.
+         * Parse an **explicit** config / env value.
          *
+         * Blank/null does **not** mean ACCOUNT — use [IdentityModeDefaults.resolve] for unset mode.
          * Canonical: `account`, `external`.
          * Aliases (compat): `legacy`/`accounts` → ACCOUNT; `platform`/`idk`/`session` → EXTERNAL.
+         * Unknown non-blank values → ACCOUNT (safe for upgrades with typos).
          */
         fun parse(value: String?): IdentityMode {
-            if (value.isNullOrBlank()) return ACCOUNT
+            if (value.isNullOrBlank()) {
+                return IdentityModeDefaults.resolve(explicitMode = null)
+            }
+            return parseExplicit(value) ?: ACCOUNT
+        }
+
+        /**
+         * Parse only when the operator set a non-blank value; null means "use auto default".
+         */
+        fun parseExplicit(value: String?): IdentityMode? {
+            if (value.isNullOrBlank()) return null
             return when (value.trim().lowercase()) {
                 "account", "accounts", "legacy" -> ACCOUNT
                 "external", "platform", "idk", "session" -> EXTERNAL
                 else -> ACCOUNT
             }
         }
+    }
+}
+
+/**
+ * Default [IdentityMode] when `oidf.identity.mode` / `OIDF_IDENTITY_MODE` is unset.
+ *
+ * | Situation | Default |
+ * |-----------|---------|
+ * | Explicit config/env | that value |
+ * | Existing DB (upgrade from pre-0.25 / develop) | [IdentityMode.ACCOUNT] |
+ * | New install + account modules on classpath | [IdentityMode.ACCOUNT] |
+ * | New install + no account modules | [IdentityMode.EXTERNAL] |
+ */
+object IdentityModeDefaults {
+    fun resolve(
+        explicitMode: String?,
+        accountModulesPresent: Boolean = IdentityClasspath.accountModulesPresent(),
+        isExistingDatabase: Boolean = IdentityInstallState.isExistingDatabase,
+    ): IdentityMode {
+        IdentityMode.parseExplicit(explicitMode)?.let { return it }
+        if (isExistingDatabase) return IdentityMode.ACCOUNT
+        if (accountModulesPresent) return IdentityMode.ACCOUNT
+        return IdentityMode.EXTERNAL
     }
 }
 
@@ -93,6 +132,10 @@ enum class SessionAlignment {
  *   ACCOUNT mode only; EXTERNAL never honors the header.
  */
 data class IdentityConfig(
+    /**
+     * Effective mode. When constructing in tests, set explicitly.
+     * Runtime binder uses [IdentityModeDefaults.resolve] when config is unset.
+     */
     val mode: IdentityMode = IdentityMode.ACCOUNT,
     val externalRootTenantId: String? = null,
     val sessionAlignment: SessionAlignment = SessionAlignment.ACCOUNT,

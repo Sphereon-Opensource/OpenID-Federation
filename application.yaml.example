@@ -38,8 +38,10 @@ oidf:
         enabled: auto
 
   identity:
-    # account (default) | external  (aliases: legacy, platform)
-    mode: account
+    # account | external (aliases: legacy, platform).
+    # If omitted: upgrade (existing DB) or account-http on classpath → account;
+    # greenfield without account modules → external.
+    # mode: account
     account:
       header:
         principal:

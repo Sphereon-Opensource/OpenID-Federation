@@ -4,6 +4,7 @@ import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import com.sphereon.openid.fed.core.tenant.IdentityInstallState
 import com.sphereon.openid.fed.persistence.config.DatabaseConfig
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.database.PlatformSqlDriver
@@ -194,6 +195,14 @@ actual object Persistence {
             QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else 0L)
         }).value ?: 0L
 
+        // Upgrade path: pre-existing schema (develop / pre-0.25 installs) → ACCOUNT mode default
+        if (currentVersion > 0L) {
+            IdentityInstallState.markExistingDatabase(currentVersion)
+        } else if (legacyAccountTablePresent(driver)) {
+            // Partial / older installs that have Account data but empty schema_version
+            IdentityInstallState.markExistingDatabase(1L)
+        }
+
         // Backfill migration history for existing databases that already have data
         backfillMigrationHistory(driver, currentVersion)
 
@@ -232,6 +241,28 @@ actual object Persistence {
                     throw e
                 }
             }
+        }
+    }
+
+    /**
+     * Detect Account table from pre-migration / legacy databases so identity defaults to ACCOUNT.
+     */
+    private fun legacyAccountTablePresent(driver: SqlDriver): Boolean {
+        return try {
+            val count = driver.executeQuery(
+                null,
+                """
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_schema = 'public' AND lower(table_name) = 'account'
+                """.trimIndent(),
+                parameters = 0,
+                mapper = { cursor: SqlCursor ->
+                    QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else 0L)
+                },
+            ).value ?: 0L
+            count > 0L
+        } catch (_: Exception) {
+            false
         }
     }
 
