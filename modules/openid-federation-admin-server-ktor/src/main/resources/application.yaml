@@ -1,0 +1,49 @@
+# Packaged APP defaults for the Admin Server (classpath).
+# Overridden by working-dir / config/application.* and by environment variables.
+# See docs/CONFIGURATION.md and application.yaml.example at the repo root.
+
+oidf:
+  federation:
+    root:
+      identifier: http://localhost:8080
+    dev:
+      mode: false
+  server:
+    admin:
+      port: 8081
+      host: "0.0.0.0"
+  identity:
+    mode: account
+    account:
+      header:
+        principal:
+          claim: sub
+        allowed:
+          principals: ""
+    session:
+      alignment: account
+      fixed:
+        tenant:
+          id: default
+  oauth2:
+    # Required non-blank at admin startup — override via env or deploy file
+    issuer:
+      uri: ""
+    jwt:
+      auth:
+        enabled: auto
+  cors:
+    allowed:
+      origins: "*"
+      methods: GET,POST,PUT,DELETE,OPTIONS
+      headers: "*"
+    max:
+      age: 3600
+  logger:
+    severity: INFO
+    output: TEXT
+    include:
+      timestamp: false
+  kms:
+    default:
+      provider: memory

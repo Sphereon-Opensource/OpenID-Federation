@@ -24,12 +24,41 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # Gradle version MUST come from the project wrapper only
+      # (gradle/wrapper/gradle-wrapper.properties). Do not pin a different
+      # gradle-version here — that would desync CI from local builds.
       - name: Setup Gradle
+        id: setup-gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
 
       - name: Grant execute permission for Gradlew (Linux/Mac)
         if: runner.os != 'Windows'
         run: chmod +x ./gradlew
+
+      - name: Verify Gradle version matches project wrapper
+        run: |
+          set -euo pipefail
+          EXPECTED=$(sed -n 's/.*gradle-\([0-9][0-9.]*\)-bin\.zip/\1/p' gradle/wrapper/gradle-wrapper.properties)
+          if [ -z "${EXPECTED}" ]; then
+            echo "::error::Could not parse Gradle version from gradle/wrapper/gradle-wrapper.properties"
+            exit 1
+          fi
+          SETUP_VERSION="${{ steps.setup-gradle.outputs.gradle-version }}"
+          ACTUAL=$(./gradlew --version | awk '/^Gradle /{print $2; exit}')
+          echo "wrapper.properties : ${EXPECTED}"
+          echo "setup-gradle output: ${SETUP_VERSION}"
+          echo "./gradlew --version: ${ACTUAL}"
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Gradle version mismatch: wrapper=${EXPECTED} ./gradlew=${ACTUAL}"
+            exit 1
+          fi
+          if [ -n "${SETUP_VERSION}" ] && [ "${EXPECTED}" != "${SETUP_VERSION}" ]; then
+            echo "::error::setup-gradle resolved ${SETUP_VERSION}, expected wrapper ${EXPECTED}"
+            exit 1
+          fi
+          echo "OK: CI uses Gradle ${ACTUAL} (project wrapper)"
 
       - name: Execute build
         id: build

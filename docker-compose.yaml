@@ -1,6 +1,8 @@
 services:
   db:
-    image: postgres:latest
+    # Pin major version: postgres:latest (18+) changed the data directory layout and
+    # breaks existing volumes mounted at /var/lib/postgresql/data.
+    image: postgres:16
     container_name: openid-federation-datastore
     security_opt:
       - no-new-privileges:true
@@ -10,9 +12,9 @@ services:
       - path: .env.local
         required: false
     environment:
-      - POSTGRES_USER
-        POSTGRES_PASSWORD
-        POSTGRES_DB
+      POSTGRES_USER: ${POSTGRES_USER:-${DATASOURCE_USER}}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-${DATASOURCE_PASSWORD}}
+      POSTGRES_DB: ${POSTGRES_DB:-${DATASOURCE_DB}}
     ports:
       - "5432:5432"
     volumes:
@@ -26,7 +28,7 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d ${DATASOURCE_DB} -U ${DATASOURCE_USER}" ]
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
       interval: 3s
       timeout: 5s
       retries: 20
@@ -60,6 +62,14 @@ services:
         ROOT_IDENTIFIER
         DEV_MODE
         LOGGER_SEVERITY
+        KMS_PROVIDERS_MEMORY_TYPE
+        KMS_PROVIDERS_MEMORY_ID
+        KMS_PROVIDERS_MEMORY_ENABLED
+        KMS_PROVIDERS_MEMORY_ORDER
+        KMS_PROVIDERS_MEMORY_KEYSTORE_TYPE
+        KMS_PROVIDERS_MEMORY_KEYSTORE_ID
+        KMS_PROVIDERS_MEMORY_KEYSTORE_SCOPEBINDING
+        KMS_PROVIDERS_MEMORY_KEYSTORE_KEYVISIBILITY
     depends_on:
       db:
         condition: service_healthy
@@ -71,6 +81,8 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-server:/tmp/logs
+      # Optional file config — see application.yaml.example / docs/CONFIGURATION.md
+      - ./config:/app/config:ro
     networks:
       - openid_network
 
@@ -95,18 +107,37 @@ services:
       - path: .env.local
         required: false
     environment:
-      - DATASOURCE_URL
-        DATASOURCE_USER
-        DATASOURCE_PASSWORD
-        APP_KEY
-        KMS_PROVIDER
-        ROOT_IDENTIFIER
-        OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI
-        DEV_MODE
-        LOGGER_SEVERITY
-        LOGGER_OUTPUT
+      # Pass-through host env (same pattern as federation server)
+      DATASOURCE_URL: ${DATASOURCE_URL:-}
+      DATASOURCE_USER: ${DATASOURCE_USER:-}
+      DATASOURCE_PASSWORD: ${DATASOURCE_PASSWORD:-}
+      APP_KEY: ${APP_KEY:-}
+      KMS_PROVIDER: ${KMS_PROVIDER:-memory}
+      ROOT_IDENTIFIER: ${ROOT_IDENTIFIER:-}
+      DEV_MODE: ${DEV_MODE:-false}
+      LOGGER_SEVERITY: ${LOGGER_SEVERITY:-}
+      LOGGER_OUTPUT: ${LOGGER_OUTPUT:-}
+      # Admin always requires a JWT issuer (startup fails if blank).
+      # Prefer OIDF_* ; legacy OAUTH2_* still mapped on JVM.
+      OIDF_OAUTH2_ISSUER_URI: ${OIDF_OAUTH2_ISSUER_URI:-${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI:-http://keycloak:8080/realms/openid-federation}}
+      OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI:-http://keycloak:8080/realms/openid-federation}
+      OIDF_OAUTH2_AUDIENCE: ${OIDF_OAUTH2_AUDIENCE:-}
+      OIDF_OAUTH2_JWT_AUTH_ENABLED: ${OIDF_OAUTH2_JWT_AUTH_ENABLED:-auto}
+      KMS_PROVIDERS_MEMORY_TYPE: ${KMS_PROVIDERS_MEMORY_TYPE:-}
+      KMS_PROVIDERS_MEMORY_ID: ${KMS_PROVIDERS_MEMORY_ID:-}
+      KMS_PROVIDERS_MEMORY_ENABLED: ${KMS_PROVIDERS_MEMORY_ENABLED:-}
+      KMS_PROVIDERS_MEMORY_ORDER: ${KMS_PROVIDERS_MEMORY_ORDER:-}
+      KMS_PROVIDERS_MEMORY_KEYSTORE_TYPE: ${KMS_PROVIDERS_MEMORY_KEYSTORE_TYPE:-}
+      KMS_PROVIDERS_MEMORY_KEYSTORE_ID: ${KMS_PROVIDERS_MEMORY_KEYSTORE_ID:-}
+      KMS_PROVIDERS_MEMORY_KEYSTORE_SCOPEBINDING: ${KMS_PROVIDERS_MEMORY_KEYSTORE_SCOPEBINDING:-}
+      KMS_PROVIDERS_MEMORY_KEYSTORE_KEYVISIBILITY: ${KMS_PROVIDERS_MEMORY_KEYSTORE_KEYVISIBILITY:-}
     depends_on:
       db:
+        condition: service_healthy
+      # Bundled Keycloak is the default JWT issuer for local compose.
+      # For an external IdP: set OIDF_OAUTH2_ISSUER_URI and stop/remove the keycloak service
+      # (or override depends_on). Admin will not accept unauthenticated API calls.
+      keycloak:
         condition: service_healthy
     networks:
       - openid_network
@@ -117,6 +148,9 @@ services:
         max-file: "3"
     volumes:
       - ./logs/openid-federation-admin-server:/tmp/logs
+      # Optional file config (prefer application.yaml — see application.yaml.example / docs/CONFIGURATION.md).
+      # Env from env_file still overrides these keys.
+      - ./config:/app/config:ro
 
   keycloak:
     image: keycloak/keycloak:26.0

@@ -1,0 +1,73 @@
+package com.sphereon.openid.fed.server.federation.api.http.describe
+
+import com.sphereon.core.api.http.describe.HttpAdapterDescription
+import com.sphereon.core.api.http.describe.HttpAdapterDescriptorProvider
+import com.sphereon.core.api.http.describe.HttpAdapterMount
+import com.sphereon.openid.fed.server.federation.api.http.FederationHttpAdapter
+import com.sphereon.openid.fed.server.federation.api.http.command.*
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
+
+/**
+ * AppScope descriptor provider for FederationHttpAdapter.
+ *
+ * This provides metadata-only information about the adapter's endpoints,
+ * allowing the HttpAdapterCatalog to be built at startup without instantiating
+ * SessionScope adapters.
+ */
+@Inject
+@SingleIn(AppScope::class)
+@ContributesIntoSet(AppScope::class, binding = binding<HttpAdapterDescriptorProvider>())
+class FederationHttpAdapterDescriptorProvider : HttpAdapterDescriptorProvider {
+    override val id: String = FederationHttpAdapter.ID
+
+    override fun describe(): HttpAdapterDescription = HttpAdapterDescription(
+        id = id,
+        mount = HttpAdapterMount(
+            serverPrefix = "",
+            adapterBasePath = ""
+        ),
+        endpoints = listOf(
+            // Entity Configuration endpoints
+            GetEntityConfigurationEndpointCommand.ENDPOINT,
+            GetAccountEntityConfigurationEndpointCommand.ENDPOINT,
+            // List subordinates endpoints (GET + POST)
+            ListSubordinatesRootEndpointCommand.ENDPOINT,
+            PostListSubordinatesRootEndpointCommand.ENDPOINT,
+            ListSubordinatesAccountEndpointCommand.ENDPOINT,
+            PostListSubordinatesAccountEndpointCommand.ENDPOINT,
+            // Fetch subordinate statement endpoints (GET + POST)
+            FetchSubordinateRootEndpointCommand.ENDPOINT,
+            PostFetchSubordinateRootEndpointCommand.ENDPOINT,
+            FetchSubordinateAccountEndpointCommand.ENDPOINT,
+            PostFetchSubordinateAccountEndpointCommand.ENDPOINT,
+            // Trust mark status endpoints (GET + POST)
+            GetTrustMarkStatusRootEndpointCommand.ENDPOINT,
+            TrustMarkStatusRootEndpointCommand.ENDPOINT,
+            GetTrustMarkStatusAccountEndpointCommand.ENDPOINT,
+            TrustMarkStatusAccountEndpointCommand.ENDPOINT,
+            // Trust mark list endpoints (GET + POST)
+            TrustMarkListRootEndpointCommand.ENDPOINT,
+            PostTrustMarkListRootEndpointCommand.ENDPOINT,
+            TrustMarkListAccountEndpointCommand.ENDPOINT,
+            PostTrustMarkListAccountEndpointCommand.ENDPOINT,
+            // Get trust mark endpoints (GET + POST)
+            GetTrustMarkRootEndpointCommand.ENDPOINT,
+            PostGetTrustMarkRootEndpointCommand.ENDPOINT,
+            GetTrustMarkAccountEndpointCommand.ENDPOINT,
+            PostGetTrustMarkAccountEndpointCommand.ENDPOINT,
+            // Historical keys endpoints
+            HistoricalKeysRootEndpointCommand.ENDPOINT,
+            HistoricalKeysAccountEndpointCommand.ENDPOINT,
+            // Resolve endpoints (GET + POST)
+            ResolveRootEndpointCommand.ENDPOINT,
+            PostResolveRootEndpointCommand.ENDPOINT,
+            ResolveAccountEndpointCommand.ENDPOINT,
+            PostResolveAccountEndpointCommand.ENDPOINT
+        )
+    )
+}

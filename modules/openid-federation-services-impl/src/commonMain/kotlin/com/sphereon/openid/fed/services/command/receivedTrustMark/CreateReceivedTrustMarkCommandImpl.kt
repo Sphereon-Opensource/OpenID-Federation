@@ -1,0 +1,69 @@
+package com.sphereon.openid.fed.services.command.receivedTrustMark
+
+import com.sphereon.openid.fed.core.error.FederationError
+
+import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
+import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
+import com.sphereon.openid.fed.core.logging.federationLogger
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
+import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
+import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.services.mappers.toDTO
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
+
+/**
+ * Implementation of the CreateReceivedTrustMarkCommand.
+ * Creates a new received trust mark for an account.
+ */
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<CreateReceivedTrustMarkCommand>())
+class CreateReceivedTrustMarkCommandImpl(
+    execution: SessionExecution
+) : TypedServiceCommandAdapter<CreateReceivedTrustMarkArgs, ReceivedTrustMark, FederationError>(
+    commandId = CreateReceivedTrustMarkCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<CreateReceivedTrustMarkArgs>(),
+    outputTypeToken = typeToken<ReceivedTrustMark>()
+), CreateReceivedTrustMarkCommand {
+
+    private val logger = execution.federationLogger("CreateReceivedTrustMarkCommand")
+    private val receivedTrustMarkQueries = Persistence.receivedTrustMarkQueries
+
+    override suspend fun doExecute(
+        args: CreateReceivedTrustMarkArgs,
+        applyDuring: (CreateReceivedTrustMarkArgs) -> CreateReceivedTrustMarkArgs
+    ): IdkResult<ReceivedTrustMark, FederationError> {
+        val (tenantId, createRequest) = applyDuring(args)
+        val username = tenantId
+
+        logger.info("Creating trust mark for account: $username")
+
+        return try {
+            val createdTrustMark = receivedTrustMarkQueries.create(
+                account_id = tenantId,
+                trust_mark_id = createRequest.trustMarkType,
+                jwt = createRequest.jwt,
+            ).executeAsOneOrNull()
+
+            if (createdTrustMark != null) {
+                logger.info("Successfully created trust mark with ID: ${createdTrustMark.id}")
+                IdkResult.ok(createdTrustMark.toDTO())
+            } else {
+                logger.error("Failed to create trust mark for account: $username")
+                federationErr(ServerError("Failed to create received trust mark"))
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to create trust mark for account: $username", e)
+            federationErr(ServerError("Failed to create received trust mark", e.message, e))
+        }
+    }
+}

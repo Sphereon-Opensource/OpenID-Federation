@@ -1,0 +1,53 @@
+package com.sphereon.openid.fed.server.admin.api.http.command
+
+import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.Ok
+import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
+import com.sphereon.core.api.http.GenericHttpRequest
+import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
+import com.sphereon.core.api.http.response.errorResponse
+import com.sphereon.core.api.http.response.jsonResponse
+import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.services.LogService
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
+
+// ==================== List Logs Endpoint Implementation ====================
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListLogsEndpointCommand>())
+class ListLogsEndpointCommandImpl(
+    execution: SessionExecution,
+    private val logService: LogService,
+    private val json: Json
+) : HttpEndpointCommandAdapter(
+    id = ListLogsEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = ListLogsEndpointCommand.ENDPOINT
+), ListLogsEndpointCommand {
+
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        val request = applyDuring(args)
+
+        val limit = request.queryParameters["limit"]?.toLongOrNull() ?: 100L
+
+        val result = logService.getRecentLogs(limit)
+
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(result.value)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}

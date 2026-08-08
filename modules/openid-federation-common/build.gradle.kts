@@ -1,34 +1,23 @@
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
     id("maven-publish")
-    alias(sureplug.plugins.dev.petuska.npm.publish.dev.petuska.npm.publish.gradle.plugin)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.npm.publish.org.jetbrains.kotlin.npm.publish.gradle.plugin)
     alias(libs.plugins.kover)
 }
 
 kotlin {
     jvm()
 
-    js(IR) {
-        /*browser {
-             useEsModules()
-             commonWebpackConfig {
-                 devServer = KotlinWebpackConfig.DevServer().apply {
-                     port = 8083
-                 }
-             }
-         }*/
+    js {
+        outputModuleName = "@sphereon/openid-federation-common"
         nodejs {
             useEsModules()
-            testTask {
-                /*     useMocha {
-                         timeout = "5000"
-                     }*/
-            }
+            binaries.library()
+            generateTypeScriptDefinitions()
         }
-
-        binaries.library()
-        generateTypeScriptDefinitions()
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-common"
@@ -53,32 +42,41 @@ kotlin {
         }
     }
 
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        nodejs()
+        binaries.library()
+        generateTypeScriptDefinitions()
+    }
+
     sourceSets {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationOpenapi)
-                implementation(surelib.io.ktor.client.core)
-                implementation(surelib.io.ktor.client.logging)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.io.ktor.client.auth)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.core)
+                // Core module for OidfConfigKeys used by LegacyEnvMappingPropertySource
+                api(projects.modules.openidFederationCorePublic)
+                implementation(sphereonlib.io.ktor.client.core)
+                implementation(sphereonlib.io.ktor.client.logging)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.io.ktor.client.auth)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.core)
             }
         }
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
-                implementation(surelib.io.ktor.client.mock)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(sphereonlib.io.ktor.client.mock)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation(surelib.io.ktor.client.core.jvm)
-                runtimeOnly(surelib.io.ktor.client.cio.jvm)
-                implementation(libs.nimbus.jose.jwt)
+                implementation(sphereonlib.io.ktor.client.core.jvm)
+                runtimeOnly(sphereonlib.io.ktor.client.cio.jvm)
+                // nimbus-jose-jwt removed - no longer used in source code
             }
         }
         val jvmTest by getting {
@@ -89,11 +87,11 @@ kotlin {
 
         val jsMain by getting {
             dependencies {
-                runtimeOnly(surelib.io.ktor.client.core.js)
-                runtimeOnly(surelib.io.ktor.client.js)
+                runtimeOnly(sphereonlib.io.ktor.client.core.js)
+                runtimeOnly(sphereonlib.io.ktor.client.js)
                 implementation(npm("typescript", "5.5.3"))
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(libs.kotlinx.coroutines.core.js)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core.js)
             }
         }
 
@@ -124,5 +122,12 @@ npmPublish {
             scope.set("@sphereon")
             packageName.set("openid-federation-common")
         }
+    }
+}
+
+// Replace wasmJs npm-publish tasks: mainFile provider has no value on Kotlin 2.3.x wasmJs targets
+afterEvaluate {
+    listOf("assembleWasmJsPackage", "packWasmJsPackage", "publishWasmJsPackageToNpmjsRegistry").forEach { taskName ->
+        try { tasks.replace(taskName) } catch (_: Exception) {}
     }
 }

@@ -1,54 +1,23 @@
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.jvm)
-    alias(libs.plugins.springboot)
-    alias(libs.plugins.kotlinPluginSpring)
-    alias(sureplug.plugins.org.jetbrains.kotlin.plugin.serialization)
-    alias(libs.plugins.springDependencyManagement)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.jvm)
     id("maven-publish")
     application
 }
 
+// Backwards compatibility shim module
+// Re-exports both API and Ktor modules for consumers of the original module
 dependencies {
-    api(projects.modules.openidFederationOpenapi)
-    api(projects.modules.openidFederationCommon)
-    api(projects.modules.openidFederationPersistence)
-    api(projects.modules.openidFederationServices)
-    api(projects.modules.openidFederationLogger)
-    implementation(libs.sphereon.kmp.cbor)
-    implementation(libs.sphereon.kmp.crypto)
-    implementation(libs.sphereon.kmp.crypto.kms)
-    implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
-    implementation(surelib.dev.whyoleg.cryptography.core)
-    implementation(surelib.org.jetbrains.kotlin.stdlib)
-    implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.reactor)
-    implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-    implementation(surelib.io.ktor.serialization.kotlinx.json)
-    implementation(libs.springboot.actuator)
-    implementation(libs.springboot.web)
-    implementation(libs.springboot.data.jdbc)
-    implementation(libs.springboot.security)
-    implementation(libs.springboot.oauth2.resource.server)
-    implementation(surelib.org.jetbrains.kotlin.reflect)
-    testImplementation(libs.springboot.test)
-    testImplementation(libs.testcontainer.junit)
-    testImplementation(libs.springboot.testcontainer)
-    runtimeOnly(libs.springboot.devtools)
+    // Re-export both modules for backwards compatibility
+    api(projects.modules.openidFederationPublicServerApi)
+    api(projects.modules.openidFederationPublicServerKtor)
 }
 
-kotlin {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xjsr305=strict")
-    }
+application {
+    mainClass.set("com.sphereon.openid.fed.server.federation.ktor.ApplicationKt")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    testLogging {
-        setExceptionFormat("full")
-        events("started", "skipped", "passed", "failed")
-        showStandardStreams = true
-    }
 }
 
 publishing {
@@ -56,11 +25,9 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
 
-            artifact(tasks.named("bootJar"))
-
             pom {
                 name.set("OpenID Federation Server")
-                description.set("Server for OpenID Federation")
+                description.set("Server for OpenID Federation (backwards compatibility shim)")
                 url.set("https://github.com/Sphereon-Opensource/OpenID-Federation")
                 licenses {
                     license {
@@ -71,8 +38,4 @@ publishing {
             }
         }
     }
-}
-
-tasks.named<Jar>("jar") {
-    enabled = false
 }

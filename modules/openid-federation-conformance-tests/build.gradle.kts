@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     id("maven-publish")
 }
 
@@ -10,7 +10,7 @@ kotlin {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         binaries {
             executable {
-                mainClass.set("com.sphereon.oid.fed.conformance.SetupConformanceTest")
+                mainClass.set("com.sphereon.openid.fed.conformance.SetupConformanceTest")
             }
         }
     }
@@ -20,30 +20,30 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationClient)
-                api(projects.modules.openidFederationLogger)
+                // IDK logging API
+                api(idklib.sphereon.idk.lib.core.api.public)
                 api(projects.modules.openidFederationOpenapi)
                 api(projects.modules.openidFederationPersistence)
                 api(projects.modules.openidFederationCommon)
-                implementation(surelib.org.jetbrains.kotlin.stdlib)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.datetime)
-                implementation(libs.ktor.client.cio)
-                implementation(libs.sphereon.kmp.cbor)
-                implementation(libs.sphereon.kmp.crypto)
-                implementation(libs.sphereon.kmp.crypto.kms)
-                implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
-                implementation(libs.sphereon.kmp.crypto.kms.azure)
-                implementation(libs.sphereon.kmp.crypto.kms.aws)
-                implementation(surelib.dev.whyoleg.cryptography.core)
-                implementation(projects.modules.openidFederationLogger)
+                implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
+                implementation(sphereonlib.io.ktor.client.cio)
+                // IDK crypto libraries
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.azure)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
+                implementation(sphereonlib.dev.whyoleg.cryptography.core)
+                implementation(idklib.sphereon.idk.lib.core.api.public)
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationPersistence)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
-                implementation(libs.mockk)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(sphereonlib.io.mockk.mockk)
             }
         }
     }

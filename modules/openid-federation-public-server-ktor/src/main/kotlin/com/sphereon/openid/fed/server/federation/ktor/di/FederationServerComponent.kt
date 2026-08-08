@@ -1,0 +1,158 @@
+package com.sphereon.openid.fed.server.federation.ktor.di
+
+import com.sphereon.core.defaults.app.DefaultRootScopeProvider
+import com.sphereon.di.app.RootScopeProvider
+import com.sphereon.crypto.core.kms.KmsProviderConfigBinder
+import com.sphereon.crypto.core.kms.model.KeyProviderSettings
+import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
+import com.sphereon.crypto.kms.provider.azure.AzureKeyVaultCryptoProvider
+import com.sphereon.crypto.kms.provider.azure.AzureKmsProviderConfig
+import com.sphereon.di.app.AbstractAppGraph
+import com.sphereon.core.api.log.Log
+import com.sphereon.oauth2.jwt.validation.IdpConfig
+import com.sphereon.oauth2.jwt.validation.JwtValidationConfig
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
+import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.DependencyGraph
+import dev.zacsweers.metro.Named
+import dev.zacsweers.metro.Provides
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.createGraphFactory
+import kotlinx.serialization.json.Json
+
+private val logger = Log.app().withTag("FederationServerAppGraph")
+
+/**
+ * Configuration for the Federation Server.
+ *
+ * This configuration is loaded via OidfConfigBinder which supports:
+ * - IDK-normalized environment variables (OIDF_SERVER_FEDERATION_PORT)
+ * - Legacy environment variables (SERVER_PORT, ROOT_IDENTIFIER, etc.)
+ * - reference.conf defaults
+ */
+data class FederationServerConfig(
+    val rootIdentifier: String = "http://localhost:8080",
+    val port: Int = 8080,
+    val host: String = "0.0.0.0",
+    val devMode: Boolean = false,
+    val corsAllowedOrigins: List<String> = listOf("*"),
+    val corsAllowedMethods: List<String> = listOf("GET", "POST", "OPTIONS"),
+    val corsAllowedHeaders: List<String> = listOf("*"),
+    val corsMaxAge: Long = 3600
+)
+
+/**
+ * Main App-level DI graph for the Federation Server.
+ *
+ * Uses Metro's DependencyGraph to automatically include all contributed
+ * bindings from IDK modules (KMS providers, services, etc.).
+ */
+@SingleIn(AppScope::class)
+@DependencyGraph(AppScope::class)
+abstract class FederationServerAppGraph : AbstractAppGraph() {
+    abstract val configBinder: OidfConfigBinder
+    abstract val kmsProviderConfigBinder: KmsProviderConfigBinder
+    abstract val memoryKeyStoreBackingStorage: MemoryKeyStoreBackingStorage
+    abstract val serverConfig: FederationServerConfig
+
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideFederationServerConfig(): FederationServerConfig {
+        val federation = configBinder.getFederationConfig()
+        val server = configBinder.getServerConfig(OidfConfigBinder.ServerType.FEDERATION)
+        val cors = configBinder.getCorsConfig()
+
+        return FederationServerConfig(
+            rootIdentifier = federation.rootIdentifier,
+            port = server.port,
+            host = server.host,
+            devMode = federation.devMode,
+            corsAllowedOrigins = cors.allowedOrigins,
+            corsAllowedMethods = cors.allowedMethods,
+            corsAllowedHeaders = cors.allowedHeaders,
+            corsMaxAge = cors.maxAge
+        )
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideTenantServiceConfig(): TenantServiceConfig {
+        val federation = configBinder.getFederationConfig()
+        return TenantServiceConfig(federation.rootIdentifier)
+    }
+
+    // CacheManager: use IDK's CacheManagerInitialization + KacheCacheModule contributions.
+    // Do not re-provide an OIDF facade.
+
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideJson(): Json {
+        return Json {
+            prettyPrint = true
+            isLenient = true
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+    }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideAzureKeyVaultCryptoProviderFactory(): (AzureKmsProviderConfig, KeyProviderSettings) -> AzureKeyVaultCryptoProvider {
+        return { config, _ -> AzureKeyVaultCryptoProvider(config) }
+    }
+
+    /**
+     * IDK JWT validation config (PLATFORM / forced jwt auth).
+     * Public federation protocol stays anonymous when JWT auth is off (LEGACY).
+     */
+    @Provides
+    @SingleIn(AppScope::class)
+    open fun provideJwtValidationConfig(): JwtValidationConfig {
+        val oauth = configBinder.getOAuth2Config()
+        val issuer = oauth.issuerUri.trim()
+        if (issuer.isEmpty()) {
+            return JwtValidationConfig(enabled = false)
+        }
+        val audience = oauth.audience.trim().takeIf { it.isNotEmpty() }
+        return JwtValidationConfig(
+            enabled = true,
+            defaultIdp = IdpConfig.oidc(id = "oidf-primary", issuer = issuer, audience = audience),
+            strictIssuerMatching = true,
+        )
+    }
+
+    @DependencyGraph.Factory
+    fun interface Factory {
+        fun create(
+            @Provides application: Any,
+            @Provides @Named("appId") appId: String,
+            @Provides @Named("profile") profile: String,
+            @Provides @Named("version") version: String,
+            @Provides rootScopeProvider: RootScopeProvider,
+        ): FederationServerAppGraph
+    }
+}
+
+/**
+ * Create and initialize the FederationServerAppGraph.
+ */
+fun createFederationServerAppGraph(
+    application: Any,
+    appId: String = "openid-federation-server",
+    profile: String = "default",
+    version: String = "0.26.0"
+): FederationServerAppGraph {
+    val graph = createGraphFactory<FederationServerAppGraph.Factory>().create(
+        application = application,
+        appId = appId,
+        profile = profile,
+        version = version,
+        rootScopeProvider = DefaultRootScopeProvider()
+    )
+    // Registers Scoped instances + PropertySourceBootstrap (IDK Env + oidf-legacy-env bridge, …)
+    graph.initRootScopeProvider()
+    OidfConfigBootstrap.ensurePropertySourcesRegistered(graph)
+    return graph
+}

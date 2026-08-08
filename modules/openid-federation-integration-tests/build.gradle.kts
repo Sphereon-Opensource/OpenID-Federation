@@ -1,46 +1,56 @@
 plugins {
-    alias(sureplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     id("maven-publish")
 }
 
 
 kotlin {
-    jvm()
+    // Align with admin-server-ktor (JVM 21) so ExternalInProcessFixture can depend on it.
+    jvm {
+        compilations.configureEach {
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                }
+            }
+        }
+    }
+    jvmToolchain(21)
 
     sourceSets {
         val commonMain by getting {
             dependencies {
                 api(projects.modules.openidFederationClient)
-                api(projects.modules.openidFederationLogger)
+                // IDK logging API
+                api(idklib.sphereon.idk.lib.core.api.public)
                 api(projects.modules.openidFederationOpenapi)
                 api(projects.modules.openidFederationPersistence)
                 api(projects.modules.openidFederationCommon)
-                implementation(surelib.org.jetbrains.kotlin.stdlib)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.core)
-                implementation(surelib.org.jetbrains.kotlinx.serialization.json)
-                implementation(surelib.io.ktor.serialization.kotlinx.json)
-                implementation(surelib.org.jetbrains.kotlinx.datetime)
-                implementation(libs.ktor.client.cio)
-                implementation(libs.sphereon.kmp.cbor)
-                implementation(libs.sphereon.kmp.crypto)
-                implementation(libs.sphereon.kmp.crypto.kms)
-                implementation(libs.sphereon.kmp.crypto.kms.ecdsa)
-                implementation(libs.sphereon.kmp.crypto.kms.azure)
-                implementation(libs.sphereon.kmp.crypto.kms.aws)
-                implementation(surelib.dev.whyoleg.cryptography.core)
+                implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.core)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.datetime)
+                implementation(sphereonlib.io.ktor.client.cio)
+                // IDK crypto libraries
+                implementation(idklib.sphereon.idk.lib.crypto.core.public)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.azure)
+                implementation(idklib.sphereon.idk.lib.crypto.kms.provider.aws)
+                implementation(sphereonlib.dev.whyoleg.cryptography.core)
             }
         }
 
         val commonTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(projects.modules.openidFederationLogger)
+                implementation(idklib.sphereon.idk.lib.core.api.public)
                 implementation(projects.modules.openidFederationOpenapi)
                 implementation(projects.modules.openidFederationPersistence)
                 implementation(projects.modules.openidFederationCommon)
-                implementation(surelib.io.ktor.client.content.negotiation)
-                implementation(surelib.org.jetbrains.kotlinx.coroutines.test)
-                implementation(libs.mockk)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(sphereonlib.io.mockk.mockk)
             }
         }
 
@@ -48,6 +58,38 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit5")) // Use the JUnit 5 variant
                 implementation("org.junit.jupiter:junit-jupiter-engine:5.10.2") // Use an appropriate version
+                // PLATFORM e2e: tenant claim helpers + OpenAPI models + in-process admin
+                implementation(projects.modules.openidFederationCorePublic)
+                implementation(projects.modules.openidFederationOpenapi)
+                // Full admin + federation Ktor graphs for in-process fixtures (AS + servers same JVM)
+                implementation(projects.modules.openidFederationAdminServerKtor)
+                implementation(projects.modules.openidFederationPublicServerKtor)
+                // Metro graph supertypes for AdminServerAppGraph (JWT auth extension)
+                implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
+                implementation(sphereonlib.io.ktor.client.cio)
+                implementation(sphereonlib.io.ktor.client.content.negotiation)
+                implementation(sphereonlib.io.ktor.serialization.kotlinx.json)
+                implementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)
+                implementation(sphereonlib.org.jetbrains.kotlinx.serialization.json)
+                // Real IDK OAuth2 / OIDC Authorization Server (in-process issuer — not Keycloak).
+                // Consumed as a normal IDK dependency; publishing is IDK/VDX-infra ownership, not OIDFed.
+                implementation("com.sphereon.idk:services-oauth2-as-rest:0.25.0-SNAPSHOT")
+                // Compile-time APIs used by IdkOauth2AsFixture (CreateAccessToken*, bootstrap, Ktor).
+                // Runtime graph also pulls these transitively from services-oauth2-as-rest.
+                implementation("com.sphereon.idk:lib-oauth2-server-authorization-public:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-oauth2-server-authorization-impl:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-oauth2-common-public:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-oauth2-common-impl:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-core-events-impl:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:ktor-server-kotlin-inject:0.25.0-SNAPSHOT")
+                implementation("com.sphereon.idk:lib-crypto-kms-provider-software:0.25.0-SNAPSHOT")
+                implementation(sphereonlib.io.ktor.server.cio)
+                implementation(sphereonlib.io.ktor.server.core)
+                implementation(sphereonlib.io.ktor.server.content.negotiation)
+                implementation(sphereonlib.io.ktor.server.status.pages)
             }
         }
     }
@@ -71,7 +113,39 @@ publishing {
     }
 }
 
-tasks.withType<Test>().named("jvmTest") {
+val integrationTests by tasks.registering {
+    group = "verification"
+    description = "Runs the integration tests by triggering the jvmTest task."
+}
+
+/**
+ * EXTERNAL e2e: in-process IDK AS + in-process admin (see ExternalInProcessFixture).
+ * Postgres required; no standalone EXTERNAL server.
+ * See docs/PLATFORM_E2E.md (EXTERNAL e2e; historical filename).
+ */
+val platformIntegrationTests by tasks.registering {
+    group = "verification"
+    description =
+        "EXTERNAL e2e (in-process AS + admin). Prefer --tests …platform.External* on jvmTest."
+}
+
+/** Always-on smoke: boot in-process IDK AS, discovery, CreateAccessTokenCommand mint. */
+val platformAsSmokeTests by tasks.registering {
+    group = "verification"
+    description = "Enables jvmTest for IdkOauth2AsFixtureTest (pass --tests on jvmTest)."
+}
+
+/**
+ * Zero process-env config smoke (YAML only). Prefer:
+ *   --tests "…FileOnlyConfigE2eTest"
+ * Docker: docker compose -f docker-compose.file-only.yaml up
+ */
+val fileOnlyConfigTests by tasks.registering {
+    group = "verification"
+    description = "Enables jvmTest for FileOnlyConfigE2eTest (file config, no OIDFed env)."
+}
+
+tasks.named<Test>("jvmTest") {
     description = "Runs integration tests for the JVM target."
     group = "verification"
 
@@ -83,12 +157,16 @@ tasks.withType<Test>().named("jvmTest") {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 
-    onlyIf { gradle.taskGraph.hasTask(tasks.named("integrationTests").get()) }
+    // Gate heavy integration suite behind explicit verification umbrella tasks.
+    onlyIf {
+        val graph = gradle.taskGraph
+        graph.hasTask(integrationTests.get()) ||
+            graph.hasTask(platformIntegrationTests.get()) ||
+            graph.hasTask(platformAsSmokeTests.get()) ||
+            graph.hasTask(fileOnlyConfigTests.get())
+    }
 }
 
-tasks.register("integrationTests") {
-    group = "verification"
-    description = "Runs the integration tests by triggering the jvmTest task."
-
-    finalizedBy(tasks.named("jvmTest"))
+listOf(integrationTests, platformIntegrationTests, platformAsSmokeTests, fileOnlyConfigTests).forEach { umbrella ->
+    umbrella.configure { finalizedBy(tasks.named("jvmTest")) }
 }

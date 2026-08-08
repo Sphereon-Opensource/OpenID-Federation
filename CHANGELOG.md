@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.25.0
+
+### Identity modes: account and external
+
+OpenID Federation now documents and implements two identity modes for multi-entity isolation on the admin API. The
+mode is selected with `OIDF_IDENTITY_MODE` / `oidf.identity.mode`.
+
+**Account mode** (`account`, default; alias `legacy`) is the pre-0.25.0 standalone model. Federation entities are
+`Account` rows managed through `/accounts`. A seeded **root** account owns the federation root entity identifier
+(`ROOT_IDENTIFIER` / `OIDF_FEDERATION_ROOT_IDENTIFIER`). Additional entities are ordinary accounts. After a valid
+Bearer token is accepted, operators may switch entity context with `X-Account-Username` only when the authenticated
+principal is on a configured allow-list. By default that allow-list is empty, so header rebind is denied until you
+list the operators who may switch context. Matching uses a JWT claim (default `sub`) against
+`OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS`. A single `*` allows any authenticated principal and is intended only for
+tests.
+
+**External mode** (`external`; alias `platform`) is for host or platform embeddings where an OAuth2 or OIDC
+authorization server owns subjects and tenants. Tenant isolation comes only from claims on the access token
+(`tenant_id`, `tid`, and related IDK claim names). `/accounts` is not registered. `X-Account-Username` is never used
+for identity. Tokens without a usable tenant claim fail closed (401) on protected admin routes. On first contact the
+server can auto-provision a federation row for the token tenant.
+
+### Root entity versus token tenants (external)
+
+External mode does not provide a privileged root login account inside OIDFed. `OIDF_EXTERNAL_ROOT_TENANT_ID` /
+`oidf.identity.external.root.tenant.id` only maps which validated token tenant id owns the federation **root entity
+URL**. Other tenants typically receive identifiers under `{root}/tenants/{tenantId}`. That mapping is entity URL
+ownership, not an authentication bypass.
+
+### Delegation and STS (external)
+
+Acting as another tenant is an authorization-server concern (token exchange, on-behalf-of / STS, actor or delegation
+claims). OIDFed validates the token against the configured issuer and fully trusts the resulting tenant claims. It
+does not implement its own impersonation API and does not accept client-controlled headers to change tenant.
+
+### Admin authentication always required
+
+Admin endpoints always require `Authorization: Bearer …` (except health and debug). A non-blank OAuth2 issuer
+(`OIDF_OAUTH2_ISSUER_URI` or the JVM alias `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI`) is required at startup.
+
+The previous anonymous admin / no-auth configuration has been **removed for security**. Related environment variables
+and config keys (including `allowAnonymousAdmin` / `oidf.identity.allow.anonymous.admin` and any product path that
+disabled JWT requirement on the admin server) no longer exist. Local development and integration tests obtain real
+Bearer tokens (Keycloak in Compose, or the in-process IDK OAuth2 AS in automated tests) instead of turning auth off.
+
+### Session and pipeline behavior
+
+Admin request identity uses KotlinInject bootstrap, then IDK `JwtAuthentication` on the request session, then a
+post-JWT plugin that stamps claims and aligns or rebinds the session. There is no throwaway validation session.
+Business `TenantContextResolver` implementations resolve the entity context from `SessionExecution.tenantId` only.
+
+### Documentation and testing
+
+- README: identity modes, root versus STS, and removal of no-auth configuration
+- `docs/IDENTITY_AND_IDK_ALIGNMENT.md`: design and IDK alignment
+- `docs/PLATFORM_E2E.md`: in-process IDK AS plus admin for external e2e
+- Integration fixtures: `AccountInProcessFixture`, `ExternalInProcessFixture`
+- Account header allow-list e2e: fail-closed default and allowed rebind
+
+### Breaking changes (summary)
+
+- Admin authentication can no longer be disabled through configuration.
+- Default account-mode header rebind is fail-closed (empty allow-list) until principals are listed explicitly.
+- Prefer `account` / `external` mode names; `legacy` / `platform` remain accepted aliases.
+- Prefer `OIDF_EXTERNAL_ROOT_TENANT_ID` for the external root entity URL mapping; older `platform.root…` names remain
+  as aliases where documented.
+
 ## 0.12.0 - 20250321
 
 ## WARNING

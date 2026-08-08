@@ -1,0 +1,64 @@
+package com.sphereon.openid.fed.client.services
+
+import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
+import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
+import com.sphereon.openid.fed.core.error.FederationResult
+import com.sphereon.openid.fed.openapi.models.Jwk
+import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
+import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
+
+/**
+ * Implementation of TrustChainService as a command aggregator.
+ *
+ * This service aggregates all trust chain-related commands and provides both
+ * direct method access and command-based access for advanced use cases.
+ *
+ * All methods delegate to individual commands, enabling:
+ * - Command composition and chaining
+ * - Cross-cutting concerns via command extensions (audit, caching, auth)
+ * - Testability through command mocking
+ */
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<TrustChainService>())
+class TrustChainServiceImpl(
+    private val resolveTrustChainCommand: ResolveTrustChainCommand,
+    private val verifyTrustChainCommand: VerifyTrustChainCommand
+) : TrustChainService {
+
+    /**
+     * Inner class implementing the Commands interface.
+     * Provides access to individual commands for advanced use cases.
+     */
+    inner class CommandsImpl : TrustChainService.Commands {
+        override val resolveTrustChain: ResolveTrustChainCommand
+            get() = this@TrustChainServiceImpl.resolveTrustChainCommand
+
+        override val verifyTrustChain: VerifyTrustChainCommand
+            get() = this@TrustChainServiceImpl.verifyTrustChainCommand
+    }
+
+    override val commands: TrustChainService.Commands = CommandsImpl()
+
+    // Delegate all service methods to their respective commands
+
+    override suspend fun resolveTrustChain(
+        entityIdentifier: String,
+        trustAnchors: Array<String>,
+        maxDepth: Int
+    ): FederationResult<TrustChainResolveResponse> =
+        resolveTrustChainCommand.resolveTrustChain(entityIdentifier, trustAnchors, maxDepth)
+
+    override suspend fun verifyTrustChain(
+        trustChain: Array<String>,
+        trustAnchor: String?,
+        currentTime: Long?,
+        trustAnchorPublicKeys: List<Jwk>?
+    ): FederationResult<VerifyTrustChainResponse> =
+        verifyTrustChainCommand.verifyTrustChain(trustChain, trustAnchor, currentTime, trustAnchorPublicKeys)
+}

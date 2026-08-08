@@ -1,0 +1,58 @@
+package com.sphereon.openid.fed.services.command.log
+
+import com.sphereon.openid.fed.core.error.FederationError
+
+import com.sphereon.core.api.IdkResult
+import com.sphereon.core.api.binary.typeToken
+import com.sphereon.core.api.context.SessionExecution
+import com.sphereon.core.api.error.IdkError
+import com.sphereon.openid.fed.core.logging.federationLogger
+import com.sphereon.core.api.service.TypedServiceCommandAdapter
+import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.core.error.ServerError
+import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.services.mappers.toDTO
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metro.SingleIn
+import com.sphereon.openid.fed.openapi.models.Log as LogDTO
+
+/**
+ * Implementation of the SearchLogsCommand.
+ * Searches for log entries matching a search term.
+ */
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<SearchLogsCommand>())
+class SearchLogsCommandImpl(
+    execution: SessionExecution
+) : TypedServiceCommandAdapter<SearchLogsArgs, List<LogDTO>, FederationError>(
+    commandId = SearchLogsCommand.COMMAND_ID,
+    execution = execution,
+    inputTypeToken = typeToken<SearchLogsArgs>(),
+    outputTypeToken = typeToken<List<LogDTO>>()
+), SearchLogsCommand {
+
+    private val logger = execution.federationLogger("SearchLogsCommand")
+    private val logQueries = Persistence.logQueries
+
+    override suspend fun doExecute(
+        args: SearchLogsArgs,
+        applyDuring: (SearchLogsArgs) -> SearchLogsArgs
+    ): IdkResult<List<LogDTO>, FederationError> {
+        val (searchTerm, limit) = applyDuring(args)
+
+        logger.debug("Searching logs with term: '$searchTerm', limit: $limit")
+
+        return try {
+            val logs = logQueries.searchLogs(searchTerm, limit).executeAsList().map { it.toDTO() }
+            logger.debug("Found ${logs.size} logs matching search term: '$searchTerm'")
+            IdkResult.ok(logs)
+        } catch (e: Exception) {
+            logger.error("Failed to search logs with term: '$searchTerm'", e)
+            federationErr(ServerError("Failed to search logs", e.message, e))
+        }
+    }
+}

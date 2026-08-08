@@ -1,0 +1,101 @@
+# File-only OIDFed config demo: admin + federation read /app/config/application.yaml only
+# (no env_file / OIDF_* on those services). DB and Keycloak use compose environment for
+# their own images — that is not product config for OpenID Federation.
+#
+#   docker compose -f docker-compose.file-only.yaml up --build -d
+#   curl -s http://localhost:8080/health
+#   curl -s http://localhost:8081/health
+#
+# Config source: ./config/application.file-only.yaml → /app/config/application.yaml
+
+services:
+  db:
+    image: postgres:16
+    container_name: openid-federation-datastore-file-only
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: openid-federation-db-user
+      POSTGRES_PASSWORD: openid-federation-db-password
+      POSTGRES_DB: openid-federation-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_file_only:/var/lib/postgresql/data
+    networks:
+      - openid_network_file_only
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d openid-federation-db -U openid-federation-db-user" ]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  keycloak:
+    image: keycloak/keycloak:26.0
+    user: keycloak
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./.docker/keycloak:/opt/keycloak/data/import/
+    networks:
+      - openid_network_file_only
+    healthcheck:
+      test: [ "CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  openid-federation-server:
+    image: sphereon/openid-federation-server:latest
+    build:
+      context: .
+      dockerfile: ./.docker/openid-federation-server/Dockerfile
+    # No env_file / environment — config from mounted YAML only
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config/application.file-only.yaml:/app/config/application.yaml:ro
+      - ./logs/openid-federation-server:/tmp/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - openid_network_file_only
+    restart: unless-stopped
+
+  openid-federation-admin-server:
+    image: sphereon/openid-federation-admin-server:latest
+    build:
+      context: .
+      dockerfile: ./.docker/openid-federation-admin-server/Dockerfile
+    # No env_file / environment — config from mounted YAML only
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./config/application.file-only.yaml:/app/config/application.yaml:ro
+      - ./logs/openid-federation-admin-server:/tmp/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - openid_network_file_only
+    restart: unless-stopped
+
+networks:
+  openid_network_file_only:
+    driver: bridge
+
+volumes:
+  postgres_data_file_only:

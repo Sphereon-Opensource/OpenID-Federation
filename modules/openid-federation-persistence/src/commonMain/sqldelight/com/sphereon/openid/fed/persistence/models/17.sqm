@@ -1,0 +1,6 @@
+-- Allow tenant provisioning without full account management.
+-- Make username default to empty string so auto-provisioned tenants don't need explicit usernames.
+ALTER TABLE Account ALTER COLUMN username SET DEFAULT '';
+
+-- Add tenant_source to distinguish auto-provisioned vs account-managed tenants.
+ALTER TABLE Account ADD COLUMN IF NOT EXISTS tenant_source VARCHAR(50) DEFAULT 'account';
