@@ -50,14 +50,19 @@ import com.sphereon.trust.core.config.TrustConfig
 import com.sphereon.trust.core.config.TrustConfigProvider
 import com.sphereon.trust.core.config.OidfTrustConfig
 import com.sphereon.trust.core.config.TrustAnchorsConfig
+import com.sphereon.trust.core.model.TrustChainHopPosition
+import com.sphereon.trust.core.model.TrustChainLinks
 import com.sphereon.trust.core.model.TrustContext
 import com.sphereon.trust.core.model.TrustStatus
 import com.sphereon.trust.core.model.TrustValidationRequest
 import com.sphereon.crypto.resolution.extern.ExternalIdentifierOIDFEntityIdOpts
 import kotlinx.coroutines.test.runTest
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 
@@ -80,6 +85,83 @@ class OidfTrustValidationServiceTest {
         assertTrue(result.trusted)
         assertEquals(TrustStatus.TRUSTED, result.status)
         assertEquals(3, result.validationPath.size)
+        assertNull(result.trustChain, "opaque mock JWTs are not hops; the chain stays absent")
+    }
+
+    @Test
+    fun aFederationChainArrivesOrderedFromLeafToAnchor() = runTest {
+        val leaf = "https://leaf.example"
+        val intermediate = "https://intermediate.example"
+        val anchor = "https://anchor.example"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(
+                trustChain = listOf(
+                    entityStatementJwt(sub = leaf, iss = intermediate),
+                    entityStatementJwt(sub = intermediate, iss = anchor),
+                    entityStatementJwt(sub = anchor, iss = anchor),
+                )
+            )),
+            verifyResult = Ok(VerifyTrustChainResponse(isValid = true))
+        )
+
+        val result = service.validate(createRequest(
+            entityIdentifier = leaf,
+            trustAnchors = anchor
+        ))
+
+        val chain = result.trustChain!!
+        assertEquals(3, chain.hops.size)
+        assertEquals(TrustChainHopPosition.LEAF, chain.hops.first().position)
+        assertEquals(TrustChainHopPosition.ANCHOR, chain.hops.last().position)
+        assertEquals(listOf(leaf, intermediate, anchor), chain.hops.map { it.identifier })
+        assertEquals(TrustChainLinks.VERIFIED, chain.links)
+        assertNull(result.attestationAuthorisation)
+        assertNull(result.domainAdmission)
+    }
+
+    @Test
+    fun aMechanismThatResolvesNoChainLeavesItAbsentNotEmptyButPresent() = runTest {
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(
+                trustChain = emptyList(),
+                errorMessage = "No path to trust anchor"
+            )),
+            verifyResult = Ok(VerifyTrustChainResponse(isValid = false))
+        )
+
+        val result = service.validate(createRequest(
+            entityIdentifier = "https://untrusted.example.com",
+            trustAnchors = "https://anchor.example.com"
+        ))
+
+        assertNull(result.trustChain)
+    }
+
+    @Test
+    fun aBrokenFederationLinkKeepsTheOrderedHops() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(
+                trustChain = listOf(
+                    entityStatementJwt(sub = leaf, iss = anchor),
+                    entityStatementJwt(sub = anchor, iss = anchor),
+                )
+            )),
+            verifyResult = Ok(VerifyTrustChainResponse(
+                isValid = false,
+                errorMessage = "Signature verification failed"
+            ))
+        )
+
+        val result = service.validate(createRequest(
+            entityIdentifier = leaf,
+            trustAnchors = anchor
+        ))
+
+        assertFalse(result.trusted)
+        assertEquals(TrustChainLinks.BROKEN, result.trustChain!!.links)
+        assertEquals(listOf(leaf, anchor), result.trustChain!!.hops.map { it.identifier })
     }
 
     @Test
@@ -442,4 +524,18 @@ class OidfTrustValidationServiceTest {
         override suspend fun execute(args: LogMessage) = IdkOkResult(Unit)
         override fun toSync(): SessionLogService = TestLogService(sessionContext)
     }
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+private fun entityStatementJwt(
+    sub: String,
+    iss: String,
+): String {
+    val header =
+        Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode("{\"alg\":\"none\"}".encodeToByteArray())
+    val payload =
+        Base64.UrlSafe
+            .withPadding(Base64.PaddingOption.ABSENT)
+            .encode("""{"sub":"$sub","iss":"$iss"}""".encodeToByteArray())
+    return "$header.$payload.sig"
 }

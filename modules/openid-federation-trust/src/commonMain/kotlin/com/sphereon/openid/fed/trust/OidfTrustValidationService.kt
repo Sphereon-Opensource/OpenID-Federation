@@ -21,6 +21,8 @@ import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
 import com.sphereon.trust.core.TrustValidationService
 import com.sphereon.trust.core.config.TrustConfigProvider
 import com.sphereon.trust.core.model.TrustAnchor
+import com.sphereon.trust.core.model.TrustChain
+import com.sphereon.trust.core.model.TrustChainLinks
 import com.sphereon.trust.core.model.TrustContext
 import com.sphereon.trust.core.model.TrustStatus
 import com.sphereon.trust.core.model.TrustValidationRequest
@@ -73,7 +75,7 @@ class OidfTrustValidationService(
         )
     }
 
-    override suspend fun validate(request: TrustValidationRequest): TrustValidationResult {
+    override suspend fun doValidate(request: TrustValidationRequest): TrustValidationResult {
         logger.debug("Validating OpenID Federation trust for context: ${request.context}")
 
         val entityIdentifier = request.context.parameters["entityIdentifier"]
@@ -142,6 +144,8 @@ class OidfTrustValidationService(
                 return cacheAndReturn(cacheKey, TrustValidationResult(
                     trusted = false,
                     status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    trustChain = TrustChain.fromEntityStatementEntries(trustChain, TrustChainLinks.BROKEN),
                     details = "Trust chain verification failed: ${error.message}",
                     validatedAt = Clock.System.now()
                 ))
@@ -152,6 +156,8 @@ class OidfTrustValidationService(
                 return cacheAndReturn(cacheKey, TrustValidationResult(
                     trusted = false,
                     status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    trustChain = TrustChain.fromEntityStatementEntries(trustChain, TrustChainLinks.BROKEN),
                     details = "Trust chain is not valid: ${verifyResponse.errorMessage ?: "unknown reason"}",
                     validatedAt = Clock.System.now()
                 ))
@@ -162,6 +168,7 @@ class OidfTrustValidationService(
                 trusted = true,
                 status = TrustStatus.TRUSTED,
                 validationPath = trustChain,
+                trustChain = TrustChain.fromEntityStatementEntries(trustChain, TrustChainLinks.VERIFIED),
                 details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links)",
                 validatedAt = Clock.System.now()
             )
@@ -177,7 +184,7 @@ class OidfTrustValidationService(
         }
     }
 
-    override suspend fun getTrustAnchors(): List<TrustAnchor> {
+    override suspend fun doGetTrustAnchors(): List<TrustAnchor> {
         // TrustAnchor.keyInfo is @Contextual and not reliably JSON-serializable for CacheManager,
         // so resolve live from entity configurations rather than caching typed anchors.
         val trustAnchorIds = trustConfigProvider.getTrustConfig().anchors.oidfed.trustAnchors

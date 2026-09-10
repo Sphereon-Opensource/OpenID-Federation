@@ -22,7 +22,8 @@ captures
 /platform-tools/
 /.temp/
 /.run/*
-kotlin-js-store/
+kotlin-js-store/yarn.lock
+kotlin-js-store/wasm/yarn.lock
 .env
 .env.local
 /.docker/keycloak-dev/

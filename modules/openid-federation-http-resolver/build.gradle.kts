@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
     alias(sphereonplug.plugins.org.jetbrains.kotlin.plugin.serialization)
+    id("maven-publish")
 }
 
 
@@ -88,4 +89,22 @@ kotlin {
 
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenKotlin") {
+            pom {
+                name.set("OpenID Federation HTTP Resolver")
+                description.set("HTTP metadata resolver used by the OpenID Federation client")
+                url.set("https://github.com/Sphereon-Opensource/openid-federation")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+            }
+        }
+    }
 }
