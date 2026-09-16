@@ -4,6 +4,8 @@
  * Licensed under the Apache License, Version 2.0
  */
 
+@file:OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+
 package com.sphereon.openid.fed.trust
 
 import com.sphereon.core.api.cache.CacheManager
@@ -14,7 +16,10 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.di.session.SessionScope
 import com.sphereon.crypto.core.jose.Jwk
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
@@ -94,8 +99,9 @@ class OidfTrustValidationService(
             return validationError("No trust anchors configured. Set trust.anchors.oidfed.trust-anchors or provide trustAnchors in request parameters")
         }
 
-        // Check cache
-        val cacheKey = "$entityIdentifier:${trustAnchors.sorted().joinToString(",")}"
+        // Check cache. Required trust marks are part of identity so a marked
+        // request cannot reuse an unmarked result.
+        val cacheKey = cacheKey(entityIdentifier, trustAnchors, requiredTrustMarks)
         val cached = cache.getApp(cacheKey)
         if (cached != null) {
             logger.debug("Using cached trust chain result for $entityIdentifier")
@@ -131,10 +137,19 @@ class OidfTrustValidationService(
                 ))
             }
 
-            // Step 2: Verify the trust chain cryptographically
+            // Step 2: Verify the trust chain against the selected chain anchor,
+            // not the first configured identifier.
+            val selectedAnchor = selectedTrustAnchor(trustChain, trustAnchors)
+                ?: return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "No selected trust anchor on the resolved chain",
+                    validatedAt = Clock.System.now()
+                ))
             val verifyResult = verifyTrustChainCommand.verifyTrustChain(
                 trustChain = trustChain.toTypedArray(),
-                trustAnchor = trustAnchors.firstOrNull()
+                trustAnchor = selectedAnchor
             )
 
             if (verifyResult.isErr) {
@@ -157,12 +172,43 @@ class OidfTrustValidationService(
                 ))
             }
 
+            if (requiredTrustMarks.isNotEmpty()) {
+                val taConfig = getEntityConfigurationCommand.getEntityConfiguration(selectedAnchor)
+                if (taConfig.isErr) {
+                    return cacheAndReturn(cacheKey, TrustValidationResult(
+                        trusted = false,
+                        status = TrustStatus.UNTRUSTED,
+                        validationPath = trustChain,
+                        details = "Trust mark verification failed: ${taConfig.error.message}",
+                        validatedAt = Clock.System.now()
+                    ))
+                }
+                for (mark in requiredTrustMarks) {
+                    val markResult = verifyTrustMarkCommand.verifyTrustMark(
+                        trustMark = mark,
+                        trustAnchorConfig = taConfig.value,
+                        subject = entityIdentifier
+                    )
+                    val markInvalid = markResult.isErr || !markResult.value.isValid
+                    if (markInvalid) {
+                        val reason = if (markResult.isErr) markResult.error.message else markResult.value.errorMessage
+                        return cacheAndReturn(cacheKey, TrustValidationResult(
+                            trusted = false,
+                            status = TrustStatus.UNTRUSTED,
+                            validationPath = trustChain,
+                            details = "Required trust mark failed: ${reason ?: mark}",
+                            validatedAt = Clock.System.now()
+                        ))
+                    }
+                }
+            }
+
             // All checks passed
             val result = TrustValidationResult(
                 trusted = true,
                 status = TrustStatus.TRUSTED,
                 validationPath = trustChain,
-                details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links)",
+                details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links) at $selectedAnchor",
                 validatedAt = Clock.System.now()
             )
             cacheAndReturn(cacheKey, enrichWithEntityInfo(result, request, entityInfoExtractor))
@@ -233,4 +279,47 @@ class OidfTrustValidationService(
         details = message,
         validatedAt = Clock.System.now()
     )
+
+    internal fun cacheKey(
+        entityIdentifier: String,
+        trustAnchors: List<String>,
+        requiredTrustMarks: List<String>,
+    ): String =
+        listOf(
+            entityIdentifier.trim(),
+            trustAnchors.map { it.trim() }.filter { it.isNotEmpty() }.sorted().joinToString(","),
+            requiredTrustMarks.map { it.trim() }.filter { it.isNotEmpty() }.sorted().joinToString(","),
+        ).joinToString("|")
+
+    internal fun selectedTrustAnchor(
+        trustChain: List<String>,
+        configuredAnchors: List<String>,
+    ): String? {
+        val configured = configuredAnchors.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        if (configured.isEmpty()) return null
+        val hops = trustChain.mapNotNull { decodeIssSub(it) }
+        if (hops.isNotEmpty()) {
+            val identifiers = hops.mapNotNull { it.sub }
+            return identifiers.lastOrNull { it in configured }
+                ?: hops.lastOrNull { hop -> hop.iss != null && hop.iss == hop.sub && hop.sub in configured }?.sub
+        }
+        return configured.singleOrNull()
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun decodeIssSub(jwt: String): IssSub? {
+        val parts = jwt.split('.')
+        if (parts.size < 2) return null
+        return try {
+            val json = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+                .decode(parts[1])
+                .decodeToString()
+            Json.decodeFromString(IssSub.serializer(), json)
+        } catch (_: Exception) {
+            null
+        }
+    }
 }
+
+@Serializable
+internal data class IssSub(val iss: String? = null, val sub: String? = null)

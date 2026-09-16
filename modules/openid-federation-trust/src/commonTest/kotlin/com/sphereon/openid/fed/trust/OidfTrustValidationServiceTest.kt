@@ -193,6 +193,59 @@ class OidfTrustValidationServiceTest {
     }
 
     @Test
+    fun selectedAnchorIsTheChainAnchorNotTheFirstConfigured() = runTest {
+        val taA = "https://ta-a.example.com"
+        val taB = "https://ta-b.example.com"
+        val leaf = "https://leaf.example.com"
+        var capturedAnchor: String? = "unset"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(
+                trustChain = listOf(
+                    entityStatementJwt(sub = leaf, iss = taB),
+                    entityStatementJwt(sub = taB, iss = taB),
+                )
+            )),
+            verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
+            onVerify = { capturedAnchor = it.trustAnchor },
+        )
+
+        val result = service.validate(createRequest(
+            entityIdentifier = leaf,
+            trustAnchors = "$taA,$taB",
+        ))
+
+        assertTrue(result.trusted)
+        assertEquals(taB, capturedAnchor)
+        assertEquals(taB, service.selectedTrustAnchor(
+            listOf(entityStatementJwt(sub = leaf, iss = taB), entityStatementJwt(sub = taB, iss = taB)),
+            listOf(taA, taB),
+        ))
+    }
+
+    @Test
+    fun requiredTrustMarksChangeResultAndCacheKey() = runTest {
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(
+                trustChain = listOf("jwt-leaf", "jwt-anchor")
+            )),
+            verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
+            verifyTrustMarkResult = Ok(TrustMarkValidationResponse(isValid = true)),
+        )
+        val unmarked = service.validate(createRequest("https://entity.example.com", trustAnchors = "https://anchor.example.com"))
+        val marked = service.validate(createRequest(
+            "https://entity.example.com",
+            trustAnchors = "https://anchor.example.com",
+            requiredTrustMarks = "https://tm.example/member",
+        ))
+        val unmarkedKey = service.cacheKey("https://entity.example.com", listOf("https://anchor.example.com"), emptyList())
+        val markedKey = service.cacheKey("https://entity.example.com", listOf("https://anchor.example.com"), listOf("https://tm.example/member"))
+        assertTrue(unmarked.trusted)
+        assertTrue(marked.trusted)
+        assertTrue(unmarkedKey != markedKey)
+        assertTrue(markedKey.contains("https://tm.example/member"))
+    }
+
+    @Test
     fun getTrustAnchorsResolvesEntityConfigurations() = runTest {
         val service = createService(
             configTrustAnchors = listOf("https://anchor1.example.com", "https://anchor2.example.com")
@@ -218,10 +271,12 @@ class OidfTrustValidationServiceTest {
 
     private fun createRequest(
         entityIdentifier: String,
-        trustAnchors: String? = null
+        trustAnchors: String? = null,
+        requiredTrustMarks: String? = null,
     ): TrustValidationRequest {
         val params = mutableMapOf("entityIdentifier" to entityIdentifier)
         if (trustAnchors != null) params["trustAnchors"] = trustAnchors
+        if (requiredTrustMarks != null) params["requiredTrustMarks"] = requiredTrustMarks
         return TrustValidationRequest(
             identifier = ExternalIdentifierOIDFEntityIdOpts(identifier = entityIdentifier),
             context = TrustContext(
@@ -239,7 +294,11 @@ class OidfTrustValidationServiceTest {
         verifyResult: IdkResult<VerifyTrustChainResponse, FederationError> = Ok(
             VerifyTrustChainResponse(isValid = true)
         ),
-        onResolve: ((ResolveTrustChainArgs) -> Unit)? = null
+        onResolve: ((ResolveTrustChainArgs) -> Unit)? = null,
+        onVerify: ((VerifyTrustChainArgs) -> Unit)? = null,
+        verifyTrustMarkResult: IdkResult<TrustMarkValidationResponse, FederationError> = Ok(
+            TrustMarkValidationResponse(isValid = true)
+        ),
     ): OidfTrustValidationService {
         val resolveCmd = object : ResolveTrustChainCommand {
             override val isEnabled: Boolean get() = true
@@ -263,7 +322,10 @@ class OidfTrustValidationServiceTest {
                 trustAnchor: String?,
                 currentTime: Long?,
                 trustAnchorPublicKeys: List<com.sphereon.openid.fed.openapi.models.Jwk>?
-            ): IdkResult<VerifyTrustChainResponse, FederationError> = verifyResult
+            ): IdkResult<VerifyTrustChainResponse, FederationError> {
+                onVerify?.invoke(VerifyTrustChainArgs(trustChain, trustAnchor, currentTime, trustAnchorPublicKeys))
+                return verifyResult
+            }
             override suspend fun execute(args: VerifyTrustChainArgs): IdkResult<VerifyTrustChainResponse, FederationError> =
                 verifyTrustChain(args.trustChain, args.trustAnchor, args.currentTime)
             override suspend fun supports(args: Any): Boolean = args is VerifyTrustChainArgs
@@ -277,9 +339,9 @@ class OidfTrustValidationServiceTest {
                 trustAnchorConfig: EntityConfigurationStatement,
                 currentTime: Long?,
                 subject: String?
-            ): IdkResult<TrustMarkValidationResponse, FederationError> = throw NotImplementedError()
+            ): IdkResult<TrustMarkValidationResponse, FederationError> = verifyTrustMarkResult
             override suspend fun execute(args: VerifyTrustMarkArgs): IdkResult<TrustMarkValidationResponse, FederationError> =
-                throw NotImplementedError()
+                verifyTrustMark(args.trustMark, args.trustAnchorConfig, args.currentTime, args.subject)
             override suspend fun supports(args: Any): Boolean = args is VerifyTrustMarkArgs
             override val id: String get() = VerifyTrustMarkCommand.COMMAND_ID
         }
