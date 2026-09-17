@@ -4,6 +4,7 @@ import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.AuthorityHintQueries
 import com.sphereon.openid.fed.persistence.models.CritQueries
 import com.sphereon.openid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.openid.fed.persistence.models.ForeignSubordinateStatementQueries
 import com.sphereon.openid.fed.persistence.models.JwkQueries
 import com.sphereon.openid.fed.persistence.models.LogQueries
 import com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries
@@ -48,4 +49,5 @@ expect object Persistence {
     val metadataPolicyQueries: MetadataPolicyQueries
     val trustAnchorHintQueries: TrustAnchorHintQueries
     val subordinateConstraintQueries: SubordinateConstraintQueries
+    val foreignSubordinateStatementQueries: ForeignSubordinateStatementQueries
 }

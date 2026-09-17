@@ -38,6 +38,18 @@ interface SubordinateCommandDescriptors {
         RegistrableServiceCommandDescriptor.of(FetchSubordinateStatementCommand.COMMAND_ID) { cmd.value }
 
     @Provides @IntoSet
+    fun persistForeignSubordinateStatement(
+        cmd: Lazy<PersistForeignSubordinateStatementCommand>,
+    ): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(PersistForeignSubordinateStatementCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun findForeignSubordinateStatement(
+        cmd: Lazy<FindForeignSubordinateStatementCommand>,
+    ): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(FindForeignSubordinateStatementCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
     fun getSubordinateJwks(cmd: Lazy<GetSubordinateJwksCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(GetSubordinateJwksCommand.COMMAND_ID) { cmd.value }
 

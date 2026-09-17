@@ -34,6 +34,17 @@ interface SubordinateService {
         kid: String?
     ): FederationResult<String>
     suspend fun fetchSubordinateStatement(iss: String, sub: String): FederationResult<String>
+    suspend fun persistForeignSubordinateStatement(
+        accountId: String,
+        iss: String,
+        sub: String,
+        signedJwt: String,
+    ): FederationResult<Unit>
+    suspend fun findForeignSubordinateStatement(
+        accountId: String,
+        iss: String,
+        sub: String,
+    ): FederationResult<String?>
     suspend fun createSubordinateJwk(tenantId: String, id: String, jwk: Jwk): FederationResult<SubordinateJwk>
     suspend fun getSubordinateJwks(tenantId: String, id: String): FederationResult<Array<SubordinateJwk>>
     suspend fun deleteSubordinateJwk(tenantId: String, id: String, jwkId: String): FederationResult<SubordinateJwk>

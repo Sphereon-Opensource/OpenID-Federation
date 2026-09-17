@@ -40,4 +40,10 @@ interface EntityConfigurationStatementService {
         kmsKeyRef: String?,
         kid: String?
     ): FederationResult<String>
+
+    /**
+     * Returns the latest persisted Entity Configuration JWT for [accountId], or null if none exists.
+     * Does not rebuild claims and does not invoke KMS.
+     */
+    suspend fun findLatestStoredJwtByAccount(accountId: String): FederationResult<String?>
 }

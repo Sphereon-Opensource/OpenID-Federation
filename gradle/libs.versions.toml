@@ -4,7 +4,7 @@ bom = "1.0.0.Final"
 kover = "0.9.1"
 node-gradle = "7.1.0"
 # Keep in sync with IDK / sphereon gradle-plugin-bom (dev.zacsweers.metro).
-metro = "1.1.1"
+metro = "1.4.2"
 
 android-compileSdk = "34"
 android-minSdk = "24"

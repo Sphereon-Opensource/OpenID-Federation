@@ -26,6 +26,12 @@ FROM Account
 WHERE id = ?
 AND deleted_at IS NULL;
 
+findByIdentifier:
+SELECT *
+FROM Account
+WHERE identifier = ?
+AND deleted_at IS NULL;
+
 ensureTenantExists:
 INSERT INTO Account (id, username, tenant_source)
 VALUES (:id, :username, :tenant_source)

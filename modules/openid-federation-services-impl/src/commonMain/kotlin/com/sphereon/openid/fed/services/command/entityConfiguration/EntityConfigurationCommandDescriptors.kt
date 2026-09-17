@@ -16,4 +16,10 @@ interface EntityConfigurationCommandDescriptors {
     @Provides @IntoSet
     fun publishEntityConfiguration(cmd: Lazy<PublishEntityConfigurationCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(PublishEntityConfigurationCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun findLatestStoredEntityConfigurationJwt(
+        cmd: Lazy<FindLatestStoredEntityConfigurationJwtCommand>,
+    ): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(FindLatestStoredEntityConfigurationJwtCommand.COMMAND_ID) { cmd.value }
 }
