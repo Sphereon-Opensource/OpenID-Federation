@@ -170,8 +170,8 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
 kotlin {
     tasks.register<Copy>("fixOpenApiKotlinIssues") {
         dependsOn("openApiGenerateKotlin")
-        from("$kotlinOutputDir/src/commonMain/kotlin/$basePackage".replace('.', '/'))
-        into("$projectDir/build/copy/src/commonMain/kotlin/$basePackage".replace('.', '/'))
+        from("$kotlinOutputDir/src/commonMain/kotlin/${basePackage.replace('.', '/')}")
+        into("$projectDir/build/copy/src/commonMain/kotlin/${basePackage.replace('.', '/')}")
 
         filter { line: String ->
             line.replace("io.ktor.util.InternalAPI", "io.ktor.utils.io.InternalAPI")
