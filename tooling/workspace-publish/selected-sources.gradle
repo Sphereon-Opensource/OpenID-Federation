@@ -1,0 +1,31 @@
+/* One source substitution map per selected root; no nested source composites. */
+def selection = System.getenv('WORKSPACE_SOURCE_MODULES')
+if (selection != null) {
+    def names = selection.split(',').collect { it.trim() }.findAll { !it.isEmpty() }.toSet()
+    gradle.projectsEvaluated {
+        def preparationDirectory = System.getenv('WORKSPACE_PREPARATION_ROOT_DIR')
+        if (preparationDirectory) {
+            if (rootProject.projectDir.canonicalFile != new File(preparationDirectory).canonicalFile) return
+        } else {
+            def preparationRoot = gradle.startParameter.projectProperties['workspacePreparationRootName'] ?: System.getenv('WORKSPACE_PREPARATION_ROOT_NAME')
+            if (preparationRoot && rootProject.name != preparationRoot) return
+        }
+        def projects = rootProject.subprojects.findAll { names.contains(it.name) }
+        def configured = projects.collect { it.name }.toSet()
+        if (configured != names || rootProject.subprojects.size() != names.size()) {
+            throw new GradleException('Configured source modules differ from exact selection: ' + names)
+        }
+        // Retain strings/selectors, not Project instances in deferred resolution rules.
+        def coordinates = projects.collect { [coordinate: it.group.toString() + ':' + it.name, path: it.path] }
+        rootProject.allprojects { owner ->
+            owner.configurations.configureEach { configuration ->
+                configuration.resolutionStrategy.dependencySubstitution { substitutions ->
+                    coordinates.each { source ->
+                        substitutions.substitute(substitutions.module(source.coordinate))
+                            .using(substitutions.project(source.path))
+                    }
+                }
+            }
+        }
+    }
+}

@@ -13,6 +13,9 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.attributes.Attribute
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.Usage
 
 abstract class PrepareWorkspaceArtifacts extends DefaultTask {
     @Input abstract Property<String> getProducerJson()
@@ -43,10 +46,20 @@ abstract class PrepareWorkspaceArtifacts extends DefaultTask {
                 int size
                 while ((size = input.read(buffer)) > 0) digest.update(buffer, 0, size)
             }
-            records << [path:item.path, sha256:digest.digest().encodeHex().toString(), size:target.length(),
-                        kind:item.kind, variant:item.variant ?: 'jvm', coordinate:item.coordinate]
+            def record = [path:item.path, sha256:digest.digest().encodeHex().toString(), size:target.length(), kind:item.kind, variant:item.variant ?: 'jvm']
+            if (producer.publicationCoordinates != null || producer.publicationType == 'toml-bom') record.coordinate = item.coordinate
+            records << record
         }
-        if (producer.publicationCoordinates) {
+        if (producer.publicationType == 'toml-bom') {
+            def parts = producer.coordinate.split(':')
+            def prefix = parts[0].replace('.', '/') + '/' + parts[1] + '/' + parts[2] + '/' + parts[1] + '-' + parts[2]
+            def exact = [(prefix+'.toml'):'artifact', (prefix+'-bom.toml'):'artifact',
+                         (prefix+'.pom'):'pom', (prefix+'.module'):'module']
+            if (records.size() != 4 || records.collect { it.path }.toSet() != exact.keySet() ||
+                    records.any { it.coordinate != producer.coordinate || it.variant != 'metadata' || it.kind != exact[it.path] }) {
+                throw new GradleException('Incomplete or undeclared exact BOM catalog files')
+            }
+        } else if (producer.publicationCoordinates != null) {
             producer.publicationCoordinates.each { coordinate ->
                 def publicationRecords = records.findAll { it.coordinate == coordinate }
                 def present = publicationRecords.collect { it.kind }.toSet()
@@ -64,7 +77,8 @@ abstract class PrepareWorkspaceArtifacts extends DefaultTask {
         def manifest = [schemaVersion:1, module:producer.module, coordinate:producer.coordinate,
                         producerInputId:producer.producerInputId, buildLogicId:producer.buildLogicId,
                         dependencyIds:producer.dependencyIds, variants:['jvm'], files:records.sort { it.path }]
-        if (producer.publicationCoordinates) manifest.publicationCoordinates = producer.publicationCoordinates
+        if (producer.publicationCoordinates != null) manifest.publicationCoordinates = producer.publicationCoordinates
+        if (producer.publicationType != null) manifest.publicationType = producer.publicationType
         new File(output, 'manifest.json').setText(JsonOutput.toJson(manifest), 'UTF-8')
     }
 }
@@ -83,25 +97,71 @@ if (raw) {
         throw new GradleException('Selected source projects must have exact finite project paths')
     }
     gradle.projectsEvaluated {
-        def configuredLeaves = gradle.rootProject.allprojects.findAll { it != gradle.rootProject && it.childProjects.isEmpty() }.collect { it.path }.toSet()
-        def selectedPaths = sourceProjects.values().toSet()
-        if (configuredLeaves != selectedPaths) throw new GradleException('Configured modules differ from the exact source selection. selected=' + selectedPaths + ', configured=' + configuredLeaves)
-        def grouping = gradle.rootProject.allprojects.findAll { it != gradle.rootProject && !it.childProjects.isEmpty() }
-        if (grouping.any { parent -> !selectedPaths.any { it.startsWith(parent.path + ':') } }) {
-            throw new GradleException('Unselected grouping project was configured')
+        def preparationDirectory = System.getenv('WORKSPACE_PREPARATION_ROOT_DIR')
+        if (preparationDirectory) {
+            if (gradle.rootProject.projectDir.canonicalFile != new File(preparationDirectory).canonicalFile) return
+        } else {
+            def preparationRoot = gradle.startParameter.projectProperties['workspacePreparationRootName'] ?: System.getenv('WORKSPACE_PREPARATION_ROOT_NAME')
+            if (preparationRoot && gradle.rootProject.name != preparationRoot) return
         }
+        def selectedPaths = sourceProjects.values().toSet()
+        def configured = gradle.rootProject.allprojects.findAll { project ->
+            if (project == gradle.rootProject) return false
+            // Canonical has one implicit, source-free :modules container, never a producer.
+            if (project.path == ':modules' && !project.childProjects.isEmpty() &&
+                    selectedPaths.every { it.startsWith(':modules:') }) {
+                def publications = project.extensions.findByName('publishing')?.publications
+                if (project.buildFile.isFile() || project.file('src').exists() ||
+                        (publications != null && !publications.isEmpty())) {
+                    throw new GradleException('Canonical grouping project has publishing/source behavior: ' + project.path)
+                }
+                return false
+            }
+            return true
+        }.collect { it.path }.toSet()
+        if (configured != selectedPaths) throw new GradleException('Configured modules differ from the exact source selection. selected=' + selectedPaths + ', configured=' + configured)
         producers.each { name, producer ->
             if (producer.projectPath != sourceProjects[name]) throw new GradleException('Producer path differs from the exact source selection: ' + name)
             def project = gradle.rootProject.findProject(producer.projectPath)
             if (project == null) throw new GradleException('Selected producer was not configured: ' + name)
+            if (project.name != name) throw new GradleException('Selected producer project name differs: ' + name)
             def publishing = project.extensions.findByName('publishing')
             if (publishing == null) throw new GradleException('Selected module has no Maven publications: ' + name)
             def allPublications = publishing.publications.withType(MavenPublication)
             def expected = producer.coordinate.split(':')
             if (expected.length != 3) throw new GradleException('Malformed selected component coordinate: ' + name)
             def finite = producer.publicationCoordinates
+            def catalog = producer.publicationType == 'toml-bom'
+            if (producer.publicationType != null && !catalog) throw new GradleException('Unsupported publication type: ' + producer.publicationType)
             def publications
-            if (finite) {
+            if (catalog) {
+                if (producer.module != 'idk:idk-bom' || name != 'idk-bom' || producer.projectPath != ':idk-bom' ||
+                        finite != null || expected[0] != 'com.sphereon.idk' || expected[1] != 'idk-bom' ||
+                        project.projectDir.canonicalFile != new File(gradle.rootProject.projectDir, 'versions/idk-bom').canonicalFile ||
+                        !project.plugins.hasPlugin('com.sphereon.gradle.toml-catalog') ||
+                        project.group.toString() != expected[0] || project.version.toString() != expected[2]) {
+                    throw new GradleException('Invalid finite source-owned IDK BOM catalog producer')
+                }
+                def generator = project.tasks.findByName('generateTomlCatalog')
+                def elements = project.configurations.findByName('sphereonIdkBomCatalogElements')
+                if (generator == null || project.components.findByName('sphereonIdkBomCatalog') == null || elements == null ||
+                        elements.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)?.name != Category.REGULAR_PLATFORM ||
+                        elements.attributes.getAttribute(Usage.USAGE_ATTRIBUTE)?.name != Usage.VERSION_CATALOG ||
+                        elements.attributes.getAttribute(Attribute.of('sphereon.catalog.type', String)) != 'toml-bom') {
+                    throw new GradleException('Missing actual BOM catalog component/generator contract')
+                }
+                publications = allPublications.findAll { it.name == 'bomCatalog' }
+                if (publications.size() != 1) throw new GradleException('Exactly one actual bomCatalog publication is required')
+                def artifacts = publications[0].artifacts
+                def expectedArtifacts = ['':project.layout.buildDirectory.file('tomlCatalog/sphereonIdkBom.versioned.toml').get().asFile.canonicalFile,
+                                         bom:project.layout.buildDirectory.file('tomlCatalog/sphereonIdkBom.toml').get().asFile.canonicalFile]
+                if (publications[0].pom.packaging != 'pom' || artifacts.size() != 2 ||
+                        artifacts.collect { it.classifier ?: '' }.toSet() != expectedArtifacts.keySet() ||
+                        artifacts.any { it.extension != 'toml' || it.file.canonicalFile != expectedArtifacts[it.classifier ?: ''] ||
+                                        !it.buildDependencies.getDependencies(generator).contains(generator) }) {
+                    throw new GradleException('BOM catalog requires both exact generated TOML artifacts')
+                }
+            } else if (finite != null) {
                 def expectedFinite = [expected[0]+':'+expected[1]+'-multiplatform:'+expected[2],
                                       expected[0]+':'+expected[1]+'-jvm:'+expected[2]]
                 if (finite != expectedFinite || producer.projectPath != ':modules:'+name) {
@@ -112,22 +172,23 @@ if (raw) {
                     throw new GradleException('Both standard root and JVM publications are required: ' + name)
                 }
             } else {
-                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm', 'maven', 'mavenJava'] }
+                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm', 'maven', 'mavenJava', 'pluginMaven'] }
                 if (publications.isEmpty()) throw new GradleException('No supported JVM publication: ' + name)
             }
             def task = project.tasks.register('prepareWorkspaceArtifacts', PrepareWorkspaceArtifacts) {
                 group = 'build'
-                description = 'Prepare selected JVM Maven bytes for coordinator archival; never publish to a repository'
+                description = catalog ? 'Prepare selected BOM catalog Maven bytes for coordinator archival; never publish to a repository' :
+                    'Prepare selected JVM Maven bytes for coordinator archival; never publish to a repository'
                 producerJson.set(JsonOutput.toJson(producer))
                 destination.set(project.layout.buildDirectory.dir('workspace-artifacts'))
             }
             publications.each { publication ->
                 def coordinate = publication.groupId + ':' + publication.artifactId + ':' + publication.version
-                if (finite ? coordinate != finite[publication.name == 'kotlinMultiplatform' ? 0 : 1] :
+                if (catalog ? coordinate != producer.coordinate : finite != null ? coordinate != finite[publication.name == 'kotlinMultiplatform' ? 0 : 1] :
                     (publication.groupId != expected[0] || publication.version != expected[2] || !(publication.artifactId in [expected[1], expected[1] + '-jvm']))) {
                     throw new GradleException('Publication coordinates differ from selected component: ' + coordinate)
                 }
-                def variant = finite && publication.name == 'kotlinMultiplatform' ? 'metadata' : 'jvm'
+                def variant = catalog || (finite != null && publication.name == 'kotlinMultiplatform') ? 'metadata' : 'jvm'
                 def prefix = publication.groupId.replace('.', '/') + '/' + publication.artifactId + '/' + publication.version + '/'
                 def base = publication.artifactId + '-' + publication.version
                 def capital = publication.name.substring(0, 1).toUpperCase() + publication.name.substring(1)

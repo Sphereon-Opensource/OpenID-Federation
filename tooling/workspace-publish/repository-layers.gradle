@@ -1,0 +1,62 @@
+// Exact selected coordinates only. Missing changed artifacts cannot fall back.
+def encoded = System.getenv('WORKSPACE_REPOSITORY_POLICY')
+def policyFile = System.getenv('WORKSPACE_REPOSITORY_POLICY_FILE')
+def policyHash = System.getenv('WORKSPACE_REPOSITORY_POLICY_SHA256')
+if (policyFile || policyHash) {
+    if (encoded || !policyFile || !(policyHash ==~ /[0-9a-f]{64}/)) {
+        throw new GradleException('Exact repository policy requires one file and its immutable digest')
+    }
+    def file = new File(policyFile)
+    if (!file.isAbsolute() || !file.isFile() || file.length() > 8 * 1024 * 1024) {
+        throw new GradleException('Exact repository policy file exceeds bounded size or is missing')
+    }
+    def bytes = file.bytes
+    def digest = java.security.MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+    if (digest != policyHash) throw new GradleException('Exact repository policy file changed after submission')
+    encoded = new String(bytes, java.nio.charset.StandardCharsets.UTF_8)
+}
+if (!encoded) throw new GradleException('Exact workspace repository policy is missing')
+def policy = new groovy.json.JsonSlurper().parseText(encoded)
+if (policy.schemaVersion != 1 || !(policy.components instanceof Map)) {
+    throw new GradleException('Unsupported workspace repository policy')
+}
+def origins = policy.components.groupBy { coordinate, origin -> origin }
+def names = origins.keySet().withIndex().collectEntries { origin, index -> [(origin): 'workspaceLayer' + index] }
+def isLayer = { repository ->
+    names.values().any { repository.name == it || repository.name == '__plugin_repository__' + it }
+}
+def configureLayers = { repositories ->
+    repositories.all { repository ->
+        if (!isLayer(repository)) {
+            repository.content { descriptor ->
+                policy.components.keySet().each { coordinate ->
+                    def gav = coordinate.split(':', -1)
+                    descriptor.excludeVersion(gav[0], gav[1], gav[2])
+                }
+            }
+        }
+    }
+    origins.each { origin, components ->
+        repositories.maven {
+            name = names[origin]
+            url = new File(origin).toURI()
+            content { descriptor ->
+                components.keySet().each { coordinate ->
+                    def gav = coordinate.split(':', -1)
+                    descriptor.includeVersion(gav[0], gav[1], gav[2])
+                }
+            }
+        }
+    }
+}
+gradle.beforeSettings { settings ->
+    configureLayers(settings.dependencyResolutionManagement.repositories)
+}
+gradle.beforeProject { project ->
+    // Leave an empty project handler empty so PREFER_PROJECT keeps settings repos.
+    project.repositories.all { repository ->
+        if (!isLayer(repository) && !names.values().every { project.repositories.findByName(it) }) {
+            configureLayers(project.repositories)
+        }
+    }
+}

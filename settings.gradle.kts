@@ -3,10 +3,23 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
-        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")
+        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")?.takeIf { it.isNotEmpty() }
         require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
         val workspaceRepo = suppliedRepo?.trim()
-        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")
+        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")?.takeIf { it.isNotEmpty() }
+        val exactRepositoryPolicy = listOf("WORKSPACE_REPOSITORY_POLICY", "WORKSPACE_REPOSITORY_POLICY_FILE",
+            "WORKSPACE_REPOSITORY_POLICY_SHA256").any { System.getenv(it) != null }
+        if (exactRepositoryPolicy) {
+            require(workspaceRepo == null && workspaceModules == null && System.getenv("WORKTREE_MAVEN_REPO").isNullOrEmpty()) {
+                "Exact repository policy cannot be mixed with legacy Maven selection"
+            }
+            // The captured helper validates inline/file policy and installs exact-version layers.
+            // Never interpret policy here or silently resolve its selected GAVs through ordinary repositories.
+            val policyHelper = java.io.File(settingsDir, "tooling/workspace-publish/repository-layers.gradle").canonicalFile
+            require(policyHelper.isFile && gradle.startParameter.initScripts.any { it.canonicalFile == policyHelper }) {
+                "Exact repository policy requires the captured repository-layers.gradle init script"
+            }
+        }
         require(workspaceModules == null || workspaceRepo != null) {
             "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
         }
@@ -92,10 +105,23 @@ dependencyResolutionManagement {
         }
     }
     repositories {
-        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")
+        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")?.takeIf { it.isNotEmpty() }
         require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
         val workspaceRepo = suppliedRepo?.trim()
-        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")
+        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")?.takeIf { it.isNotEmpty() }
+        val exactRepositoryPolicy = listOf("WORKSPACE_REPOSITORY_POLICY", "WORKSPACE_REPOSITORY_POLICY_FILE",
+            "WORKSPACE_REPOSITORY_POLICY_SHA256").any { System.getenv(it) != null }
+        if (exactRepositoryPolicy) {
+            require(workspaceRepo == null && workspaceModules == null && System.getenv("WORKTREE_MAVEN_REPO").isNullOrEmpty()) {
+                "Exact repository policy cannot be mixed with legacy Maven selection"
+            }
+            // The captured helper validates inline/file policy and installs exact-version layers.
+            // Never interpret policy here or silently resolve its selected GAVs through ordinary repositories.
+            val policyHelper = java.io.File(settingsDir, "tooling/workspace-publish/repository-layers.gradle").canonicalFile
+            require(policyHelper.isFile && gradle.startParameter.initScripts.any { it.canonicalFile == policyHelper }) {
+                "Exact repository policy requires the captured repository-layers.gradle init script"
+            }
+        }
         require(workspaceModules == null || workspaceRepo != null) {
             "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
         }

@@ -1,0 +1,268 @@
+// Coordinator-owned, configuration-cache-compatible task evidence.
+// Only stable lane/task metadata is serialized. The per-invocation gate reads
+// current credentials; the worker archives the stable lane evidence stream.
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import org.gradle.api.Action
+import org.gradle.api.GradleException
+import org.gradle.api.Task
+import org.gradle.api.file.Directory
+import org.gradle.api.provider.MapProperty
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
+import org.gradle.api.services.BuildService
+import org.gradle.api.services.BuildServiceParameters
+import org.gradle.api.specs.Spec
+import org.gradle.api.tasks.testing.Test
+import org.gradle.build.event.BuildEventsListenerRegistry
+import org.gradle.tooling.events.FinishEvent
+import org.gradle.tooling.events.OperationCompletionListener
+import org.gradle.tooling.events.task.TaskFailureResult
+import org.gradle.tooling.events.task.TaskFinishEvent
+import org.gradle.tooling.events.task.TaskSkippedResult
+import org.gradle.tooling.events.task.TaskSuccessResult
+import javax.inject.Inject
+
+interface CoordinatorEventParameters extends BuildServiceParameters {
+    MapProperty<String, String> getTaskMetadata()
+}
+
+abstract class CoordinatorRuntimeGate implements ValueSource<Boolean, ValueSourceParameters.None> {
+    @Override
+    Boolean obtain() {
+        // Plugin builds can execute tasks while their consuming build is still
+        // configuring. ValueSource is the supported external-precondition
+        // boundary in either phase. Only the successful Boolean is a cache input;
+        // no credentials or paths are parameters or returned values.
+        def python = System.getenv('VDX_BUILD_PYTHON')
+        def gateScript = System.getenv('VDX_BUILD_GATE')
+        if (!python || !gateScript || !System.getenv('VDX_BUILD_JOB') || !System.getenv('VDX_BUILD_TOKEN')) {
+            throw new GradleException('Coordinator runtime lease is missing')
+        }
+        def gate = new ProcessBuilder(python, gateScript).inheritIO().start()
+        if (gate.waitFor() != 0) throw new GradleException('Coordinator denied task execution')
+        return true
+    }
+}
+
+abstract class CoordinatorTaskEvents implements BuildService<CoordinatorEventParameters>, OperationCompletionListener {
+    private boolean gateEntered = false
+    private final Map<String, Map> started = [:]
+
+    @Inject
+    abstract ProviderFactory getProviders()
+
+    synchronized void enterGate() {
+        if (gateEntered) return
+        // BuildService instances are recreated on every invocation. Construct the
+        // provider here, never as a cached service parameter or task field, so a
+        // cache hit must authorize the current job before it can emit evidence.
+        if (providers.of(CoordinatorRuntimeGate) {}.get() != true) {
+            throw new GradleException('Coordinator denied task execution')
+        }
+        gateEntered = true
+    }
+
+    // Gradle decorates this class; dynamic Groovy calls must see the method on
+    // the generated subclass as well as on the declared service class.
+    final void emit(Map value) {
+        // Included plugin tasks run during the consumer's configuration, so this
+        // path can be a cache input. The worker owns a stable lane path and
+        // archives it to the current job only after all process handles drain.
+        def destination = System.getenv('VDX_BUILD_EVENTS_FILE')
+        if (!destination) throw new GradleException('Coordinator event destination is missing')
+        new FileOutputStream(destination, true).withCloseable { stream ->
+            stream.write((JsonOutput.toJson(value) + '\n').getBytes('UTF-8'))
+        }
+    }
+
+    synchronized void taskStarted(String identity, List<String> outputs, List<String> xml) {
+        enterGate()
+        def encoded = parameters.taskMetadata.get().get(identity)
+        if (encoded == null) throw new GradleException('Coordinator task identity is missing: ' + identity)
+        Map metadata = new LinkedHashMap((Map) new JsonSlurper().parseText(encoded))
+        metadata.outputs = outputs
+        metadata.xml = xml
+        started[identity] = metadata
+        emit(metadata + [event: 'start'])
+    }
+
+    @Override
+    synchronized void onFinish(FinishEvent event) {
+        if (!(event instanceof TaskFinishEvent)) return
+        def identity = event.descriptor.taskPath
+        def encoded = parameters.taskMetadata.get().get(identity)
+        // Each included build owns its graph. Ignore events outside that graph
+        // rather than inventing task paths or emitting duplicate evidence.
+        if (encoded == null) return
+        enterGate()
+        Map metadata = started.remove(identity)
+        if (metadata == null) metadata = new LinkedHashMap((Map) new JsonSlurper().parseText(encoded))
+        def result = event.result
+        def outcome = 'UNKNOWN'
+        if (result instanceof TaskFailureResult) {
+            outcome = 'FAILED'
+        } else if (result instanceof TaskSkippedResult) {
+            outcome = result.skipMessage == 'NO-SOURCE' ? 'NO-SOURCE' : 'SKIPPED'
+        } else if (result instanceof TaskSuccessResult) {
+            outcome = result.fromCache ? 'FROM-CACHE' : (result.upToDate ? 'UP-TO-DATE' : 'EXECUTED')
+        }
+        emit(metadata + [event: 'task', outcome: outcome,
+                         started_ms: result.startTime, finished_ms: result.endTime])
+    }
+}
+
+class CoordinatorFreshTest implements Spec<Task>, Serializable {
+    @Override boolean isSatisfiedBy(Task task) { false }
+}
+
+class CoordinatorNoTestCache implements Spec<Task>, Serializable {
+    @Override boolean isSatisfiedBy(Task task) { true }
+}
+
+interface CoordinatorRepositoryParameters extends ValueSourceParameters {
+    Property<String> getLaneRoot()
+    Property<String> getBuildRoot()
+}
+
+abstract class CoordinatorRepositoryProvenance implements ValueSource<Map, CoordinatorRepositoryParameters> {
+    @Override
+    Map obtain() {
+        def repositoryJson = System.getenv('VDX_BUILD_REPOSITORIES')
+        if (!repositoryJson) throw new GradleException('Coordinator snapshot repository provenance is missing; restart the worker')
+        def repositories = new JsonSlurper().parseText(repositoryJson)
+        if (!(repositories instanceof List) || repositories.isEmpty()) {
+            throw new GradleException('Coordinator snapshot repository provenance is invalid')
+        }
+        def laneRoot = new File(parameters.laneRoot.get()).canonicalFile
+        def buildRoot = new File(parameters.buildRoot.get()).canonicalFile.toPath()
+        if (!buildRoot.startsWith(laneRoot.toPath())) {
+            throw new GradleException('Build root escapes coordinator lane')
+        }
+        def repository = repositories.findAll { entry ->
+            buildRoot.startsWith(new File(laneRoot, entry.path).canonicalFile.toPath())
+        }.max { entry -> entry.path == '.' ? 0 : entry.path.split('/').length }
+        if (repository == null) throw new GradleException('Build root has no snapshot repository provenance')
+        // Gradle tracks this selected result when configuration queries it.
+        // Unused provenance and unrelated repository HEADs are not inputs.
+        return Collections.unmodifiableMap(new LinkedHashMap(repository))
+    }
+}
+
+class CoordinatorRepositoryMap extends AbstractMap implements Serializable {
+    private final Provider<Map> repository
+
+    CoordinatorRepositoryMap(Provider<Map> repository) {
+        this.repository = repository
+    }
+
+    @Override Object get(Object key) { repository.get().get(key) }
+    @Override Set entrySet() { repository.get().entrySet() }
+}
+
+class CoordinatorTaskStart implements Action<Task>, Serializable {
+    private final Provider<CoordinatorTaskEvents> service
+    private final String identity
+    private final File laneRoot
+    private final Provider<Directory> reports
+    private final String root
+
+    CoordinatorTaskStart(Provider<CoordinatorTaskEvents> service, String identity,
+                         File laneRoot, Provider<Directory> reports, String root) {
+        this.service = service
+        this.identity = identity
+        this.laneRoot = laneRoot
+        this.reports = reports
+        this.root = root
+    }
+
+    @Override
+    void execute(Task task) {
+        def events = service.get()
+        events.enterGate()
+        if (task.name in ['nativeCompile', 'verifyNativePreparationInputs']) {
+            // Read the current request even on configuration-cache hits. Native
+            // dependencies cannot borrow a prior verified request's authority.
+            def gate = new ProcessBuilder(System.getenv('VDX_BUILD_PYTHON'), System.getenv('VDX_BUILD_GATE'),
+                '--native-task', identity, '--native-root', root).inheritIO().start()
+            if (gate.waitFor() != 0) throw new GradleException('Undeclared native task: ' + identity)
+        }
+        List<String> xml = []
+        if (reports != null) {
+            def directory = reports.get().asFile.canonicalFile
+            if (!directory.toPath().startsWith(laneRoot.toPath())) {
+                throw new GradleException('Test report directory escapes coordinator lane')
+            }
+            directory.listFiles()?.findAll { it.name.startsWith('TEST-') && it.name.endsWith('.xml') }?.each { file ->
+                if (!file.delete()) throw new GradleException('Cannot remove prior test report: ' + file)
+            }
+            xml = [directory.absolutePath]
+        }
+        // The action receives its own task, never another Task/Project reference.
+        // Executed tasks report their actual runtime outputs; skipped/cache-hit
+        // tasks retain the configured output declarations serialized in parameters.
+        events.taskStarted(identity, task.outputs.files.files.collect { it.absolutePath }, xml)
+    }
+}
+
+def laneRoot = new File(System.getenv('VDX_BUILD_LANE')).canonicalFile
+gradle.settingsEvaluated { settings ->
+    settings.buildCache.local.directory = new File(System.getenv('VDX_BUILD_CACHE'))
+}
+gradle.beforeProject { project ->
+    if (project == project.rootProject) {
+        def buildRoot = project.rootDir.canonicalFile.toPath()
+        if (!buildRoot.startsWith(laneRoot.toPath())) {
+            throw new GradleException('Build root escapes coordinator lane')
+        }
+        // Product version helpers query this during configuration; roots that
+        // do not use it need no Git provenance in their configuration identity.
+        def repository = project.providers.of(CoordinatorRepositoryProvenance) { registration ->
+            registration.parameters.laneRoot.set(laneRoot.absolutePath)
+            registration.parameters.buildRoot.set(buildRoot.toString())
+        }
+        project.extensions.extraProperties.set('sphereon.source.repository', new CoordinatorRepositoryMap(repository))
+    }
+    // Finite optional coverage exclusion, supplied only by validated requests.
+    if (project.providers.systemProperty('vdx.build.exclude-kover').orNull == 'true') {
+        project.tasks.configureEach { task ->
+            if (task.name == 'koverVerify') task.enabled = false
+        }
+    }
+    project.tasks.withType(Test).configureEach { task ->
+        task.outputs.upToDateWhen(new CoordinatorFreshTest())
+        task.outputs.doNotCacheIf('Coordinator requires fresh test evidence', new CoordinatorNoTestCache())
+    }
+}
+
+// This callback runs only on cache misses; the service registration, scalar
+// metadata and typed actions are restored from the entry on subsequent hits.
+gradle.taskGraph.whenReady { graph ->
+    def root = laneRoot.toPath().relativize(gradle.rootProject.rootDir.canonicalFile.toPath()).toString().replace('\\', '/') ?: '.'
+    Map<String, String> metadata = [:]
+    graph.allTasks.each { task ->
+        def identity = task.identityPath.toString()
+        if (task.name in ['nativeCompile', 'verifyNativePreparationInputs']) {
+            def producer = System.getenv('VDX_BUILD_NATIVE_PRODUCER')
+            if (!producer || root != '.' || !(identity in [producer,
+                    producer.replace(':nativeCompile', ':verifyNativePreparationInputs')])) {
+                throw new GradleException('Undeclared native task: ' + identity)
+            }
+        }
+        def xml = task instanceof Test ? [task.reports.junitXml.outputLocation.get().asFile.absolutePath] : []
+        metadata[identity] = JsonOutput.toJson([path: task.path, identity: identity, root: root,
+                xml: xml, outputs: task.outputs.files.files.collect { it.absolutePath }])
+    }
+    def service = gradle.sharedServices.registerIfAbsent('vdxCoordinatorTaskEvents', CoordinatorTaskEvents) { registration ->
+        registration.parameters.taskMetadata.set(metadata)
+    }
+    graph.allTasks.each { task ->
+        task.usesService(service)
+        task.doFirst(new CoordinatorTaskStart(service, task.identityPath.toString(), laneRoot,
+                task instanceof Test ? task.reports.junitXml.outputLocation : null, root))
+    }
+    gradle.services.get(BuildEventsListenerRegistry).onTaskCompletion(service)
+}

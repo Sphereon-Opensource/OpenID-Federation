@@ -2,6 +2,9 @@
 .kotlin
 .gradle
 **/build/
+# Local coordinator registration and generated Python bytecode are not source inputs.
+/.vdx-build-required.json
+/tooling/**/__pycache__/
 xcuserdata
 !src/**/build/
 local.properties

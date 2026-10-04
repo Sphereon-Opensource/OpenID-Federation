@@ -1,3 +1,5 @@
+import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
+import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
@@ -237,7 +239,7 @@ kotlin {
         }
     }
 
-    js {
+    configureJsTargetIfEnabled {
         outputModuleName = "@sphereon/openid-federation-open-api"
         tasks.named("compileKotlinJs") {
             dependsOn("fixOpenApiKotlinIssues")
@@ -303,7 +305,7 @@ customField("type", "module")
     }
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
+    configureWasmJsTargetIfEnabled {
         tasks.named("compileKotlinWasmJs") {
             dependsOn("fixOpenApiKotlinIssues")
         }
@@ -341,13 +343,15 @@ npmPublish {
         }
     }
     packages {
-        named("js") {
-            packageJson {
-                "name" by "@sphereon/openid-federation-open-api"
-                "version" by rootProject.extra["npmVersion"] as String
+        if (kotlin.targets.findByName("js") != null) {
+            named("js") {
+                packageJson {
+                    "name" by "@sphereon/openid-federation-open-api"
+                    "version" by rootProject.extra["npmVersion"] as String
+                }
+                scope.set("@sphereon")
+                packageName.set("openid-federation-openapi")
             }
-            scope.set("@sphereon")
-            packageName.set("openid-federation-openapi")
         }
     }
 }

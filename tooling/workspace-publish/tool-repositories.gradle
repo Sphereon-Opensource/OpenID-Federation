@@ -1,0 +1,58 @@
+// Request-pinned tool resolution for every independent/included settings root.
+def pinnedTools = System.getenv('WORKSPACE_TOOL_MAVEN_REPO')
+if (!pinnedTools) throw new GradleException('Workspace tool repository is missing')
+// Gradle exposes plugin-management repositories to project plugin resolution
+// through PluginArtifactRepository, whose name has this prefix.
+def isPinnedTools = { repository ->
+    repository.name == 'workspaceToolInputs' ||
+        repository.name == '__plugin_repository__workspaceToolInputs'
+}
+
+def restrictTools = { repositories ->
+    repositories.all { repository ->
+        if (!isPinnedTools(repository)) {
+            repository.content { descriptor ->
+                descriptor.excludeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
+                descriptor.excludeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+            }
+        }
+    }
+}
+
+def addPinnedTools = { repositories ->
+    repositories.maven {
+        name = 'workspaceToolInputs'
+        url = new File(pinnedTools).toURI()
+        content { descriptor ->
+            descriptor.includeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
+            descriptor.includeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+        }
+    }
+}
+
+gradle.beforeSettings { settings ->
+    restrictTools(settings.pluginManagement.repositories)
+    addPinnedTools(settings.pluginManagement.repositories)
+    restrictTools(settings.dependencyResolutionManagement.repositories)
+    addPinnedTools(settings.dependencyResolutionManagement.repositories)
+}
+gradle.beforeProject { project ->
+    restrictTools(project.repositories)
+    // An otherwise empty project repository handler must stay empty: populating
+    // it makes PREFER_PROJECT ignore all normal settings repositories.
+    project.repositories.all { repository ->
+        if (!isPinnedTools(repository) && !project.repositories.findByName('workspaceToolInputs')) {
+            addPinnedTools(project.repositories)
+        }
+    }
+    // Plugin-management exclusiveContent forbids adding buildscript repositories.
+    // Existing buildscript repositories must still never resolve unpinned tools.
+    project.buildscript.repositories.all { repository ->
+        if (!isPinnedTools(repository)) {
+            repository.content { descriptor ->
+                descriptor.excludeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
+                descriptor.excludeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+            }
+        }
+    }
+}

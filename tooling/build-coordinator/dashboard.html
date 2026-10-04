@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VDX Build Coordinator</title>
+<style>
+:root{--paper:#f1f5f8;--surface:#fff;--ink:#193449;--muted:#526a7a;--line:#cfdae1;--blue:#14668d;--green:#196f57;--amber:#855300;--red:#ac343b;--soft:#e6f1f6}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 "Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.55}button,a,input,select,textarea,summary{outline-offset:3px}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--blue)}
+header{background:var(--ink);color:#fff;padding:22px max(24px,calc((100vw - 1600px)/2));display:flex;gap:24px;align-items:center;justify-content:space-between}h1{font-size:25px;letter-spacing:-.5px;margin:0;font-weight:650}header p{margin:3px 0 0;color:#c4d5df;font-size:13px;overflow-wrap:anywhere}header .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.button{padding:7px 13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;font-weight:600}.primary{background:var(--blue);color:white;border-color:var(--blue)}.danger{color:var(--red)}main{max-width:1648px;margin:auto;padding:24px}.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px}.panel{background:var(--surface);border:1px solid var(--line);border-radius:7px;margin-bottom:20px;overflow:hidden}.panel-head{padding:16px 20px;display:flex;gap:12px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}h2{font-size:18px;margin:0;font-weight:650}h3{font-size:15px;margin:18px 0 8px}.hint{font-size:13px;color:var(--muted);margin:4px 0}.body{padding:16px 20px}.ribbon{display:flex;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:7px;margin-bottom:20px;flex-wrap:wrap}.metric{padding:14px 22px;flex:1;min-width:160px;border-right:1px solid var(--line)}.metric:last-child{border:0}.metric strong{display:block;font-size:23px;font-weight:600;font-variant-numeric:tabular-nums}.metric span{color:var(--muted);font-size:13px}.notice{padding:12px 16px;border-left:4px solid var(--amber);background:#fff3da;margin-bottom:20px;overflow-wrap:anywhere}.notice.error{border-color:var(--red);background:#fff0ef}[hidden]{display:none!important}.badge{display:inline-block;font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;background:#e9eff3;color:var(--muted);white-space:nowrap}.good{color:var(--green);background:#e3f3ec}.warn{color:var(--amber);background:#fff0cf}.bad{color:var(--red);background:#ffeaeb}.blue{color:var(--blue);background:var(--soft)}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px 18px;border-bottom:1px solid #e4ebef;vertical-align:top;font-size:13px}th{background:#f7fafb;color:var(--muted);font-weight:600}tr:last-child td{border-bottom:0}td .hint{font-size:12px}code{font:12px/1.5 Consolas,monospace;overflow-wrap:anywhere}.task{max-width:560px;overflow-wrap:anywhere}.empty{padding:30px 20px;color:var(--muted)}.job-id{color:var(--muted);font-size:12px}.workspaces{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px;background:#f7fafb}.workspace{border:1px solid var(--line);padding:5px 9px;border-radius:5px;font-size:12px}.workspace .dot{color:var(--green)}.workspace.offline .dot{color:var(--muted)}.settings{position:sticky;top:18px;align-self:start}.settings .body{padding:16px}.field{display:block;margin:0 0 14px}.field>span{display:block;font-size:13px;font-weight:600;margin-bottom:5px}input[type=number],select,textarea{width:100%;padding:7px 9px;border:1px solid #acbdc9;border-radius:4px;color:var(--ink);background:white}textarea{resize:vertical}input[type=checkbox]{width:17px;height:17px;accent-color:var(--blue);flex:none}.check{display:flex;align-items:flex-start;gap:9px;font-size:13px;margin:14px 0}.check input{margin-top:3px}.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.settings-grid .field{margin:0}.save-bar{border-top:1px solid var(--line);background:#f7fafb;padding:14px 16px}.save-bar .buttons{display:flex;gap:8px;margin-top:10px}.save-bar button:first-child{flex:1}#save-state{font-size:13px;overflow-wrap:anywhere}summary{cursor:pointer;font-weight:600}details>summary{padding:14px 20px}details .body summary{padding:0}.process-command{max-width:700px;white-space:pre-wrap;color:var(--muted);margin-top:8px}.filters{display:flex;gap:6px;align-items:center;font-size:13px}.filters select{width:auto;font-size:13px}.time{white-space:nowrap;font-variant-numeric:tabular-nums}.settings details{border-top:1px solid var(--line);margin-top:14px}.settings details summary{padding:12px 0}.error-text{color:var(--red)}footer{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:1500px){.layout{grid-template-columns:minmax(0,1fr)}.settings{position:static;max-width:none}.settings .body{display:block}.ribbon .metric{min-width:130px}header{padding:18px 24px}}
+@media(max-width:600px){main{padding:12px}header{align-items:flex-start;flex-direction:column;gap:12px;padding:16px}h1{font-size:22px}.panel-head{align-items:flex-start;flex-direction:column;padding:14px}th,td{padding:10px}.metric{padding:12px}.ribbon{margin-bottom:12px}.layout{gap:0}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}.storage-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.storage-toolbar label{flex:1;min-width:200px}.storage-toolbar select{margin-top:4px}.storage-usage{display:flex;gap:24px;flex-wrap:wrap;padding:16px 0}.storage-usage strong{display:block;font-size:18px;font-variant-numeric:tabular-nums}.storage-report{margin:12px 0;max-height:300px;overflow:auto;white-space:pre-wrap;font-size:13px}.storage-report:empty{display:none}.console-dialog{width:min(1440px,96vw);height:min(920px,94vh);max-height:94vh;padding:0;border:1px solid #7a95a8;border-radius:7px;background:var(--surface);color:var(--ink);overflow:hidden}.console-dialog::backdrop{background:rgba(15,33,46,.65)}.console-shell{display:flex;flex-direction:column;height:100%;min-height:0}.console-heading{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line)}.console-heading h2{font-size:20px}.console-meta{display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr;gap:8px 18px;padding:12px 20px;background:#f7fafb}.console-meta dl{margin:0;min-width:0}.console-meta dt{font-size:12px;color:var(--muted)}.console-meta dd{margin:0;font-size:13px;overflow-wrap:anywhere}.console-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line)}.console-toolbar .button{font-size:13px;padding:5px 10px}.console-toolbar a{text-decoration:none}.console-search{display:flex;align-items:center;gap:6px;flex:1;min-width:250px}.console-search input{min-width:60px;width:220px;flex:1;border:1px solid #acbdc9;border-radius:4px;padding:5px 8px}.console-toolbar .hint{margin:0}.console-message{margin:0;padding:9px 20px;border-left:4px solid var(--blue);background:var(--soft);font-size:13px}.console-message.error{border-color:var(--red);background:#fff0ef}.console-history{padding:7px 20px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);font-size:12px}.console-history .button{padding:3px 7px;font-size:12px}.console-output{flex:1;min-height:100px;overflow:auto;background:#132936;color:#e8f0f4;margin:0;padding:14px 18px;font:13px/1.55 Consolas,"Cascadia Mono",monospace;tab-size:4;white-space:pre;outline-offset:-3px;overscroll-behavior:contain}.console-output .log-line{min-height:1.55em}.console-output .log-error{color:#ffb4af}.console-output mark{background:#f4d06f;color:#152b39}.console-output .log-target{background:#314b5c;outline:1px solid #799bab}.console-footer{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:8px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}.console-footer button{padding:3px 8px;font-size:12px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:700px){.console-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}.console-heading,.console-toolbar,.console-meta,.console-history,.console-footer{padding-left:12px;padding-right:12px}.console-meta{grid-template-columns:1fr 1fr}.console-search{width:100%;order:2}.console-search input{width:100px}.console-footer{align-items:flex-start;flex-wrap:wrap}}
+.console-provenance{flex:none;max-height:180px;overflow:auto;border-top:1px solid var(--line);padding:0 20px;font-size:13px}.console-provenance>summary{padding:7px 0}.console-provenance .provenance-body{padding-bottom:10px}.console-pages{display:flex;gap:6px;flex-wrap:wrap}.console-pages button{font-size:12px;padding:3px 8px}
+.icon-button{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:8px;flex:none}.icon-button svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.failure-preview{min-width:220px;max-width:600px;margin-top:9px}.failure-preview .hint{margin:4px 0}.failure-excerpt{margin:5px 0;padding:8px 10px;border-left:3px solid var(--red);background:#fff5f4;color:#733238;white-space:pre-wrap;overflow-wrap:anywhere;max-height:10.5em;overflow:auto;font:12px/1.45 Consolas,"Cascadia Mono",monospace}.preview-retry{font-size:12px;padding:3px 7px}
+.failure-preview-head{display:flex;align-items:flex-start;gap:8px}.failure-preview-head .hint{flex:1}.failure-preview [data-preview-announcement]:empty{display:none}.console-toolbar .icon-button{padding:8px}.build-timing{margin:0;display:grid;gap:3px;white-space:nowrap;font-variant-numeric:tabular-nums}.build-timing>div{display:flex;justify-content:space-between;gap:12px}.build-timing dt{font-size:12px;color:var(--muted);font-weight:400}.build-timing dd{margin:0}.build-timing .duration{font-weight:600}.console-timing{grid-column:1/-1}.console-timing .build-timing{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px 18px}.console-timing .build-timing>div{display:block}.console-timing .hint{margin-bottom:0}@media(max-width:700px){.console-timing .build-timing{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.workspace{display:inline-flex;align-items:center;gap:7px;border-left:4px solid hsl(var(--h) 62% 42%)}.ws-status{width:10px;height:10px;border-radius:50%;flex:none}.workspace.online{background:#f1faf6;border-color:#9fd2bd;border-left-color:hsl(var(--h) 62% 42%);color:var(--ink)}.workspace.online .ws-status{background:#1fa36f;animation:ws-pulse 1.8s ease-out infinite}.workspace.paused{background:#fff7e3;border-color:#e6c27a;border-left-color:hsl(var(--h) 62% 42%);color:var(--ink)}.workspace.paused .ws-status{background:var(--amber)}.ws-filter{display:flex;gap:8px;align-items:center;padding:10px 20px 0;background:#f7fafb;flex-wrap:wrap}.ws-filter .hint{margin:0}#ws-filter-buttons{display:flex;gap:6px;flex-wrap:wrap}.ws-filter-toggle{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}.ws-filter-toggle .count{font-variant-numeric:tabular-nums;opacity:.8}.ws-filter-toggle[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}.ws-filter-toggle.online[aria-pressed=true]{background:#1f7a55;border-color:#1f7a55}.ws-filter-toggle.paused[aria-pressed=true]{background:var(--amber);border-color:var(--amber)}.workspace.idle{background:#f4f6f8;border-color:#c9d4db;border-left-color:hsl(var(--h) 30% 62%);color:#6b7d89}.workspace.idle .ws-status{background:#8fa3b0}.workspace.offline{background:transparent;border-style:dashed;border-left-style:solid;color:#8a9aa6}.workspace.offline .ws-status{background:transparent;border:1.5px solid #9fb0bb;box-sizing:border-box}.workspace.offline strong{font-weight:500}@keyframes ws-pulse{0%{box-shadow:0 0 0 0 rgba(31,163,111,.6)}70%{box-shadow:0 0 0 7px rgba(31,163,111,0)}100%{box-shadow:0 0 0 0 rgba(31,163,111,0)}}@media (prefers-reduced-motion:reduce){.workspace.online .ws-status{animation:none;box-shadow:0 0 0 3px rgba(31,163,111,.3)}}.ws-admission{padding:1px 8px;font-size:12px;margin-left:4px}.ws-kind{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border-radius:3px;background:#e9eff3;color:var(--muted)}.ws-kind-worktree{background:#ece8fb;color:#5b3fb0}.ws-kind-checkout{background:#e2eef6;color:var(--blue)}.ws-kind-primary{background:var(--ink);color:#fff}.ws-branch{font:12px Consolas,monospace;color:var(--muted)}.workspace.offline .ws-kind{opacity:.7}.build-agents{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:12px}.agent-chip{display:inline-flex;gap:5px;align-items:center;font:12px Consolas,monospace;color:var(--muted)}.agent-chip .badge{font-family:"Segoe UI",sans-serif}.ws-priority select{width:auto;padding:1px 4px;font-size:12px;border-radius:4px;margin-left:4px}.ws-priority-high select{border-color:var(--blue);color:var(--blue);font-weight:600}.ws-priority-low select{color:var(--muted)}.build-health{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:12px}.health-dots{display:inline-flex;gap:3px}.hdot{width:8px;height:8px;border-radius:2px;display:inline-block}.hdot.ok{background:#2f9e6e}.hdot.ko{background:var(--red)}.overdue{color:var(--amber);font-weight:600}.spark{color:var(--blue);vertical-align:middle}.tag{display:inline-flex;align-items:center;gap:5px;min-width:0}.tag-dot{width:9px;height:9px;border-radius:50%;flex:none;background:hsl(var(--h) 62% 42%)}tr.grouped>td:first-child{box-shadow:inset 4px 0 0 hsl(var(--h) 62% 42%)}tr.proc-group>td{background:hsl(var(--h) 60% 96%);border-top:2px solid hsl(var(--h) 55% 80%);padding-top:9px;padding-bottom:9px}.proc-group .build-tasks{display:inline}.proc-group-meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-top:3px}.proc-tree{display:flex;align-items:flex-start;gap:6px}.proc-branch{color:#9fb2bf;font:12px/1.6 Consolas,monospace;white-space:pre;flex:none}
+.queue-help{padding:8px 20px;margin:0;border-bottom:1px solid var(--line)}.queue-feedback{padding:8px 20px;border-bottom:1px solid var(--line)}.queue-feedback p{margin:3px 0}.queue-controls{display:flex;gap:6px}.queue-controls:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:5px}
+.build-summary{min-width:340px}.build-tasks{margin-bottom:5px;font-size:15px;line-height:1.35}.build-tasks strong{display:block;font-weight:650;overflow-wrap:anywhere}.tasks-unknown{color:var(--muted);font-weight:500}.build-secondary{display:flex;gap:6px 10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:13px}.build-workspace{font-weight:600}.build-id{color:var(--muted);font-size:12px}.build-secondary .hint{margin:0}.build-source{display:flex;align-items:baseline;gap:8px;font-size:13px;line-height:1.4}.build-label{color:var(--muted);font-size:12px}.source-path{user-select:text;overflow-wrap:anywhere}.build-context{display:flex;flex-wrap:wrap;gap:3px 16px;margin-top:3px;font-size:13px;line-height:1.4}.build-context>span{overflow-wrap:anywhere}.build-admission{font-size:13px;color:var(--muted);margin-top:5px}.build-time{width:230px;min-width:230px}.build-timing{gap:4px;font-size:13px}.build-timing dt{font-size:13px}.build-actions{width:124px;min-width:124px;max-width:none}.build-actions .row-actions{width:85px;gap:5px}.build-actions .queue-controls{width:100%;gap:5px}.failure-preview{margin-top:8px;min-width:0;max-width:none}.failure-preview-head{align-items:center}.failure-preview-head .hint{font-size:12px;margin:0}.failure-preview-head .icon-button{width:30px;height:30px;padding:4px}.failure-excerpt{max-height:5.4em;margin:4px 0 0;padding:7px 9px;font:13px/1.35 Consolas,"Cascadia Mono",monospace}.preview-retry{margin-top:4px}
+</style>
+</head>
+<body>
+<header><div><h1>VDX Build Coordinator</h1><p id="source">Connecting to your checkout…</p></div><div class="actions"><span id="worker" class="badge">Connecting</span><button class="button" id="worker-action">Pause admission</button><button class="button" id="resume-all" hidden>Resume all</button><button class="button" id="refresh">Refresh</button></div></header>
+<main>
+<div id="connection-error" class="notice error" role="alert" hidden></div>
+<div id="queue-notice" class="notice" role="status" hidden></div>
+<div class="ribbon"><div class="metric"><strong id="job-count">—</strong><span>Running / queued</span></div><div class="metric" id="workload-metric"><strong id="workload">—</strong><span id="workload-note">Work remaining across workspaces</span></div><div class="metric"><strong id="slot-count">—</strong><span id="slot-mode">Execution capacity</span></div><div class="metric"><strong id="ram">—</strong><span id="ram-total">Available physical RAM</span></div><div class="metric"><strong id="budget">—</strong><span id="budget-note">Memory admission budget</span></div></div>
+<div class="layout"><div>
+<section class="panel"><div class="panel-head"><div><h2>Build activity</h2><p class="hint">Live jobs across discovered coordinator workspaces<br>Start is coordinator admission, including lane preparation. Timings update with status.</p></div><span id="updated" class="hint">Waiting for status</span></div><div class="ws-filter" role="group" aria-label="Show workspaces"><span class="hint">Show</span><div id="ws-filter-buttons"></div></div><div id="workspaces" class="workspaces"></div><p class="hint queue-help">Queue order applies within each workspace. Eligibility and resource checks still determine when a build can start.</p><div id="queue-order-status" class="queue-feedback hint" role="status" aria-live="polite" hidden></div><div id="jobs" class="scroll"></div></section>
+<section class="panel"><div class="panel-head"><div><h2>Host processes</h2><p class="hint" id="process-summary">Managed builds and external activity</p></div><label class="filters">Show <select id="process-filter"><option value="all">All candidates</option><option value="blocking">External blockers</option><option value="managed">Managed builds</option></select></label></div><div id="inspection-error" class="notice error" hidden></div><div id="processes" class="scroll"></div></section>
+<details class="panel" open><summary>Recent results</summary><div id="recent" class="scroll"></div></details><details class="panel" id="task-stats-panel"><summary>Task statistics</summary><div class="body"><p class="hint">Per requested task set (tasks plus test filters), across discovered workspaces. Durations are medians of recent passing runs. Scheduling uses these figures: shorter work tends to go first, the last slot is kept for shorter builds when long ones fill the host, and auto-sized jobs reserve their recorded peak plus a margin.</p><label class="filters">Filter <input id="task-stats-filter" type="search" placeholder="task path" style="width:260px"></label></div><div id="task-stats" class="scroll"><div class="empty">Open to load.</div></div></details>
+<details class="panel"><summary id="writers-title">Source edit leases</summary><div id="writers" class="scroll"></div></details>
+<details class="panel" id="storage-panel"><summary>Build logs and storage</summary><div class="body"><div class="storage-toolbar"><label class="field" for="storage-workspace"><span>Workspace</span><select id="storage-workspace"></select></label><button class="button" id="cleanup-preview" type="button">Preview cleanup</button><button class="button danger" id="cleanup-apply" type="button" disabled>Apply cleanup</button></div><p class="hint">Preview uses the saved retention policy. Active builds, pinned logs and referenced snapshots are protected. Usage counts file sizes; shared hard links may be counted more than once.</p><div id="storage-usage" class="storage-usage"></div><p id="storage-state" class="hint" role="status">Open this section to inspect storage.</p><div id="storage-report" class="storage-report"></div></div></details>
+<footer>Unknown daemon state remains a blocker. Managed processes are associated with their owning job; maintenance actions require an explicit selection.</footer>
+</div>
+<aside class="panel settings"><div class="panel-head"><h2>Execution settings</h2><span id="draft-badge" class="badge" hidden>Unsaved</span></div>
+<form id="config-form"><div class="body"><p class="hint">Save applies to all currently discovered workspaces. Edits stay here while live status refreshes.</p>
+<label class="field" for="slots"><span>Concurrent builds</span><select id="slots" name="slots"><option value="auto">Auto</option><option value="1">1 build</option><option value="2">2 builds</option><option value="3">3 builds</option><option value="4">4 builds</option><option value="5">5 builds</option><option value="6">6 builds</option><option value="7">7 builds</option><option value="8">8 builds</option></select></label>
+<div id="auto-reason" class="hint"></div>
+<label class="check"><input type="checkbox" id="include_swap" name="include_swap"><span>Include weighted swap in memory admission<br><span class="hint">Auto concurrency uses physical RAM.</span></span></label>
+<label class="field" for="swap_weight"><span>Swap weight (0–1)</span><input type="number" id="swap_weight" name="swap_weight" min="0" max="1" step="0.05" required></label>
+<label class="check"><input type="checkbox" id="tier_sizing" name="tier_sizing"><span>Use task-tier memory estimates for new requests</span></label>
+<details><summary>Memory reservations and headroom</summary><p class="hint">GiB reserved for new automatic requests. Existing requests keep their recorded reservation.</p><div class="settings-grid">
+<label class="field"><span>Test reservation</span><input type="number" name="threshold_test_gb" id="threshold_test_gb" min="1" max="96" step="0.5" required></label><label class="field"><span>Test headroom</span><input type="number" name="headroom_test_gb" id="headroom_test_gb" min="0" max="96" step="0.5" required></label>
+<label class="field"><span>Build reservation</span><input type="number" name="threshold_build_gb" id="threshold_build_gb" min="1" max="96" step="0.5" required></label><label class="field"><span>Build headroom</span><input type="number" name="headroom_build_gb" id="headroom_build_gb" min="0" max="96" step="0.5" required></label>
+<label class="field"><span>Heavy reservation</span><input type="number" name="threshold_heavy_gb" id="threshold_heavy_gb" min="1" max="96" step="0.5" required></label><label class="field"><span>Heavy headroom</span><input type="number" name="headroom_heavy_gb" id="headroom_heavy_gb" min="0" max="96" step="0.5" required></label>
+</div></details>
+<details><summary>Daemon policy and exemptions</summary><label class="check"><input type="checkbox" name="test_tier_exempt_external_blockers" id="test_tier_exempt_external_blockers"><span>Allow test-tier jobs alongside external builds when telemetry permits</span></label><label class="check"><input type="checkbox" name="reap_idle_gradle_daemons" id="reap_idle_gradle_daemons"><span>Reap verified idle, unowned Gradle daemons</span></label><label class="field"><span>Minimum idle time (seconds)</span><input name="reap_min_idle_seconds" id="reap_min_idle_seconds" type="number" min="0" step="1" required></label><label class="field"><span>Permanent process exemptions</span><textarea id="whitelist_patterns" name="whitelist_patterns" rows="4" spellcheck="false"></textarea></label><p class="hint">One wildcard pattern per line. Exemptions remove matching processes from admission blockers.</p><button class="button" type="button" id="reap">Reap verified idle daemons now</button><p id="maintenance-state" class="hint" role="status"></p></details>
+<details><summary>Log and snapshot retention</summary><p class="hint">Keep failed output longer for diagnosis. Pinned logs and data used by active builds are protected from cleanup.</p><div class="settings-grid"><label class="field"><span>Successful logs (days)</span><input type="number" id="log_retention_success_days" name="log_retention_success_days" min="0" step="1" value="7" required></label><label class="field"><span>Other finished logs (days)</span><input type="number" id="log_retention_failure_days" name="log_retention_failure_days" min="0" step="1" value="30" required></label><label class="field"><span>Log budget (GiB)</span><input type="number" id="log_budget_gb" name="log_budget_gb" min="0" step="0.1" value="2" required></label><label class="field"><span>Snapshot age (days)</span><input type="number" id="snapshot_retention_days" name="snapshot_retention_days" min="0" step="1" value="7" required></label><label class="field"><span>Keep latest snapshots</span><input type="number" id="snapshot_keep_latest" name="snapshot_keep_latest" min="0" step="1" value="3" required></label><label class="field"><span>Snapshot budget (GiB)</span><input type="number" id="snapshot_budget_gb" name="snapshot_budget_gb" min="0" step="0.5" value="20" required></label></div><label class="check"><input type="checkbox" id="cleanup_enabled" name="cleanup_enabled" checked><span>Run automatic storage cleanup</span></label><label class="field"><span>Cleanup interval (minutes)</span><input type="number" id="cleanup_interval_minutes" name="cleanup_interval_minutes" min="1" step="1" value="60" required></label></details>
+</div><div class="save-bar"><div id="save-state" role="status" aria-live="polite">Loading saved settings…</div><div class="buttons"><button id="save" class="button primary" type="submit" disabled>Save settings</button><button id="discard" class="button" type="button" disabled>Discard</button></div></div></form></aside></div></main>
+<dialog class="console-dialog" id="console-dialog" aria-labelledby="console-title"><div class="console-shell"><div class="console-heading"><div><h2 id="console-title">Build console</h2><p class="hint" id="console-identity"></p></div><button type="button" class="button" id="console-close" aria-label="Close build console">Close</button></div><div class="console-meta"><dl><dt>Workspace</dt><dd id="console-workspace">—</dd></dl><dl><dt>Snapshot</dt><dd id="console-snapshot">—</dd></dl><dl><dt>Build status</dt><dd id="console-status">—</dd></dl><dl><dt>Last output</dt><dd id="console-last-output">—</dd></dl></div><div id="console-history" class="console-history" hidden></div><div class="console-toolbar"><button class="button" id="console-older" type="button" disabled>Load older</button><button class="button" id="console-follow" type="button" aria-pressed="true">Pause following</button><button class="button" id="console-errors" type="button" disabled>Next error</button><button class="button" id="console-copy" type="button" disabled>Copy window</button><a class="button" id="console-download" hidden>Download full log</a><button class="button" id="console-pin" type="button" aria-pressed="false" disabled>Pin log</button><div class="console-search"><label class="sr-only" for="console-search">Search loaded output</label><input id="console-search" type="search" placeholder="Search loaded output" autocomplete="off"><button class="button" id="console-search-prev" type="button" aria-label="Previous search match" disabled>Previous</button><button class="button" id="console-search-next" type="button" aria-label="Next search match" disabled>Next</button><span class="hint" id="console-matches" aria-live="polite"></span></div></div><p id="console-message" class="console-message" role="status">Loading output…</p><pre id="console-output" class="console-output" tabindex="0" role="region" aria-label="Build output"></pre><div class="console-footer"><span id="console-buffer">Live output is fetched while this console is visible.</span><span id="console-announcement" role="status" aria-live="polite"></span><button class="button" id="console-refresh" type="button">Refresh output</button></div></div></dialog>
+<script>
+'use strict';
+let lastStatus=null, dirty=false, saving=false, statusRequest=null, revision=0;
+const $=id=>document.getElementById(id);
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const elapsed=t=>{if(!t)return '—';const s=Math.max(0,Math.floor(Date.now()/1000-t));return s<60?`${s}s`:s<3600?`${Math.floor(s/60)}m ${s%60}s`:`${Math.floor(s/3600)}h ${Math.floor(s%3600/60)}m`;};
+const terminalStates=new Set(['passed','failed','cancelled','canceled','aborted','interrupted','superseded','replaced','expired']);
+function timestamp(value){if(!['number','string'].includes(typeof value)||typeof value==='string'&&!value.trim())return null;const seconds=Number(value);return Number.isFinite(seconds)&&seconds>=0&&Number.isFinite(new Date(seconds*1000).getTime())?seconds:null;}
+function durationBetween(start,end){if(start===null||end===null||end<start)return 'Unavailable';const seconds=Math.floor(end-start);return seconds<60?`${seconds}s`:seconds<3600?`${Math.floor(seconds/60)}m ${seconds%60}s`:`${Math.floor(seconds/3600)}h ${Math.floor(seconds%3600/60)}m`;}
+function timeMarkup(value,missing){const seconds=timestamp(value);if(seconds===null)return `<span class="hint">${esc(missing)}</span>`;const date=new Date(seconds*1000),full=date.toLocaleString(undefined,{dateStyle:'full',timeStyle:'long'}),short=date.toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});return `<time datetime="${date.toISOString()}" title="${esc(full)}" aria-label="${esc(full)}">${esc(short)}</time>`;}
+function timingMarkup(job,observedAt){
+  const created=timestamp(job.created),started=timestamp(job.started),finished=timestamp(job.finished),observed=timestamp(observedAt)??Date.now()/1000,terminal=terminalStates.has(job.status),queued=job.status==='queued';
+  let queue=durationBetween(created,started),run=durationBetween(started,finished);
+  if(started===null&&queued){queue=durationBetween(created,observed);if(queue!=='Unavailable')queue+=' · waiting';run='Not started';}
+  if(started!==null&&finished===null&&!terminal){run=durationBetween(started,observed);if(run!=='Unavailable')run+=' · running';}
+  return `<dl class="build-timing"><div><dt>First seen</dt><dd>${timeMarkup(created,'Not recorded')}</dd></div><div><dt title="Coordinator admission, including lane preparation">Started</dt><dd>${timeMarkup(started,queued?'Pending':'Not recorded')}</dd></div><div><dt>Finished</dt><dd>${timeMarkup(finished,terminal?'Not recorded':'Pending')}</dd></div><div><dt>Queue wait</dt><dd class="duration">${esc(queue)}</dd></div><div><dt>Run time</dt><dd class="duration">${esc(run)}</dd></div>${expectationMarkup(job,observed)}</dl>`;
+}
+function minutesText(m){return m>=60?`${Math.floor(m/60)}h ${Math.round(m%60)}m`:`${Math.round(m)} min`;}
+function expectationMarkup(job,observed){
+  const e=job.estimate;
+  if(!e)return '';
+  if(e.runs<3)return `<div><dt>Typical</dt><dd class="hint">${e.runs} earlier run${e.runs===1?'':'s'}; too few to estimate</dd></div>`;
+  const started=timestamp(job.started);let extra='';
+  if(job.status==='running'&&started!==null){const elapsed=(observed-started)/60,over=elapsed>e.p90_minutes*1.2;extra=`<div><dt>Progress</dt><dd class="duration ${over?'overdue':''}">${minutesText(elapsed)} of ~${minutesText(e.median_minutes)}${over?' · longer than usual':''}</dd></div>`;}
+  if(job.status==='queued'&&job.expected_start){extra=`<div><dt>Expected start</dt><dd class="duration" title="Estimate from the typical durations of running and earlier queued builds">in ~${minutesText(Math.max(0,(job.expected_start-observed)/60))}</dd></div>`;}
+  return `<div><dt>Typical</dt><dd class="duration" title="Median of recent passing runs; 90% finish within ${e.p90_minutes} min${e.peak_gb?'; peak memory '+e.peak_gb+' GiB':''}">${minutesText(e.median_minutes)} <span class="hint">(p90 ${minutesText(e.p90_minutes)}${e.peak_gb?' · '+e.peak_gb+' GiB':''})</span></dd></div>${extra}`;
+}
+function healthDots(e){return `<span class="health-dots" title="Last ${e.recent.length} runs, newest first">${e.recent.map(o=>`<span class="hdot ${o==='passed'?'ok':'ko'}"></span>`).join('')}</span>`;}
+function healthMarkup(e){if(!e||!e.recent?.length)return '';const f=e.failures||{};const bad=Number(f['10']||0);return `<div class="build-health"><span class="build-label">Health</span>${healthDots(e)}<span class="${bad>=3?'error-text':'hint'}">${f['5']??0}/5 · ${f['10']??0}/10 · ${f['25']??0}/25 failed</span></div>`;}
+function estimateStarts(jobs,slots,observed){
+  // Each running build frees its slot at its expected end; queued builds take the earliest free slot in queue order.
+  // Builds without enough history count as 10 minutes and are reported as unknown.
+  const known=j=>j.estimate&&j.estimate.runs>=3,free=[];
+  let runningLeft=0,queuedWork=0,unknown=0;
+  for(const j of jobs.filter(j=>['running','cancelling'].includes(j.status))){const s=timestamp(j.started);let end=observed+600;if(s!==null&&known(j))end=Math.max(observed+60,s+j.estimate.median_minutes*60);else unknown++;runningLeft+=end-observed;free.push(end);}
+  while(free.length<slots)free.push(observed);
+  free.sort((a,b)=>a-b);
+  let clear=Math.max(observed,...free.slice(0,Math.max(0,free.length)));
+  for(const j of jobs.filter(j=>j.status==='queued')){const at=free.shift()??observed,minutes=known(j)?j.estimate.median_minutes:10;if(!known(j))unknown++;j.expected_start=at;queuedWork+=minutes*60;const end=at+minutes*60;free.push(end);free.sort((a,b)=>a-b);clear=Math.max(clear,end);}
+  return {runningLeft,queuedWork,clear,unknown};
+}
+function renderWorkload(totals,counts,observed){
+  if(!totals||!counts.running&&!counts.queued){$('workload').textContent='Idle';$('workload-note').textContent='Nothing running or queued';$('workload-metric').title='';return;}
+  const clearIn=Math.max(0,(totals.clear-observed)/60);
+  $('workload').textContent=`~${minutesText(clearIn)}`;
+  const parts=[];
+  if(counts.running)parts.push(`${minutesText(totals.runningLeft/60)} left on ${counts.running} running`);
+  if(counts.queued)parts.push(`${minutesText(totals.queuedWork/60)} queued`);
+  $('workload-note').textContent=`Until all work clears · ${parts.join(' · ')}`;
+  $('workload-metric').title=`Estimated from each task set's typical duration at the current slot count, across all workspaces. The queue clears at about ${new Date(totals.clear*1000).toLocaleTimeString()}.`+(totals.unknown?` ${totals.unknown} build${totals.unknown===1?' has':'s have'} too little history and ${totals.unknown===1?'counts':'count'} as 10 minutes.`:'');
+}
+const badge=(text,kind='')=>`<span class="badge ${kind}">${esc(text)}</span>`;
+const table=(heads,rows)=>`<table><thead><tr>${heads.map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+const workspaceId=item=>item.workspace_id||item.workspace?.id||'';
+const openDetails=new Set();
+const detailKey=(kind,id,workspace='')=>`${kind}:${workspace}:${id}`;
+function keepTableState(id,html){
+  const root=$(id),active=document.activeElement;
+  if(root.dataset.rendered===html)return;
+  const focus=active?.closest('[data-focus-key]'),focusKey=root.contains(focus)?focus.dataset.focusKey:null;
+  const queueFocus=focusKey?focus.closest('[data-queue-controls]'):null;
+  const queueIdentity=queueFocus?{job:queueFocus.dataset.queueJob,workspace:queueFocus.dataset.workspace}:null;
+  const scroll=[root.scrollLeft,root.scrollTop];
+  const retained=new Map();
+  root.querySelectorAll('details[data-detail-key]').forEach(el=>retained.set(el.dataset.detailKey,el));
+  root.querySelectorAll('details[data-detail-key]').forEach(el=>el.open?openDetails.add(el.dataset.detailKey):openDetails.delete(el.dataset.detailKey));
+  root.innerHTML=html;root.dataset.rendered=html;
+  root.querySelectorAll('details[data-detail-key]').forEach(el=>{const previous=retained.get(el.dataset.detailKey);if(previous?.innerHTML===el.innerHTML)el.replaceWith(previous);else el.open=openDetails.has(el.dataset.detailKey);});
+  if(focusKey){let target=Array.from(root.querySelectorAll('[data-focus-key]')).find(el=>el.dataset.focusKey===focusKey);if(target?.disabled)target=target.closest('[data-queue-controls]');if(!target&&queueIdentity)target=Array.from(root.querySelectorAll('[data-console-job]')).find(el=>el.dataset.consoleJob===queueIdentity.job&&el.dataset.workspace===queueIdentity.workspace);target?.focus({preventScroll:true});}
+  root.scrollLeft=scroll[0];root.scrollTop=scroll[1];
+}
+function provenanceMarkup(item){
+  const p=item.provenance||{},repos=p.repositories||[];
+  return `<div class="hint">Workspace path</div><code>${esc(p.source||item.source||item.workspace?.source||'Unavailable')}</code><div class="hint">Build root / lane</div><code>${esc(item.build_root||item.root||(item.status==='queued'?'Build has not started':'Unavailable'))}</code><div class="hint">Snapshot</div><code>${esc(p.snapshot||item.snapshot||item.spec?.snapshot||'Unavailable')}</code><div class="hint">Captured repositories</div>${repos.length?repos.map(repo=>`<div><code>${esc(repo.path||'.')}</code><br><span class="hint">Branch: ${esc(repo.branch||'Branch not captured')}<br>Commit: </span><code>${esc(repo.head||'Unavailable')}</code></div>`).join(''):'<span class="hint">Repository and branch metadata was not captured.</span>'}`;
+}
+function relevantRepository(job){
+  const source=String(job.provenance?.source||job.source||job.workspace?.source||'').replace(/\\/g,'/').replace(/\/+$/,'');
+  const relative=value=>{let path=String(value||'.').replace(/\\/g,'/').replace(/\/+$/,'');if(/^(?:[a-z]:\/|\/)/i.test(path)){if(source&&path.toLowerCase()===source.toLowerCase())path='.';else if(source&&path.toLowerCase().startsWith(source.toLowerCase()+'/'))path=path.slice(source.length+1);else return null;}const parts=path.split('/').filter(part=>part&&part!=='.');return parts.includes('..')?null:parts.join('/')||'.';};
+  const root=relative(job.spec?.root??job.root??'.')||'.';
+  return (job.provenance?.repositories||[]).map(repo=>({repo,path:relative(repo.path)})).filter(({path})=>path!==null&&(path==='.'||root.toLowerCase()===path.toLowerCase()||root.toLowerCase().startsWith(path.toLowerCase()+'/'))).sort((a,b)=>b.path.split('/').length-a.path.split('/').length||(a.path==='.'?1:b.path==='.'?-1:0))[0]?.repo||null;
+}
+const WS_FILTERS=[['online','Active'],['paused','Paused'],['idle','Idle'],['offline','Offline']];
+const wsShown=(()=>{try{const saved=JSON.parse(localStorage.getItem('ws-filter')||'null');if(Array.isArray(saved))return new Set(saved.filter(k=>WS_FILTERS.some(([key])=>key===k)));}catch{}return new Set(['online']);})();
+function kindBadge(kind,primary){if(!kind&&!primary)return '';const label=primary?'this checkout':kind==='worktree'?'worktree':kind==='checkout'?'main':'folder';return `<span class="ws-kind ws-kind-${esc(kind||'other')}${primary?' ws-kind-primary':''}">${label}</span>`;}
+function workspaceInfo(job){return (lastStatus?.workspaces||[]).find(w=>(w.workspace_id||w.id)===workspaceId(job))||null;}
+function priorityControl(w,data){if(!('priority' in w))return '';const id=w.workspace_id||w.id;return `<label class="ws-priority ws-priority-${esc(w.priority)}" title="Share of free build slots when several workspaces are waiting. High gets about three starts for every one Low gets."><span class="sr-only">Priority for ${esc(w.name)}</span><select data-priority-workspace="${esc(id)}" data-focus-key="${esc('priority:'+id)}">${[['low','Low priority'],['normal','Normal priority'],['high','High priority']].map(([v,l])=>`<option value="${v}"${w.priority===v?' selected':''}>${l}</option>`).join('')}</select></label>`;}
+function renderAdmission(data){
+  const spaces=data.workspaces||[],paused=spaces.filter(w=>w.drain),live=spaces.filter(w=>w.worker_live&&!w.drain);
+  if(!data.workspace_admission){$('worker').className='badge '+(data.drain?'warn':data.worker_live?'good':'bad');$('worker').textContent=data.drain?'Admission paused (this checkout only)':data.worker_live?'Worker online':'Worker offline';$('worker-action').textContent=data.drain||!data.worker_live?'Start / resume worker':'Pause admission';$('resume-all').hidden=true;return;}
+  const all=spaces.length&&paused.length===spaces.length;
+  $('worker').className='badge '+(all?'warn':paused.length?'warn':live.length?'good':'bad');
+  $('worker').textContent=all?'Admission paused everywhere':paused.length?`Paused in ${paused.length} of ${spaces.length} workspaces`:live.length?'All workers online':'Workers offline';
+  $('worker').title=paused.length?'Paused: '+paused.map(w=>w.name).join(', '):'';
+  $('worker-action').textContent='Pause all';$('worker-action').disabled=all;
+  $('resume-all').hidden=false;$('resume-all').disabled=!paused.length&&spaces.every(w=>w.worker_live);
+}
+function hue(value){let h=0;for(const ch of String(value??''))h=(h*31+ch.charCodeAt(0))>>>0;return h%360;}
+function tag(label,value,text){const known=value&&value!=='Unavailable'&&value!=='Not captured';return known?`<span class="tag" style="--h:${hue(value)}" title="${esc(label+': '+value)}"><span class="tag-dot" aria-hidden="true"></span>${text}</span>`:text;}
+function jobSource(job){return job?.provenance?.source||job?.source||job?.workspace?.source||'';}
+function shortIdentity(value){const text=String(value??'Unavailable');return text.length>12?text.slice(0,12)+'…':text;}
+function buildIdentity(job,work=''){
+  const p=job.provenance||{},source=p.source||job.source||job.workspace?.source||'Unavailable',snapshot=p.snapshot||job.snapshot||job.spec?.snapshot||'Unavailable',repo=relevantRepository(job),status=job.status||'Unknown';
+  const kind=status==='passed'?'good':['failed','interrupted'].includes(status)?'bad':status==='running'?'blue':'warn';
+  return `<div class="build-summary">${taskMarkup(job)}<div class="build-secondary"><span class="build-workspace">${(()=>{const w=workspaceInfo(job);return (w?kindBadge(w.checkout_kind,w.is_primary)+' ':'')+tag('Workspace',source,esc(w?.name||job.workspace?.name||job.workspace||'Workspace'));})()}</span><span class="build-id" title="${esc(job.id)}">${esc(shortIdentity(job.id))}</span>${badge(status,kind)}${queuePositionMarkup(job)}</div><div class="build-source"><span class="build-label">Source</span><span class="source-path" title="${esc(source)}">${esc(source)}</span></div><div class="build-context"><span><span class="build-label">Repo</span> ${esc(repo?.path||'Not captured')}</span><span><span class="build-label">Branch</span> ${tag('Branch',repo?.branch&&(repo.path+'@'+repo.branch),esc(repo?.branch||'Not captured'))}</span><span><span class="build-label">Snapshot</span> ${tag('Snapshot',snapshot,esc(shortIdentity(snapshot)))}</span></div>${work}</div>`;
+}
+const actionIcons={console:'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/></svg>',cancel:'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="m9 9 6 6m0-6-6 6"/></svg>',copy:'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h4"/></svg>',download:'<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></svg>'};
+actionIcons.up='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V4m-6 6 6-6 6 6"/></svg>';
+actionIcons.down='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v16m-6-6 6 6 6-6"/></svg>';
+for(const [id,label,title,icon] of [['console-copy','Copy window','Copy all loaded console output','copy'],['console-download','Download full log','Download the complete captured log','download']]){const control=$(id);control.classList.add('icon-button');control.setAttribute('aria-label',label);control.title=title;control.innerHTML=actionIcons[icon];}
+function consoleButton(job){const workspace=workspaceId(job);return `<button class="button icon-button" type="button" aria-label="Console" title="${esc(workspace?'Open console for '+job.id:'Workspace identity unavailable')}" data-console-job="${esc(job.id)}" data-workspace="${esc(workspace)}" data-focus-key="${esc(detailKey('console',job.id,workspace))}" ${workspace?'':'disabled'}>${actionIcons.console}</button>`;}
+const queueMoves=new Map();
+function queueBounds(job){const position=job.queue_position,size=job.queue_size;return Number.isInteger(position)&&Number.isInteger(size)&&position>=1&&size>=position?{position,size}:null;}
+function queueReorderReason(job){return job.queue_reorder_supported===true?'':String(job.queue_reorder_reason||'Queue ordering requires an updated worker restart');}
+function queuePositionMarkup(job){if(job.status!=='queued')return '';const bounds=queueBounds(job),reason=queueReorderReason(job);return `<div class="hint">${bounds?`Queue position ${bounds.position} of ${bounds.size}`:'Queue position unavailable'}${reason?' · '+esc(reason):''}</div>`;}
+function phaseMarkup(job){const phase=String(job.phase??'').trim();return phase&&phase.toLowerCase()!==String(job.status).toLowerCase()?`<div class="hint">${esc(phase)}</div>`:'';}
+function taskMarkup(job){const tasks=job.spec?.tasks||[];return `<div class="build-tasks">${tasks.length?tasks.map(task=>`<strong>${esc(task.path)}</strong>`).join(''):'<span class="tasks-unknown">Tasks not recorded</span>'}</div>`;}
+function subscribersMarkup(job){const subs=job.subscribers||[];if(!subs.length)return '';const active=['queued','running','cancelling'].includes(job.status);return `<div class="build-agents"><span class="build-label">Agents</span>${subs.map(s=>{const state=s.tracked===undefined?null:active?(s.waiter_live?['waiting','good','A background wait is following this build']:['no one waiting','warn','Nothing is waiting on this build; its agent may not notice when it ends']):!s.tracked?null:s.collected?['result read','good','The agent collected this result']:['result not read','bad','This build finished but its agent never collected the result'];return `<span class="agent-chip" title="${esc((s.agent||'unknown agent')+(state?' · '+state[2]:''))}">${esc(s.agent||'unknown')}${state?' '+badge(state[0],state[1]):''}</span>`;}).join('')}</div>`;}
+function activeWorkMarkup(job){return healthMarkup(job.estimate)+(job.blocked_reason?`<div class="build-admission">${esc(job.blocked_reason)}</div>`:phaseMarkup(job))+subscribersMarkup(job);}
+function resultWorkMarkup(job){return healthMarkup(job.estimate)+subscribersMarkup(job)+failurePreview(job);}
+function queueControls(job){
+  if(job.status!=='queued')return '';
+  const workspace=workspaceId(job),bounds=queueBounds(job),state=queueMoves.get(workspace),unsupported=queueReorderReason(job);
+  const buttons=[['up','Move earlier'],['down','Move later']].map(([direction,label])=>{
+    const boundary=bounds&&(direction==='up'?bounds.position===1:bounds.position===bounds.size);
+    const disabled=!!unsupported||!workspace||!bounds||state?.pending||state?.stale||boundary;
+    const reason=unsupported||(state?.pending?'Queue update in progress':state?.stale?'Refresh status before moving again':!workspace||!bounds?'Queue position unavailable':boundary?(direction==='up'?'Already first in this workspace':'Already last in this workspace'):`${label} in ${job.workspace||workspace}`);
+    return `<button class="button icon-button" type="button" aria-label="${label}" title="${esc(reason+' · '+job.id)}" data-queue-move="${direction}" data-queue-job="${esc(job.id)}" data-workspace="${esc(workspace)}" data-focus-key="${esc(detailKey('queue-'+direction,job.id,workspace))}" ${disabled?'disabled':''}>${actionIcons[direction]}</button>`;
+  }).join('');
+  return `<div class="queue-controls" role="group" aria-label="${esc('Queue order for '+job.id)}" tabindex="-1" data-queue-controls data-queue-job="${esc(job.id)}" data-workspace="${esc(workspace)}" data-focus-key="${esc(detailKey('queue',job.id,workspace))}">${buttons}</div>`;
+}
+function orderedJobs(jobs,workspaces=[]){
+  const groups=new Map(),workspaceOrder=new Map(workspaces.map((workspace,index)=>[workspace.workspace_id||workspace.id,index]));
+  for(const job of jobs){if(job.status!=='queued')continue;const key=workspaceId(job)||job.workspace||'';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(job);}
+  const rank=job=>Number.isFinite(job.queue_order)?job.queue_order:Number.isFinite(job.queue_position)?job.queue_position:Infinity;
+  const queued=[...groups].sort(([a],[b])=>(workspaceOrder.get(a)??Infinity)-(workspaceOrder.get(b)??Infinity)||a.localeCompare(b)).flatMap(([,group])=>group.sort((a,b)=>rank(a)-rank(b)));
+  return [...jobs.filter(job=>job.status!=='queued'),...queued];
+}
+function renderQueueFeedback(){
+  const root=$('queue-order-status'),signature=JSON.stringify([...queueMoves.values()].map(state=>[state.workspaceName,state.message,state.error]));if(root.dataset.rendered===signature)return;root.dataset.rendered=signature;root.replaceChildren();
+  for(const state of queueMoves.values()){if(!state.message)continue;const line=document.createElement('p');line.textContent=`${state.workspaceName}: ${state.message}`;if(state.error)line.className='error-text';root.append(line);}
+  root.hidden=!root.childElementCount;
+}
+function workspaceStatusAvailable(data,workspace){const item=data?.workspaces?.find(item=>(item.workspace_id||item.id)===workspace);return !!item&&!(data.workspace_errors||[]).some(error=>error.workspace_id===workspace||item.source&&error.source===item.source);}
+function failurePreview(job){if(!['failed','interrupted'].includes(job.status))return '';const key=detailKey('preview',job.id,workspaceId(job));return `<div class="failure-preview" data-error-preview="${esc(key)}"><div class="failure-preview-head"><p class="hint" data-preview-state>Loading error excerpt…</p><button class="button icon-button" type="button" data-preview-copy="${esc(key)}" data-focus-key="${esc(key+':copy')}" aria-label="Copy error excerpt" title="Copy displayed error excerpt for ${esc(job.id)}" hidden>${actionIcons.copy}</button></div><pre class="failure-excerpt" data-preview-text tabindex="0" aria-label="Error output for ${esc(job.id)}" hidden></pre><p class="hint" data-preview-announcement role="status" aria-live="polite"></p><button class="button preview-retry" type="button" data-preview-retry="${esc(key)}" data-focus-key="${esc(key)}" hidden>Retry error preview</button></div>`;}
+function notice(id,message){$(id).hidden=!message;$(id).textContent=message||'';}
+async function api(path,body,options={}){const res=await fetch(path,{...(body===undefined?{cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),...options});let data;try{data=await res.json();}catch{const error=new Error(`Server returned ${res.status}; response unavailable`);error.status=res.status;throw error;}if(!res.ok||data.status==='error'||data.status==='partial'){const error=new Error((data.error||`Request failed (${res.status})`)+(data.failed?.length?' — '+data.failed.map(f=>`${f.source}: ${f.error}`).join('; '):''));error.status=res.status;throw error;}return data;}
+function updateDraft(message){$('draft-badge').hidden=!dirty;$('save').disabled=!dirty||saving;$('discard').disabled=!dirty||saving;$('save').textContent=saving?'Saving…':'Save settings';if(message)$('save-state').textContent=message;}
+function populate(cfg){if(dirty||saving||!cfg)return;for(const el of $('config-form').elements){if(!el.name||!(el.name in cfg))continue;if(el.type==='checkbox')el.checked=!!cfg[el.name];else if(el.name==='whitelist_patterns')el.value=(cfg[el.name]||[]).join('\n');else el.value=cfg[el.name];}}
+$('config-form').addEventListener('input',()=>{dirty=true;revision++;updateDraft('Unsaved changes');});
+$('config-form').addEventListener('change',()=>{dirty=true;revision++;updateDraft('Unsaved changes');});
+$('discard').addEventListener('click',()=>{dirty=false;populate(lastStatus?.config);updateDraft('Restored saved settings');});
+$('config-form').addEventListener('submit',async e=>{e.preventDefault();if(saving||!$('config-form').reportValidity())return;const cfg={};for(const el of $('config-form').elements){if(!el.name)continue;cfg[el.name]=el.type==='checkbox'?el.checked:el.name==='slots'?(el.value==='auto'?'auto':Number(el.value)):el.name==='whitelist_patterns'?el.value.split('\n').map(s=>s.trim()).filter(Boolean):Number(el.value);}const sentRevision=revision;saving=true;updateDraft('Saving to discovered workspaces…');try{const result=await api('/api/config',cfg);if(lastStatus)lastStatus.config=result.config;dirty=revision!==sentRevision;updateDraft(dirty?'Saved submitted settings; newer edits are still unsaved':`Saved to ${result.saved.length} workspace${result.saved.length===1?'':'s'}`);}catch(err){dirty=true;updateDraft('Save failed: '+err.message);}finally{saving=false;updateDraft();await fetchStatus();}});
+function renderJobs(data){const jobs=orderedJobs(data.jobs||[],data.workspaces||[]);try{const observed=timestamp(data.observed_at)??Date.now()/1000;renderWorkload(estimateStarts(jobs,Number(data.dynamic_slots?.slots)||1,observed),{running:jobs.filter(j=>['running','cancelling'].includes(j.status)).length,queued:jobs.filter(j=>j.status==='queued').length},observed);}catch{}keepTableState('jobs',jobs.length?table(['Build','Timing','Actions'],jobs.map(j=>`<tr class="grouped" style="--h:${hue(jobSource(j))}"><td>${buildIdentity(j,activeWorkMarkup(j))}</td><td class="build-time">${timingMarkup(j,data.observed_at)}</td><td class="build-actions"><div class="row-actions">${queueControls(j)}${consoleButton(j)}<button class="button danger icon-button" type="button" aria-label="Cancel" title="Cancel build ${esc(j.id)}" data-cancel-job="${esc(j.id)}" data-focus-key="${esc(detailKey('cancel',j.id,workspaceId(j)))}">${actionIcons.cancel}</button></div></td></tr>`)):'<div class="empty"><strong>No active or queued jobs.</strong><br>Recent results are below. Host processes are listed separately from this queue.</div>');renderQueueFeedback();}
+function render(data){$('source').textContent=data.source;renderAdmission(data);const jobs=data.jobs||[];const running=jobs.filter(j=>['running','cancelling'].includes(j.status));const queued=jobs.filter(j=>j.status==='queued');$('job-count').textContent=`${running.length} / ${queued.length}`;$('slot-count').textContent=data.dynamic_slots.slots;$('slot-mode').textContent=data.dynamic_slots.mode==='auto'?'Auto concurrency':'Configured concurrency';$('ram').textContent=`${data.memory.ram_available_gb} GiB`;$('ram-total').textContent=`Available RAM of ${data.memory.ram_total_gb} GiB`;$('budget').textContent=`${data.effective_memory_gb} GiB`;$('budget-note').textContent=data.config.include_swap?'RAM + weighted swap (commit capped)':'RAM only (commit capped)';$('auto-reason').textContent=data.dynamic_slots.reason;$('updated').textContent=`Updated ${new Date(data.observed_at*1000).toLocaleTimeString()}`;
+notice('queue-notice',queued.length&&data.blocked?.reason?data.blocked.reason:queued.length&&!data.worker_live?'This worker is offline. Start it to admit its queued work.':null);
+const ACTIVE_WINDOW=30*60,observedNow=timestamp(data.observed_at)??Date.now()/1000;const wsState=w=>w.drain?'paused':!w.worker_live?'offline':(w.last_activity===undefined||w.last_activity!==null&&observedNow-w.last_activity<=ACTIVE_WINDOW)?'online':'idle';const wsRank=w=>({online:0,paused:1,idle:2,offline:3})[wsState(w)];const counts={online:0,paused:0,idle:0,offline:0};for(const w of data.workspaces)counts[wsState(w)]++;$('ws-filter-buttons').innerHTML=WS_FILTERS.map(([key,label])=>`<button type="button" class="ws-filter-toggle ${key}" aria-pressed="${wsShown.has(key)}" data-ws-filter="${key}" data-focus-key="ws-filter:${key}">${label} <span class="count">${counts[key]}</span></button>`).join('');const visible=[...data.workspaces].filter(w=>wsShown.has(wsState(w)));$('workspaces').innerHTML=visible.length?visible.sort((a,b)=>wsRank(a)-wsRank(b)).map(w=>{const id=w.workspace_id||w.id,paused=w.drain,control=data.workspace_admission?`<button class="button ws-admission" type="button" data-admission="${paused||!w.worker_live?'resume':'drain'}" data-workspace-admission="${esc(id)}" data-focus-key="${esc('admission:'+id)}" title="${esc((paused||!w.worker_live?'Resume admission for ':'Pause admission for ')+w.name)}">${paused||!w.worker_live?'Resume':'Pause'}</button>`:'';const state=wsState(w),idleFor=w.last_activity?Math.max(0,observedNow-w.last_activity):null,since=idleFor===null?'':idleFor>=86400?`${Math.floor(idleFor/86400)}d ${Math.floor(idleFor%86400/3600)}h`:durationBetween(w.last_activity,observedNow);const label=state==='online'?'active':state==='idle'?(since&&since!=='Unavailable'?'idle '+since:'idle, no activity'):state;return `<span class="workspace ${state}" style="--h:${hue(w.source)}" title="${esc(w.source+' · '+(state==='idle'?'worker running, no builds, snapshots or edit leases in the last 30 minutes':state)+(w.last_activity?' · last activity '+new Date(w.last_activity*1000).toLocaleString():''))}"><span class="ws-status" aria-hidden="true"></span> ${kindBadge(w.checkout_kind,w.is_primary)} <span>${esc(w.name)}</span>${w.branch?` <span class="ws-branch" title="Branch">${esc(w.branch)}</span>`:''} · <strong>${esc(label)}</strong>${w.config_matches?'':' · settings differ'}${priorityControl(w,data)}${control}</span>`;}).join(''):`<span class="hint">No workspaces in the selected states.</span>`;
+renderJobs(data);
+notice('inspection-error',data.inspection_error?'Process inspection unavailable: '+data.inspection_error:null);renderProcesses();
+keepTableState('recent',data.recent_jobs?.length?table(['Build','Timing','Actions'],data.recent_jobs.map(j=>`<tr><td>${buildIdentity(j,resultWorkMarkup(j))}</td><td class="build-time">${timingMarkup(j,data.observed_at)}</td><td class="build-actions">${consoleButton(j)}</td></tr>`)):'<div class="empty">No recent results in the discovered workspaces.</div>');
+failurePreviews.update(data.recent_jobs||[]);
+consoleViewer.updateTiming(data.observed_at);
+$('writers-title').textContent=`Source edit leases (${data.writers.length})`;keepTableState('writers',data.writers.length?table(['Workspace','Owner','Age',''],data.writers.map(w=>`<tr><td>${esc(w.workspace)}</td><td>${esc(w.agent)}<div class="job-id">${esc(w.id)}</div></td><td class="time">${elapsed(w.created)}</td><td><button class="button" type="button" data-release-writer="${esc(w.id)}" data-focus-key="${esc(detailKey('release',w.id))}">Release</button></td></tr>`)):'<div class="empty">No active source edits.</div>');populate(data.config);updateStorageWorkspaces(data.workspaces||[]);}
+function renderProcesses(){if(!lastStatus)return;const all=lastStatus.candidates||[];const blocking=all.filter(c=>c.blocking);$('process-summary').textContent=`${all.filter(c=>c.owner).length} managed · ${blocking.length} external blocker${blocking.length===1?'':'s'} · ${all.filter(c=>!c.owner&&!c.blocking).length} idle or unrelated`;
+const filter=$('process-filter').value;const rows=all.filter(c=>filter==='blocking'?c.blocking:filter==='managed'?c.owner:true);keepTableState('processes',rows.length?table(['Process','Classification / owner','Details'],processGroups(rows).flatMap(({header,items})=>[header,...items.map(({c,prefix})=>{const key=detailKey('process',`${c.pid}:${c.created||c.create_time||c.name||''}`,c.owner?.source||'');return `<tr class="grouped" style="--h:${hue(c.owner?.source||(c.blocking?'external':'other'))}"><td><div class="proc-tree">${prefix?`<span class="proc-branch" aria-hidden="true">${prefix}</span>`:''}<div><strong>${esc(c.target||c.name)}</strong><div class="job-id">PID ${esc(c.pid)}${c.parent?` · parent ${esc(c.parent)}`:''}</div></div></div></td><td>${badge(c.owner?'Managed build':c.blocking?'External blocker':'Not blocking',c.owner?'blue':c.blocking?'warn':'good')}<div class="hint">${esc(c.reason)}</div>${c.owner?.job?`<code>${esc(c.owner.job)}</code>`:''}${c.state?`<div class="hint">${esc(c.state)}</div>`:''}${!c.owner?'<div class="hint">External process: captured console unavailable.</div>':''}</td><td><details data-detail-key="${esc(key)}"><summary data-focus-key="${esc(key)}">${esc(c.extra||c.compressed_cwd||'Process details')}</summary><div class="hint">Working directory</div><code>${esc(c.cwd||'Unavailable')}</code>${c.owner?.source?`<div class="hint">Owning workspace</div><code>${esc(c.owner.source)}</code>`:''}<div class="hint">Full command</div><div class="process-command"><code>${esc(c.full_command||c.command_preview||'Unavailable')}</code></div></details></td></tr>`;})])):'<div class="empty">No matching processes.</div>');}
+function processGroups(rows){
+  const groups=new Map();
+  for(const c of rows){const key=c.owner?`job:${c.owner.source||''}:${c.owner.job||''}`:c.blocking?'external':'other';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(c);}
+  const rank=key=>key==='external'?0:key==='other'?2:1;
+  return [...groups].sort(([a],[b])=>rank(a)-rank(b)||a.localeCompare(b)).map(([key,members])=>({header:processGroupHeader(key,members),items:processTree(members)}));
+}
+function processTree(members){
+  const pids=new Set(members.map(c=>c.pid)),children=new Map();
+  for(const c of members){const parent=pids.has(c.parent)&&c.parent!==c.pid?c.parent:null;if(!children.has(parent))children.set(parent,[]);children.get(parent).push(c);}
+  const out=[],seen=new Set();
+  const walk=(parent,lead)=>{const kids=(children.get(parent)||[]).sort((a,b)=>Number(b.blocking)-Number(a.blocking)||a.pid-b.pid);kids.forEach((c,i)=>{if(seen.has(c.pid))return;seen.add(c.pid);const last=i===kids.length-1;out.push({c,prefix:parent===null?'':lead+(last?'└─ ':'├─ ')});walk(c.pid,parent===null?'':lead+(last?'   ':'│  '));});};
+  walk(null,'');
+  for(const c of members)if(!seen.has(c.pid))out.push({c,prefix:''});
+  return out;
+}
+function processGroupHeader(key,members){
+  const count=`${members.length} process${members.length===1?'':'es'}`;
+  if(key==='external')return `<tr class="proc-group" style="--h:30"><td colspan="3"><strong>External builds</strong> <span class="hint">· ${count} · not started by any coordinator this dashboard can see</span></td></tr>`;
+  if(key==='other')return `<tr class="proc-group" style="--h:210"><td colspan="3"><strong>Idle or unrelated</strong> <span class="hint">· ${count}</span></td></tr>`;
+  const owner=members[0].owner||{},job=(lastStatus?.jobs||[]).find(j=>j.id===owner.job),source=owner.source||jobSource(job),repo=job?relevantRepository(job):null,snapshot=job?.provenance?.snapshot||job?.spec?.snapshot;
+  const name=job?.workspace?.name||job?.workspace||String(source).split(/[\/]/).filter(Boolean).pop()||'Workspace';
+  return `<tr class="proc-group" style="--h:${hue(source)}"><td colspan="3">${job?taskMarkup(job):`<strong>${esc(owner.job||'Managed build')}</strong>`}<div class="proc-group-meta">${tag('Workspace',source,esc(name))}<span class="build-id" title="${esc(owner.job||'')}">${esc(shortIdentity(owner.job||'Job unknown'))}</span>${repo?.branch?`<span><span class="build-label">Branch</span> ${tag('Branch',repo.path+'@'+repo.branch,esc(repo.branch))}</span>`:''}${snapshot?`<span><span class="build-label">Snapshot</span> ${tag('Snapshot',snapshot,esc(shortIdentity(snapshot)))}</span>`:''}<span>${count}</span></div></td></tr>`;
+}
+function fetchStatus(options={}){
+  if(statusRequest)return options.afterCurrent?statusRequest.then(()=>fetchStatus()):statusRequest;
+  statusRequest=(async()=>{
+    try{
+      const data=await api('/api/status'),first=!lastStatus;lastStatus=data;
+      for(const [workspace,state] of queueMoves){if(state.stale&&workspaceStatusAvailable(data,workspace)){state.stale=false;state.error=false;state.message=state.saved?'Queue order updated.':'Queue status refreshed.';}}
+      render(data);const errors=(data.workspace_errors||[]).map(w=>`${w.source}: ${w.error}`).join('; ');notice('connection-error',errors?`Some workspace status is unavailable: ${errors}`:null);if(first)updateDraft('Saved settings loaded');return true;
+    }catch(err){notice('connection-error','Live status unavailable: '+err.message+'. Last successful data is retained.');return false;}
+  })().finally(()=>{statusRequest=null;});
+  return statusRequest;
+}
+async function moveQueueJob(workspace,id,direction,focusKey){
+  const job=lastStatus?.jobs?.find(job=>workspaceId(job)===workspace&&job.id===id),previous=queueMoves.get(workspace),bounds=job&&queueBounds(job);
+  if(!workspace||job?.status!=='queued'||job.queue_reorder_supported!==true||!bounds||!['up','down'].includes(direction)||previous?.pending||previous?.stale||(direction==='up'?bounds.position===1:bounds.position===bounds.size))return;
+  const state={workspaceName:job.workspace||workspace,pending:true,stale:false,saved:false,error:false,message:`Moving ${id} ${direction==='up'?'earlier':'later'}…`};queueMoves.set(workspace,state);renderJobs(lastStatus);
+  try{await api('/api/queue/move',{workspace,job:id,direction});state.saved=true;state.message='Queue order saved. Refreshing status…';}
+  catch(error){state.error=true;state.message=`Could not move ${id}: ${error.message}`;}
+  const refreshed=await fetchStatus({afterCurrent:true});
+  if(state.saved){state.stale=!refreshed||!workspaceStatusAvailable(lastStatus,workspace);state.error=state.stale;state.message=state.stale?'Queue order saved, but status refresh failed. Refresh status before another move.':'Queue order updated.';}
+  else if(!refreshed||!workspaceStatusAvailable(lastStatus,workspace)){state.stale=true;state.message+=' Status refresh also failed; refresh status before another move.';}
+  state.pending=false;if(lastStatus)renderJobs(lastStatus);
+  if(document.activeElement?.dataset.focusKey===detailKey('queue',id,workspace)){const control=Array.from($('jobs').querySelectorAll('[data-focus-key]')).find(control=>control.dataset.focusKey===focusKey);if(control&&!control.disabled)control.focus({preventScroll:true});}
+}
+document.addEventListener('click',event=>{const button=event.target.closest('[data-queue-move]');if(button&&!button.disabled)moveQueueJob(button.dataset.workspace,button.dataset.queueJob,button.dataset.queueMove,button.dataset.focusKey);});
+async function admission(button,body){button.disabled=true;try{await api('/api/action',body);await fetchStatus();}catch(err){notice('connection-error',err.message);}finally{button.disabled=false;}}
+$('worker-action').addEventListener('click',()=>{if(!lastStatus)return;if(lastStatus.workspace_admission)return admission($('worker-action'),{action:'drain',scope:'all'});admission($('worker-action'),{action:lastStatus.drain||!lastStatus.worker_live?'resume':'drain'});});
+$('resume-all').addEventListener('click',()=>admission($('resume-all'),{action:'resume',scope:'all'}));
+$('ws-filter-buttons').addEventListener('click',event=>{const button=event.target.closest('[data-ws-filter]');if(!button)return;const key=button.dataset.wsFilter;wsShown.has(key)?wsShown.delete(key):wsShown.add(key);try{localStorage.setItem('ws-filter',JSON.stringify([...wsShown]));}catch{}if(lastStatus)render(lastStatus);});
+$('workspaces').addEventListener('change',async event=>{const select=event.target.closest('[data-priority-workspace]');if(!select)return;select.disabled=true;try{await api('/api/action',{action:'priority',workspace_id:select.dataset.priorityWorkspace,priority:select.value});await fetchStatus();}catch(err){notice('connection-error',err.message);}finally{select.disabled=false;}});
+$('workspaces').addEventListener('click',event=>{const button=event.target.closest('[data-workspace-admission]');if(button)admission(button,{action:button.dataset.admission,workspace_id:button.dataset.workspaceAdmission});});
+document.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-cancel-job],[data-release-writer]');
+  if(!button)return;
+  const job=button.dataset.cancelJob,writer=button.dataset.releaseWriter;
+  const message=job?`Cancel build ${job} for all its subscribers?`:`Release edit lease ${writer}? Confirm that its owner has stopped writing before continuing.`;
+  if(!confirm(message))return;
+  button.disabled=true;
+  try{await api('/api/action',job?{action:'cancel_job',job_id:job}:{action:'release_writer',writer_id:writer});await fetchStatus();}
+  catch(err){notice('connection-error',err.message);button.disabled=false;}
+});
+$('reap').addEventListener('click',async()=>{
+  $('reap').disabled=true;
+  try{const result=await api('/api/reap',{});$('maintenance-state').textContent=`Requested shutdown of ${result.reaped.length} verified idle daemon(s)`;await fetchStatus();}
+  catch(err){$('maintenance-state').textContent=err.message;}
+  finally{$('reap').disabled=false;}
+});
+// Error excerpts are independent of status polling: two bounded reads, cached per terminal job.
+const failurePreviews=(()=>{
+  const cache=new Map(),MAX_ENTRIES=24,MAX_ACTIVE=2;
+  let queue=[],wanted=new Set(),running=0;
+  const panel=$('recent').closest('details');
+  const visible=()=>!document.hidden&&panel.open;
+  function paint(entry){
+    for(const node of $('recent').querySelectorAll('[data-error-preview]')){
+      if(node.dataset.errorPreview!==entry.key)continue;
+      const preview=entry.preview||{},state=preview.state||'loading';
+      const text=typeof preview.text==='string'?preview.text.slice(0,8192):'';
+      const captions={available:'Error output',no_match:text?'Last output · no error marker found in the recent log':'No error marker found in the recent log. Open the console for more output.',loading:'Loading error excerpt…',expired:'Captured log expired. The build result is retained.',unavailable:'No captured error excerpt is available. Open the console to inspect this build.',error:'Error excerpt unavailable. Other dashboard data is still live.'};
+      const caption=(captions[state]||captions.unavailable)+(preview.truncated?' · excerpt truncated':'');
+      const label=node.querySelector('[data-preview-state]'),output=node.querySelector('[data-preview-text]');
+      if(label.textContent!==caption)label.textContent=caption;
+      if(output.textContent!==text)output.textContent=text;
+      output.hidden=!text;
+      const copy=node.querySelector('[data-preview-copy]');copy.hidden=!text;copy.disabled=!!entry.copying;
+      const announcement=node.querySelector('[data-preview-announcement]');if(announcement.textContent!==(entry.announcement||''))announcement.textContent=entry.announcement||'';
+      const retry=node.querySelector('[data-preview-retry]');retry.hidden=!['error','unavailable'].includes(state);retry.disabled=!!entry.request;
+    }
+  }
+  function prune(){
+    for(const [key,entry] of cache){
+      if(cache.size<=MAX_ENTRIES)break;
+      if(wanted.has(key)||entry.request)continue;
+      clearTimeout(entry.timer);cache.delete(key);
+    }
+    queue=queue.filter(entry=>{const keep=cache.get(entry.key)===entry&&wanted.has(entry.key);if(!keep)entry.queued=false;return keep;});
+  }
+  function enqueue(entry){
+    if(entry.queued||entry.request||entry.preview.state!=='loading')return;
+    entry.queued=true;queue.push(entry);
+  }
+  async function load(entry){
+    running++;entry.queued=false;entry.attempts++;entry.request=new AbortController();
+    try{
+      const data=await api('/api/console/preview?'+new URLSearchParams({workspace:entry.workspace,job:entry.job}),undefined,{signal:entry.request.signal});
+      if(cache.get(entry.key)!==entry)return;
+      const preview=data.error_preview||data;
+      entry.preview={state:preview.state||'unavailable',text:typeof preview.text==='string'?preview.text.slice(0,8192):'',truncated:!!preview.truncated};
+      if(entry.preview.state==='loading'&&entry.attempts>=3)entry.preview={state:'unavailable',text:entry.preview.text};
+    }catch(error){
+      if(cache.get(entry.key)!==entry)return;
+      if(error.name==='AbortError')entry.attempts=Math.max(0,entry.attempts-1);
+      else entry.preview={state:'error',text:''};
+    }finally{
+      running--;entry.request=null;
+      if(cache.get(entry.key)===entry){
+        paint(entry);
+        if(entry.preview.state==='loading'&&wanted.has(entry.key)&&visible())entry.timer=setTimeout(()=>{entry.timer=null;enqueue(entry);pump();},1000);
+      }
+      prune();pump();
+    }
+  }
+  function pump(){
+    if(!visible())return;
+    while(running<MAX_ACTIVE&&queue.length){
+      const entry=queue.shift();entry.queued=false;
+      if(cache.get(entry.key)===entry&&wanted.has(entry.key)&&!entry.request)load(entry);
+    }
+  }
+  function update(jobs){
+    const failed=jobs.filter(job=>['failed','interrupted'].includes(job.status));
+    wanted=new Set(failed.map(job=>detailKey('preview',job.id,workspaceId(job))));
+    for(const job of failed){
+      const workspace=workspaceId(job),key=detailKey('preview',job.id,workspace);
+      let entry=cache.get(key);
+      if(!entry){entry={key,workspace,job:job.id,preview:job.error_preview||{state:workspace?'loading':'unavailable'},attempts:0,request:null,queued:false,timer:null};cache.set(key,entry);}
+      paint(entry);if(visible()&&!entry.timer)enqueue(entry);
+    }
+    prune();pump();
+  }
+  function visibility(){
+    if(visible()){update(lastStatus?.recent_jobs||[]);return;}
+    for(const entry of cache.values()){entry.request?.abort();clearTimeout(entry.timer);entry.timer=null;}
+  }
+  panel.addEventListener('toggle',visibility);document.addEventListener('visibilitychange',visibility);
+  document.addEventListener('click',event=>{
+    const button=event.target.closest('[data-preview-retry]');if(!button)return;
+    const entry=cache.get(button.dataset.previewRetry);if(!entry||entry.request)return;
+    clearTimeout(entry.timer);entry.timer=null;entry.attempts=0;entry.preview={state:'loading'};paint(entry);enqueue(entry);pump();
+  });
+  document.addEventListener('click',async event=>{
+    const button=event.target.closest('[data-preview-copy]');if(!button)return;
+    const entry=cache.get(button.dataset.previewCopy),text=entry?.preview?.text;
+    if(!text||entry.copying)return;
+    entry.copying=true;entry.announcement='Copying error excerpt…';paint(entry);
+    try{await navigator.clipboard.writeText(text.slice(0,8192));entry.announcement='Error excerpt copied';}
+    catch{entry.announcement='Clipboard unavailable. Select the error excerpt and copy it.';}
+    finally{entry.copying=false;if(cache.get(entry.key)===entry)paint(entry);}
+  });
+  return {update};
+})();
+// A console owns one visible request stream. Opaque server cursors never become file paths.
+const consoleProvenance=document.createElement('details');
+consoleProvenance.className='console-provenance';consoleProvenance.innerHTML='<summary>Build details and captured source</summary><div class="provenance-body"></div>';
+$('console-history').before(consoleProvenance);
+const consolePages=document.createElement('div');consolePages.className='console-pages';consolePages.hidden=true;
+consolePages.innerHTML='<button class="button" type="button" id="console-lines-prev">Previous loaded lines</button><button class="button" type="button" id="console-lines-next">Next loaded lines</button>';
+$('console-buffer').after(consolePages);
+const consoleTiming=document.createElement('div');consoleTiming.className='console-timing';$('console-status').closest('.console-meta').append(consoleTiming);
+const consoleViewer=(()=>{
+  const MAX_BYTES=512*1024,MAX_LINES=2000,CHUNK_BYTES=65536,TAIL_BYTES=8192,INITIAL_BYTES=65536;
+  const terminal=new Set(['passed','failed','cancelled','canceled','aborted','interrupted','superseded','replaced','expired']);
+  const encoder=new TextEncoder();
+  const errorLine=/\b(?:error|exception|failed|failure|fatal)\b|\* What went wrong:/i;
+  let active=null,timer=null,request=null,opener=null,openerKey=null;
+  const visible=()=>$('console-dialog').open&&!document.hidden;
+  const isCurrent=s=>active===s&&$('console-dialog').open;
+  const url=(path,s,extra={})=>path+'?'+new URLSearchParams({workspace:s.workspace,job:s.job,...extra});
+  function say(message,error=false){$('console-message').textContent=message;$('console-message').classList.toggle('error',error);}
+  function stop(){clearTimeout(timer);timer=null;request?.abort();request=null;}
+  function controls(){
+    if(!active)return;const s=active;
+    const foregroundLoading=s.loading&&s.readMode!=='backfill';
+    $('console-older').disabled=foregroundLoading||!s.hasOlder;
+    $('console-follow').textContent=s.history?'Resume live':s.follow?'Pause following':'Resume following';
+    $('console-follow').setAttribute('aria-pressed',String(s.follow&&!s.history));
+    $('console-copy').disabled=!s.text;
+    $('console-errors').disabled=!s.lines.some(line=>errorLine.test(line));
+    $('console-refresh').disabled=foregroundLoading;
+    const available=s.meta.log_state==='available';
+    $('console-download').hidden=!available;
+    $('console-pin').disabled=!available||s.pinning;
+    $('console-pin').textContent=s.meta.pinned?'Unpin log':'Pin log';
+    $('console-pin').setAttribute('aria-pressed',String(!!s.meta.pinned));
+    const matched=s.matches.length>0;
+    $('console-search-prev').disabled=!matched;$('console-search-next').disabled=!matched;
+    $('console-matches').textContent=s.query?(matched?`${s.match>=0?s.match+1:'—'} / ${s.matches.length}`:'No matches'):'';
+    consolePages.hidden=s.lines.length<=MAX_LINES;
+    $('console-lines-prev').disabled=s.viewStart===0;
+    $('console-lines-next').disabled=s.viewStart+MAX_LINES>=s.lines.length;
+  }
+  function stateMessage(){
+    if(!active)return;const s=active,state=s.meta.log_state;
+    if(state==='queued')say('Queued. Output starts when the worker begins this build.');
+    else if(state==='not_started')say('This build has not produced output yet.');
+    else if(state==='unavailable')say('No captured log is available for this build. Older coordinator runs and external processes may have no captured output.');
+    else if(state==='expired')say('This log expired under the saved retention policy. Build result and attempt history remain available.');
+    else if(s.history)say('Browsing older output. Live fetching is paused; Resume live returns to the latest output.');
+    else if(s.backfillPending)say('Latest output is ready. Loading a little earlier context…');
+    else if(s.meta.status&&terminal.has(s.meta.status))say(s.hasMore?'Build finished. Loading remaining output…':'Build finished. Captured output is ready.');
+    else say(s.follow?'Following live output. Scrolling up pauses following.':'Following is paused. New output is still captured in this bounded window.');
+  }
+  function schedule(delay){
+    clearTimeout(timer);timer=null;
+    const s=active;if(!s||!visible()||s.history||s.loading)return;
+    if(s.backfillPending&&s.follow&&!s.hasMore&&s.bytes<INITIAL_BYTES){timer=setTimeout(()=>read('backfill'),s.backfillAttempts?1500:80);return;}
+    if(!s.hasMore&&terminal.has(s.meta.status))return;
+    timer=setTimeout(()=>read(s.cursor?'next':'tail'),delay??(s.hasMore?250:1500));
+  }
+  function updateMetadata(data){
+    const s=active;if(!s)return;s.meta={...s.meta,...data};
+    const workspace=typeof data.workspace==='object'?data.workspace:null;
+    $('console-workspace').textContent=workspace?.source||s.meta.provenance?.source||s.workspaceName||s.workspace;
+    $('console-snapshot').textContent=s.meta.snapshot||s.meta.provenance?.snapshot||'Unavailable';
+    $('console-status').textContent=s.meta.status||'Loading';
+    const outputTime=s.meta.last_output;
+    $('console-last-output').textContent=outputTime?(typeof outputTime==='number'?new Date(outputTime*1000):new Date(outputTime)).toLocaleString():'No output yet';
+    $('console-download').href=url('/api/console/download',s);
+    $('console-download').download=s.job+'.log';
+    const known=[...(lastStatus?.jobs||[]),...(lastStatus?.recent_jobs||[])].find(job=>job.id===s.job&&workspaceId(job)===s.workspace)||{};
+    updateTiming();
+    const provenance=provenanceMarkup({...known,...s.meta});
+    if(consoleProvenance.dataset.markup!==provenance){consoleProvenance.querySelector('.provenance-body').innerHTML=provenance;consoleProvenance.dataset.markup=provenance;}
+    const attempts=new Map();
+    for(const attempt of s.meta.attempt_chain||[]){const id=typeof attempt==='string'?attempt:attempt.id||attempt.job_id;if(id)attempts.set(id,typeof attempt==='string'?{id}:attempt);}
+    for(const [relation,value] of [['Previous attempt',s.meta.predecessor],['Replacement',s.meta.replacement]]){
+      const id=typeof value==='string'?value:value?.id||value?.job_id;
+      if(id)attempts.set(id,{...(attempts.get(id)||{}),id,relation});
+    }
+    const root=$('console-history'),signature=JSON.stringify([...attempts]);
+    if(root.dataset.signature!==signature){root.replaceChildren();root.hidden=!attempts.size;root.dataset.signature=signature;
+      if(attempts.size){const label=document.createElement('span');label.textContent='Attempts';root.append(label);}
+      for(const [id,attempt] of attempts){
+        const button=document.createElement('button');button.type='button';button.className='button';
+        button.textContent=[attempt.relation,id,attempt.status].filter(Boolean).join(' · ');button.disabled=id===s.job;
+        button.addEventListener('click',()=>open(s.workspace,id,s.workspaceName,false));root.append(button);
+      }
+    }
+  }
+  function updateTiming(observedAt=Date.now()/1000){
+    const s=active;if(!s)return;
+    const known=[...(lastStatus?.jobs||[]),...(lastStatus?.recent_jobs||[])].find(job=>job.id===s.job&&workspaceId(job)===s.workspace)||{};
+    const job={...s.meta,created:s.meta.created??known.created,started:s.meta.started??known.started,finished:s.meta.finished??known.finished,status:terminal.has(known.status)?known.status:s.meta.status||known.status};
+    const markup=timingMarkup(job,observedAt)+'<p class="hint">Start is coordinator admission, including lane preparation.</p>';
+    if(consoleTiming.dataset.markup!==markup){consoleTiming.innerHTML=markup;consoleTiming.dataset.markup=markup;}
+  }
+  function reindex(){
+    const s=active;s.text=s.chunks.map(chunk=>chunk.text).join('');s.lines=s.text?s.text.split('\n'):[];
+    s.matches=[];if(s.query){const q=s.query.toLocaleLowerCase();s.lines.forEach((line,index)=>{if(line.toLocaleLowerCase().includes(q))s.matches.push(index);});}
+    if(s.match>=s.matches.length)s.match=-1;
+  }
+  function draw(targetLine=null,olderHeight=null){
+    const s=active;if(!s)return;const output=$('console-output'),previousTop=output.scrollTop;
+    const count=s.lines.length;
+    if(targetLine!==null)s.viewStart=Math.max(0,Math.min(targetLine-Math.floor(MAX_LINES/2),count-MAX_LINES));
+    else if(s.follow)s.viewStart=Math.max(0,count-MAX_LINES);
+    else s.viewStart=Math.max(0,Math.min(s.viewStart,count-MAX_LINES));
+    const start=s.viewStart,end=Math.min(count,start+MAX_LINES),fragment=document.createDocumentFragment();
+    for(let index=start;index<end;index++){
+      const line=s.lines[index],node=document.createElement('div');node.className='log-line';node.dataset.line=String(index);
+      if(errorLine.test(line))node.classList.add('log-error');if(index===targetLine)node.classList.add('log-target');
+      if(s.query){
+        const lower=line.toLocaleLowerCase(),query=s.query.toLocaleLowerCase();let offset=0,found;
+        while((found=lower.indexOf(query,offset))!==-1){node.append(document.createTextNode(line.slice(offset,found)));const mark=document.createElement('mark');mark.textContent=line.slice(found,found+query.length);node.append(mark);offset=found+query.length;}
+        node.append(document.createTextNode(line.slice(offset)));
+      }else node.textContent=line;
+      fragment.append(node);
+    }
+    output.replaceChildren(fragment);
+    if(targetLine!==null){const node=output.querySelector(`[data-line="${targetLine}"]`);if(node)output.scrollTop=Math.max(0,node.offsetTop-output.offsetTop-output.clientHeight/2);}
+    else if(s.follow)output.scrollTop=output.scrollHeight;
+    else if(olderHeight!==null)output.scrollTop=previousTop+Math.max(0,output.scrollHeight-olderHeight);
+    else output.scrollTop=previousTop;
+    $('console-buffer').textContent=`${formatBytes(s.bytes)} / 512 KiB loaded · ${count?start+1:0}–${end} of ${count} loaded lines${s.trimmed?' · window limit reached':''}${count>MAX_LINES?' · search loaded output or download the full log':''}`;
+    controls();
+  }
+  async function read(mode='next'){
+    const s=active;if(!s||!visible())return;
+    if(s.loading){if(s.readMode==='backfill'&&['tail','older'].includes(mode)){s.pendingRead=mode;request?.abort();}return;}
+    const backfill=mode==='backfill',prepend=backfill||mode==='older';
+    if(prepend&&!s.hasOlder)return;
+    if(backfill&&(!s.follow||s.history||s.bytes>=INITIAL_BYTES)){s.backfillPending=false;schedule();return;}
+    clearTimeout(timer);s.loading=true;s.readMode=mode;
+    if(backfill){s.backfillPending=false;s.backfillAttempts++;}
+    controls();request=new AbortController();
+    const extra={limit:String(mode==='tail'?TAIL_BYTES:backfill?Math.max(4,INITIAL_BYTES-s.bytes):CHUNK_BYTES)};
+    if(prepend)extra.before=s.before;else if(mode==='next'&&s.cursor)extra.cursor=s.cursor;else extra.tail='true';
+    try{
+      const data=await api(url('/api/console',s,extra),undefined,{signal:request.signal});
+      if(!isCurrent(s))return;
+      const oldHeight=$('console-output').scrollHeight;
+      if(mode==='tail'){s.chunks=[];s.bytes=0;s.trimmed=false;s.history=false;s.backfillAttempts=0;s.hasOlder=!!data.has_older;s.cursor=data.cursor;s.before=data.before;}
+      if(prepend){s.hasOlder=!!data.has_older;s.before=data.before;if(!backfill){s.history=true;s.follow=false;}}
+      else{s.cursor=data.cursor;s.hasMore=!!data.has_more;}
+      if(data.text){
+        const text=String(data.text),chunk={text,before:data.before,cursor:data.cursor,bytes:encoder.encode(text).byteLength};
+        if(chunk.bytes>MAX_BYTES)throw new Error('Server returned more output than the bounded console can display. Download the full log.');
+        if(prepend)s.chunks.unshift(chunk);else s.chunks.push(chunk);s.bytes+=chunk.bytes;
+        while(s.bytes>MAX_BYTES&&s.chunks.length>1){const removed=mode==='older'?s.chunks.pop():s.chunks.shift();s.bytes-=removed.bytes;s.trimmed=true;if(mode!=='older'){s.hasOlder=true;s.before=s.chunks[0].before;}}
+        if(mode==='older')s.viewStart=0;
+      }
+      if(mode==='tail')s.backfillPending=s.follow&&s.hasOlder&&s.bytes<INITIAL_BYTES&&data.log_state==='available';
+      updateMetadata(data);
+      if(data.text||mode!=='next'){reindex();draw(null,mode==='older'?oldHeight:null);}
+      stateMessage();
+    }catch(error){
+      if(!isCurrent(s)||error.name==='AbortError')return;
+      if(error.status===409||(error.status===400&&(extra.cursor||extra.before))){s.cursor=null;s.before=null;s.hasOlder=false;s.backfillPending=false;s.history=false;s.follow=true;s.meta.status='';say('The log changed or is busy. Reconnecting to the latest output…');}
+      else if(error.status===423){if(backfill)s.backfillPending=s.backfillAttempts<3;say('Log maintenance or another download is in progress. Retrying without losing your position…');}
+      else if(backfill){say('Latest output is retained. Earlier context could not be loaded; use Load older to retry.',true);}
+      else{say('Output unavailable: '+error.message+'. Use Refresh output to retry.',true);s.hasMore=false;if(error.status===400||error.status===404)s.meta.status='expired';}
+    }finally{if(isCurrent(s)){s.loading=false;s.readMode=null;request=null;const pending=s.pendingRead;s.pendingRead=null;controls();if(pending)read(pending);else schedule();}}
+  }
+  function open(workspace,job,workspaceName='',rememberOpener=true){
+    stop();if(rememberOpener){opener=document.activeElement;openerKey=opener?.dataset.focusKey;}
+    active={workspace,job,workspaceName,meta:{},chunks:[],text:'',lines:[],bytes:0,cursor:null,before:null,hasOlder:false,hasMore:false,follow:true,history:false,loading:false,readMode:null,pendingRead:null,backfillPending:false,backfillAttempts:0,pinning:false,query:'',matches:[],match:-1,viewStart:0,trimmed:false,lastError:-1};
+    $('console-identity').textContent=job;$('console-search').value='';$('console-history').replaceChildren();$('console-history').hidden=true;delete $('console-history').dataset.signature;$('console-output').replaceChildren();$('console-announcement').textContent='';$('console-buffer').textContent='Loading the latest 8 KiB of output…';
+    consoleProvenance.open=false;consoleProvenance.querySelector('.provenance-body').textContent='Loading captured build details…';delete consoleProvenance.dataset.markup;
+    $('console-workspace').textContent=workspaceName||workspace;$('console-snapshot').textContent='Loading';$('console-status').textContent='Loading';$('console-last-output').textContent='—';
+    updateTiming(lastStatus?.observed_at);
+    say('Loading output…');controls();if(!$('console-dialog').open)$('console-dialog').showModal();read('tail');
+  }
+  function close(){stop();active=null;const target=opener?.isConnected?opener:Array.from(document.querySelectorAll('[data-focus-key]')).find(element=>element.dataset.focusKey===openerKey);target?.focus({preventScroll:true});}
+  function pause(){if(!active||!active.follow)return;active.follow=false;active.backfillPending=false;if(active.readMode==='backfill')request?.abort();controls();stateMessage();}
+  function search(step=0){
+    const s=active;if(!s)return;const query=$('console-search').value;
+    if(query!==s.query){s.query=query;s.match=-1;reindex();}
+    if(s.matches.length){s.match=step?(s.match+step+s.matches.length)%s.matches.length:0;pause();draw(s.matches[s.match]);}
+    else draw();controls();
+  }
+  $('console-close').addEventListener('click',()=>$('console-dialog').close());
+  $('console-dialog').addEventListener('close',close);
+  $('console-older').addEventListener('click',()=>{if(active){active.history=true;pause();read('older');}});
+  $('console-follow').addEventListener('click',()=>{const s=active;if(!s)return;if(s.follow){pause();return;}s.follow=true;if(s.history){s.history=false;read('tail');}else{draw();stateMessage();schedule(0);}});
+  $('console-refresh').addEventListener('click',()=>{if(active){active.follow=true;active.history=false;read('tail');}});
+  $('console-output').addEventListener('wheel',event=>{if(event.deltaY<0)pause();},{passive:true});
+  $('console-output').addEventListener('touchstart',pause,{passive:true});
+  $('console-output').addEventListener('keydown',event=>{if(['ArrowUp','PageUp','Home'].includes(event.key))pause();});
+  $('console-output').addEventListener('scroll',()=>{const output=$('console-output');if(active?.follow&&output.scrollHeight-output.scrollTop-output.clientHeight>50)pause();});
+  $('console-search').addEventListener('input',()=>search());
+  $('console-search').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();search(event.shiftKey?-1:1);}});
+  $('console-search-prev').addEventListener('click',()=>search(-1));$('console-search-next').addEventListener('click',()=>search(1));
+  $('console-lines-prev').addEventListener('click',()=>{if(active){pause();active.viewStart=Math.max(0,active.viewStart-MAX_LINES);draw();$('console-output').scrollTop=0;}});
+  $('console-lines-next').addEventListener('click',()=>{if(active){pause();active.viewStart=Math.min(Math.max(0,active.lines.length-MAX_LINES),active.viewStart+MAX_LINES);draw();$('console-output').scrollTop=0;}});
+  $('console-errors').addEventListener('click',()=>{const s=active;if(!s)return;const errors=s.lines.map((line,index)=>errorLine.test(line)?index:-1).filter(index=>index>=0);const next=errors.find(index=>index>s.lastError)??errors[0];if(next!==undefined){s.lastError=next;pause();draw(next);$('console-announcement').textContent=`Error at loaded line ${next+1}`;}});
+  $('console-copy').addEventListener('click',async()=>{const s=active;if(!s)return;try{await navigator.clipboard.writeText(s.text);if(isCurrent(s))$('console-announcement').textContent='Loaded output copied';}catch{if(isCurrent(s))$('console-announcement').textContent='Clipboard unavailable. Select output and copy, or download the log.';}});
+  $('console-pin').addEventListener('click',async()=>{const s=active;if(!s)return;s.pinning=true;controls();try{const result=await api('/api/console/pin',{workspace:s.workspace,job:s.job,pinned:!s.meta.pinned});if(isCurrent(s)){updateMetadata(result);$('console-announcement').textContent=s.meta.pinned?'Log pinned; cleanup will preserve it':'Log unpinned; saved retention applies';}}catch(error){if(isCurrent(s))$('console-announcement').textContent='Pin failed: '+error.message;}finally{if(isCurrent(s)){s.pinning=false;controls();}}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(timer);request?.abort();}else if(active)schedule(0);});
+  return {open,updateTiming};
+})();
+
+function formatBytes(value){const n=Number(value)||0;if(n>=1024**3)return (n/1024**3).toFixed(2)+' GiB';if(n>=1024**2)return (n/1024**2).toFixed(1)+' MiB';if(n>=1024)return (n/1024).toFixed(1)+' KiB';return n+' B';}
+
+// Storage reports are explicit background operations; rendering status never scans disk.
+const storageState={workspace:'',loading:false,operation:null,timer:null,revision:0,error:''};
+function updateStorageWorkspaces(workspaces){
+  const select=$('storage-workspace'),previous=select.value;
+  const available=workspaces.filter(workspace=>workspace.workspace_id||workspace.id);
+  const signature=JSON.stringify(available.map(workspace=>[workspace.workspace_id||workspace.id,workspace.name]));
+  if(select.dataset.signature!==signature){select.replaceChildren(...available.map(workspace=>{const option=document.createElement('option');option.value=workspace.workspace_id||workspace.id;option.textContent=workspace.name+(workspace.is_primary?' (this checkout)':'');return option;}));select.dataset.signature=signature;if(available.some(workspace=>(workspace.workspace_id||workspace.id)===previous))select.value=previous;}
+  if(storageState.workspace!==select.value){storageState.workspace=select.value;storageState.revision++;storageState.operation=null;storageState.error='';clearTimeout(storageState.timer);$('storage-report').textContent='';$('storage-usage').replaceChildren();$('cleanup-apply').disabled=true;if($('storage-panel').open)loadStorage();}
+}
+function renderStorage(data){
+  const operation=data.cleanup||data.operation||data;
+  if(operation.status)storageState.operation=operation;
+  const report=operation.report||data.report,usage=report?.usage||data.usage;
+  if(usage){const root=$('storage-usage');root.replaceChildren();for(const [category,value] of Object.entries(usage)){if(typeof value!=='object'||value===null||!('bytes' in value))continue;const item=document.createElement('div'),size=document.createElement('strong'),label=document.createElement('span');size.textContent=formatBytes(value.bytes);label.textContent=category[0].toUpperCase()+category.slice(1);label.className='hint';item.append(size,label);root.append(item);}}
+  const state=operation.status||'idle',busy=['queued','running'].includes(state);
+  $('cleanup-preview').disabled=busy||storageState.loading||!storageState.workspace;
+  $('cleanup-apply').disabled=busy||storageState.loading||state!=='completed'||!!operation.apply||!report;
+  $('storage-state').textContent=storageState.error|| (operation.error?'Cleanup failed: '+operation.error:busy?`${operation.apply?'Cleanup':'Preview'} ${state}${operation.phase?' · '+operation.phase:''}`:state==='completed'?`${operation.apply?'Cleanup':'Preview'} completed${operation.finished?' at '+new Date(operation.finished*1000).toLocaleTimeString():''}`:state==='skipped'?'Cleanup skipped: '+(operation.reason||'another operation or active build protects this data'):'Preview cleanup to calculate storage usage and eligible files.');
+  if(report){
+    const lines=[];
+    for(const [key,label] of [['logs','Logs'],['snapshots','Snapshots'],['blobs','Cached source blobs']]){
+      const result=report[key];if(!result)continue;
+      const actions=result.actions||result.candidates||[];
+      const count=result.candidate_count??result.eligible_count??actions.length;
+      const bytes=result.candidate_bytes??result.eligible_bytes;
+      let line=`${label}: ${count} ${operation.apply?'reported actions':'eligible actions'}${bytes!==undefined?' ('+formatBytes(bytes)+')':''}`;
+      if(result.removed_count!==undefined)line+=`, ${result.removed_count} removed`;
+      if(result.protected_count!==undefined)line+=`, ${result.protected_count} protected`;
+      if(result.protected_bytes!==undefined)line+=`, ${formatBytes(result.protected_bytes)} protected`;
+      if(result.budget_satisfied===false||result.budget_unmet)line+='; protected data exceeds the storage budget';
+      if(result.unknown_usage)line+='; some usage could not be inspected';
+      lines.push(line);
+      for(const action of actions.slice(0,100))lines.push('  '+[action.id||action.path,action.action||action.status,action.reason,action.bytes!==undefined?formatBytes(action.bytes):'',action.conditional_on_compression?'only if still over budget after compression':'',action.applied===false?'skipped':'',action.error||action.skipped].filter(Boolean).join(' · '));
+      if(count>100)lines.push(`  First 100 of ${count} actions shown.`);
+      if(result.errors?.length)lines.push('  Errors: '+result.errors.map(error=>typeof error==='string'?error:JSON.stringify(error)).join('; '));
+    }
+    if(report.errors?.length)lines.push('Errors: '+report.errors.map(error=>typeof error==='string'?error:JSON.stringify(error)).join('; '));
+    $('storage-report').textContent=lines.join('\n');
+  }
+  clearTimeout(storageState.timer);if(busy&&$('storage-panel').open&&!document.hidden)storageState.timer=setTimeout(()=>loadStorage(true),1500);
+}
+async function loadStorage(operationOnly=false){
+  const workspace=storageState.workspace;if(!workspace||storageState.loading)return;
+  storageState.loading=true;const revision=storageState.revision;
+  try{const data=await api((operationOnly?'/api/cleanup':'/api/storage')+'?'+new URLSearchParams({workspace}));if(revision===storageState.revision){storageState.error='';renderStorage(data);}}
+  catch(error){if(revision===storageState.revision){storageState.error='Storage information unavailable: '+error.message;$('storage-state').textContent=storageState.error;}}
+  finally{storageState.loading=false;if(revision===storageState.revision&&storageState.operation)renderStorage(storageState.operation);else if(revision!==storageState.revision&&$('storage-panel').open)loadStorage();}
+}
+async function cleanup(apply){
+  const workspace=storageState.workspace;if(!workspace||storageState.loading)return;
+  if(apply&&!confirm('Apply cleanup using the saved policy? Eligible logs and unused snapshots will be deleted. Pinned logs and protected data are retained.'))return;
+  storageState.loading=true;const revision=storageState.revision;$('cleanup-preview').disabled=true;$('cleanup-apply').disabled=true;$('storage-state').textContent=apply?'Requesting cleanup…':'Preparing storage preview…';
+  try{const data=await api('/api/cleanup',{workspace,apply});if(revision===storageState.revision){storageState.error='';renderStorage(data);}}
+  catch(error){if(revision===storageState.revision){storageState.error='Cleanup request failed: '+error.message;$('storage-state').textContent=storageState.error;}}
+  finally{storageState.loading=false;if(revision===storageState.revision&&storageState.operation)renderStorage(storageState.operation);else if(revision!==storageState.revision&&$('storage-panel').open)loadStorage();else $('cleanup-preview').disabled=false;}
+}
+$('storage-panel').addEventListener('toggle',()=>{if($('storage-panel').open)loadStorage();else clearTimeout(storageState.timer);});
+$('storage-workspace').addEventListener('change',()=>{storageState.workspace=$('storage-workspace').value;storageState.revision++;storageState.operation=null;storageState.error='';clearTimeout(storageState.timer);$('storage-report').textContent='';$('storage-usage').replaceChildren();$('cleanup-apply').disabled=true;loadStorage();});
+$('cleanup-preview').addEventListener('click',()=>cleanup(false));$('cleanup-apply').addEventListener('click',()=>cleanup(true));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(storageState.timer);else if($('storage-panel').open)loadStorage(true);});
+document.addEventListener('click',event=>{const button=event.target.closest('[data-console-job]');if(button&&!button.disabled){const workspace=(lastStatus?.workspaces||[]).find(item=>(item.workspace_id||item.id)===button.dataset.workspace);consoleViewer.open(button.dataset.workspace,button.dataset.consoleJob,workspace?.name);}});
+$('process-filter').addEventListener('change',renderProcesses);
+let taskStats=null;
+function sparkline(values){if(!values?.length)return '';const max=Math.max(...values,1),w=90,h=18,step=values.length>1?w/(values.length-1):0;const pts=values.map((v,i)=>`${(i*step).toFixed(1)},${(h-2-(v/max)*(h-4)).toFixed(1)}`).join(' ');return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-label="Duration trend, oldest to newest"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;}
+function renderTaskStats(){if(!taskStats)return;const q=$('task-stats-filter').value.trim().toLowerCase();const rows=taskStats.filter(t=>!q||t.task_key.toLowerCase().includes(q));$('task-stats').innerHTML=rows.length?table(['Task set','Runs','Typical','p90','Peak memory','Failed 5 / 10 / 25','Recent','Trend'],rows.map(t=>{const f=t.failures||{};return `<tr><td class="task"><code>${esc(t.task_key)}</code><div class="hint">${esc(t.workspace||'')}</div></td><td>${t.runs}</td><td>${minutesText(t.median_minutes)}</td><td>${minutesText(t.p90_minutes)}</td><td>${t.peak_gb?t.peak_gb+' GiB':'<span class="hint">not sampled yet</span>'}</td><td class="${Number(f['10']||0)>=3?'error-text':''}">${f['5']??0} / ${f['10']??0} / ${f['25']??0}</td><td>${healthDots(t)}</td><td>${sparkline(t.trend)}</td></tr>`;})):'<div class="empty">No matching task history.</div>';}
+async function loadTaskStats(){try{taskStats=(await api('/api/task-stats')).tasks||[];renderTaskStats();}catch(err){$('task-stats').innerHTML=err.status===404?'<div class="empty">Task statistics need the updated dashboard server. Restart the dashboard to load them.</div>':`<div class="empty error-text">${esc(err.message)}</div>`;}}
+$('task-stats-panel').addEventListener('toggle',()=>{if($('task-stats-panel').open)loadTaskStats();});
+$('task-stats-filter').addEventListener('input',renderTaskStats);$('refresh').addEventListener('click',fetchStatus);async function poll(){await fetchStatus();setTimeout(poll,2500);}poll();
+</script></body></html>
