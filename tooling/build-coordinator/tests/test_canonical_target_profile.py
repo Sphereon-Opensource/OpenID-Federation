@@ -1,11 +1,15 @@
 """Explicitly structural build-profile checks; no Gradle acceptance is claimed."""
 from pathlib import Path
+import os
 import sys
+import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'tooling/build-coordinator'))
-from store import normalize, build_key
+from store import Store, normalize, build_key
+from processes import ExclusiveLock
 from worker import gradle_command
 
 WEB_MODULES = ('client', 'client-impl', 'client-public', 'common', 'core-impl',
@@ -13,6 +17,51 @@ WEB_MODULES = ('client', 'client-impl', 'client-public', 'common', 'core-impl',
 
 
 class CanonicalTargetProfileTests(unittest.TestCase):
+    def test_ordinary_request_retains_legacy_execution_identity(self):
+        ordinary = normalize(dict(snapshot='a' * 64, tasks=[':modules:openid-federation-core-public:jvmJar'], memory_gb=1))
+        legacy = {key: value for key, value in ordinary.items() if key != 'offline'}
+        self.assertEqual(build_key(legacy), build_key(ordinary))
+        self.assertNotEqual(build_key(ordinary), build_key(dict(ordinary, offline=True)))
+
+    def test_offline_submission_refuses_absent_legacy_stale_or_unheld_capability(self):
+        for kind in ('absent', 'legacy', 'stale', 'unheld'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                state = Path(directory)
+                store = Store(state)
+                store.register_snapshot(dict(id='a' * 64, path=str(state / 'snapshot'), files=1))
+                request = dict(snapshot='a' * 64, tasks=[':modules:openid-federation-core-public:jvmJar'], memory_gb=1)
+                marker = dict(pid=os.getpid(), heartbeat=time.time(), offline_request_version=1)
+                if kind == 'legacy':
+                    marker.pop('offline_request_version')
+                if kind == 'stale':
+                    marker['heartbeat'] = time.time() - 31
+                if kind != 'absent':
+                    store.metadata('worker', marker)
+                if kind == 'unheld':
+                    with ExclusiveLock(state / 'worker.lock'):
+                        pass
+                    with self.assertRaisesRegex(ValueError, 'offline-capable worker'):
+                        store.submit(dict(request, offline=True), 'fixture')
+                else:
+                    with ExclusiveLock(state / 'worker.lock'):
+                        with self.assertRaisesRegex(ValueError, 'offline-capable worker'):
+                            store.submit(dict(request, offline=True), 'fixture')
+                self.assertEqual([], store.jobs())
+                store.submit(request, 'fixture')
+                self.assertEqual(1, len(store.jobs()))
+
+    def test_offline_submission_with_actual_live_held_capability_preserves_request(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            store = Store(state)
+            store.register_snapshot(dict(id='a' * 64, path=str(state / 'snapshot'), files=1))
+            store.metadata('worker', dict(pid=os.getpid(), heartbeat=time.time(), offline_request_version=1))
+            with ExclusiveLock(state / 'worker.lock'):
+                request = store.submit(dict(snapshot='a' * 64,
+                    tasks=[':modules:openid-federation-core-public:jvmJar'], memory_gb=1, offline=True), 'fixture')
+            self.assertIs(True, store.result(request)['spec']['offline'])
+            self.assertEqual(1, len(store.jobs()))
+
     def test_offline_is_a_validated_boolean_with_ordinary_default_and_distinct_identity(self):
         request = dict(snapshot='0' * 64, tasks=[':modules:openid-federation-core-public:jvmJar'], memory_gb=1)
         ordinary = normalize(request)

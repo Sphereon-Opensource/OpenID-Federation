@@ -475,7 +475,27 @@ def merge_tasks(a, b):
 
 
 def build_key(spec):
-    return identity({k: v for k, v in spec.items() if k not in ('tasks', 'artifacts', 'follow_latest', 'reuse_tests', 'reuse_later')})
+    return identity({k: v for k, v in spec.items()
+                     if k not in ('tasks', 'artifacts', 'follow_latest', 'reuse_tests', 'reuse_later')
+                     and not (k == 'offline' and v is False)})
+
+
+def offline_worker_ready(store):
+    """Offline requests require a live capability lease; old workers fail closed."""
+    from processes import ExclusiveLock, pid_alive
+    data = store.metadata('worker') or {}
+    stamp = data.get('heartbeat')
+    if (data.get('offline_request_version') != 1 or type(stamp) not in (int, float)
+            or not 0 <= time.time() - stamp <= 30 or not pid_alive(data.get('pid'))):
+        return False
+    lock = store.state / 'worker.lock'
+    if not lock.is_file():
+        return False
+    try:
+        with ExclusiveLock(lock):
+            return False
+    except BlockingIOError:
+        return True
 
 
 class Store:
@@ -607,6 +627,8 @@ class Store:
 
     def submit(self, raw, agent):
         spec = normalize(raw, self.all_config())
+        if spec['offline'] and not offline_worker_ready(self):
+            raise ValueError('Offline requests require a live offline-capable worker; drain and restart this owned workspace first')
         if not isinstance(agent, str) or not agent.strip():
             raise ValueError('Agent/session identity is required')
         snapshot = self.snapshot(spec['snapshot'])

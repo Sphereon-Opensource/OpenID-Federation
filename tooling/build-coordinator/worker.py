@@ -1112,6 +1112,7 @@ class Worker:
             result['attempts'] = store.attempt_history(job['id'], 'failed' if infra else ('passed' if result['accepted'] else 'failed'), infra)
             result['crash_artifacts'] = crash
             observations = configuration_cache_result(log)
+            result['offline'] = spec.get('offline', False)
             result['configuration_cache'] = {
                 'requested': spec.get('configuration_cache', 'auto'),
                 'enabled': cache_enabled and not fallback, 'fallback': fallback,
@@ -1193,7 +1194,7 @@ class Worker:
                 # external-process preflight must first prove the lane is clear.
                 orphans = self.close_pre_boot_orphans(store.job_headers(tuple(ACTIVE)))
                 while True:
-                    store.metadata('worker', {'pid': os.getpid(), 'heartbeat': time.time(), 'queue_order_version': 1})
+                    store.metadata('worker', {'pid': os.getpid(), 'heartbeat': time.time(), 'queue_order_version': 1, 'offline_request_version': 1})
                     if registry:
                         running = [{'id': j['id'], 'lane': j['lane'], 'memory_gb': j['spec'].get('memory_gb', 0),
                                     'tier': classify_task_tier(j['spec'])}
@@ -1361,4 +1362,4 @@ class Worker:
             finally:
                 if legacy_lock is not None:
                     legacy_lock.close()
-                store.metadata('worker', {'pid': os.getpid(), 'heartbeat': 0, 'queue_order_version': 1})
+                store.metadata('worker', {'pid': os.getpid(), 'heartbeat': 0, 'queue_order_version': 1, 'offline_request_version': 1})
