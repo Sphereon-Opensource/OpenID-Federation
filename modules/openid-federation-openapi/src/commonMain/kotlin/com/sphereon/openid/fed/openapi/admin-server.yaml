@@ -3234,12 +3234,16 @@ components:
       properties:
         max_path_length:
           type: integer
-          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+          minimum: 0
+          description: Maximum number of Intermediate Entities between the Entity setting this constraint and the subject of a Trust Chain containing it; zero permits no Intermediates.
         naming_constraints:
           $ref: '#/components/schemas/NamingConstraints'
         allowed_entity_types:
           type: array
-          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          description: >-
+            Entity Type Identifiers permitted in Resolved Metadata. When absent, all declared
+            types are unrestricted; an empty array permits only federation_entity.
+            federation_entity is always permitted and MUST NOT be explicitly listed.
           items:
             type: string
 
@@ -3290,11 +3294,15 @@ components:
       properties:
         max_path_length:
           type: integer
-          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+          minimum: 0
+          description: Maximum number of Intermediate Entities between the Entity setting this constraint and the subject of a Trust Chain containing it; zero permits no Intermediates.
         naming_constraints:
           $ref: '#/components/schemas/NamingConstraints'
         allowed_entity_types:
           type: array
-          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          description: >-
+            Entity Type Identifiers permitted in Resolved Metadata. When absent, all declared
+            types are unrestricted; an empty array permits only federation_entity.
+            federation_entity is always permitted and MUST NOT be explicitly listed.
           items:
             type: string

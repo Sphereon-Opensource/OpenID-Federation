@@ -744,6 +744,25 @@ data class AccountAlreadyExistsError(
     }
 }
 
+/** The caller's expected selected-signing-key revision is stale or exhausted. */
+data class SelectedSigningKeyConflictError(
+    val accountId: String,
+    override val exception: Throwable? = null,
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Conflict
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.selected-signing-key-conflict",
+        i18nParams = mapOf("accountId" to accountId),
+        defaultMessage = "Selected signing-key revision conflict for account: $accountId",
+    )
+
+    companion object {
+        const val ERROR_CODE = "selected_signing_key_conflict"
+    }
+}
+
 // =============================================================================
 // Critical Claim Errors
 // =============================================================================

@@ -1,0 +1,154 @@
+/* Finite coordinator-owned preparation. No publication repository or upload task. */
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.publish.maven.MavenPublication
+
+abstract class PrepareWorkspaceArtifacts extends DefaultTask {
+    @Input abstract Property<String> getProducerJson()
+    @Input abstract ListProperty<String> getFileDescriptions()
+    @InputFiles abstract ConfigurableFileCollection getPublicationFiles()
+    @OutputDirectory abstract DirectoryProperty getDestination()
+
+    @TaskAction void prepare() {
+        def producer = new JsonSlurper().parseText(producerJson.get())
+        def output = destination.get().asFile
+        def repo = new File(output, 'repo')
+        // Only this task's fixed build/workspace-artifacts output is replaced.
+        if (output.exists() && !output.deleteDir()) throw new GradleException('Cannot replace preparation output: ' + output)
+        repo.mkdirs()
+        def records = []
+        fileDescriptions.get().each { description ->
+            def item = new JsonSlurper().parseText(description)
+            def source = new File(item.source)
+            if (!source.isFile()) throw new GradleException('Missing publication output: ' + source)
+            def target = new File(repo, item.path)
+            if (!target.canonicalPath.startsWith(repo.canonicalPath + File.separator)) throw new GradleException('Invalid publication path')
+            if (target.exists()) throw new GradleException('Duplicate publication path: ' + item.path)
+            target.parentFile.mkdirs()
+            java.nio.file.Files.copy(source.toPath(), target.toPath())
+            def digest = MessageDigest.getInstance('SHA-256')
+            target.withInputStream { input ->
+                byte[] buffer = new byte[65536]
+                int size
+                while ((size = input.read(buffer)) > 0) digest.update(buffer, 0, size)
+            }
+            records << [path:item.path, sha256:digest.digest().encodeHex().toString(), size:target.length(),
+                        kind:item.kind, variant:item.variant ?: 'jvm', coordinate:item.coordinate]
+        }
+        if (producer.publicationCoordinates) {
+            producer.publicationCoordinates.each { coordinate ->
+                def publicationRecords = records.findAll { it.coordinate == coordinate }
+                def present = publicationRecords.collect { it.kind }.toSet()
+                def parts = coordinate.split(':')
+                def mainJar = parts[0].replace('.', '/') + '/' + parts[1] + '/' + parts[2] + '/' +
+                    parts[1] + '-' + parts[2] + '.jar'
+                if (!present.containsAll(['artifact', 'pom', 'module']) ||
+                    !publicationRecords.any { it.kind == 'artifact' && it.path == mainJar }) {
+                    throw new GradleException('Incomplete exact publication: ' + coordinate)
+                }
+            }
+        } else if (!records.any { it.kind == 'artifact' } || !records.any { it.kind == 'pom' } || !records.any { it.kind == 'module' }) {
+            throw new GradleException('JVM preparation requires artifacts, POM and Gradle module metadata')
+        }
+        def manifest = [schemaVersion:1, module:producer.module, coordinate:producer.coordinate,
+                        producerInputId:producer.producerInputId, buildLogicId:producer.buildLogicId,
+                        dependencyIds:producer.dependencyIds, variants:['jvm'], files:records.sort { it.path }]
+        if (producer.publicationCoordinates) manifest.publicationCoordinates = producer.publicationCoordinates
+        new File(output, 'manifest.json').setText(JsonOutput.toJson(manifest), 'UTF-8')
+    }
+}
+
+def raw = gradle.startParameter.projectProperties['workspaceProducerInputs']
+if (raw) {
+    def producers = new JsonSlurper().parseText(raw)
+    if (!(producers instanceof Map) || producers.isEmpty()) throw new GradleException('workspaceProducerInputs must contain selected modules')
+    def selected = (System.getenv('WORKSPACE_SOURCE_MODULES') ?: '').split(',').findAll { !it.isEmpty() }.toSet()
+    if (!selected.containsAll(producers.keySet())) throw new GradleException('Every producer must be explicitly selected by WORKSPACE_SOURCE_MODULES')
+    def pathJson = gradle.startParameter.projectProperties['workspaceSourceProjects']
+    def sourceProjects = pathJson ? new JsonSlurper().parseText(pathJson) : selected.collectEntries { [(it): ':'+it] }
+    if (!(sourceProjects instanceof Map) || sourceProjects.keySet() != selected ||
+        sourceProjects.values().toSet().size() != selected.size() ||
+        sourceProjects.values().any { !(it instanceof String) || !(it ==~ /:(?:[A-Za-z0-9-]+:)*[A-Za-z0-9-]+/) }) {
+        throw new GradleException('Selected source projects must have exact finite project paths')
+    }
+    gradle.projectsEvaluated {
+        def configuredLeaves = gradle.rootProject.allprojects.findAll { it != gradle.rootProject && it.childProjects.isEmpty() }.collect { it.path }.toSet()
+        def selectedPaths = sourceProjects.values().toSet()
+        if (configuredLeaves != selectedPaths) throw new GradleException('Configured modules differ from the exact source selection. selected=' + selectedPaths + ', configured=' + configuredLeaves)
+        def grouping = gradle.rootProject.allprojects.findAll { it != gradle.rootProject && !it.childProjects.isEmpty() }
+        if (grouping.any { parent -> !selectedPaths.any { it.startsWith(parent.path + ':') } }) {
+            throw new GradleException('Unselected grouping project was configured')
+        }
+        producers.each { name, producer ->
+            if (producer.projectPath != sourceProjects[name]) throw new GradleException('Producer path differs from the exact source selection: ' + name)
+            def project = gradle.rootProject.findProject(producer.projectPath)
+            if (project == null) throw new GradleException('Selected producer was not configured: ' + name)
+            def publishing = project.extensions.findByName('publishing')
+            if (publishing == null) throw new GradleException('Selected module has no Maven publications: ' + name)
+            def allPublications = publishing.publications.withType(MavenPublication)
+            def expected = producer.coordinate.split(':')
+            if (expected.length != 3) throw new GradleException('Malformed selected component coordinate: ' + name)
+            def finite = producer.publicationCoordinates
+            def publications
+            if (finite) {
+                def expectedFinite = [expected[0]+':'+expected[1]+'-multiplatform:'+expected[2],
+                                      expected[0]+':'+expected[1]+'-jvm:'+expected[2]]
+                if (finite != expectedFinite || producer.projectPath != ':modules:'+name) {
+                    throw new GradleException('Invalid finite canonical publication contract: ' + name)
+                }
+                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm'] }
+                if (publications.size() != 2 || publications.collect { it.name }.toSet() != ['kotlinMultiplatform','jvm'].toSet()) {
+                    throw new GradleException('Both standard root and JVM publications are required: ' + name)
+                }
+            } else {
+                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm', 'maven', 'mavenJava'] }
+                if (publications.isEmpty()) throw new GradleException('No supported JVM publication: ' + name)
+            }
+            def task = project.tasks.register('prepareWorkspaceArtifacts', PrepareWorkspaceArtifacts) {
+                group = 'build'
+                description = 'Prepare selected JVM Maven bytes for coordinator archival; never publish to a repository'
+                producerJson.set(JsonOutput.toJson(producer))
+                destination.set(project.layout.buildDirectory.dir('workspace-artifacts'))
+            }
+            publications.each { publication ->
+                def coordinate = publication.groupId + ':' + publication.artifactId + ':' + publication.version
+                if (finite ? coordinate != finite[publication.name == 'kotlinMultiplatform' ? 0 : 1] :
+                    (publication.groupId != expected[0] || publication.version != expected[2] || !(publication.artifactId in [expected[1], expected[1] + '-jvm']))) {
+                    throw new GradleException('Publication coordinates differ from selected component: ' + coordinate)
+                }
+                def variant = finite && publication.name == 'kotlinMultiplatform' ? 'metadata' : 'jvm'
+                def prefix = publication.groupId.replace('.', '/') + '/' + publication.artifactId + '/' + publication.version + '/'
+                def base = publication.artifactId + '-' + publication.version
+                def capital = publication.name.substring(0, 1).toUpperCase() + publication.name.substring(1)
+                def pom = project.tasks.findByName('generatePomFileFor' + capital + 'Publication')
+                def metadata = project.tasks.findByName('generateMetadataFileFor' + capital + 'Publication')
+                if (pom == null || metadata == null) throw new GradleException('Missing metadata producer for publication ' + publication.name)
+                task.configure {
+                    dependsOn(pom, metadata)
+                    publicationFiles.from(pom.outputs.files, metadata.outputs.files)
+                    fileDescriptions.add(JsonOutput.toJson([source:pom.destination.absolutePath, path:prefix+base+'.pom', kind:'pom', variant:variant, coordinate:coordinate]))
+                    fileDescriptions.add(JsonOutput.toJson([source:metadata.outputFile.get().asFile.absolutePath, path:prefix+base+'.module', kind:'module', variant:variant, coordinate:coordinate]))
+                }
+                publication.artifacts.each { artifact ->
+                    def classifier = artifact.classifier ? '-' + artifact.classifier : ''
+                    task.configure {
+                        dependsOn(artifact.buildDependencies)
+                        publicationFiles.from(artifact.file)
+                        fileDescriptions.add(JsonOutput.toJson([source:artifact.file.absolutePath, path:prefix+base+classifier+'.'+artifact.extension, kind:'artifact', variant:variant, coordinate:coordinate]))
+                    }
+                }
+            }
+        }
+    }
+}

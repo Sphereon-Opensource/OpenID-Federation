@@ -26,6 +26,13 @@ FROM Account
 WHERE id = ?
 AND deleted_at IS NULL;
 
+findActiveForUpdate:
+SELECT *
+FROM Account
+WHERE id = ?
+AND deleted_at IS NULL
+FOR UPDATE;
+
 findByIdentifier:
 SELECT *
 FROM Account

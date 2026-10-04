@@ -71,6 +71,14 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation(sphereonlib.io.mockk.mockk)
+                implementation(sphereonlib.io.ktor.client.mock)
+                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.impl)
+                implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
+                implementation(idklib.sphereon.idk.lib.core.api.default)
+                implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
+                implementation(sphereonlib.org.postgresql.postgresql)
+                implementation(sphereonlib.org.testcontainers.testcontainers)
+                implementation(sphereonlib.org.testcontainers.postgresql)
             }
         }
     }

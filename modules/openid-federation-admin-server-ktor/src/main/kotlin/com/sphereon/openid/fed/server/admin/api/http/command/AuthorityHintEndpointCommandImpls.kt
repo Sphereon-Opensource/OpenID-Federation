@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
@@ -18,6 +19,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -26,6 +29,8 @@ import dev.zacsweers.metro.SingleIn
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListAuthorityHintsEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListAuthorityHintsEndpointCommand.COMMAND_ID)
 class ListAuthorityHintsEndpointCommandImpl(
     execution: SessionExecution,
     private val authorityHintService: AuthorityHintService,
@@ -63,6 +68,8 @@ class ListAuthorityHintsEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateAuthorityHintEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateAuthorityHintEndpointCommand.COMMAND_ID)
 class CreateAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -115,6 +122,8 @@ class CreateAuthorityHintEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteAuthorityHintEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteAuthorityHintEndpointCommand.COMMAND_ID)
 class DeleteAuthorityHintEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,

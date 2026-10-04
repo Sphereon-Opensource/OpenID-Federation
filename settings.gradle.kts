@@ -3,6 +3,33 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
+        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")
+        require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
+        val workspaceRepo = suppliedRepo?.trim()
+        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")
+        require(workspaceModules == null || workspaceRepo != null) {
+            "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
+        }
+        workspaceRepo?.let { value ->
+            val supplied = java.io.File(value)
+            require(supplied.isAbsolute) { "WORKSPACE_MAVEN_REPO must be an absolute path" }
+            val pinned = supplied.canonicalFile
+            require(pinned.isDirectory && pinned.name == "repo" && pinned.parentFile?.parentFile?.name == "generations") {
+                "WORKSPACE_MAVEN_REPO must be an existing immutable generations/<id>/repo directory"
+            }
+            require(!workspaceModules.isNullOrBlank()) { "WORKSPACE_MAVEN_MODULES must select prepared IDK artifact coordinates" }
+            val selected = workspaceModules.split(',').map { it.trim() }.onEach {
+                require(Regex("com\\.sphereon\\.idk:[A-Za-z0-9][A-Za-z0-9_.-]*").matches(it)) {
+                    "WORKSPACE_MAVEN_MODULES must contain comma-separated exact com.sphereon.idk:artifact coordinates"
+                }
+            }.map { it.substringBefore(':') to it.substringAfter(':') }.toSet()
+            exclusiveContent {
+                forRepository { maven { url = uri(pinned) } }
+                filter {
+                    selected.forEach { (group, module) -> includeModule(group, module) }
+                }
+            }
+        }
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
         mavenLocal {
             content {
@@ -65,6 +92,33 @@ dependencyResolutionManagement {
         }
     }
     repositories {
+        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")
+        require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
+        val workspaceRepo = suppliedRepo?.trim()
+        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")
+        require(workspaceModules == null || workspaceRepo != null) {
+            "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
+        }
+        workspaceRepo?.let { value ->
+            val supplied = java.io.File(value)
+            require(supplied.isAbsolute) { "WORKSPACE_MAVEN_REPO must be an absolute path" }
+            val pinned = supplied.canonicalFile
+            require(pinned.isDirectory && pinned.name == "repo" && pinned.parentFile?.parentFile?.name == "generations") {
+                "WORKSPACE_MAVEN_REPO must be an existing immutable generations/<id>/repo directory"
+            }
+            require(!workspaceModules.isNullOrBlank()) { "WORKSPACE_MAVEN_MODULES must select prepared IDK artifact coordinates" }
+            val selected = workspaceModules.split(',').map { it.trim() }.onEach {
+                require(Regex("com\\.sphereon\\.idk:[A-Za-z0-9][A-Za-z0-9_.-]*").matches(it)) {
+                    "WORKSPACE_MAVEN_MODULES must contain comma-separated exact com.sphereon.idk:artifact coordinates"
+                }
+            }.map { it.substringBefore(':') to it.substringAfter(':') }.toSet()
+            exclusiveContent {
+                forRepository { maven { url = uri(pinned) } }
+                filter {
+                    selected.forEach { (group, module) -> includeModule(group, module) }
+                }
+            }
+        }
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
         mavenLocal {
             content {
@@ -145,46 +199,76 @@ dependencyResolutionManagement {
     }
 }
 
+// Finite workspace preparation selects exact source leaves; absent means the ordinary full build.
+val workspaceSourceModules = System.getenv("WORKSPACE_SOURCE_MODULES")?.let { raw ->
+    require(Regex("[A-Za-z0-9][A-Za-z0-9-]*(,[A-Za-z0-9][A-Za-z0-9-]*)*").matches(raw)) {
+        "WORKSPACE_SOURCE_MODULES must be a nonempty comma-separated list of exact module names"
+    }
+    val names = raw.split(',')
+    require(names.size == names.toSet().size) { "WORKSPACE_SOURCE_MODULES contains duplicate module names" }
+    names.toSet()
+}
+val includedFederationModules = mutableSetOf<String>()
+
+fun org.gradle.api.initialization.Settings.includeFederationModule(path: String) {
+    require(path.startsWith(":modules:") && path.count { it == ':' } == 2) {
+        "Federation module path must be an exact :modules:<name> leaf"
+    }
+    val name = path.removePrefix(":modules:")
+    if (workspaceSourceModules == null || name in workspaceSourceModules) {
+        require(includedFederationModules.add(name)) { "Duplicate federation module declaration: $name" }
+        this.include(path)
+    }
+}
+
 // Core modules (IDK migration)
 // NOTE: These modules should use IDK types directly, not duplicate them
-include(":modules:openid-federation-core-public")
-include(":modules:openid-federation-core-impl")
+includeFederationModule(":modules:openid-federation-core-public")
+includeFederationModule(":modules:openid-federation-core-impl")
 
 // Account modules (optional account-based multi-tenancy)
-include(":modules:openid-federation-account-public")
-include(":modules:openid-federation-account-impl")
+includeFederationModule(":modules:openid-federation-account-public")
+includeFederationModule(":modules:openid-federation-account-impl")
 // LEGACY /accounts REST only — optional dependency (on classpath = REST present)
-include(":modules:openid-federation-account-http")
+includeFederationModule(":modules:openid-federation-account-http")
 
 // Existing modules
-include(":modules:openid-federation-openapi")
-include(":modules:openid-federation-services")
-include(":modules:openid-federation-services-public")
-include(":modules:openid-federation-services-impl")
-include(":modules:openid-federation-bom")
-include(":modules:openid-federation-common")
-include(":modules:openid-federation-client")
-include(":modules:openid-federation-client-public")
-include(":modules:openid-federation-client-impl")
-include(":modules:openid-federation-client-test-js")
+includeFederationModule(":modules:openid-federation-openapi")
+includeFederationModule(":modules:openid-federation-services")
+includeFederationModule(":modules:openid-federation-services-public")
+includeFederationModule(":modules:openid-federation-services-impl")
+includeFederationModule(":modules:openid-federation-bom")
+includeFederationModule(":modules:openid-federation-common")
+includeFederationModule(":modules:openid-federation-client")
+includeFederationModule(":modules:openid-federation-client-public")
+includeFederationModule(":modules:openid-federation-client-impl")
+includeFederationModule(":modules:openid-federation-client-test-js")
 
 // Trust bridge module (bridges OID-Fed trust chain to IDK Trust Validation framework)
-include(":modules:openid-federation-trust")
+includeFederationModule(":modules:openid-federation-trust")
 
 // Wallet architecture modules (OpenID Federation Wallet Architecture 1.0)
-include(":modules:openid-federation-wallet-public")
-include(":modules:openid-federation-wallet-impl")
-include(":modules:openid-federation-http-resolver")
-include(":modules:openid-federation-persistence")
-include(":modules:openid-federation-integration-tests")
-include(":modules:openid-federation-conformance-tests")
+includeFederationModule(":modules:openid-federation-wallet-public")
+includeFederationModule(":modules:openid-federation-wallet-impl")
+includeFederationModule(":modules:openid-federation-http-resolver")
+includeFederationModule(":modules:openid-federation-persistence")
+includeFederationModule(":modules:openid-federation-integration-tests")
+includeFederationModule(":modules:openid-federation-conformance-tests")
 
 // Admin server modules (API layer is KMP, Ktor layer is JVM)
-include(":modules:openid-federation-admin-server-api")
-include(":modules:openid-federation-admin-server-ktor")
-include(":modules:openid-federation-admin-server")  // Backwards compat shim
+includeFederationModule(":modules:openid-federation-admin-server-api")
+includeFederationModule(":modules:openid-federation-admin-server-ktor")
+includeFederationModule(":modules:openid-federation-admin-server")  // Backwards compat shim
 
 // Federation server modules (API layer is KMP, Ktor layer is JVM)
-include(":modules:openid-federation-public-server-api")
-include(":modules:openid-federation-public-server-ktor")
-include(":modules:openid-federation-server")  // Backwards compat shim
+includeFederationModule(":modules:openid-federation-public-server-api")
+includeFederationModule(":modules:openid-federation-public-server-ktor")
+includeFederationModule(":modules:openid-federation-server")  // Backwards compat shim
+
+
+if (workspaceSourceModules != null) {
+    require(includedFederationModules == workspaceSourceModules) {
+        "WORKSPACE_SOURCE_MODULES contains unknown or unconfigured module names: " +
+            (workspaceSourceModules - includedFederationModules)
+    }
+}

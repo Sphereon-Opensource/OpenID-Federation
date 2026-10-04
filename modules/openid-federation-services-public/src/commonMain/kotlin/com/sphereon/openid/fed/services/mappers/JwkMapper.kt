@@ -17,6 +17,7 @@ fun JwkEntity.toDTO(): TenantJwk {
 
     return TenantJwk(
         id = this.id,
+        accountId = this.account_id,
         kms = this.kms,
         kmsKeyRef = this.kms_key_ref,
         e = key.e,

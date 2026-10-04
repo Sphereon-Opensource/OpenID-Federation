@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.di.session.SessionScope
@@ -14,12 +15,16 @@ import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.persistence.Persistence
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetEntityConfigurationEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetEntityConfigurationEndpointCommand.COMMAND_ID)
 class GetEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver
@@ -56,6 +61,8 @@ class GetEntityConfigurationEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetAccountEntityConfigurationEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetAccountEntityConfigurationEndpointCommand.COMMAND_ID)
 class GetAccountEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver

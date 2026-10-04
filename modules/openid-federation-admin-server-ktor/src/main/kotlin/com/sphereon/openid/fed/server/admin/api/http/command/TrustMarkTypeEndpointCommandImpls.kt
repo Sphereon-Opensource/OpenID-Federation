@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
@@ -22,6 +23,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -30,6 +33,8 @@ import dev.zacsweers.metro.SingleIn
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListTrustMarkTypesEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListTrustMarkTypesEndpointCommand.COMMAND_ID)
 class ListTrustMarkTypesEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -67,6 +72,8 @@ class ListTrustMarkTypesEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkTypeEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateTrustMarkTypeEndpointCommand.COMMAND_ID)
 class CreateTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -119,6 +126,8 @@ class CreateTrustMarkTypeEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkTypeEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkTypeEndpointCommand.COMMAND_ID)
 class GetTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -159,6 +168,8 @@ class GetTrustMarkTypeEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteTrustMarkTypeEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteTrustMarkTypeEndpointCommand.COMMAND_ID)
 class DeleteTrustMarkTypeEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -203,6 +214,8 @@ class DeleteTrustMarkTypeEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkTypeIssuersEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkTypeIssuersEndpointCommand.COMMAND_ID)
 class GetTrustMarkTypeIssuersEndpointCommandImpl(
     execution: SessionExecution,
     private val trustMarkService: TrustMarkService,
@@ -245,6 +258,8 @@ class GetTrustMarkTypeIssuersEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<AddTrustMarkTypeIssuerEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(AddTrustMarkTypeIssuerEndpointCommand.COMMAND_ID)
 class AddTrustMarkTypeIssuerEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -315,6 +330,8 @@ private fun PersistenceTrustMarkIssuer.toApiModel(): TrustMarkIssuer = TrustMark
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<RemoveTrustMarkTypeIssuerEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(RemoveTrustMarkTypeIssuerEndpointCommand.COMMAND_ID)
 class RemoveTrustMarkTypeIssuerEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,

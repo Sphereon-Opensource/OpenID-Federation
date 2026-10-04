@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
@@ -17,6 +18,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -25,6 +28,8 @@ import dev.zacsweers.metro.SingleIn
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListCriticalClaimsEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListCriticalClaimsEndpointCommand.COMMAND_ID)
 class ListCriticalClaimsEndpointCommandImpl(
     execution: SessionExecution,
     private val criticalClaimService: CriticalClaimService,
@@ -62,6 +67,8 @@ class ListCriticalClaimsEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateCriticalClaimEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateCriticalClaimEndpointCommand.COMMAND_ID)
 class CreateCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -114,6 +121,8 @@ class CreateCriticalClaimEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteCriticalClaimEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteCriticalClaimEndpointCommand.COMMAND_ID)
 class DeleteCriticalClaimEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,

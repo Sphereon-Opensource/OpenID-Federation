@@ -45,6 +45,7 @@ import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
+import com.sphereon.openid.fed.openapi.models.TrustMark
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
 import com.sphereon.trust.core.config.TrustConfig
 import com.sphereon.trust.core.config.TrustConfigProvider
@@ -53,39 +54,54 @@ import com.sphereon.trust.core.config.TrustAnchorsConfig
 import com.sphereon.trust.core.model.TrustChainHopPosition
 import com.sphereon.trust.core.model.TrustChainLinks
 import com.sphereon.trust.core.model.TrustContext
+import com.sphereon.trust.core.model.EntityDiscoveryOptions
 import com.sphereon.trust.core.model.TrustStatus
 import com.sphereon.trust.core.model.TrustValidationRequest
+import com.sphereon.trust.core.model.TrustValidationResult
 import com.sphereon.crypto.resolution.extern.ExternalIdentifierOIDFEntityIdOpts
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 class OidfTrustValidationServiceTest {
 
     @Test
     fun validatesSuccessfulTrustChain() = runTest {
+        val leaf = "https://entity.example.com"
+        val anchor = "https://anchor.example.com"
         val service = createService(
             resolveResult = Ok(TrustChainResolveResponse(
-                trustChain = listOf("jwt-leaf", "jwt-intermediate", "jwt-anchor")
+                trustChain = listOf(
+                    entityStatementJwt(leaf, leaf),
+                    entityStatementJwt(leaf, anchor),
+                    entityStatementJwt(anchor, anchor),
+                )
             )),
             verifyResult = Ok(VerifyTrustChainResponse(isValid = true))
         )
 
         val result = service.validate(createRequest(
-            entityIdentifier = "https://entity.example.com",
-            trustAnchors = "https://anchor.example.com"
+            entityIdentifier = leaf,
+            trustAnchors = anchor
         ))
 
         assertTrue(result.trusted)
         assertEquals(TrustStatus.TRUSTED, result.status)
         assertEquals(3, result.validationPath.size)
-        assertNull(result.trustChain, "opaque mock JWTs are not hops; the chain stays absent")
+        assertNotNull(result.trustChain)
     }
 
     @Test
@@ -186,9 +202,11 @@ class OidfTrustValidationServiceTest {
 
     @Test
     fun returnsUntrustedWhenChainVerificationFails() = runTest {
+        val leaf = "https://entity.example.com"
+        val anchor = "https://anchor.example.com"
         val service = createService(
             resolveResult = Ok(TrustChainResolveResponse(
-                trustChain = listOf("jwt-leaf", "jwt-anchor")
+                trustChain = listOf(entityStatementJwt(leaf, leaf), entityStatementJwt(leaf, anchor))
             )),
             verifyResult = Ok(VerifyTrustChainResponse(
                 isValid = false,
@@ -197,8 +215,8 @@ class OidfTrustValidationServiceTest {
         )
 
         val result = service.validate(createRequest(
-            entityIdentifier = "https://entity.example.com",
-            trustAnchors = "https://anchor.example.com"
+            entityIdentifier = leaf,
+            trustAnchors = anchor
         ))
 
         assertFalse(result.trusted)
@@ -237,17 +255,19 @@ class OidfTrustValidationServiceTest {
     @Test
     fun usesConfigTrustAnchorsWhenNotInRequest() = runTest {
         var capturedAnchors: Array<String>? = null
+        val leaf = "https://entity.example.com"
+        val anchor = "https://config-anchor.example.com"
         val service = createService(
-            configTrustAnchors = listOf("https://config-anchor.example.com"),
+            configTrustAnchors = listOf(anchor),
             resolveResult = Ok(TrustChainResolveResponse(
-                trustChain = listOf("jwt-leaf", "jwt-anchor")
+                trustChain = listOf(entityStatementJwt(leaf, leaf), entityStatementJwt(leaf, anchor))
             )),
             verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
             onResolve = { args -> capturedAnchors = args.trustAnchors }
         )
 
         service.validate(createRequest(
-            entityIdentifier = "https://entity.example.com"
+            entityIdentifier = leaf
             // no trustAnchors param — should use config
         ))
 
@@ -257,18 +277,20 @@ class OidfTrustValidationServiceTest {
     @Test
     fun requestParamsOverrideConfig() = runTest {
         var capturedAnchors: Array<String>? = null
+        val leaf = "https://entity.example.com"
+        val anchor = "https://override-anchor.example.com"
         val service = createService(
             configTrustAnchors = listOf("https://config-anchor.example.com"),
             resolveResult = Ok(TrustChainResolveResponse(
-                trustChain = listOf("jwt-leaf", "jwt-anchor")
+                trustChain = listOf(entityStatementJwt(leaf, leaf), entityStatementJwt(leaf, anchor))
             )),
             verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
             onResolve = { args -> capturedAnchors = args.trustAnchors }
         )
 
         service.validate(createRequest(
-            entityIdentifier = "https://entity.example.com",
-            trustAnchors = "https://override-anchor.example.com"
+            entityIdentifier = leaf,
+            trustAnchors = anchor
         ))
 
         assertEquals("https://override-anchor.example.com", capturedAnchors?.firstOrNull())
@@ -305,26 +327,360 @@ class OidfTrustValidationServiceTest {
     }
 
     @Test
+    fun selectsTerminalSuperiorIssuerFromFullStatements() = runTest {
+        val leaf = "https://leaf.example"
+        val intermediate = "https://intermediate.example"
+        val firstAnchor = "https://first-anchor.example"
+        val terminalAnchor = "https://terminal-anchor.example"
+        var verifiedAt: String? = null
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, intermediate),
+                entityStatementJwt(intermediate, terminalAnchor),
+            ))),
+            onVerify = { verifiedAt = it.trustAnchor },
+        )
+
+        val result = service.validate(createRequest(leaf, "$firstAnchor,$terminalAnchor"))
+
+        assertTrue(result.trusted)
+        assertEquals(terminalAnchor, verifiedAt)
+    }
+
+    @Test
+    fun rejectsChainWhoseTerminalIssuerIsNotConfiguredEvenWhenEarlierHopIs() = runTest {
+        val leaf = "https://leaf.example"
+        val requestedAnchor = "https://requested-anchor.example"
+        val otherSuperior = "https://other-superior.example"
+        var verifyCalls = 0
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, requestedAnchor),
+                entityStatementJwt(requestedAnchor, otherSuperior),
+            ))),
+            onVerify = { verifyCalls++ },
+        )
+
+        val result = service.validate(createRequest(leaf, requestedAnchor))
+
+        assertFalse(result.trusted)
+        assertEquals(0, verifyCalls)
+    }
+
+    @Test
+    fun rejectsMalformedTerminalWithoutSingleAnchorFallback() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val service = createService(resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+            entityStatementJwt(leaf, leaf),
+            entityStatementJwt(leaf, anchor),
+            "not-a-compact-jwt",
+        ))))
+
+        assertFalse(service.validate(createRequest(leaf, anchor)).trusted)
+    }
+
+    @Test
+    fun acceptedChainExpiresAtEarliestSignedStatementExpiry() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val earliestExpiry = Clock.System.now().epochSeconds + 600
+        val service = createService(resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+            entityStatementJwt(leaf, leaf, exp = earliestExpiry + 300),
+            entityStatementJwt(leaf, anchor, exp = earliestExpiry),
+            entityStatementJwt(anchor, anchor, exp = earliestExpiry + 900),
+        ))))
+
+        val result = service.validate(createRequest(leaf, anchor))
+
+        assertTrue(result.trusted)
+        assertEquals(Instant.fromEpochSeconds(earliestExpiry), result.expiresAt)
+    }
+
+    @Test
+    fun expiredSignedChainCannotBeTrusted() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val expired = Clock.System.now().epochSeconds - 10
+        val service = createService(resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+            entityStatementJwt(leaf, leaf, exp = expired),
+            entityStatementJwt(leaf, anchor),
+            entityStatementJwt(anchor, anchor),
+        ))))
+
+        assertFalse(service.validate(createRequest(leaf, anchor)).trusted)
+    }
+
+    @Test
+    fun requiredMarkTypeUsesSubjectAdvertisedCompactJwtUnderSelectedAnchor() = runTest {
+        val leaf = "https://leaf.example"
+        val firstAnchor = "https://first-anchor.example"
+        val selectedAnchor = "https://selected-anchor.example"
+        val markType = "https://marks.example/member"
+        val markJwt = trustMarkJwt(markType, leaf)
+        var verifiedMark: VerifyTrustMarkArgs? = null
+        val fetchedEntityConfigurations = mutableListOf<String>()
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, selectedAnchor),
+                entityStatementJwt(selectedAnchor, selectedAnchor),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(trustMarkType = markType, trustMark = markJwt)),
+            advertisedSubject = leaf,
+            onVerifyMark = { verifiedMark = it },
+            onGetEntityConfiguration = { fetchedEntityConfigurations += it },
+        )
+
+        val result = service.validate(createRequest(leaf, "$firstAnchor,$selectedAnchor", markType))
+
+        assertTrue(result.trusted)
+        assertEquals(markJwt, verifiedMark?.trustMark)
+        assertEquals(leaf, verifiedMark?.subject)
+        assertEquals(selectedAnchor, verifiedMark?.trustAnchorConfig?.sub)
+        assertTrue(leaf in fetchedEntityConfigurations)
+    }
+
+    @Test
+    fun absentRequiredMarkIsNotSatisfiedByAValidatorAcceptingTheTypeString() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        var verifyCalls = 0
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            onVerifyMark = { verifyCalls++ },
+        )
+
+        val result = service.validate(createRequest(leaf, anchor, "https://marks.example/member"))
+
+        assertFalse(result.trusted)
+        assertEquals(0, verifyCalls)
+    }
+
+    @Test
+    fun verifiedDifferentMarkTypeDoesNotSatisfyRequiredType() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(
+                trustMarkType = "https://marks.example/other",
+                trustMark = trustMarkJwt("https://marks.example/other", leaf),
+            )),
+            advertisedSubject = leaf,
+        )
+
+        assertFalse(service.validate(createRequest(leaf, anchor, "https://marks.example/member")).trusted)
+    }
+
+    @Test
+    fun advertisedMemberEntryWithDifferentJwtTypeDoesNotSatisfyRequiredType() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val requiredType = "https://marks.example/member"
+        val jwtType = "https://marks.example/other"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(requiredType, trustMarkJwt(jwtType, leaf))),
+            advertisedSubject = leaf,
+        )
+
+        assertFalse(service.validate(createRequest(leaf, anchor, requiredType)).trusted)
+    }
+
+    @Test
+    fun rejectedAdvertisedMarkDoesNotSatisfyRequiredType() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val markType = "https://marks.example/member"
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(markType, trustMarkJwt(markType, leaf))),
+            advertisedSubject = leaf,
+            verifyTrustMarkResult = Ok(TrustMarkValidationResponse(isValid = false)),
+        )
+
+        assertFalse(service.validate(createRequest(leaf, anchor, markType)).trusted)
+    }
+
+    @Test
+    fun acceptedMarkExpiryBoundsTrustResult() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val markType = "https://marks.example/member"
+        val markExpiry = Clock.System.now().epochSeconds + 300
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(markType, trustMarkJwt(markType, leaf, markExpiry))),
+            advertisedSubject = leaf,
+        )
+
+        val result = service.validate(createRequest(leaf, anchor, markType))
+
+        assertTrue(result.trusted)
+        assertEquals(Instant.fromEpochSeconds(markExpiry), result.expiresAt)
+    }
+
+    @Test
+    fun expiredAdvertisedMarkCannotBeTrustedEvenWhenVerifierReturnsValid() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val markType = "https://marks.example/member"
+        val now = Clock.System.now().epochSeconds
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf, exp = now + 600),
+                entityStatementJwt(leaf, anchor, exp = now + 600),
+                entityStatementJwt(anchor, anchor, exp = now + 600),
+            ))),
+            advertisedTrustMarks = listOf(TrustMark(markType, trustMarkJwt(markType, leaf, now - 10))),
+            advertisedSubject = leaf,
+            verifyTrustMarkResult = Ok(TrustMarkValidationResponse(isValid = true)),
+        )
+
+        assertFalse(service.validate(createRequest(leaf, anchor, markType)).trusted)
+    }
+
+    @Test
+    fun cacheIdentityIncludesMaxDepthAndAnchorPreferenceOrder() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val otherAnchor = "https://other-anchor.example"
+        var resolveCalls = 0
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf),
+                entityStatementJwt(leaf, anchor),
+                entityStatementJwt(anchor, anchor),
+            ))),
+            onResolve = { resolveCalls++ },
+        )
+
+        val depthThree = createRequest(leaf, "$anchor,$otherAnchor", maxChainDepth = 3)
+        val depthFive = createRequest(leaf, "$anchor,$otherAnchor", maxChainDepth = 5)
+        val reversedAnchors = createRequest(leaf, "$otherAnchor,$anchor", maxChainDepth = 5)
+        assertTrue(service.validate(depthThree).trusted)
+        assertTrue(service.validate(depthThree).trusted)
+        assertTrue(service.validate(depthFive).trusted)
+        assertTrue(service.validate(depthFive).trusted)
+        assertTrue(service.validate(reversedAnchors).trusted)
+        assertTrue(service.validate(reversedAnchors).trusted)
+        assertEquals(3, resolveCalls)
+    }
+
+    @Test
+    fun expiredCachedTrustEvidenceIsResolvedAgain() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val now = Clock.System.now().epochSeconds
+        val cacheManager = NoOpCacheManager(TrustValidationResult(
+            trusted = true,
+            status = TrustStatus.TRUSTED,
+            expiresAt = Instant.fromEpochSeconds(now - 30),
+        ))
+        var resolveCalls = 0
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf, exp = now + 600),
+                entityStatementJwt(leaf, anchor, exp = now + 600),
+                entityStatementJwt(anchor, anchor, exp = now + 600),
+            ))),
+            onResolve = { resolveCalls++ },
+            cacheManager = cacheManager,
+        )
+
+        val result = service.validate(createRequest(leaf, anchor))
+
+        assertEquals(1, resolveCalls)
+        assertTrue(result.trusted)
+        assertEquals(Instant.fromEpochSeconds(now + 600), result.expiresAt)
+        val cachedFreshResult = service.validate(createRequest(leaf, anchor))
+        assertEquals(1, resolveCalls)
+        assertEquals(Instant.fromEpochSeconds(now + 600), cachedFreshResult.expiresAt)
+    }
+
+    @Test
+    fun evidenceExpiringDuringEntityEnrichmentCannotReturnTrusted() = runTest {
+        val leaf = "https://leaf.example"
+        val anchor = "https://anchor.example"
+        val expiry = Clock.System.now().epochSeconds + 3
+        val cacheManager = NoOpCacheManager()
+        var enrichmentFetches = 0
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(
+                entityStatementJwt(leaf, leaf, exp = expiry),
+                entityStatementJwt(leaf, anchor, exp = expiry),
+                entityStatementJwt(anchor, anchor, exp = expiry),
+            ))),
+            onGetEntityConfiguration = {
+                enrichmentFetches++
+                // Wait for this evidence's actual expiry, not a guessed fixed delay.
+                withContext(Dispatchers.Default) {
+                    withTimeout(10_000) {
+                        while (Clock.System.now().epochSeconds < expiry) delay(10)
+                    }
+                }
+            },
+            cacheManager = cacheManager,
+        )
+        val request = createRequest(leaf, anchor).copy(
+            entityDiscovery = EntityDiscoveryOptions(enabled = true),
+        )
+
+        val result = service.validate(request)
+
+        assertEquals(1, enrichmentFetches)
+        assertFalse(result.trusted)
+        assertFalse(cacheManager.appWrites.any { it.trusted })
+    }
+
+    @Test
     fun requiredTrustMarksChangeResultAndCacheKey() = runTest {
+        val leaf = "https://entity.example.com"
+        val anchor = "https://anchor.example.com"
+        val markType = "https://tm.example/member"
+        var resolveCalls = 0
         val service = createService(
             resolveResult = Ok(TrustChainResolveResponse(
-                trustChain = listOf("jwt-leaf", "jwt-anchor")
+                trustChain = listOf(entityStatementJwt(leaf, leaf), entityStatementJwt(leaf, anchor))
             )),
             verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
             verifyTrustMarkResult = Ok(TrustMarkValidationResponse(isValid = true)),
+            advertisedTrustMarks = listOf(TrustMark(markType, trustMarkJwt(markType, leaf))),
+            advertisedSubject = leaf,
+            onResolve = { resolveCalls++ },
         )
-        val unmarked = service.validate(createRequest("https://entity.example.com", trustAnchors = "https://anchor.example.com"))
+        val unmarked = service.validate(createRequest(leaf, trustAnchors = anchor))
         val marked = service.validate(createRequest(
-            "https://entity.example.com",
-            trustAnchors = "https://anchor.example.com",
-            requiredTrustMarks = "https://tm.example/member",
+            leaf,
+            trustAnchors = anchor,
+            requiredTrustMarks = markType,
         ))
-        val unmarkedKey = service.cacheKey("https://entity.example.com", listOf("https://anchor.example.com"), emptyList())
-        val markedKey = service.cacheKey("https://entity.example.com", listOf("https://anchor.example.com"), listOf("https://tm.example/member"))
         assertTrue(unmarked.trusted)
         assertTrue(marked.trusted)
-        assertTrue(unmarkedKey != markedKey)
-        assertTrue(markedKey.contains("https://tm.example/member"))
+        assertEquals(2, resolveCalls)
     }
 
     @Test
@@ -355,10 +711,12 @@ class OidfTrustValidationServiceTest {
         entityIdentifier: String,
         trustAnchors: String? = null,
         requiredTrustMarks: String? = null,
+        maxChainDepth: Int? = null,
     ): TrustValidationRequest {
         val params = mutableMapOf("entityIdentifier" to entityIdentifier)
         if (trustAnchors != null) params["trustAnchors"] = trustAnchors
         if (requiredTrustMarks != null) params["requiredTrustMarks"] = requiredTrustMarks
+        if (maxChainDepth != null) params["maxChainDepth"] = maxChainDepth.toString()
         return TrustValidationRequest(
             identifier = ExternalIdentifierOIDFEntityIdOpts(identifier = entityIdentifier),
             context = TrustContext(
@@ -381,6 +739,11 @@ class OidfTrustValidationServiceTest {
         verifyTrustMarkResult: IdkResult<TrustMarkValidationResponse, FederationError> = Ok(
             TrustMarkValidationResponse(isValid = true)
         ),
+        advertisedTrustMarks: List<TrustMark>? = null,
+        advertisedSubject: String? = null,
+        onVerifyMark: ((VerifyTrustMarkArgs) -> Unit)? = null,
+        onGetEntityConfiguration: (suspend (String) -> Unit)? = null,
+        cacheManager: CacheManager = NoOpCacheManager(),
     ): OidfTrustValidationService {
         val resolveCmd = object : ResolveTrustChainCommand {
             override val isEnabled: Boolean get() = true
@@ -421,7 +784,10 @@ class OidfTrustValidationServiceTest {
                 trustAnchorConfig: EntityConfigurationStatement,
                 currentTime: Long?,
                 subject: String?
-            ): IdkResult<TrustMarkValidationResponse, FederationError> = verifyTrustMarkResult
+            ): IdkResult<TrustMarkValidationResponse, FederationError> {
+                onVerifyMark?.invoke(VerifyTrustMarkArgs(trustMark, trustAnchorConfig, currentTime, subject))
+                return verifyTrustMarkResult
+            }
             override suspend fun execute(args: VerifyTrustMarkArgs): IdkResult<TrustMarkValidationResponse, FederationError> =
                 verifyTrustMark(args.trustMark, args.trustAnchorConfig, args.currentTime, args.subject)
             override suspend fun supports(args: Any): Boolean = args is VerifyTrustMarkArgs
@@ -443,11 +809,13 @@ class OidfTrustValidationServiceTest {
         val getEntityConfigCmd = object : GetEntityConfigurationCommand {
             override val isEnabled: Boolean get() = true
             override suspend fun getEntityConfiguration(entityIdentifier: String): IdkResult<EntityConfigurationStatement, FederationError> {
+                onGetEntityConfiguration?.invoke(entityIdentifier)
                 return Ok(EntityConfigurationStatement(
                     iss = entityIdentifier,
                     sub = entityIdentifier,
                     exp = 9999999999.0,
                     iat = 1000000000.0,
+                    trustMarks = if (entityIdentifier == advertisedSubject) advertisedTrustMarks else null,
                     jwks = com.sphereon.openid.fed.openapi.models.BaseStatementJwks(
                         propertyKeys = listOf(
                             com.sphereon.openid.fed.openapi.models.Jwk(
@@ -473,7 +841,7 @@ class OidfTrustValidationServiceTest {
             verifyTrustMarkCommand = trustMarkCmd,
             getEntityConfigurationCommand = getEntityConfigCmd,
             trustConfigProvider = configProvider,
-            cacheManager = NoOpCacheManager(),
+            cacheManager = cacheManager,
             execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test", correlationId = "oidfed-test")),
             entityInfoExtractor = OidfEntityInfoExtractor(getEntityConfigCmd)
         )
@@ -482,10 +850,13 @@ class OidfTrustValidationServiceTest {
     // -- Test infrastructure --
 
     /**
-     * No-op CacheManager for testing — creates in-memory no-store caches.
+     * In-memory CacheManager for testing the bridge's cache identity and expiry behavior.
      * Matches the published CacheManager API from IDK 0.25.0-SNAPSHOT.
      */
-    private class NoOpCacheManager : CacheManager {
+    private class NoOpCacheManager(
+        private val seededAppResult: TrustValidationResult? = null,
+    ) : CacheManager {
+        val appWrites = mutableListOf<TrustValidationResult>()
         override fun registerBackend(backend: CacheBackend) = Unit
         override fun getBackends(): List<CacheBackend> = emptyList()
         override fun getBackend(id: String): CacheBackend? = null
@@ -498,7 +869,7 @@ class OidfTrustValidationServiceTest {
             requirements: CacheRequirements,
             keySerializer: CacheSerializer<K>,
             valueSerializer: CacheSerializer<V>,
-        ): ScopedCache<K, V> = NoOpScopedCache(requirements.namespace)
+        ): ScopedCache<K, V> = NoOpScopedCache(requirements.namespace, seededAppResult, appWrites)
 
         override fun <K : Any, V : Any> getCache(namespace: String): ScopedCache<K, V>? = null
         override fun getAllCaches(): List<ScopedCache<*, *>> = emptyList()
@@ -510,13 +881,25 @@ class OidfTrustValidationServiceTest {
     }
 
     private class NoOpScopedCache<K : Any, V : Any>(
-        override val namespace: String
+        override val namespace: String,
+        seededAppResult: TrustValidationResult? = null,
+        private val appWrites: MutableList<TrustValidationResult>,
     ) : ScopedCache<K, V> {
+        private val appEntries = mutableMapOf<K, V>()
+        private var pendingSeed = seededAppResult
         override val backendId: String = "noop"
-        override suspend fun getApp(key: K): V? = null
-        override suspend fun putApp(key: K, value: V, ttl: Duration?) = Unit
-        override suspend fun removeApp(key: K): Boolean = false
-        override suspend fun containsApp(key: K): Boolean = false
+        @Suppress("UNCHECKED_CAST")
+        override suspend fun getApp(key: K): V? {
+            val seed = pendingSeed
+            pendingSeed = null
+            return (seed as V?) ?: appEntries[key]
+        }
+        override suspend fun putApp(key: K, value: V, ttl: Duration?) {
+            appEntries[key] = value
+            if (value is TrustValidationResult) appWrites += value
+        }
+        override suspend fun removeApp(key: K): Boolean = appEntries.remove(key) != null
+        override suspend fun containsApp(key: K): Boolean = key in appEntries
         override suspend fun getTenant(tenantId: String, key: K): V? = null
         override suspend fun putTenant(tenantId: String, key: K, value: V, ttl: Duration?) = Unit
         override suspend fun removeTenant(tenantId: String, key: K): Boolean = false
@@ -525,7 +908,7 @@ class OidfTrustValidationServiceTest {
         override suspend fun putPrincipal(tenantId: String, principalId: String, key: K, value: V, ttl: Duration?) = Unit
         override suspend fun removePrincipal(tenantId: String, principalId: String, key: K): Boolean = false
         override suspend fun containsPrincipal(tenantId: String, principalId: String, key: K): Boolean = false
-        override suspend fun invalidateApp() = Unit
+        override suspend fun invalidateApp() { appEntries.clear() }
         override suspend fun invalidateTenant(tenantId: String) = Unit
         override suspend fun invalidatePrincipal(tenantId: String, principalId: String) = Unit
         override suspend fun invalidateByKeyPattern(pattern: String) = Unit
@@ -534,8 +917,8 @@ class OidfTrustValidationServiceTest {
         override suspend fun getOrPut(key: ScopedKey<K>, ttl: Duration?, compute: suspend () -> V): V = compute()
         override suspend fun remove(key: ScopedKey<K>): Boolean = false
         override suspend fun contains(key: ScopedKey<K>): Boolean = false
-        override suspend fun clear() = Unit
-        override suspend fun size(): Long = 0
+        override suspend fun clear() { appEntries.clear() }
+        override suspend fun size(): Long = appEntries.size.toLong()
         override fun stats(): CacheStatistics = CacheStatistics()
         override suspend fun getMany(keys: Collection<ScopedKey<K>>): Map<ScopedKey<K>, V> = emptyMap()
         override suspend fun putMany(entries: Map<ScopedKey<K>, V>, ttl: Duration?) = Unit
@@ -592,12 +975,39 @@ class OidfTrustValidationServiceTest {
 private fun entityStatementJwt(
     sub: String,
     iss: String,
+    exp: Long = Clock.System.now().epochSeconds + 3600,
 ): String {
-    val header =
-        Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode("{\"alg\":\"none\"}".encodeToByteArray())
-    val payload =
-        Base64.UrlSafe
-            .withPadding(Base64.PaddingOption.ABSENT)
-            .encode("""{"sub":"$sub","iss":"$iss"}""".encodeToByteArray())
-    return "$header.$payload.sig"
+    val iat = Clock.System.now().epochSeconds - 60
+    val payload = """{
+        "iss":"$iss",
+        "sub":"$sub",
+        "iat":$iat,
+        "exp":$exp,
+        "jwks":{"keys":[{"kty":"EC","kid":"key-1","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}]},
+        "metadata":{"federation_entity":{"federation_fetch_endpoint":"$iss/fetch"}}
+    }"""
+    return compactTestJwt("entity-statement+jwt", payload)
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+private fun trustMarkJwt(
+    type: String,
+    subject: String,
+    exp: Long = Clock.System.now().epochSeconds + 3600,
+): String {
+    val iat = Clock.System.now().epochSeconds - 60
+    return compactTestJwt("trust-mark+jwt", """{
+        "iss":"https://mark-issuer.example",
+        "sub":"$subject",
+        "trust_mark_type":"$type",
+        "iat":$iat,
+        "exp":$exp
+    }""")
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+private fun compactTestJwt(typ: String, payload: String): String {
+    val encoder = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT)
+    val header = encoder.encode("""{"alg":"ES256","typ":"$typ","kid":"key-1"}""".encodeToByteArray())
+    return "$header.${encoder.encode(payload.encodeToByteArray())}.fixture-signature"
 }

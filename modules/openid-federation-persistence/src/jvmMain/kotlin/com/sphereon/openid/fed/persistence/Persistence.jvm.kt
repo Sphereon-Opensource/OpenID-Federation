@@ -10,6 +10,8 @@ import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.openid.fed.persistence.models.Account
 import com.sphereon.openid.fed.persistence.models.AccountQueries
+import com.sphereon.openid.fed.persistence.models.AccountSigningKey
+import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
 import com.sphereon.openid.fed.persistence.models.AuthorityHint
 import com.sphereon.openid.fed.persistence.models.AuthorityHintQueries
 import com.sphereon.openid.fed.persistence.models.Crit
@@ -52,6 +54,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     actual val accountQueries: AccountQueries
+    actual val accountSigningKeyQueries: AccountSigningKeyQueries
     actual val jwkQueries: JwkQueries
     actual val subordinateQueries: SubordinateQueries
     actual val metadataQueries: MetadataQueries
@@ -91,6 +94,7 @@ actual object Persistence {
         18L to ("18.sqm" to "Create TrustAnchorHint table for trust anchor hint identifiers"),
         19L to ("19.sqm" to "Create SubordinateConstraint table for subordinate entity constraints"),
         20L to ("20.sqm" to "Create ForeignSubordinateStatement table for received Immediate Superior JWTs"),
+        21L to ("21.sqm" to "Create account-selected signing key binding with revision tracking"),
     )
 
     private val driver: SqlDriver
@@ -103,6 +107,7 @@ actual object Persistence {
         database = Database(
             driver,
             AccountAdapter = Account.Adapter(JavaUuidStringAdapter),
+            AccountSigningKeyAdapter = AccountSigningKey.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             AuthorityHintAdapter = AuthorityHint.Adapter(
                 JavaUuidStringAdapter,
                 JavaUuidStringAdapter
@@ -146,6 +151,7 @@ actual object Persistence {
         )
 
         accountQueries = database.accountQueries
+        accountSigningKeyQueries = database.accountSigningKeyQueries
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
         jwkQueries = database.jwkQueries
         subordinateQueries = database.subordinateQueries

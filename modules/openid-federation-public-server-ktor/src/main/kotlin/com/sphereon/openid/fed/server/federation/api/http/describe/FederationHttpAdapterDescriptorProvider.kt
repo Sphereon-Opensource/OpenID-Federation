@@ -33,41 +33,41 @@ class FederationHttpAdapterDescriptorProvider : HttpAdapterDescriptorProvider {
         ),
         endpoints = listOf(
             // Entity Configuration endpoints
-            GetEntityConfigurationEndpointCommand.ENDPOINT,
-            GetAccountEntityConfigurationEndpointCommand.ENDPOINT,
+            GetEntityConfigurationEndpointCommand.ENDPOINT.copy(handlerCommandId = GetEntityConfigurationEndpointCommand.COMMAND_ID),
+            GetAccountEntityConfigurationEndpointCommand.ENDPOINT.copy(handlerCommandId = GetAccountEntityConfigurationEndpointCommand.COMMAND_ID),
             // List subordinates endpoints (GET + POST)
-            ListSubordinatesRootEndpointCommand.ENDPOINT,
-            PostListSubordinatesRootEndpointCommand.ENDPOINT,
-            ListSubordinatesAccountEndpointCommand.ENDPOINT,
-            PostListSubordinatesAccountEndpointCommand.ENDPOINT,
+            ListSubordinatesRootEndpointCommand.ENDPOINT.copy(handlerCommandId = ListSubordinatesRootEndpointCommand.COMMAND_ID),
+            PostListSubordinatesRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostListSubordinatesRootEndpointCommand.COMMAND_ID),
+            ListSubordinatesAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = ListSubordinatesAccountEndpointCommand.COMMAND_ID),
+            PostListSubordinatesAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostListSubordinatesAccountEndpointCommand.COMMAND_ID),
             // Fetch subordinate statement endpoints (GET + POST)
-            FetchSubordinateRootEndpointCommand.ENDPOINT,
-            PostFetchSubordinateRootEndpointCommand.ENDPOINT,
-            FetchSubordinateAccountEndpointCommand.ENDPOINT,
-            PostFetchSubordinateAccountEndpointCommand.ENDPOINT,
+            FetchSubordinateRootEndpointCommand.ENDPOINT.copy(handlerCommandId = FetchSubordinateRootEndpointCommand.COMMAND_ID),
+            PostFetchSubordinateRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostFetchSubordinateRootEndpointCommand.COMMAND_ID),
+            FetchSubordinateAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = FetchSubordinateAccountEndpointCommand.COMMAND_ID),
+            PostFetchSubordinateAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostFetchSubordinateAccountEndpointCommand.COMMAND_ID),
             // Trust mark status endpoints (GET + POST)
-            GetTrustMarkStatusRootEndpointCommand.ENDPOINT,
-            TrustMarkStatusRootEndpointCommand.ENDPOINT,
-            GetTrustMarkStatusAccountEndpointCommand.ENDPOINT,
-            TrustMarkStatusAccountEndpointCommand.ENDPOINT,
+            GetTrustMarkStatusRootEndpointCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkStatusRootEndpointCommand.COMMAND_ID),
+            TrustMarkStatusRootEndpointCommand.ENDPOINT.copy(handlerCommandId = TrustMarkStatusRootEndpointCommand.COMMAND_ID),
+            GetTrustMarkStatusAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkStatusAccountEndpointCommand.COMMAND_ID),
+            TrustMarkStatusAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = TrustMarkStatusAccountEndpointCommand.COMMAND_ID),
             // Trust mark list endpoints (GET + POST)
-            TrustMarkListRootEndpointCommand.ENDPOINT,
-            PostTrustMarkListRootEndpointCommand.ENDPOINT,
-            TrustMarkListAccountEndpointCommand.ENDPOINT,
-            PostTrustMarkListAccountEndpointCommand.ENDPOINT,
+            TrustMarkListRootEndpointCommand.ENDPOINT.copy(handlerCommandId = TrustMarkListRootEndpointCommand.COMMAND_ID),
+            PostTrustMarkListRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostTrustMarkListRootEndpointCommand.COMMAND_ID),
+            TrustMarkListAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = TrustMarkListAccountEndpointCommand.COMMAND_ID),
+            PostTrustMarkListAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostTrustMarkListAccountEndpointCommand.COMMAND_ID),
             // Get trust mark endpoints (GET + POST)
-            GetTrustMarkRootEndpointCommand.ENDPOINT,
-            PostGetTrustMarkRootEndpointCommand.ENDPOINT,
-            GetTrustMarkAccountEndpointCommand.ENDPOINT,
-            PostGetTrustMarkAccountEndpointCommand.ENDPOINT,
+            GetTrustMarkRootEndpointCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkRootEndpointCommand.COMMAND_ID),
+            PostGetTrustMarkRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostGetTrustMarkRootEndpointCommand.COMMAND_ID),
+            GetTrustMarkAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkAccountEndpointCommand.COMMAND_ID),
+            PostGetTrustMarkAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostGetTrustMarkAccountEndpointCommand.COMMAND_ID),
             // Historical keys endpoints
-            HistoricalKeysRootEndpointCommand.ENDPOINT,
-            HistoricalKeysAccountEndpointCommand.ENDPOINT,
+            HistoricalKeysRootEndpointCommand.ENDPOINT.copy(handlerCommandId = HistoricalKeysRootEndpointCommand.COMMAND_ID),
+            HistoricalKeysAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = HistoricalKeysAccountEndpointCommand.COMMAND_ID),
             // Resolve endpoints (GET + POST)
-            ResolveRootEndpointCommand.ENDPOINT,
-            PostResolveRootEndpointCommand.ENDPOINT,
-            ResolveAccountEndpointCommand.ENDPOINT,
-            PostResolveAccountEndpointCommand.ENDPOINT
+            ResolveRootEndpointCommand.ENDPOINT.copy(handlerCommandId = ResolveRootEndpointCommand.COMMAND_ID),
+            PostResolveRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostResolveRootEndpointCommand.COMMAND_ID),
+            ResolveAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = ResolveAccountEndpointCommand.COMMAND_ID),
+            PostResolveAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostResolveAccountEndpointCommand.COMMAND_ID)
         )
     )
 }

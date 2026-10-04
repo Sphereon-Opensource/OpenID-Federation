@@ -18,18 +18,26 @@ val omitAccountHttp =
 
 // Core admin OpenAPI always (no /accounts). Optional LEGACY accounts fragment when
 // account-http is on the classpath so all-in-one still ships the full contract docs.
-tasks.register<Copy>("copyOpenAPI") {
+val copyOpenAPI = tasks.register<Sync>("copyOpenAPI") {
     from("../openid-federation-openapi/src/commonMain/kotlin/com/sphereon/openid/fed/openapi") {
         include("admin-server.yaml")
         if (!omitAccountHttp) {
             include("admin-accounts.yaml")
         }
     }
-    into("src/main/resources/public")
+    into(layout.buildDirectory.dir("generated/openapi"))
 }
 
-tasks.named("processResources") {
-    dependsOn("copyOpenAPI")
+// The checked-in copies are documentation snapshots, not generated task outputs.
+// Package the selected current specs once, preserving their public/* resource paths.
+sourceSets.named("main") {
+    resources.exclude("public/admin-server.yaml", "public/admin-accounts.yaml")
+}
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    from(copyOpenAPI) {
+        into("public")
+    }
 }
 
 dependencies {
