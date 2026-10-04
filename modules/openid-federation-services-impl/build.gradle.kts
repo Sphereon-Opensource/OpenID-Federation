@@ -46,7 +46,7 @@ kotlin {
 
                 // IDK YAML property sources (APP + tenant + principal scopes via PropertySourceContribution)
                 // Do not reimplement YAML parsing in OIDFed — use this for application.yaml / tenant YAML.
-                api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+                api("com.sphereon.idk:lib-conf-yaml:0.26.0-SNAPSHOT")
 
             }
         }

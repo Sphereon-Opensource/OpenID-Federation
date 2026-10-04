@@ -78,13 +78,13 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     versionCatalogs {
         create("sphereonplug") {
-            from("com.sphereon.gradle:gradle-plugin-bom:0.9.0-SNAPSHOT@toml" as String)
+            from("com.sphereon.gradle:gradle-plugin-bom:0.10.0-SNAPSHOT@toml" as String)
         }
         create("sphereonlib") {
-            from("com.sphereon.gradle:library-bom:0.9.0-SNAPSHOT@toml" as String)
+            from("com.sphereon.gradle:library-bom:0.10.0-SNAPSHOT@toml" as String)
         }
         create("idklib") {
-            from("com.sphereon.idk:idk-bom:0.25.0-SNAPSHOT@toml" as String)
+            from("com.sphereon.idk:idk-bom:0.26.0-SNAPSHOT@toml" as String)
         }
         // TODO: Move aws sdk to our bom
         create("awssdk") {
