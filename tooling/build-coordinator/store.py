@@ -390,7 +390,7 @@ def normalize_excluded_tasks(values, tasks):
 def normalize(spec, config=None):
     allowed = {'snapshot', 'root', 'tasks', 'profile', 'properties', 'environment',
                'resources', 'memory_gb', 'follow_latest', 'reuse_tests', 'reuse_later',
-               'artifacts', 'runtime', 'configuration_cache', 'excluded_tasks'}
+               'artifacts', 'runtime', 'configuration_cache', 'excluded_tasks', 'offline'}
     if not isinstance(spec, dict) or set(spec) - allowed:
         raise ValueError('Unknown request fields')
     if not re.fullmatch('[a-f0-9]{64}', spec.get('snapshot', '')):
@@ -449,11 +449,11 @@ def normalize(spec, config=None):
         raise ValueError('configuration_cache must be auto or off')
     if profile == 'fresh':
         configuration_cache = 'off'
-    for flag in ('follow_latest', 'reuse_tests', 'reuse_later'):
+    for flag in ('follow_latest', 'reuse_tests', 'reuse_later', 'offline'):
         if flag in spec and not isinstance(spec[flag], bool):
             raise ValueError(f'{flag} must be boolean')
     return dict(snapshot=spec['snapshot'], root=str(PurePosixPath(root)), tasks=merge_tasks([], normalized),
-                configuration_cache=configuration_cache,
+                configuration_cache=configuration_cache, offline=spec.get('offline', False),
                 excluded_tasks=normalize_excluded_tasks(spec.get('excluded_tasks', []), normalized),
                 profile=profile, properties=props, environment=env, resources=sorted(set(resources)),
                 memory_gb=memory, memory_auto=memory_auto, follow_latest=spec.get('follow_latest', False),

@@ -319,6 +319,8 @@ def gradle_command(spec, lane, init_script, runtime):
         else:
             argv.extend(['--exclude-task', selector])
     argv.extend(['--no-daemon', '--no-parallel', '--max-workers=1', '--console=plain', '--init-script', str(init_script)])
+    if spec.get('offline', False):
+        argv.append('--offline')
     if spec.get('owned_selection') is not None:
         names = spec['owned_selection'].get('sourceModules', {}).get(spec['root'])
         selected = sorted(set(spec['environment'].get('WORKSPACE_SOURCE_MODULES', '').split(',')))
