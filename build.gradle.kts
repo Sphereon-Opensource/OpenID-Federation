@@ -107,11 +107,13 @@ fun getNpmVersion(): String {
 
     // Get git commit hash
     val gitCommitHash = try {
-        val process = ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
-            .redirectError(ProcessBuilder.Redirect.INHERIT)
-            .start()
+        val output = providers.exec {
+            commandLine("git", "rev-parse", "--short=7", "HEAD")
+            workingDir(rootDir)
+            isIgnoreExitValue = true
+        }.standardOutput.asText.get()
 
-        process.inputStream.bufferedReader().use { it.readLine() }
+        output.reader().buffered().use { it.readLine() }
     } catch (e: Exception) {
         "unknown"
     }
