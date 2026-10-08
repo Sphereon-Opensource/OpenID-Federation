@@ -17,6 +17,7 @@ import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServi
 import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
+import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
@@ -67,9 +68,27 @@ class ResolveTrustChainCommandImpl(
         args: ResolveTrustChainArgs,
         applyDuring: (ResolveTrustChainArgs) -> ResolveTrustChainArgs
     ): IdkResult<TrustChainResolveResponse, FederationError> {
-        val (entityIdentifier, configuredTrustAnchors, maxDepth) = applyDuring(args)
+        val (entityIdentifier, configuredTrustAnchors, maxDepth, startingAuthorityHints) = applyDuring(args)
 
         return try {
+            if (startingAuthorityHints != null) {
+                val leafJwt = fetchAndVerifySelfEntityConfiguration(entityIdentifier)
+                    ?: return IdkResult.err(
+                        NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = configuredTrustAnchors.toList())
+                    )
+                val published = mapEntityStatement(leafJwt, EntityConfigurationStatement::class)?.authorityHints.orEmpty()
+                val unpublished = startingAuthorityHints.filterNot { it in published }
+                if (startingAuthorityHints.isEmpty() || unpublished.isNotEmpty()) {
+                    return IdkResult.err(
+                        TrustChainValidationFailedError(
+                            entityId = entityIdentifier,
+                            reason = "Starting authority_hints must be a non-empty subset of the published " +
+                                "authority_hints; not published: ${unpublished.joinToString()}",
+                        )
+                    )
+                }
+            }
+
             // Apply leaf EC trust_anchor_hints (OIDFed 1.1 §3.1.2) before graph walk / selection
             val publishedHints = fetchLeafTrustAnchorHints(entityIdentifier)
             val trustAnchors = TrustAnchorHints.effectiveTrustAnchors(configuredTrustAnchors, publishedHints)
@@ -91,7 +110,7 @@ class ResolveTrustChainCommandImpl(
             }
 
             // Special case: entity itself is a configured Trust Anchor → single-EC chain
-            if (trustAnchors.contains(entityIdentifier)) {
+            if (startingAuthorityHints == null && trustAnchors.contains(entityIdentifier)) {
                 val taEc = fetchAndVerifySelfEntityConfiguration(entityIdentifier)
                 if (taEc != null) {
                     logger.info("Entity $entityIdentifier is a Trust Anchor; returning self-signed EC chain")
@@ -107,6 +126,7 @@ class ResolveTrustChainCommandImpl(
                 depth = 0,
                 maxDepth = maxDepth,
                 out = candidates,
+                startingAuthorityHints = startingAuthorityHints,
             )
 
             val selected = TrustChainTopology.selectPreferredChain(
@@ -154,6 +174,7 @@ class ResolveTrustChainCommandImpl(
         depth: Int,
         maxDepth: Int,
         out: MutableList<List<String>>,
+        startingAuthorityHints: List<String>? = null,
     ) {
         if (depth >= maxDepth) {
             logger.debug("Maximum depth reached ($maxDepth) at $entityIdentifier")
@@ -180,7 +201,11 @@ class ResolveTrustChainCommandImpl(
             // still explore superiors if any (rare multi-federation TA)
         }
 
-        val authorityHints = entityStatement.authorityHints
+        val authorityHints = if (prefix.isEmpty() && startingAuthorityHints != null) {
+            entityStatement.authorityHints.orEmpty().filter { it in startingAuthorityHints }
+        } else {
+            entityStatement.authorityHints
+        }
         if (authorityHints.isNullOrEmpty()) {
             logger.debug("No authority_hints for $entityIdentifier")
             return

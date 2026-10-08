@@ -11,11 +11,16 @@ import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
  * @param entityIdentifier The entity identifier for which to build the trust chain.
  * @param trustAnchors The trust anchors to use for building the trust chain.
  * @param maxDepth The maximum depth to search for trust chain links.
+ * @param startingAuthorityHints When set, discovery starts only from these Immediate Superiors of the subject
+ *   instead of every published `authority_hints` entry. Each entry must be one of the subject's published
+ *   `authority_hints`. Used where a protocol fixes the starting points, such as Explicit Registration
+ *   (OpenID Federation for OpenID Connect 1.1 §12.2.2 and §12.2.5).
  */
 data class ResolveTrustChainArgs(
     val entityIdentifier: String,
     val trustAnchors: Array<String>,
-    val maxDepth: Int = 5
+    val maxDepth: Int = 5,
+    val startingAuthorityHints: List<String>? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -26,6 +31,7 @@ data class ResolveTrustChainArgs(
         if (entityIdentifier != other.entityIdentifier) return false
         if (!trustAnchors.contentEquals(other.trustAnchors)) return false
         if (maxDepth != other.maxDepth) return false
+        if (startingAuthorityHints != other.startingAuthorityHints) return false
 
         return true
     }
@@ -34,6 +40,7 @@ data class ResolveTrustChainArgs(
         var result = entityIdentifier.hashCode()
         result = 31 * result + trustAnchors.contentHashCode()
         result = 31 * result + maxDepth
+        result = 31 * result + (startingAuthorityHints?.hashCode() ?: 0)
         return result
     }
 }
