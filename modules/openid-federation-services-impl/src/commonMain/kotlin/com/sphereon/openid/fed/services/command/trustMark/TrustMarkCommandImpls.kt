@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -64,9 +66,9 @@ class GetTrustMarksForAccountCommandImpl(
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkCommand>())
 class CreateTrustMarkCommandImpl(
     execution: SessionExecution,
-    private val jwkService: JwkService,
     private val jwtService: JwtService,
-    private val tenantContextResolver: TenantContextResolver
+    private val tenantContextResolver: TenantContextResolver,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
 ) : TypedServiceCommandAdapter<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>(
     commandId = CreateTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<CreateTrustMarkArgs>(),
@@ -77,17 +79,14 @@ class CreateTrustMarkCommandImpl(
 
     override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
         val (tenantId, request, currentTimeMillis) = applyDuring(args)
-        val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
-        if (keysResult.isErr) return keysResult.error.asErrorResult()
-        val keys = keysResult.value
-        if (keys.isEmpty()) return federationErr(KeyNotFoundError("account:$tenantId"))
-
-        val key = keys[0]
         val iat = request.iat ?: (currentTimeMillis / 1000).toDouble()
+        val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
+        val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, accountIdentifier))
+        if (resolved.isErr) return resolved.error.asErrorResult()
+        val key = resolved.value
 
         return try {
-            val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
-                ?: return federationErr(TenantNotFoundError(tenantId))
 
             val trustMark = TrustMarkObjectBuilder()
                 .iss(accountIdentifier)
@@ -100,7 +99,7 @@ class CreateTrustMarkCommandImpl(
                 .trustMarkLifetime(request.trustMarkLifetime)
             if (request.exp != null) trustMark.exp(request.exp)
 
-            val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg ?: "RS256")
+            val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg)
             val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms)
             if (jwtResult.isErr) return jwtResult.error.asErrorResult()
             val jwt = jwtResult.value

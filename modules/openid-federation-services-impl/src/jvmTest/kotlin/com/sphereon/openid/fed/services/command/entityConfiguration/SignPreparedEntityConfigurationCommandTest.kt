@@ -348,6 +348,37 @@ class SignPreparedEntityConfigurationCommandTest {
         return signed.value
     }
 
+    private fun resolveCommand() =
+        com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommandImpl(execution, findSelectionCommand(), jwkQueries)
+
+    private suspend fun resolve(accountId: String) = resolveCommand().execute(
+        com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs(accountId, identifier),
+    )
+
+    @Test
+    fun resolvedSigningKeyIsExactlyThePersistedSelectionWithoutAnyFallback() = runTest {
+        val accountId = account()
+        key(accountId)
+        key(accountId)
+        assertTrue(resolve(accountId).isErr, "Persisted keys without a selection must never be picked")
+
+        val selected = selectedSigningKey(accountId)
+        val resolved = resolve(accountId)
+        assertTrue(resolved.isOk)
+        assertEquals(selected.id, resolved.value.keyId)
+        assertEquals(selected.kid, resolved.value.kid)
+        assertEquals("ES256", resolved.value.alg)
+        assertEquals(selected.kms_key_ref, resolved.value.kmsKeyRef)
+        assertEquals(selected.kms, resolved.value.kms)
+        assertEquals(1L, resolved.value.selectionRevision)
+
+        updatePersistedJwkField(selected.id, "alg", null)
+        assertTrue(resolve(accountId).isErr, "A selected key without an algorithm is refused, not defaulted")
+        updatePersistedJwkField(selected.id, "alg", "ES256")
+        updatePersistedJwkField(selected.id, "kid", null)
+        assertTrue(resolve(accountId).isErr, "A selected key without a kid is refused")
+    }
+
     @Test
     fun persistedSoftwareKmsRouteSignsAndVerifiesIndependentlyOfTheNewCommand() = runTest {
         val accountId = account()

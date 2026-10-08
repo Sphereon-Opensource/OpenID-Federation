@@ -59,10 +59,6 @@ class FindEntityConfigurationByAccountCommandImpl(
     private val logger = execution.federationLogger("FindEntityConfigurationByAccountCommand")
     private val queries = Persistence
 
-    companion object {
-        private const val EXPIRATION_PERIOD_SECONDS = 3600L * 24 * 365
-    }
-
     override suspend fun doExecute(
         args: FindEntityConfigurationByAccountArgs,
         applyDuring: (FindEntityConfigurationByAccountArgs) -> FindEntityConfigurationByAccountArgs
@@ -85,11 +81,14 @@ class FindEntityConfigurationByAccountCommandImpl(
             return keysResult.error.asErrorResult()
         }
         val keys = keysResult.value
+        val lifetimeSeconds = configBinder.getFederationConfig().statementLifetimeSeconds
+            ?: return federationErr(ServerError("Entity Configuration lifetime is not configured"))
 
         return try {
             val entityConfigBuilder = createBaseEntityConfigurationStatement(
                 identifier,
-                keys.map { it.toJwk() }.toTypedArray()
+                keys.map { it.toJwk() }.toTypedArray(),
+                lifetimeSeconds,
             )
 
             addComponents(tenantId, entityConfigBuilder, identifier)
@@ -104,13 +103,14 @@ class FindEntityConfigurationByAccountCommandImpl(
 
     private fun createBaseEntityConfigurationStatement(
         identifier: String,
-        keys: Array<Jwk>
+        keys: Array<Jwk>,
+        lifetimeSeconds: Long,
     ): EntityConfigurationStatementObjectBuilder {
         val currentTimeSeconds = System.currentTimeMillis() / 1000
         return EntityConfigurationStatementObjectBuilder()
             .iss(identifier)
             .iat(currentTimeSeconds.toDouble())
-            .exp((currentTimeSeconds + EXPIRATION_PERIOD_SECONDS).toDouble())
+            .exp((currentTimeSeconds + lifetimeSeconds).toDouble())
             .jwks(keys.toMutableList())
     }
 

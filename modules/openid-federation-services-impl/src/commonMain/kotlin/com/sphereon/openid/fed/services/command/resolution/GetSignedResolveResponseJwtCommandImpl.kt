@@ -1,5 +1,9 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -33,8 +37,9 @@ import dev.zacsweers.metro.SingleIn
 class GetSignedResolveResponseJwtCommandImpl(
     execution: SessionExecution,
     private val resolveEntityCommand: ResolveEntityCommand,
-    private val jwkService: JwkService,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val tenantContextResolver: TenantContextResolver,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
 ) : TypedServiceCommandAdapter<GetSignedResolveResponseJwtArgs, String, FederationError>(
     commandId = GetSignedResolveResponseJwtCommand.COMMAND_ID,
     execution = execution,
@@ -64,25 +69,20 @@ class GetSignedResolveResponseJwtCommandImpl(
                 logger.debug("Successfully built resolve response")
 
                 try {
-                    val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
-                    if (keysResult.isErr) {
-                        return keysResult.error.asErrorResult()
+                    val identifier = tenantContextResolver.resolveIdentifier(tenantId)
+                        ?: return federationErr(TenantNotFoundError(tenantId))
+                    val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, identifier))
+                    if (resolved.isErr) {
+                        return resolved.error.asErrorResult()
                     }
-
-                    val keys = keysResult.value
-                    if (keys.isEmpty()) {
-                        logger.error("No keys found for account: ${tenantId}")
-                        return federationErr(KeyNotFoundError(keyId = "account:${tenantId}"))
-                    }
-
-                    val key = keys[0]
+                    val key = resolved.value
                     logger.debug("Using key with kid: ${key.kid}")
 
                     // OIDFed 1.1 §8.3.2 / §15.3: typ is "resolve-response+jwt"
                     // (media type is application/resolve-response+jwt on the HTTP response)
                     val jwtHeader = JwtHeader(
                         kid = key.kid,
-                        alg = key.alg ?: "RS256",
+                        alg = key.alg,
                         typ = "resolve-response+jwt"
                     )
 

@@ -185,7 +185,14 @@ class GetSubordinateStatementCommandTest {
 
     private fun command() = GetSubordinateStatementCommandImpl(
         execution, resolver, subordinateQueries, keyQueries, metadataQueries, constraintQueries, policyQueries,
+        configuredLifetime(86_400),
     )
+
+    private fun configuredLifetime(seconds: Long?) =
+        object : com.sphereon.openid.fed.client.config.AppConfigOidfConfigBinder(io.mockk.mockk(relaxed = true)) {
+            override fun getFederationConfig() =
+                com.sphereon.openid.fed.core.config.FederationConfig(statementLifetimeSeconds = seconds)
+        }
 
     // Complete persisted values (including deleted rows and timestamps), not generated output expectations.
     private fun rows(): Map<String, List<String>> = source.connection.use { connection ->
@@ -263,6 +270,19 @@ class GetSubordinateStatementCommandTest {
         assertEquals(listOf(ownAccount), resolverCalls)
         assertEquals(setOf("Subordinate", "SubordinateJwk", "SubordinateMetadata", "SubordinateConstraint", "MetadataPolicy"),
             reads.tables.toSet())
+    }
+
+    @Test
+    fun configuredLifetimeBoundsExpiryAndAbsentLifetimeIssuesNothing() = runTest {
+        val statement = observe().value
+        assertEquals(86_400L, (statement.exp - statement.iat).toLong())
+
+        val unconfigured = GetSubordinateStatementCommandImpl(
+            execution, resolver, subordinateQueries, keyQueries, metadataQueries, constraintQueries, policyQueries,
+            configuredLifetime(null),
+        ).execute(GetSubordinateStatementArgs(ownAccount, ownChild))
+        assertTrue(unconfigured.isErr, "Without a configured lifetime no statement is issued")
+        assertIs<ServerError>(unconfigured.error)
     }
 
     @Test

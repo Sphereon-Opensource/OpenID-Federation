@@ -71,6 +71,8 @@ open class AppConfigOidfConfigBinder(
                 OidfConfigKeys.Federation.ENDPOINT_AUTH_TRUST_ANCHORS,
                 emptyList(),
             ),
+            statementLifetimeSeconds = getProperty(OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS, "")
+                .trim().toLongOrNull()?.takeIf { it > 0 },
         )
     }
 

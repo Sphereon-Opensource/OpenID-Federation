@@ -124,6 +124,16 @@ win over APP defaults.
 | Header principal claim | `oidf.identity.account.header.principal.claim` | `…identity.account.header.principal.claim` |
 | Header allow-list | `oidf.identity.account.header.allowed.principals` | `…identity.account.header.allowed.principals` |
 
+### Statement lifetime (required)
+
+`oidf.federation.statement.lifetime.seconds` sets how long signed Entity Configurations and Subordinate
+Statements stay valid, as a positive number of seconds. There is no default: preparing or signing a
+statement fails until the host configures it.
+
+```properties
+oidf.federation.statement.lifetime.seconds=86400
+```
+
 ### Client offline Trust Chain freshness (optional)
 
 Applied when verifying a pre-built chain offline (`trust_chain` header / `verifyOfflineTrustChain`),

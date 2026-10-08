@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services
 
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
@@ -82,7 +84,7 @@ class TrustMarkServiceImpl(
     private val getTrustMarkStatusCommand: GetTrustMarkStatusCommand,
     private val getTrustMarkedSubsCommand: GetTrustMarkedSubsCommand,
     private val getTrustMarkCommand: GetTrustMarkCommand,
-    private val jwkService: JwkService,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
     private val jwtService: JwtService,
     private val tenantContextResolver: TenantContextResolver
 ) : TrustMarkService {
@@ -134,16 +136,11 @@ class TrustMarkServiceImpl(
             val issuer = tenantContextResolver.resolveIdentifier(tenantId)
                 ?: return@andThenSuspend ServerError("Cannot resolve issuer identifier", null, null).toErr()
 
-            val keysResult = jwkService.getKeys(tenantId, includeRevoked = false)
-            if (keysResult.isErr) {
-                return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
+            val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, issuer))
+            if (resolved.isErr) {
+                return@andThenSuspend resolved.error.toErr()
             }
-            val keys = keysResult.value
-            if (keys.isEmpty()) {
-                return@andThenSuspend KeyNotFoundError(keyId = "account:$tenantId").toErr()
-            }
-
-            val key = keys[0]
+            val key = resolved.value
             val now = System.currentTimeMillis() / 1000
             // Echo the Trust Mark under evaluation (submitted JWT preferred — §8.4.2)
             val markForResponse = trustMarkJwt?.takeIf { it.isNotBlank() }
@@ -158,7 +155,7 @@ class TrustMarkServiceImpl(
 
             val header = JwtHeader(
                 kid = key.kid,
-                alg = key.alg ?: "RS256",
+                alg = key.alg,
                 typ = "trust-mark-status-response+jwt"
             )
 
