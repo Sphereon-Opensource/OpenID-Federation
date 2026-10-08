@@ -8,6 +8,7 @@ import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.session.asCoreApiServiceGraph
 import com.sphereon.di.context.PrincipalType
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.SubordinateNotFoundError
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
@@ -328,6 +329,23 @@ class GetSubordinateStatementCommandTest {
     @Test fun wrongTypedConstraintsMustNotSilentlyBecomeAbsent() = runTest {
         constraintQueries.create(ownAccount, ownChild, """{"max_path_length":"two"}""").executeAsOne()
         assertServerError()
+    }
+
+    @Test fun outOfRangeConstraintsAreRefusedNotPublished() = runTest {
+        constraintQueries.create(ownAccount, ownChild, """{"max_path_length":-1}""").executeAsOne()
+        assertServerError()
+    }
+
+    @Test fun policyWithWrongOperatorTypeIsRefusedNotPublished() = runTest {
+        policyQueries.create(ownAccount, "openid_provider", """{"grant_types":{"subset_of":"authorization_code"}}""").executeAsOne()
+        assertServerError()
+    }
+
+    @Test fun childWithoutPublicKeysIsNotVouchedFor() = runTest {
+        keyQueries.findBySubordinateId(ownChild).executeAsList().forEach { keyQueries.delete(it.id).executeAsOne() }
+        val result = observe()
+        assertTrue(result.isErr, "A statement without the child's keys must not be issued")
+        assertIs<InvalidRequestError>(result.error)
     }
 
     @Test fun malformedPolicyMustNotSilentlyBecomeAbsent() = runTest {

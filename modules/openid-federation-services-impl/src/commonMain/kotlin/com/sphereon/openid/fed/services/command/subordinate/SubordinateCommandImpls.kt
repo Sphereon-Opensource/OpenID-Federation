@@ -16,7 +16,9 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.common.builder.FederationEndpointUrls
 import com.sphereon.openid.fed.common.builder.SubordinateStatementObjectBuilder
+import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.core.error.InvalidRequestError
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.SubordinateNotFoundError
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
@@ -42,6 +44,7 @@ import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.signPayload
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -233,7 +236,10 @@ class GetSubordinateStatementCommandImpl internal constructor(
                 .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsOneOrNull()
             val constraints = constraintEntity?.let {
-                Json.decodeFromString<Constraints>(it.constraints)
+                val parsed = EntityStatementValidation.parseConstraints(Json.parseToJsonElement(it.constraints))
+                parsed.constraints ?: return federationErr(
+                    ServerError("Stored subordinate constraints are invalid", parsed.reason)
+                )
             }
 
             buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList, constraints)
@@ -270,6 +276,9 @@ class GetSubordinateStatementCommandImpl internal constructor(
             // Must equal published federation_fetch_endpoint (OIDFed 1.1 §3.1.3 / §5.1.1)
             .sourceEndpoint(FederationEndpointUrls.fetch(accountIdentifier))
 
+        if (subordinateJwks.isEmpty()) {
+            return federationErr(InvalidRequestError("Subordinate ${subordinate.identifier} has no public keys to vouch for"))
+        }
         subordinateJwks.forEach { statement.jwks(it) }
         subordinateMetadataList.forEach {
             val metadataJson = Json.parseToJsonElement(it.metadata).jsonObject
@@ -282,6 +291,13 @@ class GetSubordinateStatementCommandImpl internal constructor(
             .executeAsList()
             .forEach { policyRow ->
                 val policyJson = Json.parseToJsonElement(policyRow.policy).jsonObject
+                val checked = MetadataPolicyOperators.mergePolicies(
+                    JsonObject(emptyMap()),
+                    JsonObject(mapOf(policyRow.key to policyJson)),
+                )
+                if (checked is MetadataPolicyOperators.PolicyMergeResult.Error) {
+                    return federationErr(ServerError("Stored metadata policy for ${policyRow.key} is invalid", checked.reason))
+                }
                 statement.metadataPolicy(Pair(policyRow.key, policyJson))
             }
 
