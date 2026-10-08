@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.context.FederationContext
@@ -73,6 +74,7 @@ class ResolveRegistrationClientCommandImpl(
     execution: SessionExecution,
     resolveTrustChain: ResolveTrustChainCommand,
     verifyTrustChain: VerifyTrustChainCommand,
+    getEntityConfiguration: GetEntityConfigurationCommand,
     context: FederationContext,
     jwtService: JwtService,
 ) : TypedServiceCommandAdapter<ResolveRegistrationClientArgs, ResolvedRegistrationClient, FederationError>(
@@ -83,7 +85,7 @@ class ResolveRegistrationClientCommandImpl(
 ), ResolveRegistrationClientCommand {
 
     private val clients = RegistrationClientResolver(
-        RegistrationTrustChains(resolveTrustChain, verifyTrustChain),
+        RegistrationTrustChains(resolveTrustChain, verifyTrustChain, getEntityConfiguration),
         EntityTypeKeyResolver(context, jwtService),
     )
 

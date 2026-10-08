@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.services.command.registration
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.crypto.jose.jws.JwtService
+import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
@@ -122,12 +123,13 @@ internal data class VerifiedRegistrationChain(
 }
 
 /**
- * Trust Chain resolution and verification for registration. Only the caller's Trust Anchors are accepted and
- * each is verified against its own out-of-band keys; nothing is looked up elsewhere.
+ * Trust Chain resolution and verification for registration. Only the caller's Trust Anchors are accepted, each with
+ * the keys it publishes itself or the keys pinned for it.
  */
 internal class RegistrationTrustChains(
     private val resolveTrustChain: ResolveTrustChainCommand,
     private val verifyTrustChain: VerifyTrustChainCommand,
+    private val getEntityConfiguration: GetEntityConfigurationCommand,
 ) {
     suspend fun resolve(
         subject: String,
@@ -169,15 +171,14 @@ internal class RegistrationTrustChains(
         val trustAnchorId = payloads.last().text("iss") ?: return invalid("Trust Chain has no Trust Anchor issuer")
         val anchor = trustAnchors.firstOrNull { it.entityIdentifier == trustAnchorId }
             ?: return federationErr(InvalidTrustAnchorError(trustAnchorId, "Not an accepted Trust Anchor"))
-        if (anchor.publicKeys.isEmpty()) {
-            return federationErr(InvalidTrustAnchorError(trustAnchorId, "No out-of-band public keys for the Trust Anchor"))
-        }
         val now = getCurrentEpochTimeSeconds()
+        val anchorKeys = anchorKeys(anchor, now)
+        if (anchorKeys.isErr) return federationErr(anchorKeys.error)
         val verified = verifyTrustChain.verifyTrustChain(
             trustChain = chain.toTypedArray(),
             trustAnchor = trustAnchorId,
             currentTime = now,
-            trustAnchorPublicKeys = anchor.publicKeys,
+            trustAnchorPublicKeys = anchorKeys.value,
         )
         if (verified.isErr) return federationErr(verified.error)
         if (!verified.value.isValid) return invalid(verified.value.errorMessage ?: "Trust Chain verification returned invalid")
@@ -187,6 +188,29 @@ internal class RegistrationTrustChains(
         val validUntil = expiries.min()
         if (validUntil <= now) return invalid("Trust Chain has expired")
         return IdkResult.ok(VerifiedRegistrationChain(chain, payloads, trustAnchorId, validUntil))
+    }
+
+    /**
+     * The anchor's keys: pinned keys when configured, otherwise the `jwks` of the Entity Configuration the anchor
+     * publishes at its own Entity Identifier, self-signed and current.
+     */
+    private suspend fun anchorKeys(anchor: RegistrationTrustAnchor, now: Long): IdkResult<List<Jwk>, FederationError> {
+        val id = anchor.entityIdentifier
+        anchor.pinnedKeys?.let { pinned ->
+            if (pinned.isEmpty()) return federationErr(InvalidTrustAnchorError(id, "Pinned keys must not be empty"))
+            return IdkResult.ok(pinned)
+        }
+        if (!id.startsWith("https://")) return federationErr(InvalidTrustAnchorError(id, "A Trust Anchor is referenced by its https Entity Identifier"))
+        val published = getEntityConfiguration.getEntityConfiguration(id)
+        if (published.isErr) return federationErr(InvalidTrustAnchorError(id, "Entity Configuration unavailable: ${published.error.message.defaultMessage}"))
+        val statement = published.value
+        if (statement.iss != id || statement.sub != id) {
+            return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration is not issued by the Trust Anchor"))
+        }
+        if (statement.exp.toLong() <= now) return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration has expired"))
+        val keys = statement.jwks.propertyKeys.orEmpty()
+        if (keys.isEmpty()) return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration has no keys"))
+        return IdkResult.ok(keys)
     }
 }
 

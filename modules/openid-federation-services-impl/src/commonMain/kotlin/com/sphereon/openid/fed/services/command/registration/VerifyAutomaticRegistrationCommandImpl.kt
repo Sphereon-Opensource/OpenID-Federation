@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.context.FederationContext
@@ -36,6 +37,7 @@ class VerifyAutomaticRegistrationCommandImpl(
     execution: SessionExecution,
     resolveTrustChain: ResolveTrustChainCommand,
     verifyTrustChain: VerifyTrustChainCommand,
+    getEntityConfiguration: GetEntityConfigurationCommand,
     context: FederationContext,
     private val jwtService: JwtService,
     private val jtiStore: RegistrationProofJtiStore,
@@ -46,7 +48,7 @@ class VerifyAutomaticRegistrationCommandImpl(
     outputTypeToken = typeToken<VerifiedAutomaticRegistration>(),
 ), VerifyAutomaticRegistrationCommand {
 
-    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain)
+    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain, getEntityConfiguration)
     private val clients = RegistrationClientResolver(chains, EntityTypeKeyResolver(context, jwtService))
 
     private class SignedProof(val jws: CompactJws, val kid: String, val jti: String, val exp: Long)

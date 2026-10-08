@@ -10,9 +10,13 @@ credentials are assigned, and where registrations are stored.
 
 ## Trust Anchors
 
-Every command takes the accepted Trust Anchors as `RegistrationTrustAnchor` values: an Entity Identifier with its
-out-of-band public keys. A Trust Chain is accepted only when it ends at one of them and verifies against that
-anchor's keys. Nothing else is consulted.
+Every command takes the accepted Trust Anchors as `RegistrationTrustAnchor` values. A Trust Anchor is referenced by
+its HTTPS Entity Identifier: its keys come from the self-signed Entity Configuration it publishes at its own
+`/.well-known/openid-federation`, never from statements a counterparty supplies. A Trust Chain is accepted only when it
+ends at one of these anchors and verifies against that anchor's keys.
+
+`pinnedKeys` replaces the lookup with keys distributed another way. It is an option for special deployments and is
+not normally set.
 
 ## Automatic Registration
 

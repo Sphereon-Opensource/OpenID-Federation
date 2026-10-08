@@ -29,10 +29,15 @@ enum class RegistrationProfile(val clientEntityType: String, val providerEntityT
     OAUTH2("oauth_client", "oauth_authorization_server"),
 }
 
-/** A Trust Anchor the caller accepts, with its out-of-band public keys as the root of trust. */
+/**
+ * A Trust Anchor the caller accepts, identified by reference: its HTTPS Entity Identifier. Its keys are taken from the
+ * Entity Configuration published at the anchor's own `/.well-known/openid-federation`, never from a statement a
+ * counterparty supplies. [pinnedKeys] optionally replaces that lookup with keys distributed some other way; it is not
+ * normally used.
+ */
 data class RegistrationTrustAnchor(
     val entityIdentifier: String,
-    val publicKeys: List<Jwk>,
+    val pinnedKeys: List<Jwk>? = null,
 )
 
 // -----------------------------------------------------------------------------

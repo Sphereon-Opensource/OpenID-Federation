@@ -13,6 +13,7 @@ import com.sphereon.crypto.jose.jws.JwtServiceImpl
 import com.sphereon.crypto.kms.provider.software.SoftwareKmsProviderConfig
 import com.sphereon.crypto.kms.provider.software.SoftwareKmsProviderFactoryImpl
 import com.sphereon.di.context.PrincipalType
+import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommandImpl
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommandImpl
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommandImpl
@@ -82,6 +83,7 @@ class FederationRegistrationCommandsTest {
     private var httpClient: HttpClient? = null
     private val published = mutableMapOf<String, String>()
     private var networkRequests = 0
+    private val requested = mutableListOf<String>()
     private var now = 0L
 
     private data class Key(val kid: String, val alias: String, val provider: String, val public: JsonObject) {
@@ -121,6 +123,7 @@ class FederationRegistrationCommandsTest {
                     } else {
                         "${url.protocol.name}://${url.host}${url.encodedPath}"
                     }
+                    requested += key
                     published[key]?.let { respond(it, HttpStatusCode.OK) }
                         ?: respond("not published", HttpStatusCode.NotFound)
                 }
@@ -228,13 +231,14 @@ class FederationRegistrationCommandsTest {
         published["$ta/fetch?sub=$op"] = taAboutOp
     }
 
-    private val anchors get() = listOf(RegistrationTrustAnchor(ta, listOf(taKey.jwk)))
+    private val anchors get() = listOf(RegistrationTrustAnchor(ta))
 
     private fun resolver() = ResolveTrustChainCommandImpl(execution, context)
     private fun verifier() = VerifyTrustChainCommandImpl(execution, context)
+    private fun configurations() = GetEntityConfigurationCommandImpl(execution, context)
 
     private fun automatic(store: RegistrationProofJtiStore = InMemoryRegistrationProofJtiStore()) =
-        VerifyAutomaticRegistrationCommandImpl(execution, resolver(), verifier(), context, jwtService, store)
+        VerifyAutomaticRegistrationCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService, store)
 
     private suspend fun requestObject(
         signer: Key = rpClientKey,
@@ -296,7 +300,7 @@ class FederationRegistrationCommandsTest {
 
     @Test
     fun automaticRegistrationOnlyAcceptsTheCallersTrustAnchors() = runTest {
-        val otherAnchor = RegistrationTrustAnchor("https://other-ta.example", listOf(taKey.jwk))
+        val otherAnchor = RegistrationTrustAnchor("https://other-ta.example")
         val discovered = automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(requestObject()), listOf(otherAnchor)))
         assertTrue(discovered.isErr)
 
@@ -308,7 +312,7 @@ class FederationRegistrationCommandsTest {
 
     @Test
     fun resolvedClientCarriesOnlyPublishedClientSigningKeys() = runTest {
-        val command = ResolveRegistrationClientCommandImpl(execution, resolver(), verifier(), context, jwtService)
+        val command = ResolveRegistrationClientCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService)
         val resolved = command.execute(ResolveRegistrationClientArgs(rp, RegistrationProfile.OPENID_CONNECT, anchors))
 
         assertTrue(resolved.isOk, "client must resolve: ${if (resolved.isErr) resolved.error else ""}")
@@ -324,12 +328,35 @@ class FederationRegistrationCommandsTest {
     @Test
     fun automaticTrustChainHeaderIsVerifiedWithoutDiscovery() = runTest {
         val jwt = requestObject(trustChain = listOf(rpConfiguration, taAboutRp, taConfiguration))
-        val before = networkRequests
+        requested.clear()
         val verified = automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(jwt)))
 
         assertTrue(verified.isOk, "trust_chain header must verify: ${if (verified.isErr) verified.error else ""}")
-        assertEquals(before, networkRequests)
+        assertEquals(setOf("$ta/.well-known/openid-federation"), requested.toSet(), "only the anchor itself is consulted")
         assertEquals(listOf(rpConfiguration, taAboutRp, taConfiguration), verified.value.client.trustChain)
+    }
+
+    @Test
+    fun anchorKeysComeFromTheAnchorItselfNotFromTheSuppliedChain() = runTest {
+        val forger = key()
+        val forgedAnchor = sign(
+            statementClaims(ta, ta, jwks(forger), metadata = buildJsonObject {
+                put("federation_entity", buildJsonObject { put("federation_fetch_endpoint", "$ta/fetch") })
+            }),
+            forger, "entity-statement+jwt",
+        )
+        val forgedAboutRp = sign(statementClaims(ta, rp, jwks(rpFederationKey)), forger, "entity-statement+jwt")
+        val forged = requestObject(trustChain = listOf(rpConfiguration, forgedAboutRp, forgedAnchor))
+        assertTrue(automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(forged))).isErr)
+
+        val pinnedWrong = listOf(RegistrationTrustAnchor(ta, pinnedKeys = listOf(forger.jwk)))
+        assertTrue(automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(requestObject()), pinnedWrong)).isErr)
+        val pinnedRight = listOf(RegistrationTrustAnchor(ta, pinnedKeys = listOf(taKey.jwk)))
+        val pinned = automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(requestObject()), pinnedRight))
+        assertTrue(pinned.isOk, "pinned anchor keys must verify: ${if (pinned.isErr) pinned.error else ""}")
+        assertIs<InvalidTrustAnchorError>(
+            automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(requestObject()), listOf(RegistrationTrustAnchor(ta, pinnedKeys = emptyList())))).error
+        )
     }
 
     @Test
@@ -408,11 +435,11 @@ class FederationRegistrationCommandsTest {
     }
 
     private fun create() = CreateExplicitRegistrationRequestCommandImpl(
-        execution, resolver(), verifier(), tenants, OwnConfigurations(), SelectedKeys(), jwtService,
+        execution, resolver(), verifier(), configurations(), tenants, OwnConfigurations(), SelectedKeys(), jwtService,
     )
-    private fun verifyRequest() = VerifyExplicitRegistrationRequestCommandImpl(execution, resolver(), verifier(), context, jwtService)
+    private fun verifyRequest() = VerifyExplicitRegistrationRequestCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService)
     private fun signResponse() = SignExplicitRegistrationResponseCommandImpl(execution, tenants, SelectedKeys(), jwtService)
-    private fun verifyResponse() = VerifyExplicitRegistrationResponseCommandImpl(execution, resolver(), verifier(), jwtService)
+    private fun verifyResponse() = VerifyExplicitRegistrationResponseCommandImpl(execution, resolver(), verifier(), configurations(), jwtService)
 
     private suspend fun explicitRequest(includeTrustChains: Boolean): ExplicitRegistrationRequest {
         val created = create().execute(
