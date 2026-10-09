@@ -1,5 +1,9 @@
 package com.sphereon.openid.fed.services.command.registration
 
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkDelegationCommandImpl
+import com.sphereon.openid.fed.services.command.trustMark.CreateTrustMarkDelegationArgs
+import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkDelegationCommandImpl
+import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkDelegationArgs
 import com.sphereon.openid.fed.client.command.trustChain.PublishedTrustAnchorKeyResolver
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommandImpl
 import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustArgs
@@ -667,4 +671,51 @@ class FederationRegistrationCommandsTest {
         )
         assertIs<InvalidMetadataError>(verifyResponse().execute(VerifyExplicitRegistrationResponseArgs(request, fewerTypes, anchors)).error)
     }
+
+    // ---------------------------------------------------------------------------------------------------------
+    // Trust Mark delegation (OpenID Federation 1.1 section 7.2)
+    // ---------------------------------------------------------------------------------------------------------
+
+    private val delegatedType = "https://ta.example/marks/certified"
+
+    private fun anchorWithOwner(ownerKeys: JsonObject): EntityConfigurationStatement = json.decodeFromJsonElement(
+        JsonObject(statementClaims(ta, ta, jwks(taKey)) + ("trust_mark_owners" to buildJsonObject {
+            put(delegatedType, buildJsonObject { put("sub", op); put("jwks", ownerKeys) })
+        })),
+    )
+
+    private suspend fun delegate(issuedAt: Long, expiresAt: Long?): String {
+        val created = CreateTrustMarkDelegationCommandImpl(execution, jwtService, tenants, SelectedKeys())
+            .execute(CreateTrustMarkDelegationArgs("op-account", delegatedType, rp, issuedAt, expiresAt))
+        assertTrue(created.isOk, "the owner signs a delegation: ${if (created.isErr) created.error else ""}")
+        return created.value
+    }
+
+    @Test
+    fun anOwnersDelegationValidatesAgainstTheOwnerTheTrustAnchorRecords() = runTest {
+        val delegation = delegate(now - 10, now + 3_600)
+        val header = json.parseToJsonElement(delegation.substringBefore('.').let { String(java.util.Base64.getUrlDecoder().decode(it)) }).jsonObject
+        assertEquals("trust-mark-delegation+jwt", header["typ"]?.jsonPrimitive?.content)
+        val verify = VerifyTrustMarkDelegationCommandImpl(execution, context)
+
+        val valid = verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, rp, anchorWithOwner(jwks(opFederationKey)), now))
+        assertTrue(valid.isOk && valid.value.isValid, "a delegation from the recorded owner to this issuer is valid")
+
+        assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, op, anchorWithOwner(jwks(opFederationKey)), now)).isErr,
+            "the delegation names another issuer")
+        assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(delegation, "https://ta.example/marks/other", rp, anchorWithOwner(jwks(opFederationKey)), now)).isErr,
+            "the delegation is for another type, which the anchor records no owner for")
+        assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, rp, anchorWithOwner(jwks(rpFederationKey)), now)).isErr,
+            "the delegation is not signed with the recorded owner's keys")
+        val noOwner = json.decodeFromJsonElement<EntityConfigurationStatement>(statementClaims(ta, ta, jwks(taKey)))
+        assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, rp, noOwner, now)).isErr,
+            "a Trust Anchor that records no owner has no delegation to accept")
+
+        val expired = delegate(now - 7_200, now - 3_600)
+        assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(expired, delegatedType, rp, anchorWithOwner(jwks(opFederationKey)), now)).isErr,
+            "an expired delegation is invalid")
+        assertTrue(CreateTrustMarkDelegationCommandImpl(execution, jwtService, tenants, SelectedKeys())
+            .execute(CreateTrustMarkDelegationArgs("op-account", delegatedType, rp, now, now)).isErr, "a delegation must expire after it is issued")
+    }
 }
+

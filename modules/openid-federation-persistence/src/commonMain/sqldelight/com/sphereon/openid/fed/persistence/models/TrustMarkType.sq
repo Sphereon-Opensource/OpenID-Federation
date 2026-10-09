@@ -20,6 +20,12 @@ SET deleted_at = CURRENT_TIMESTAMP
 WHERE id = :id AND deleted_at IS NULL
 RETURNING *;
 
+setDelegation:
+UPDATE TrustMarkType
+SET delegation = :delegation, updated_at = CURRENT_TIMESTAMP
+WHERE account_id = :account_id AND id = :id AND deleted_at IS NULL
+RETURNING *;
+
 findByIdentifier:
 SELECT * FROM TrustMarkType
 WHERE identifier = :identifier AND deleted_at IS NULL;

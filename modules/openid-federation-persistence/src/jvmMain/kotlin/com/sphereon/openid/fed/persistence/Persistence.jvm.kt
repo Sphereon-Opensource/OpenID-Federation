@@ -6,6 +6,7 @@ import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.openid.fed.core.tenant.IdentityInstallState
 import com.sphereon.openid.fed.persistence.config.DatabaseConfig
+import com.sphereon.openid.fed.persistence.config.SchemaManagement
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.openid.fed.persistence.models.Account
@@ -41,6 +42,8 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkType
+import com.sphereon.openid.fed.persistence.models.TrustMarkOwner
+import com.sphereon.openid.fed.persistence.models.TrustMarkOwnerQueries
 import com.sphereon.openid.fed.persistence.models.TrustAnchorHint
 import com.sphereon.openid.fed.persistence.models.TrustAnchorHintQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateConstraint
@@ -65,6 +68,7 @@ actual object Persistence {
     actual val subordinateMetadataQueries: SubordinateMetadataQueries
     actual val trustMarkTypeQueries: TrustMarkTypeQueries
     actual val trustMarkIssuerQueries: TrustMarkIssuerQueries
+    actual val trustMarkOwnerQueries: TrustMarkOwnerQueries
     actual val trustMarkQueries: TrustMarkQueries
     actual val receivedTrustMarkQueries: ReceivedTrustMarkQueries
     actual val logQueries: LogQueries
@@ -95,14 +99,19 @@ actual object Persistence {
         19L to ("19.sqm" to "Create SubordinateConstraint table for subordinate entity constraints"),
         20L to ("20.sqm" to "Create ForeignSubordinateStatement table for received Immediate Superior JWTs"),
         21L to ("21.sqm" to "Create account-selected signing key binding with revision tracking"),
+        22L to ("22.sqm" to "Create TrustMarkOwner table and the issuer's Trust Mark delegation per type"),
     )
 
     private val driver: SqlDriver
     private val database: Database
 
     init {
-        driver = createDriver()
-        runMigrations(driver)
+        val config = DatabaseConfig()
+        driver = createDriver(config)
+        when (config.schemaManagement) {
+            SchemaManagement.MIGRATE -> runMigrations(driver)
+            SchemaManagement.VERIFY -> verifySchema(driver, Database.Schema.version)
+        }
         // We are mapping the Postgres UUID types to OpenAPI model string types
         database = Database(
             driver,
@@ -133,6 +142,7 @@ actual object Persistence {
             SubordinateStatementAdapter = SubordinateStatement.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkAdapter = TrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkIssuerAdapter = TrustMarkIssuer.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkOwnerAdapter = TrustMarkOwner.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             MetadataPolicyAdapter = MetadataPolicy.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustAnchorHintAdapter = TrustAnchorHint.Adapter(
@@ -163,6 +173,7 @@ actual object Persistence {
         subordinateMetadataQueries = database.subordinateMetadataQueries
         trustMarkTypeQueries = database.trustMarkTypeQueries
         trustMarkIssuerQueries = database.trustMarkIssuerQueries
+        trustMarkOwnerQueries = database.trustMarkOwnerQueries
         trustMarkQueries = database.trustMarkQueries
         receivedTrustMarkQueries = database.receivedTrustMarkQueries
         logQueries = database.logQueries
@@ -172,8 +183,7 @@ actual object Persistence {
         foreignSubordinateStatementQueries = database.foreignSubordinateStatementQueries
     }
 
-    private fun createDriver(): SqlDriver {
-        val config = DatabaseConfig()
+    private fun createDriver(config: DatabaseConfig): SqlDriver {
         return PlatformSqlDriver().createPostgresDriver(
             config.url,
             config.username,
@@ -321,5 +331,25 @@ actual object Persistence {
             bindLong(1, oldVersion)
             bindString(2, "Migrated from version $oldVersion to $newVersion")
         }
+    }
+}
+
+/**
+ * Checks, without any DDL, that the schema another service migrated is at [requiredVersion]. The install-state
+ * heuristic is left to the migrating service, so every service resolves the same identity mode default.
+ */
+internal fun verifySchema(driver: SqlDriver, requiredVersion: Long) {
+    val current = try {
+        driver.executeQuery(null, "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1", parameters = 0, mapper = { cursor: SqlCursor ->
+            QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else null)
+        }).value
+    } catch (e: Exception) {
+        throw IllegalStateException(
+            "The OpenID Federation schema has not been created. Start the service that migrates it first.", e,
+        )
+    }
+    check(current == requiredVersion) {
+        "The OpenID Federation schema is at version ${current ?: 0}, but this library needs version $requiredVersion. " +
+            "Start the service that migrates it first."
     }
 }

@@ -88,14 +88,6 @@ plugins {
     alias(libs.plugins.node.gradle) apply false
 }
 
-// Ordinary builds retain the complete target set. Finite JVM preparation opts in
-// with -Pcanonical.kmp.targets=jvm; never inherit a stale JVM system-property value.
-val canonicalKmpTargets = providers.gradleProperty("canonical.kmp.targets").orNull ?: "all"
-require(canonicalKmpTargets == "jvm" || canonicalKmpTargets == "all") {
-    "canonical.kmp.targets must be exactly jvm or all"
-}
-System.setProperty("kmp.targets", canonicalKmpTargets)
-
 fun getNpmVersion(): String {
     val baseVersion = project.version.toString()
     if (!baseVersion.endsWith("-SNAPSHOT")) {

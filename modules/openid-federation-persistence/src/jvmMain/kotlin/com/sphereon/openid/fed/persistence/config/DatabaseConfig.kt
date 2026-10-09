@@ -33,6 +33,15 @@ class DatabaseConfig {
 
     val password: String = resolvePassword()
 
+    val schemaManagement: SchemaManagement =
+        when (val value = OidfPropertyResolution.resolveString(key = OidfConfigKeys.Datasource.SCHEMA_MANAGEMENT, default = "migrate").trim().lowercase()) {
+            "migrate" -> SchemaManagement.MIGRATE
+            "verify" -> SchemaManagement.VERIFY
+            else -> throw IllegalStateException(
+                "Unknown oidf.datasource.schema.management '$value'. Use migrate or verify.",
+            )
+        }
+
     private fun resolvePassword(): String {
         val secretId = OidfPropertyResolution.resolveStringOrNull(
             secretIdKeyFor(OidfConfigKeys.Datasource.PASSWORD),
@@ -61,4 +70,13 @@ class DatabaseConfig {
         }
         return value
     }
+}
+
+/** Whether the library migrates its schema or only verifies that another service already did. */
+enum class SchemaManagement {
+    /** Apply pending migrations; the connection needs schema privileges. */
+    MIGRATE,
+
+    /** Run no DDL; refuse to start unless the schema is at the version this library needs. */
+    VERIFY,
 }

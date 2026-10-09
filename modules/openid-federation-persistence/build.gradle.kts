@@ -52,6 +52,8 @@ kotlin {
                 implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
                 implementation(sphereonlib.com.zaxxer.hikaricp)
                 implementation(sphereonlib.org.postgresql.postgresql)
+                implementation(sphereonlib.org.testcontainers.testcontainers)
+                implementation(sphereonlib.org.testcontainers.postgresql)
             }
         }
     }

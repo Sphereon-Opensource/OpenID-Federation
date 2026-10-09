@@ -1,5 +1,9 @@
 package com.sphereon.openid.fed.services.command.entityConfiguration
 
+import kotlinx.serialization.builtins.ListSerializer
+import com.sphereon.openid.fed.services.command.trustMark.TrustMarkOwnerKeysJson
+import com.sphereon.openid.fed.openapi.models.TrustMarkOwnerJwks
+import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import kotlinx.serialization.json.contentOrNull
@@ -129,6 +133,7 @@ class FindEntityConfigurationByAccountCommandImpl(
         addTrustAnchorHints(tenantId, builder)
         addCrits(tenantId, builder)
         addTrustMarkIssuers(tenantId, builder)
+        addTrustMarkOwners(tenantId, builder)
         addReceivedTrustMarks(tenantId, builder, identifier)
     }
 
@@ -254,6 +259,15 @@ class FindEntityConfigurationByAccountCommandImpl(
      * Only Trust Marks a relying party can still accept (OIDFed 1.1 §7.3): issued to this entity, already issued and not
      * expired. An expired or undecodable mark stays stored but is left out of the Entity Configuration.
      */
+    /** Owners the operator recorded for its Trust Mark types (OIDFed 1.1 section 7.2). */
+    private fun addTrustMarkOwners(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+        queries.trustMarkTypeQueries.findByAccountId(tenantId).executeAsList().forEach { type ->
+            val owner = queries.trustMarkOwnerQueries.findByTrustMarkTypeId(type.id).executeAsOneOrNull() ?: return@forEach
+            val keys = TrustMarkOwnerKeysJson.decodeFromString(ListSerializer(Jwk.serializer()), owner.jwks)
+            builder.trustMarkOwner(type.identifier, TrustMarkOwner(sub = owner.owner_identifier, jwks = TrustMarkOwnerJwks(propertyKeys = keys)))
+        }
+    }
+
     private fun addReceivedTrustMarks(tenantId: String, builder: EntityConfigurationStatementObjectBuilder, identifier: String) {
         val currentTimeSeconds = System.currentTimeMillis() / 1000
         queries.receivedTrustMarkQueries.findByAccountId(tenantId)

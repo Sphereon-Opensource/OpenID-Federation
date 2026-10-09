@@ -3,46 +3,6 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
-        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")?.takeIf { it.isNotEmpty() }
-        require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
-        val workspaceRepo = suppliedRepo?.trim()
-        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")?.takeIf { it.isNotEmpty() }
-        val exactRepositoryPolicy = listOf("WORKSPACE_REPOSITORY_POLICY", "WORKSPACE_REPOSITORY_POLICY_FILE",
-            "WORKSPACE_REPOSITORY_POLICY_SHA256").any { System.getenv(it) != null }
-        if (exactRepositoryPolicy) {
-            require(workspaceRepo == null && workspaceModules == null && System.getenv("WORKTREE_MAVEN_REPO").isNullOrEmpty()) {
-                "Exact repository policy cannot be mixed with legacy Maven selection"
-            }
-            // The captured helper validates inline/file policy and installs exact-version layers.
-            // Never interpret policy here or silently resolve its selected GAVs through ordinary repositories.
-            val policyHelper = java.io.File(settingsDir, "tooling/workspace-publish/repository-layers.gradle").canonicalFile
-            require(policyHelper.isFile && gradle.startParameter.initScripts.any { it.canonicalFile == policyHelper }) {
-                "Exact repository policy requires the captured repository-layers.gradle init script"
-            }
-        }
-        require(workspaceModules == null || workspaceRepo != null) {
-            "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
-        }
-        workspaceRepo?.let { value ->
-            val supplied = java.io.File(value)
-            require(supplied.isAbsolute) { "WORKSPACE_MAVEN_REPO must be an absolute path" }
-            val pinned = supplied.canonicalFile
-            require(pinned.isDirectory && pinned.name == "repo" && pinned.parentFile?.parentFile?.name == "generations") {
-                "WORKSPACE_MAVEN_REPO must be an existing immutable generations/<id>/repo directory"
-            }
-            require(!workspaceModules.isNullOrBlank()) { "WORKSPACE_MAVEN_MODULES must select prepared IDK artifact coordinates" }
-            val selected = workspaceModules.split(',').map { it.trim() }.onEach {
-                require(Regex("com\\.sphereon\\.idk:[A-Za-z0-9][A-Za-z0-9_.-]*").matches(it)) {
-                    "WORKSPACE_MAVEN_MODULES must contain comma-separated exact com.sphereon.idk:artifact coordinates"
-                }
-            }.map { it.substringBefore(':') to it.substringAfter(':') }.toSet()
-            exclusiveContent {
-                forRepository { maven { url = uri(pinned) } }
-                filter {
-                    selected.forEach { (group, module) -> includeModule(group, module) }
-                }
-            }
-        }
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
         mavenLocal {
             content {
@@ -105,46 +65,6 @@ dependencyResolutionManagement {
         }
     }
     repositories {
-        val suppliedRepo = System.getenv("WORKSPACE_MAVEN_REPO")?.takeIf { it.isNotEmpty() }
-        require(suppliedRepo == null || suppliedRepo.isNotBlank()) { "WORKSPACE_MAVEN_REPO cannot be empty" }
-        val workspaceRepo = suppliedRepo?.trim()
-        val workspaceModules = System.getenv("WORKSPACE_MAVEN_MODULES")?.takeIf { it.isNotEmpty() }
-        val exactRepositoryPolicy = listOf("WORKSPACE_REPOSITORY_POLICY", "WORKSPACE_REPOSITORY_POLICY_FILE",
-            "WORKSPACE_REPOSITORY_POLICY_SHA256").any { System.getenv(it) != null }
-        if (exactRepositoryPolicy) {
-            require(workspaceRepo == null && workspaceModules == null && System.getenv("WORKTREE_MAVEN_REPO").isNullOrEmpty()) {
-                "Exact repository policy cannot be mixed with legacy Maven selection"
-            }
-            // The captured helper validates inline/file policy and installs exact-version layers.
-            // Never interpret policy here or silently resolve its selected GAVs through ordinary repositories.
-            val policyHelper = java.io.File(settingsDir, "tooling/workspace-publish/repository-layers.gradle").canonicalFile
-            require(policyHelper.isFile && gradle.startParameter.initScripts.any { it.canonicalFile == policyHelper }) {
-                "Exact repository policy requires the captured repository-layers.gradle init script"
-            }
-        }
-        require(workspaceModules == null || workspaceRepo != null) {
-            "WORKSPACE_MAVEN_MODULES requires WORKSPACE_MAVEN_REPO"
-        }
-        workspaceRepo?.let { value ->
-            val supplied = java.io.File(value)
-            require(supplied.isAbsolute) { "WORKSPACE_MAVEN_REPO must be an absolute path" }
-            val pinned = supplied.canonicalFile
-            require(pinned.isDirectory && pinned.name == "repo" && pinned.parentFile?.parentFile?.name == "generations") {
-                "WORKSPACE_MAVEN_REPO must be an existing immutable generations/<id>/repo directory"
-            }
-            require(!workspaceModules.isNullOrBlank()) { "WORKSPACE_MAVEN_MODULES must select prepared IDK artifact coordinates" }
-            val selected = workspaceModules.split(',').map { it.trim() }.onEach {
-                require(Regex("com\\.sphereon\\.idk:[A-Za-z0-9][A-Za-z0-9_.-]*").matches(it)) {
-                    "WORKSPACE_MAVEN_MODULES must contain comma-separated exact com.sphereon.idk:artifact coordinates"
-                }
-            }.map { it.substringBefore(':') to it.substringAfter(':') }.toSet()
-            exclusiveContent {
-                forRepository { maven { url = uri(pinned) } }
-                filter {
-                    selected.forEach { (group, module) -> includeModule(group, module) }
-                }
-            }
-        }
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
         mavenLocal {
             content {
@@ -225,13 +145,14 @@ dependencyResolutionManagement {
     }
 }
 
-// Finite workspace preparation selects exact source leaves; absent means the ordinary full build.
-val workspaceSourceModules = System.getenv("WORKSPACE_SOURCE_MODULES")?.let { raw ->
+// `-PopenidFederation.modules=<name>,<name>` builds only the named modules (for example a JVM service closure);
+// absent means the full build.
+val selectedFederationModules = providers.gradleProperty("openidFederation.modules").orNull?.let { raw ->
     require(Regex("[A-Za-z0-9][A-Za-z0-9-]*(,[A-Za-z0-9][A-Za-z0-9-]*)*").matches(raw)) {
-        "WORKSPACE_SOURCE_MODULES must be a nonempty comma-separated list of exact module names"
+        "openidFederation.modules must be a nonempty comma-separated list of exact module names"
     }
     val names = raw.split(',')
-    require(names.size == names.toSet().size) { "WORKSPACE_SOURCE_MODULES contains duplicate module names" }
+    require(names.size == names.toSet().size) { "openidFederation.modules contains duplicate module names" }
     names.toSet()
 }
 val includedFederationModules = mutableSetOf<String>()
@@ -241,7 +162,7 @@ fun org.gradle.api.initialization.Settings.includeFederationModule(path: String)
         "Federation module path must be an exact :modules:<name> leaf"
     }
     val name = path.removePrefix(":modules:")
-    if (workspaceSourceModules == null || name in workspaceSourceModules) {
+    if (selectedFederationModules == null || name in selectedFederationModules) {
         require(includedFederationModules.add(name)) { "Duplicate federation module declaration: $name" }
         this.include(path)
     }
@@ -292,9 +213,8 @@ includeFederationModule(":modules:openid-federation-public-server-ktor")
 includeFederationModule(":modules:openid-federation-server")  // Backwards compat shim
 
 
-if (workspaceSourceModules != null) {
-    require(includedFederationModules == workspaceSourceModules) {
-        "WORKSPACE_SOURCE_MODULES contains unknown or unconfigured module names: " +
-            (workspaceSourceModules - includedFederationModules)
+if (selectedFederationModules != null) {
+    require(includedFederationModules == selectedFederationModules) {
+        "openidFederation.modules contains unknown module names: " + (selectedFederationModules - includedFederationModules)
     }
 }

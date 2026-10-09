@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.client.command.trustMark
 import com.sphereon.openid.fed.openapi.models.BaseStatementJwks
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
+import com.sphereon.openid.fed.openapi.models.TrustMarkOwnerJwks
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -87,7 +88,7 @@ class TrustMarkFederationPolicyTest {
         val type = "https://refeds.org/sirtfi"
         val taConfig = ta(
             trustMarkOwners = mapOf(
-                type to TrustMarkOwner(sub = "https://refeds.org/sirtfi", jwks = emptyList())
+                type to TrustMarkOwner(sub = "https://refeds.org/sirtfi", jwks = TrustMarkOwnerJwks(propertyKeys = emptyList()))
             )
         )
         val recognition = TrustMarkFederationPolicy.recognize(type, taConfig)
@@ -100,7 +101,7 @@ class TrustMarkFederationPolicyTest {
         val taConfig = ta(
             trustMarkIssuers = mapOf(type to listOf("https://issuer.example")),
             trustMarkOwners = mapOf(
-                type to TrustMarkOwner(sub = "https://owner.example", jwks = emptyList())
+                type to TrustMarkOwner(sub = "https://owner.example", jwks = TrustMarkOwnerJwks(propertyKeys = emptyList()))
             )
         )
         assertEquals(

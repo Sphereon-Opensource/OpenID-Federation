@@ -9,6 +9,7 @@ import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.context.FederationContext
+import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.findKeyInJwks
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
@@ -57,7 +58,6 @@ class VerifyTrustMarkCommandImpl(
 
     companion object {
         private const val TM_TYP = "trust-mark+jwt"
-        private const val DELEGATION_TYP = "trust-mark-delegation+jwt"
         private const val CLOCK_SKEW_SECONDS = 5L
     }
 
@@ -335,98 +335,137 @@ class VerifyTrustMarkCommandImpl(
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         val delegationJwt = decodedTrustMark.payload["delegation"]?.jsonPrimitive?.contentOrNull
             ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark missing required delegation claim"))
+        return validateTrustMarkDelegation(context.jwtService, delegationJwt, trustMarkId, trustMarkIssuer, owner, timeToUse)
+    }
+}
 
-        val decodedDelegation = try {
-            decodeJWTComponents(delegationJwt)
-        } catch (e: Exception) {
+private const val DELEGATION_TYP = "trust-mark-delegation+jwt"
+private const val DELEGATION_CLOCK_SKEW_SECONDS = 5L
+
+/**
+ * Validates a Trust Mark delegation (OpenID Federation 1.1 section 7.2.2): a signed `trust-mark-delegation+jwt` from
+ * [owner] to [trustMarkIssuer] for [trustMarkType], current at [timeToUse] and signed with one of the owner's keys.
+ */
+internal suspend fun validateTrustMarkDelegation(
+    jwtService: JwtService,
+    delegationJwt: String,
+    trustMarkType: String,
+    trustMarkIssuer: String,
+    owner: TrustMarkOwner,
+    timeToUse: Long,
+): IdkResult<TrustMarkValidationResponse, FederationError> {
+    val trustMarkId = trustMarkType
+    val decodedDelegation = try {
+        decodeJWTComponents(delegationJwt)
+    } catch (e: Exception) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Invalid delegation JWT: ${e.message}",
+            exception = e
+        ))
+    }
+
+    // §7.2.2 steps 2–3: typ and alg
+    val delTyp = decodedDelegation.header.typ
+    if (delTyp != DELEGATION_TYP) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation typ must be '$DELEGATION_TYP', got '${delTyp ?: "(missing)"}'"
+        ))
+    }
+    val delAlg = decodedDelegation.header.alg
+    if (delAlg.isBlank() || delAlg.equals("none", ignoreCase = true)) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation alg MUST NOT be 'none'"
+        ))
+    }
+
+    // §7.2.2 step 4: sub = Trust Mark Issuer
+    val delSub = decodedDelegation.payload["sub"]?.jsonPrimitive?.contentOrNull
+    if (delSub != trustMarkIssuer) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation sub must match Trust Mark issuer"
+        ))
+    }
+
+    // §7.2.2 step 5: iss = owner
+    val ownerSub = owner.sub
+    val delIss = decodedDelegation.payload["iss"]?.jsonPrimitive?.contentOrNull
+    if (delIss != ownerSub) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation issuer does not match Trust Mark owner"
+        ))
+    }
+
+    // §7.2.2 steps 6–7: iat / optional exp
+    val delIat = decodedDelegation.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
+    if (delIat == null || delIat > timeToUse + DELEGATION_CLOCK_SKEW_SECONDS) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation has invalid or future iat"
+        ))
+    }
+    val delExpEl = decodedDelegation.payload["exp"]
+    if (delExpEl != null) {
+        val delExp = delExpEl.jsonPrimitive.content.toDoubleOrNull()?.toLong()
+        if (delExp == null || delExp <= timeToUse - DELEGATION_CLOCK_SKEW_SECONDS) {
             return IdkResult.err(TrustMarkInvalidError(
                 trustMarkId = trustMarkId,
-                reason = "Invalid delegation JWT: ${e.message}",
-                exception = e
+                reason = "Delegation has expired"
             ))
         }
+    }
 
-        // §7.2.2 steps 2–3: typ and alg
-        val delTyp = decodedDelegation.header.typ
-        if (delTyp != DELEGATION_TYP) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation typ must be '$DELEGATION_TYP', got '${delTyp ?: "(missing)"}'"
-            ))
-        }
-        val delAlg = decodedDelegation.header.alg
-        if (delAlg.isBlank() || delAlg.equals("none", ignoreCase = true)) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation alg MUST NOT be 'none'"
-            ))
-        }
+    // §7.2.1: trust_mark_type is REQUIRED in a delegation; §7.2.2 step 8: it matches the Trust Mark's type.
+    val delType = decodedDelegation.payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull
+    if (delType != trustMarkId) {
+        return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = if (delType == null) "Delegation has no trust_mark_type" else "Delegation trust_mark_type does not match Trust Mark"
+        ))
+    }
 
-        // §7.2.2 step 4: sub = Trust Mark Issuer
-        val delSub = decodedDelegation.payload["sub"]?.jsonPrimitive?.contentOrNull
-        if (delSub != trustMarkIssuer) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation sub must match Trust Mark issuer"
-            ))
-        }
+    // §7.2.2 step 9: signature with owner keys
+    val ownerKeys: Array<Jwk> = owner.jwks.propertyKeys.toTypedArray()
+    if (ownerKeys.isEmpty()) return IdkResult.err(TrustMarkInvalidError(trustMarkId, "No JWKS found for Trust Mark owner"))
 
-        // §7.2.2 step 5: iss = owner
-        val ownerSub = owner.sub
-            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark owner missing sub claim"))
-        val delIss = decodedDelegation.payload["iss"]?.jsonPrimitive?.contentOrNull
-        if (delIss != ownerSub) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation issuer does not match Trust Mark owner"
-            ))
-        }
+    val delegationKey = findKeyInJwks(ownerKeys, decodedDelegation.header.kid)
+        ?: return IdkResult.err(TrustMarkInvalidError(
+            trustMarkId = trustMarkId,
+            reason = "Delegation signing key not found in owner's JWKS"
+        ))
 
-        // §7.2.2 steps 6–7: iat / optional exp
-        val delIat = decodedDelegation.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
-        if (delIat == null || delIat > timeToUse + CLOCK_SKEW_SECONDS) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation has invalid or future iat"
-            ))
-        }
-        val delExpEl = decodedDelegation.payload["exp"]
-        if (delExpEl != null) {
-            val delExp = delExpEl.jsonPrimitive.content.toDoubleOrNull()?.toLong()
-            if (delExp == null || delExp <= timeToUse - CLOCK_SKEW_SECONDS) {
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = trustMarkId,
-                    reason = "Delegation has expired"
-                ))
-            }
-        }
+    if (!jwtService.verifyJwtSignature(delegationJwt, delegationKey)) {
+        return IdkResult.err(SignatureVerificationFailedError(
+            reason = "Delegation signature verification failed",
+            keyId = decodedDelegation.header.kid
+        ))
+    }
 
-        // §7.2.1: trust_mark_type is REQUIRED in a delegation; §7.2.2 step 8: it matches the Trust Mark's type.
-        val delType = decodedDelegation.payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull
-        if (delType != trustMarkId) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = if (delType == null) "Delegation has no trust_mark_type" else "Delegation trust_mark_type does not match Trust Mark"
-            ))
-        }
+    return IdkResult.ok(TrustMarkValidationResponse(true))
+}
 
-        // §7.2.2 step 9: signature with owner keys
-        val ownerKeys: Array<Jwk> = owner.jwks?.toTypedArray()
-            ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "No JWKS found for Trust Mark owner"))
-
-        val delegationKey = findKeyInJwks(ownerKeys, decodedDelegation.header.kid)
-            ?: return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = trustMarkId,
-                reason = "Delegation signing key not found in owner's JWKS"
-            ))
-
-        if (!context.jwtService.verifyJwtSignature(delegationJwt, delegationKey)) {
-            return IdkResult.err(SignatureVerificationFailedError(
-                reason = "Delegation signature verification failed",
-                keyId = decodedDelegation.header.kid
-            ))
-        }
-
-        return IdkResult.ok(TrustMarkValidationResponse(true))
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<VerifyTrustMarkDelegationCommand>())
+class VerifyTrustMarkDelegationCommandImpl(
+    execution: SessionExecution,
+    private val context: FederationContext,
+) : ExecutionScopedCommandAdapter<VerifyTrustMarkDelegationArgs, TrustMarkValidationResponse, FederationError>(
+    id = VerifyTrustMarkDelegationCommand.COMMAND_ID,
+    execution = execution
+), VerifyTrustMarkDelegationCommand {
+    override suspend fun doExecute(
+        args: VerifyTrustMarkDelegationArgs,
+        applyDuring: (VerifyTrustMarkDelegationArgs) -> VerifyTrustMarkDelegationArgs
+    ): IdkResult<TrustMarkValidationResponse, FederationError> {
+        val input = applyDuring(args)
+        val owner = input.trustAnchorConfig.trustMarkOwners?.get(input.trustMarkType)
+            ?: return IdkResult.err(TrustMarkNotRecognizedError(input.trustMarkType, input.trustAnchorConfig.iss))
+        return validateTrustMarkDelegation(context.jwtService, input.delegation, input.trustMarkType, input.issuer, owner,
+            input.currentTime ?: getCurrentEpochTimeSeconds())
     }
 }

@@ -68,4 +68,24 @@ interface TrustMarkCommandDescriptors {
     @Provides @IntoSet
     fun listIssuedTrustMarks(cmd: Lazy<ListIssuedTrustMarksCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(ListIssuedTrustMarksCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun getTrustMarkTypeGovernance(cmd: Lazy<GetTrustMarkTypeGovernanceCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(GetTrustMarkTypeGovernanceCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun setTrustMarkTypeOwner(cmd: Lazy<SetTrustMarkTypeOwnerCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(SetTrustMarkTypeOwnerCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun removeTrustMarkTypeOwner(cmd: Lazy<RemoveTrustMarkTypeOwnerCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(RemoveTrustMarkTypeOwnerCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun setTrustMarkTypeDelegation(cmd: Lazy<SetTrustMarkTypeDelegationCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(SetTrustMarkTypeDelegationCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun createTrustMarkDelegation(cmd: Lazy<CreateTrustMarkDelegationCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(CreateTrustMarkDelegationCommand.COMMAND_ID) { cmd.value }
 }

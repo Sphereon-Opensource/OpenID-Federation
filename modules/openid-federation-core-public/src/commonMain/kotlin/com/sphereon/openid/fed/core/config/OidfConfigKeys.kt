@@ -132,6 +132,13 @@ object OidfConfigKeys {
 
         /** Database name (optional, for URL construction) */
         const val DB = "$PREFIX.db"
+
+        /**
+         * How the library treats its schema: `migrate` (default) applies pending migrations with the configured
+         * credentials; `verify` runs no DDL and only checks that the schema is current. Use `verify` for a
+         * connection without schema privileges while another service owns the migrations.
+         */
+        const val SCHEMA_MANAGEMENT = "$PREFIX.schema.management"
     }
 
     // ========================================================================

@@ -1767,8 +1767,9 @@ class SignPreparedEntityConfigurationCommandTest {
         }
         val upgradeDriver = upgradeSource.asJdbcDriver()
         try {
-            val baseline = Database.Schema.version - 1
-            assertEquals(21L, baseline, "the generated pre-migration schema version is 21")
+            // Schema version 21 is the state before 21.sqm introduced the account signing-key selection.
+            val baseline = 21L
+            assertTrue(Database.Schema.version > baseline, "the current schema includes the signing-key selection migration")
             Database.Schema.migrate(upgradeDriver, 0L, baseline)
             val oldAccountQueries = AccountQueries(upgradeDriver, Account.Adapter(JavaUuidStringAdapter))
             val oldJwkQueries = JwkQueries(upgradeDriver, Jwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
