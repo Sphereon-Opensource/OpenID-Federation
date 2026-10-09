@@ -1,3 +1,5 @@
+import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
+import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -11,7 +13,7 @@ plugins {
 kotlin {
     jvm()
 
-    js {
+    configureJsTargetIfEnabled {
         outputModuleName = "@sphereon/openid-federation-wallet-impl"
         nodejs {
             useEsModules()
@@ -21,7 +23,7 @@ kotlin {
     }
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
+    configureWasmJsTargetIfEnabled {
         nodejs()
         binaries.library()
         generateTypeScriptDefinitions()
