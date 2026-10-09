@@ -3094,6 +3094,9 @@ components:
 
     TrustMarkOwners:
       type: object
+      description: >
+        Trust Mark types the Federation Operator knows are owned by an Entity other than their issuers, mapped to
+        that owner (OpenID Federation 1.1 section 7.2). Present only in a Trust Anchor's Entity Configuration.
       additionalProperties:
         $ref: '#/components/schemas/TrustMarkOwner'
       example:
@@ -3104,23 +3107,28 @@ components:
               - alg: RS256
                 e: AQAB
                 kid: key1
-                kmsKeyRef: key1
-                kms: memory
                 kty: RSA
                 'n': pnXBOusEANuug6ewezb9J_...
                 use: sig
     TrustMarkOwner:
       type: object
+      required:
+        - sub
+        - jwks
       properties:
         sub:
           type: string
-          description: Identifier of the Trust Mark owner
+          description: Entity Identifier of the Trust Mark Owner.
         jwks:
-          type: array
-          items:
-            $ref: '#/components/schemas/Jwk'
-        additionalProperties:
-          type: string
+          type: object
+          description: The owner's Federation Entity Keys used to sign Trust Mark delegations.
+          required:
+            - keys
+          properties:
+            keys:
+              type: array
+              items:
+                $ref: '#/components/schemas/Jwk'
 
     TrustMarkPayload:
       type: object

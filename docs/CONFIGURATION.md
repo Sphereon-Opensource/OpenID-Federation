@@ -188,6 +188,17 @@ password from the environment variable `OIDF_SECRET_<ID>`, where `<ID>` is the s
 replaced by underscores, and refuses to start when that variable is not set. A missing URL, user or password also
 stops startup with a message naming the key.
 
+By default the library migrates its schema with the configured role, which therefore needs to own the schema. When
+several services share the database, let one of them own the schema and run the others with a role that may only
+read and write data:
+
+| Property key | Env (IDK-normalized) | Values |
+|--------------|----------------------|--------|
+| `oidf.datasource.schema.management` | `OIDF_DATASOURCE_SCHEMA_MANAGEMENT` | `migrate` (default) applies pending migrations; `verify` runs no DDL and refuses to start unless the schema is at the version the library needs. |
+
+Start the migrating service first after an upgrade; a `verify` service started earlier stops with a message saying
+the schema is behind.
+
 ### Federation endpoint authentication (optional)
 
 Federation endpoints accept unauthenticated requests by default. OpenID Federation 1.1 §8.8 lets an entity require
@@ -285,3 +296,13 @@ Env compatibility is locked by:
 ```
 
 Architecture guard (no `System.getenv` in module sources): `NoSystemGetenvArchTest`.
+
+## Building selected modules
+
+`-PopenidFederation.modules=<name>,<name>` includes only the named modules in the build, for example a JVM service
+closure without the servers and the JavaScript test module. Without it the full build is configured. Unknown or
+duplicate names stop the build.
+
+```bash
+./gradlew -PopenidFederation.modules=openid-federation-core-public,openid-federation-common   :modules:openid-federation-common:jvmTest
+```

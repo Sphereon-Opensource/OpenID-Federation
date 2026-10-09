@@ -4,6 +4,7 @@ import com.sphereon.openid.fed.openapi.models.BaseStatementJwks
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustMark
+import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
 import kotlinx.serialization.json.JsonObject
 
 class EntityConfigurationStatementObjectBuilder {
@@ -15,6 +16,7 @@ class EntityConfigurationStatementObjectBuilder {
     private val authorityHints: MutableList<String> = mutableListOf()
     private val trustAnchorHints: MutableList<String> = mutableListOf()
     private val trustMarkIssuers: MutableMap<String, List<String>> = mutableMapOf()
+    private val trustMarkOwners: MutableMap<String, TrustMarkOwner> = mutableMapOf()
     private val crit: MutableList<String> = mutableListOf()
     private val trustMarks: MutableList<TrustMark> = mutableListOf()
 
@@ -43,6 +45,10 @@ class EntityConfigurationStatementObjectBuilder {
         this.trustMarkIssuers[trustMark] = issuers
     }
 
+    fun trustMarkOwner(trustMarkType: String, owner: TrustMarkOwner) = apply {
+        this.trustMarkOwners[trustMarkType] = owner
+    }
+
     fun trustMark(trustMark: TrustMark) = apply {
         this.trustMarks.add(trustMark)
     }
@@ -65,6 +71,7 @@ class EntityConfigurationStatementObjectBuilder {
             trustAnchorHints = if (trustAnchorHints.isNotEmpty()) trustAnchorHints else null,
             crit = if (crit.isNotEmpty()) crit else null,
             trustMarkIssuers = this.trustMarkIssuers.map { (k, v) -> k to v }.toMap(),
+            trustMarkOwners = if (trustMarkOwners.isNotEmpty()) trustMarkOwners.toMap() else null,
             trustMarks = trustMarks
         )
     }

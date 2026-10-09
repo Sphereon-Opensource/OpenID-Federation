@@ -86,6 +86,9 @@ class CreateTrustMarkCommandImpl(
         val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, accountIdentifier))
         if (resolved.isErr) return resolved.error.asErrorResult()
         val key = resolved.value
+        // A Trust Mark of a type the account issues under delegation carries that delegation (OIDFed 1.1 section 7.2).
+        val delegation = request.delegation
+            ?: Persistence.trustMarkTypeQueries.findByAccountIdAndIdentifier(tenantId, request.trustMarkType).executeAsOneOrNull()?.delegation
 
         return try {
 
@@ -96,7 +99,7 @@ class CreateTrustMarkCommandImpl(
                 .iat(iat)
                 .logoUri(request.logoUri)
                 .ref(request.ref)
-                .delegation(request.delegation)
+                .delegation(delegation)
                 .trustMarkLifetime(request.trustMarkLifetime)
             if (request.exp != null) trustMark.exp(request.exp)
 

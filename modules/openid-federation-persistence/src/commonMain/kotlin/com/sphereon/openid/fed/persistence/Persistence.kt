@@ -16,6 +16,7 @@ import com.sphereon.openid.fed.persistence.models.SubordinateMetadataQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateStatementQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuerQueries
+import com.sphereon.openid.fed.persistence.models.TrustMarkOwnerQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.openid.fed.persistence.models.TrustAnchorHintQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateConstraintQueries
@@ -45,6 +46,7 @@ expect object Persistence {
     val subordinateMetadataQueries: SubordinateMetadataQueries
     val trustMarkTypeQueries: TrustMarkTypeQueries
     val trustMarkIssuerQueries: TrustMarkIssuerQueries
+    val trustMarkOwnerQueries: TrustMarkOwnerQueries
     val trustMarkQueries: TrustMarkQueries
     val receivedTrustMarkQueries: ReceivedTrustMarkQueries
     val logQueries: LogQueries

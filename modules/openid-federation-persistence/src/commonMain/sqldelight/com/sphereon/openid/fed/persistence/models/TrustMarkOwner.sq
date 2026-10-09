@@ -1,0 +1,14 @@
+create:
+INSERT INTO TrustMarkOwner (trust_mark_type_id, owner_identifier, jwks)
+VALUES (:trust_mark_type_id, :owner_identifier, :jwks)
+RETURNING *;
+
+findByTrustMarkTypeId:
+SELECT * FROM TrustMarkOwner
+WHERE trust_mark_type_id = :trust_mark_type_id AND deleted_at IS NULL;
+
+deleteByTrustMarkTypeId:
+UPDATE TrustMarkOwner
+SET deleted_at = CURRENT_TIMESTAMP
+WHERE trust_mark_type_id = :trust_mark_type_id AND deleted_at IS NULL
+RETURNING *;
