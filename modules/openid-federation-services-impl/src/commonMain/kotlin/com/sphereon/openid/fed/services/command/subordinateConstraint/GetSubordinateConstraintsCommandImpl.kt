@@ -15,7 +15,6 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.SubordinateConstraints
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
-import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -26,7 +25,6 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<GetSubordinateConstraintsCommand>())
 class GetSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
-    private val json: Json
 ) : TypedServiceCommandAdapter<GetSubordinateConstraintsArgs, SubordinateConstraints, FederationError>(
     commandId = GetSubordinateConstraintsCommand.COMMAND_ID,
     execution = execution,
@@ -54,7 +52,7 @@ class GetSubordinateConstraintsCommandImpl(
                 return federationErr(EntityNotFoundError("subordinate_constraint:$subordinateId"))
             }
 
-            IdkResult.ok(constraint.toDTO(json))
+            IdkResult.ok(constraint.toDTO(SubordinateConstraintJson))
         } catch (e: Exception) {
             logger.error("Failed to get constraints for subordinate: $subordinateId", e)
             federationErr(ServerError("Failed to get subordinate constraints", e.message, e))

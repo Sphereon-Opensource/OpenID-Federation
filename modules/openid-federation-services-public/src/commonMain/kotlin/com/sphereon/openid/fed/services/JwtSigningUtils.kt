@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.serializer
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Converts an OpenAPI JwtHeader to a JsonObject for use with IDK's CreateJwsOpts.
@@ -86,6 +87,8 @@ suspend inline fun <reified T> JwtService.signPayload(
                 exception = null
             ).toErr()
         }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
     } catch (e: Exception) {
         JwtCreationFailedError(
             reason = e.message ?: "Unknown signing error",

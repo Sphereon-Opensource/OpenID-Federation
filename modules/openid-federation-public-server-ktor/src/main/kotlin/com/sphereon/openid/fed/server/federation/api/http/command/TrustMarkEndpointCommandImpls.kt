@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
 import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
@@ -27,6 +28,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -35,6 +38,8 @@ import dev.zacsweers.metro.SingleIn
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkStatusRootEndpointCommand.COMMAND_ID)
 class GetTrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -80,6 +85,8 @@ class GetTrustMarkStatusRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<TrustMarkStatusRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(TrustMarkStatusRootEndpointCommand.COMMAND_ID)
 class TrustMarkStatusRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -127,6 +134,8 @@ class TrustMarkStatusRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkStatusAccountEndpointCommand.COMMAND_ID)
 class GetTrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -175,6 +184,8 @@ class GetTrustMarkStatusAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<TrustMarkStatusAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(TrustMarkStatusAccountEndpointCommand.COMMAND_ID)
 class TrustMarkStatusAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -292,6 +303,8 @@ private fun readIatClaim(payload: JwtPayload): Double? =
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<TrustMarkListRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(TrustMarkListRootEndpointCommand.COMMAND_ID)
 class TrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -332,6 +345,8 @@ class TrustMarkListRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostTrustMarkListRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostTrustMarkListRootEndpointCommand.COMMAND_ID)
 class PostTrustMarkListRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -375,6 +390,8 @@ class PostTrustMarkListRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<TrustMarkListAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(TrustMarkListAccountEndpointCommand.COMMAND_ID)
 class TrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -418,6 +435,8 @@ class TrustMarkListAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostTrustMarkListAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostTrustMarkListAccountEndpointCommand.COMMAND_ID)
 class PostTrustMarkListAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -464,6 +483,8 @@ class PostTrustMarkListAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkRootEndpointCommand.COMMAND_ID)
 class GetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -504,6 +525,8 @@ class GetTrustMarkRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostGetTrustMarkRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostGetTrustMarkRootEndpointCommand.COMMAND_ID)
 class PostGetTrustMarkRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -547,6 +570,8 @@ class PostGetTrustMarkRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetTrustMarkAccountEndpointCommand.COMMAND_ID)
 class GetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -590,6 +615,8 @@ class GetTrustMarkAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostGetTrustMarkAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostGetTrustMarkAccountEndpointCommand.COMMAND_ID)
 class PostGetTrustMarkAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

@@ -14,8 +14,17 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.di.session.SessionScope
 import com.sphereon.crypto.core.jose.Jwk
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
+import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
 import com.sphereon.trust.core.TrustValidationService
@@ -27,6 +36,7 @@ import com.sphereon.trust.core.model.TrustContext
 import com.sphereon.trust.core.model.TrustStatus
 import com.sphereon.trust.core.model.TrustValidationRequest
 import com.sphereon.trust.core.model.TrustValidationResult
+import com.sphereon.trust.core.model.EntityDiscoveryOptions
 import com.sphereon.trust.core.validation.AbstractTrustValidationService
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesIntoSet
@@ -34,6 +44,7 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 /**
  * OpenID Federation trust validation service.
@@ -47,7 +58,7 @@ import kotlin.time.Duration.Companion.minutes
  * 3. Resolve the trust chain via ResolveTrustChainCommand
  * 4. Verify the trust chain via VerifyTrustChainCommand
  * 5. If requiredTrustMarks configured, verify each via VerifyTrustMarkCommand
- * 6. Cache resolved results per entity
+ * 6. Cache results per effective request, bounded by signed evidence expiry
  */
 @Inject
 @SingleIn(SessionScope::class)
@@ -57,6 +68,7 @@ class OidfTrustValidationService(
     private val verifyTrustChainCommand: VerifyTrustChainCommand,
     private val verifyTrustMarkCommand: VerifyTrustMarkCommand,
     private val getEntityConfigurationCommand: GetEntityConfigurationCommand,
+    private val trustAnchorKeys: TrustAnchorKeyResolver,
     private val trustConfigProvider: TrustConfigProvider,
     private val cacheManager: CacheManager,
     private val execution: SessionExecution,
@@ -78,17 +90,17 @@ class OidfTrustValidationService(
     override suspend fun doValidate(request: TrustValidationRequest): TrustValidationResult {
         logger.debug("Validating OpenID Federation trust for context: ${request.context}")
 
-        val entityIdentifier = request.context.parameters["entityIdentifier"]
+        val entityIdentifier = request.context.parameters["entityIdentifier"]?.trim()?.takeIf { it.isNotEmpty() }
             ?: return validationError("No entityIdentifier specified in context parameters")
 
         // Request parameters override config values
         val oidfConfig = trustConfigProvider.getTrustConfig().anchors.oidfed
         val trustAnchors = request.context.parameters["trustAnchors"]
-            ?.split(",")?.map { it.trim() }
-            ?: oidfConfig.trustAnchors
+            ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?: oidfConfig.trustAnchors.map { it.trim() }.filter { it.isNotEmpty() }
         val requiredTrustMarks = request.context.parameters["requiredTrustMarks"]
-            ?.split(",")?.map { it.trim() }
-            ?: oidfConfig.requiredTrustMarks
+            ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+            ?: oidfConfig.requiredTrustMarks.map { it.trim() }.filter { it.isNotEmpty() }
         val maxChainDepth = request.context.parameters["maxChainDepth"]?.toIntOrNull()
             ?: oidfConfig.maxChainDepth
 
@@ -96,12 +108,17 @@ class OidfTrustValidationService(
             return validationError("No trust anchors configured. Set trust.anchors.oidfed.trust-anchors or provide trustAnchors in request parameters")
         }
 
-        // Check cache
-        val cacheKey = "$entityIdentifier:${trustAnchors.sorted().joinToString(",")}"
+        // The structured identity retains anchor preference and every request
+        // input that can affect verification or result enrichment.
+        val cacheKey = cacheKey(request, entityIdentifier, trustAnchors, requiredTrustMarks, maxChainDepth)
         val cached = cache.getApp(cacheKey)
         if (cached != null) {
-            logger.debug("Using cached trust chain result for $entityIdentifier")
-            return cached
+            val expiry = cached.expiresAt
+            if ((expiry == null && !cached.trusted) || (expiry != null && expiry > Clock.System.now())) {
+                logger.debug("Using cached trust chain result for $entityIdentifier")
+                return cached
+            }
+            cache.removeApp(cacheKey)
         }
 
         return try {
@@ -133,10 +150,50 @@ class OidfTrustValidationService(
                 ))
             }
 
-            // Step 2: Verify the trust chain cryptographically
+            // Verification authenticates these statements; decoding here only
+            // extracts the terminal identifier and the signed lifetime bound.
+            val statements = trustChain.mapNotNull { jwt ->
+                runCatching { decodeJWTComponents(jwt).payload }.getOrNull()
+            }
+            val statementExpiries = statements.map { signedExpiry(it) }
+            val now = Clock.System.now()
+            if (statements.size != trustChain.size || statementExpiries.any { it == null || it <= now.epochSeconds }) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Trust chain contains malformed or expired signed evidence",
+                    validatedAt = now
+                ))
+            }
+            var evidenceExpiry = statementExpiries.filterNotNull().minOrNull()!!
+
+            // Step 2: Verify the trust chain against the selected chain anchor,
+            // not the first configured identifier.
+            val selectedAnchor = selectedTrustAnchor(trustChain, trustAnchors)
+                ?: return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "No selected trust anchor on the resolved chain",
+                    validatedAt = Clock.System.now()
+                ))
+            // The anchor is trusted with the keys of the Entity Configuration it publishes about itself.
+            val anchorKeys = trustAnchorKeys.publishedKeys(selectedAnchor, now.epochSeconds)
+            if (anchorKeys.isErr) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Trust anchor keys unavailable: ${anchorKeys.error.message.defaultMessage}",
+                    validatedAt = Clock.System.now()
+                ))
+            }
             val verifyResult = verifyTrustChainCommand.verifyTrustChain(
                 trustChain = trustChain.toTypedArray(),
-                trustAnchor = trustAnchors.firstOrNull()
+                trustAnchor = selectedAnchor,
+                currentTime = now.epochSeconds,
+                trustAnchorPublicKeys = anchorKeys.value,
             )
 
             if (verifyResult.isErr) {
@@ -163,14 +220,101 @@ class OidfTrustValidationService(
                 ))
             }
 
+            // OpenID Federation 1.1 §10.2: metadata is resolved after validation; a policy error invalidates the chain.
+            val resolvedMetadata = MetadataPolicyOperators.resolveFromTrustChainPayloads(statements)
+            if (!resolvedMetadata.isValid) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Trust chain metadata does not resolve: ${resolvedMetadata.errors.joinToString("; ")}",
+                    validatedAt = Clock.System.now()
+                ))
+            }
+
+            if (requiredTrustMarks.isNotEmpty()) {
+                val subjectConfig = getEntityConfigurationCommand.getEntityConfiguration(entityIdentifier)
+                if (subjectConfig.isErr || subjectConfig.value.sub != entityIdentifier ||
+                    !subjectConfig.value.exp.isFinite() || subjectConfig.value.exp <= Clock.System.now().epochSeconds
+                ) {
+                    return cacheAndReturn(cacheKey, TrustValidationResult(
+                        trusted = false,
+                        status = TrustStatus.UNTRUSTED,
+                        validationPath = trustChain,
+                        details = "Could not resolve the subject's advertised trust marks",
+                        validatedAt = Clock.System.now()
+                    ))
+                }
+                val taConfig = getEntityConfigurationCommand.getEntityConfiguration(selectedAnchor)
+                if (taConfig.isErr || taConfig.value.sub != selectedAnchor ||
+                    !taConfig.value.exp.isFinite() || taConfig.value.exp <= Clock.System.now().epochSeconds
+                ) {
+                    return cacheAndReturn(cacheKey, TrustValidationResult(
+                        trusted = false,
+                        status = TrustStatus.UNTRUSTED,
+                        validationPath = trustChain,
+                        details = "Could not resolve the selected trust anchor configuration",
+                        validatedAt = Clock.System.now()
+                    ))
+                }
+                evidenceExpiry = minOf(
+                    evidenceExpiry,
+                    subjectConfig.value.exp.toLong(),
+                    taConfig.value.exp.toLong(),
+                )
+                for (requiredType in requiredTrustMarks) {
+                    var accepted = false
+                    for (advertised in subjectConfig.value.trustMarks.orEmpty()) {
+                        if (advertised.trustMarkType != requiredType) continue
+                        val payload = runCatching { decodeJWTComponents(advertised.trustMark).payload }.getOrNull()
+                            ?: continue
+                        if (payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull != requiredType ||
+                            payload["sub"]?.jsonPrimitive?.contentOrNull != entityIdentifier
+                        ) continue
+                        val markExpiryClaim = payload["exp"]
+                        val markExpiry = if (markExpiryClaim == null) null else signedExpiry(payload)
+                        if (markExpiryClaim != null && (markExpiry == null || markExpiry <= Clock.System.now().epochSeconds)) continue
+                        val markResult = verifyTrustMarkCommand.verifyTrustMark(
+                            trustMark = advertised.trustMark,
+                            trustAnchorConfig = taConfig.value,
+                            subject = entityIdentifier
+                        )
+                        if (markResult.isErr || !markResult.value.isValid) continue
+                        if (markExpiry != null) evidenceExpiry = minOf(evidenceExpiry, markExpiry)
+                        accepted = true
+                        break
+                    }
+                    if (!accepted) {
+                        return cacheAndReturn(cacheKey, TrustValidationResult(
+                            trusted = false,
+                            status = TrustStatus.UNTRUSTED,
+                            validationPath = trustChain,
+                            details = "Required trust mark failed: $requiredType",
+                            validatedAt = Clock.System.now()
+                        ))
+                    }
+                }
+            }
+
+            if (evidenceExpiry <= Clock.System.now().epochSeconds) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Signed trust evidence expired during validation",
+                    validatedAt = Clock.System.now()
+                ))
+            }
+
             // All checks passed
             val result = TrustValidationResult(
                 trusted = true,
                 status = TrustStatus.TRUSTED,
                 validationPath = trustChain,
                 trustChain = TrustChain.fromEntityStatementEntries(trustChain, TrustChainLinks.VERIFIED),
-                details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links)",
-                validatedAt = Clock.System.now()
+                details = "Entity trusted via OpenID Federation trust chain (${trustChain.size} links) at $selectedAnchor",
+                validatedAt = Clock.System.now(),
+                expiresAt = Instant.fromEpochSeconds(evidenceExpiry)
             )
             cacheAndReturn(cacheKey, enrichWithEntityInfo(result, request, entityInfoExtractor))
         } catch (e: Exception) {
@@ -230,7 +374,28 @@ class OidfTrustValidationService(
     }
 
     private suspend fun cacheAndReturn(cacheKey: String, result: TrustValidationResult): TrustValidationResult {
-        cache.putApp(cacheKey, result)
+        val expiry = result.expiresAt
+        if (result.trusted && (expiry == null || expiry <= Clock.System.now())) {
+            return result.copy(
+                trusted = false,
+                status = TrustStatus.UNTRUSTED,
+                details = "Signed trust evidence expired during validation",
+                validatedAt = Clock.System.now(),
+            )
+        }
+        val remaining = expiry?.let { it - Clock.System.now() }
+        if (remaining == null || remaining.isPositive()) {
+            cache.putApp(cacheKey, result, remaining?.let { minOf(it, 30.minutes) })
+        }
+        if (result.trusted && expiry != null && expiry <= Clock.System.now()) {
+            cache.removeApp(cacheKey)
+            return result.copy(
+                trusted = false,
+                status = TrustStatus.UNTRUSTED,
+                details = "Signed trust evidence expired during validation",
+                validatedAt = Clock.System.now(),
+            )
+        }
         return result
     }
 
@@ -240,4 +405,46 @@ class OidfTrustValidationService(
         details = message,
         validatedAt = Clock.System.now()
     )
+
+    internal fun cacheKey(
+        request: TrustValidationRequest,
+        entityIdentifier: String,
+        trustAnchors: List<String>,
+        requiredTrustMarks: List<String>,
+        maxChainDepth: Int,
+    ): String =
+        JsonArray(listOf(
+            JsonPrimitive(entityIdentifier.trim()),
+            JsonArray(trustAnchors.map { JsonPrimitive(it.trim()) }),
+            JsonArray(requiredTrustMarks.map { JsonPrimitive(it.trim()) }),
+            JsonPrimitive(maxChainDepth),
+            JsonPrimitive(request.context.type),
+            request.context.framework?.let { JsonPrimitive(it) } ?: JsonNull,
+            JsonObject(request.context.parameters.toSortedMap().mapValues { JsonPrimitive(it.value) }),
+            request.validationTime?.let { JsonPrimitive(it.toString()) } ?: JsonNull,
+            JsonPrimitive(request.checkRevocation),
+            request.entityDiscovery?.let { Json.encodeToJsonElement(EntityDiscoveryOptions.serializer(), it) } ?: JsonNull,
+            JsonPrimitive(request.identifier.toString()),
+        )).toString()
+
+    internal fun selectedTrustAnchor(
+        trustChain: List<String>,
+        configuredAnchors: List<String>,
+    ): String? {
+        val configured = configuredAnchors.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        if (configured.isEmpty()) return null
+        return runCatching {
+            val terminal = decodeJWTComponents(trustChain.last()).payload
+            val issuer = terminal["iss"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            val subject = terminal["sub"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            issuer?.takeIf { subject != null && it in configured }
+        }.getOrNull()
+    }
+
+    private fun signedExpiry(payload: JsonObject): Long? =
+        runCatching {
+            payload["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()
+                ?.takeIf { it.isFinite() && it > 0.0 && it < Long.MAX_VALUE.toDouble() }
+                ?.toLong()
+        }.getOrNull()
 }

@@ -8,6 +8,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
@@ -22,6 +23,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 import com.sphereon.di.session.SessionScope
@@ -44,6 +47,8 @@ private fun platformAccountApiDisabled(configBinder: OidfConfigBinder): IdkResul
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListAccountsEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListAccountsEndpointCommand.COMMAND_ID)
 class ListAccountsEndpointCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,
@@ -79,6 +84,8 @@ class ListAccountsEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateAccountEndpointCommand.COMMAND_ID)
 class CreateAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,
@@ -124,6 +131,8 @@ class CreateAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteAccountEndpointCommand.COMMAND_ID)
 class DeleteAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val accountService: AccountService,

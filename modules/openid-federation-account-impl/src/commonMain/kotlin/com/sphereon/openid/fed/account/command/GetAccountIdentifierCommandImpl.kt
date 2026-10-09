@@ -12,7 +12,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.account.config.AccountServiceConfig
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -23,7 +23,7 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<GetAccountIdentifierCommand>())
 class GetAccountIdentifierCommandImpl(
     execution: SessionExecution,
-    private val config: AccountServiceConfig
+    private val config: TenantServiceConfig
 ) : TypedServiceCommandAdapter<GetAccountIdentifierArgs, String, FederationError>(
     commandId = GetAccountIdentifierCommand.COMMAND_ID,
     execution = execution,

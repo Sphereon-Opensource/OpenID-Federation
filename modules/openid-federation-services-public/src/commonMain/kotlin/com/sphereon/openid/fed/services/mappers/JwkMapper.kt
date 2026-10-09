@@ -17,6 +17,7 @@ fun JwkEntity.toDTO(): TenantJwk {
 
     return TenantJwk(
         id = this.id,
+        accountId = this.account_id,
         kms = this.kms,
         kmsKeyRef = this.kms_key_ref,
         e = key.e,
@@ -38,23 +39,15 @@ fun JwkEntity.toDTO(): TenantJwk {
 }
 
 /**
- * Map a DB key row to a federation historical key (OIDFed 1.1 §8.7.2).
- *
- * - [HistoricalKey.exp] is REQUIRED: revoked keys use [revoked_at]; active keys use a far-future default
- * - [HistoricalKey.revoked] only when the key is actually revoked
- * - [revokedAt] is Seconds Since the Epoch (as a decimal string for JSON numeric compatibility)
+ * Map a revoked key row to a federation historical key (OIDFed 1.1 §8.7.2): a previously used key whose REQUIRED
+ * [HistoricalKey.exp] is its revocation time, after which it MUST NOT be considered valid, and whose
+ * [JwkRevoked.revokedAt] is the same NumericDate. Keys in use are not historical and are not mapped.
  */
-fun JwkEntity.toHistoricalKey(
-    nowEpochSeconds: Long = System.currentTimeMillis() / 1000,
-    activeKeyDefaultTtlSeconds: Long = 10L * 365 * 24 * 3600
-): HistoricalKey {
+fun JwkEntity.toHistoricalKey(): HistoricalKey {
     val key: Jwk = cryptoJsonSerializer.decodeFromString(this.key)
     val iat = this.created_at?.toEpochSecond()
-    val revokedAtEpoch = this.revoked_at?.toEpochSecond()
-    val exp = when {
-        revokedAtEpoch != null -> revokedAtEpoch
-        else -> nowEpochSeconds + activeKeyDefaultTtlSeconds
-    }
+    val revokedAtEpoch = requireNotNull(this.revoked_at?.toEpochSecond()) { "Only revoked keys are historical keys" }
+    val exp = revokedAtEpoch
 
     return HistoricalKey(
         e = key.e,
@@ -72,14 +65,10 @@ fun JwkEntity.toHistoricalKey(
         x5tS256 = key.x5t_S256,
         iat = iat?.toDouble(),
         exp = exp.toDouble(),
-        revoked = if (revokedAtEpoch != null) {
-            JwkRevoked(
-                revokedAt = revokedAtEpoch.toString(),
-                reason = this.revoked_reason
-            )
-        } else {
-            null
-        }
+        revoked = JwkRevoked(
+            revokedAt = revokedAtEpoch.toDouble(),
+            reason = this.revoked_reason
+        )
     )
 }
 

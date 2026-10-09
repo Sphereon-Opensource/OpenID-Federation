@@ -9,12 +9,13 @@ import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
 /**
  * Arguments for the VerifyTrustChain command.
  *
- * @param trustChain The trust chain to verify (leaf EC first, Trust Anchor EC last).
+ * @param trustChain The trust chain to verify (leaf EC first; Trust Anchor EC may be omitted).
  * @param trustAnchor The Trust Anchor Entity Identifier. Optional but recommended.
  * @param currentTime Validation time in epoch seconds (defaults to now).
- * @param trustAnchorPublicKeys Optional out-of-band public keys for the Trust Anchor.
- *   When non-empty, the Trust Anchor Entity Configuration signature MUST verify with one of
- *   these keys (OIDFed 1.1 §4 / §10.2 — TA keys distributed securely, not only via self-JWKS).
+ * @param trustAnchorPublicKeys Out-of-band public keys for the Trust Anchor. The argument may be
+ *   omitted only when [com.sphereon.openid.fed.client.context.FederationContext.trustAnchorPublicKeys]
+ *   contains keys for this exact Trust Anchor Entity Identifier. Verification rejects chains
+ *   without either source of pinned keys; an anchor's own or fetched JWKS is not a trust root.
  */
 data class VerifyTrustChainArgs(
     val trustChain: Array<String>,
@@ -55,7 +56,8 @@ interface VerifyTrustChainCommandService {
      * @param trustChain The trust chain to verify.
      * @param trustAnchor The trust anchor Entity Identifier. Optional.
      * @param currentTime Validation time (epoch seconds). Defaults to now.
-     * @param trustAnchorPublicKeys Optional out-of-band Trust Anchor public keys.
+     * @param trustAnchorPublicKeys Out-of-band Trust Anchor public keys, or null to use configured
+     *   keys for the exact Trust Anchor identifier. One of these pin sources is required.
      * @return IdkResult containing the VerifyTrustChainResponse or an error.
      */
     suspend fun verifyTrustChain(

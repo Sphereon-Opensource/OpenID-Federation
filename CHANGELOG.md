@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+### OpenID Federation 1.1
+
+- Every statement an account signs uses its selected Federation Entity Key, set with
+  `fed.jwk.set-account-signing-key-selection`. There is no fallback key, and a publish request naming another key is
+  refused.
+- Entity Configurations and Subordinate Statements expire after `oidf.federation.statement.lifetime.seconds`. The key
+  is required and has no default.
+- `fed.trust.verify-entity` verifies an entity's Trust Chain under one Trust Anchor referenced by its https Entity
+  Identifier, with optional required Trust Mark types and an optional `viaSuperior` that fixes the Immediate Superior.
+- `fed.trust-mark.get-signed-status-jwt` returns the signed Trust Mark Status Response (§8.4.2) and
+  `fed.trust-mark.list-issued` lists the Trust Marks an account issued, with the ids used for revocation.
+- `fed.metadata-policy.create` refuses policies with malformed operators (§6.1).
+- Client registration commands for OpenID Federation for OpenID Connect 1.1 §12 (Automatic and Explicit
+  Registration) reference Trust Anchors by Entity Identifier.
+
+### Documentation
+
+- `docs/OPENID-FEDERATION-1.1.md`: library guide covering joining and operating federations, step-by-step entity
+  onboarding, command ids and configuration.
+- `docs/CLIENT-REGISTRATION.md`: step-by-step client onboarding through Automatic and Explicit Registration for the
+  OP and RP sides.
+- `docs/CONFIGURATION.md`: statement lifetime, datasource and federation endpoint authentication settings.
+- README: signing key selection, statement lifetime and the Trust Mark status request format.
+
 ## 0.25.0
 
 ### Identity modes: account and external

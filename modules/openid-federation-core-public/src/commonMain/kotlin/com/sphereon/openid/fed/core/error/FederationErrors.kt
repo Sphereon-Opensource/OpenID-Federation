@@ -744,6 +744,25 @@ data class AccountAlreadyExistsError(
     }
 }
 
+/** The caller's expected selected-signing-key revision is stale or exhausted. */
+data class SelectedSigningKeyConflictError(
+    val accountId: String,
+    override val exception: Throwable? = null,
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Conflict
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.selected-signing-key-conflict",
+        i18nParams = mapOf("accountId" to accountId),
+        defaultMessage = "Selected signing-key revision conflict for account: $accountId",
+    )
+
+    companion object {
+        const val ERROR_CODE = "selected_signing_key_conflict"
+    }
+}
+
 // =============================================================================
 // Critical Claim Errors
 // =============================================================================
@@ -1261,5 +1280,55 @@ data class DiipProfileValidationError(
 
     companion object {
         const val ERROR_CODE = "diip_profile_validation_failed"
+    }
+}
+
+// =============================================================================
+// Client Registration Errors (OpenID Federation for OpenID Connect 1.1 §12)
+// =============================================================================
+
+/**
+ * Entity metadata is missing, invalid, or in conflict with the metadata policy of the selected Trust Chain
+ * (OpenID Federation 1.1 §8.9 `invalid_metadata`).
+ */
+data class InvalidMetadataError(
+    val entityId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.invalid-metadata",
+        i18nParams = mapOf("entityId" to entityId, "reason" to reason),
+        defaultMessage = "Invalid metadata for $entityId: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "invalid_metadata"
+    }
+}
+
+/**
+ * A client registration request or response failed verification
+ * (OpenID Federation for OpenID Connect 1.1 §12.1.1, §12.2.2, §12.2.5).
+ */
+data class InvalidRegistrationError(
+    val entityId: String,
+    val reason: String,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.BadRequest
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.invalid-registration",
+        i18nParams = mapOf("entityId" to entityId, "reason" to reason),
+        defaultMessage = "Client registration rejected for $entityId: $reason"
+    )
+
+    companion object {
+        const val ERROR_CODE = "invalid_request"
     }
 }

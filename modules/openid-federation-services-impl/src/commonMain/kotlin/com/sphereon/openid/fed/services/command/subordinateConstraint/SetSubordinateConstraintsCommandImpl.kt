@@ -16,7 +16,6 @@ import com.sphereon.openid.fed.openapi.models.SubordinateConstraints
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -27,7 +26,6 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<SetSubordinateConstraintsCommand>())
 class SetSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
-    private val json: Json
 ) : TypedServiceCommandAdapter<SetSubordinateConstraintsArgs, SubordinateConstraints, FederationError>(
     commandId = SetSubordinateConstraintsCommand.COMMAND_ID,
     execution = execution,
@@ -46,7 +44,7 @@ class SetSubordinateConstraintsCommandImpl(
 
         logger.debug("Setting constraints for subordinate: $subordinateId, account: $tenantId")
 
-        val constraintsJson = json.encodeToString(constraints)
+        val constraintsJson = SubordinateConstraintJson.encodeToString(constraints)
 
         return try {
             // Check if constraints already exist for this subordinate
@@ -66,7 +64,7 @@ class SetSubordinateConstraintsCommandImpl(
 
             if (result != null) {
                 logger.info("Successfully set constraints for subordinate: $subordinateId")
-                IdkResult.ok(result.toDTO(json))
+                IdkResult.ok(result.toDTO(SubordinateConstraintJson))
             } else {
                 logger.error("Failed to set constraints for subordinate: $subordinateId")
                 federationErr(ServerError("Failed to set subordinate constraints"))

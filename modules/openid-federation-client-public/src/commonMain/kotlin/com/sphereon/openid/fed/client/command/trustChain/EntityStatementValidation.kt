@@ -1,11 +1,19 @@
 package com.sphereon.openid.fed.client.command.trustChain
 
 import com.sphereon.openid.fed.openapi.models.Jwt
+import com.sphereon.openid.fed.openapi.models.Constraints
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.math.floor
+import kotlin.math.nextDown
 
 /**
  * Structural Entity Statement checks from OpenID Federation 1.1 §3.2 / §10.2
@@ -33,8 +41,8 @@ object EntityStatementValidation {
         "trust_mark_owners"
     )
 
-    /** Standard Entity Statement claims that MUST NOT appear in `crit`. */
-    private val STANDARD_CLAIMS = setOf(
+    /** Standard Entity Statement claims that MUST NOT appear in `crit` (OpenID Federation 1.1 §3.1.1). */
+    val STANDARD_CLAIMS = setOf(
         "iss", "sub", "iat", "exp", "jwks", "metadata", "crit",
         "authority_hints", "trust_anchor_hints", "trust_marks",
         "trust_mark_issuers", "trust_mark_owners",
@@ -45,6 +53,66 @@ object EntityStatementValidation {
         val ok: Boolean,
         val reason: String? = null
     )
+
+    data class ConstraintsResult(
+        val constraints: Constraints? = null,
+        val reason: String? = null
+    )
+
+    /** Validate known constraint syntax before decoding nullable generated model fields. */
+    fun parseConstraints(element: JsonElement): ConstraintsResult {
+        if (element !is JsonObject) {
+            return ConstraintsResult(reason = "constraints must be a JSON object")
+        }
+
+        element["max_path_length"]?.let { value ->
+            val primitive = value as? JsonPrimitive
+            val count = primitive?.takeUnless { it.isString }?.intOrNull
+            if (count == null || count < 0) {
+                return ConstraintsResult(reason = "max_path_length must be a non-negative integer")
+            }
+        }
+
+        element["allowed_entity_types"]?.let { value ->
+            if (value !is JsonArray) {
+                return ConstraintsResult(reason = "allowed_entity_types must be an array of strings")
+            }
+            for (entry in value) {
+                val primitive = entry as? JsonPrimitive
+                if (primitive == null || !primitive.isString || primitive.content.isBlank()) {
+                    return ConstraintsResult(reason = "allowed_entity_types entries must be non-empty strings")
+                }
+                if (primitive.content == "federation_entity") {
+                    return ConstraintsResult(reason = "allowed_entity_types must not explicitly list federation_entity")
+                }
+            }
+        }
+
+        element["naming_constraints"]?.let { value ->
+            if (value !is JsonObject) {
+                return ConstraintsResult(reason = "naming_constraints must be a JSON object")
+            }
+            for (name in listOf("permitted", "excluded")) {
+                value[name]?.let { entries ->
+                    if (entries !is JsonArray || entries.any { item ->
+                            val primitive = item as? JsonPrimitive
+                            primitive == null || !primitive.isString
+                        }) {
+                        return ConstraintsResult(reason = "naming_constraints.$name must be an array of strings")
+                    }
+                    if (entries.any { !NamingConstraintsMatcher.isDomainNameConstraint((it as JsonPrimitive).content.trim()) }) {
+                        return ConstraintsResult(reason = "naming_constraints.$name entries must be fully qualified domain names")
+                    }
+                }
+            }
+        }
+
+        return try {
+            ConstraintsResult(constraints = Json { ignoreUnknownKeys = true }.decodeFromJsonElement<Constraints>(element))
+        } catch (e: Exception) {
+            ConstraintsResult(reason = "Invalid constraints: ${e.message}")
+        }
+    }
 
     fun isEntityConfiguration(payload: JsonObject): Boolean {
         val iss = payload["iss"]?.jsonPrimitive?.contentOrNull
@@ -76,6 +144,13 @@ object EntityStatementValidation {
                 false,
                 "Statement at position $position typ must be '$ENTITY_STATEMENT_TYP', got '${typ ?: "(missing)"}'"
             )
+        }
+
+        if (statement.header.trustChain != null) {
+            return StructuralResult(false, "Statement at position $position must not contain trust_chain header")
+        }
+        if (statement.header.peerTrustChain != null) {
+            return StructuralResult(false, "Statement at position $position must not contain peer_trust_chain header")
         }
 
         val alg = statement.header.alg
@@ -188,16 +263,43 @@ object EntityStatementValidation {
             }
         }
 
-        val iat = payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
-        if (iat == null || iat > currentTimeSeconds + CLOCK_SKEW_SECONDS) {
+        val iat = numericDate(payload["iat"])
+        val now = currentTimeSeconds.toDouble()
+        val skew = CLOCK_SKEW_SECONDS.toDouble()
+        if (iat == null || iat > now + skew) {
             return StructuralResult(false, "Statement at position $position has invalid or future iat")
         }
-        val exp = payload["exp"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
-        if (exp == null || exp <= currentTimeSeconds - CLOCK_SKEW_SECONDS) {
+        val exp = numericDate(payload["exp"])
+        if (exp == null || exp <= now - skew) {
             return StructuralResult(false, "Statement at position $position has expired exp")
         }
 
         return StructuralResult(true)
+    }
+
+    private fun numericDate(value: JsonElement?): Double? {
+        val primitive = value as? JsonPrimitive ?: return null
+        if (primitive.isString) return null
+        return primitive.content.toDoubleOrNull()?.takeIf { it.isFinite() }
+    }
+
+    /** Shorten a signed NumericDate to a representable whole-second evidence lifetime. */
+    fun conservativeExpiryEpochSeconds(value: JsonElement?): Long? {
+        val primitive = value as? JsonPrimitive ?: return null
+        if (primitive.isString) return null
+
+        // Integral JSON tokens retain their exact value, including both Long endpoints.
+        primitive.content.toLongOrNull()?.let { return it }
+
+        val seconds = numericDate(value) ?: return null
+        val lowerBound = Long.MIN_VALUE.toDouble()
+        val upperExclusive = -lowerBound // 2^63; Long.MAX_VALUE.toDouble() rounds here too.
+        if (seconds <= lowerBound || seconds >= upperExclusive) return null
+
+        // Conversion can round a decimal upward, so step toward -infinity before flooring.
+        val conservative = floor(seconds.nextDown())
+        if (!conservative.isFinite() || conservative <= lowerBound || conservative >= upperExclusive) return null
+        return conservative.toLong()
     }
 
     /**

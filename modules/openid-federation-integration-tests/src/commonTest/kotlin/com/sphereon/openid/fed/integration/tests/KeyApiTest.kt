@@ -12,6 +12,10 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
@@ -170,6 +174,39 @@ class KeyApiTest {
         } catch (e: Exception) {
             fail("POST /keys failed: ${e.message}")
         }
+    }
+
+    /**
+     * A created key signs nothing until it is selected; the selection is guarded by its revision.
+     */
+    @Test
+    fun `PUT keys signing-selection selects the signing key and refuses a stale revision`() = runTest {
+        val created = client.post("/keys") {
+            contentType(ContentType.Application.Json)
+            setBody("{}")
+        }
+        assertEquals(HttpStatusCode.Created, created.status, "Key creation prerequisite failed")
+        val keyId = Companion.jsonConfig.decodeFromString<TenantJwk>(created.bodyAsText()).id
+
+        val before = client.get("/keys/signing-selection")
+        assertEquals(HttpStatusCode.OK, before.status, before.bodyAsText())
+        val revision = Companion.jsonConfig.parseToJsonElement(before.bodyAsText()).jsonObject.getValue("revision").jsonPrimitive.long
+
+        val selected = client.put("/keys/signing-selection") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"selectedKeyId":"$keyId","expectedRevision":$revision}""")
+        }
+        assertEquals(HttpStatusCode.OK, selected.status, selected.bodyAsText())
+        val selection = Companion.jsonConfig.parseToJsonElement(selected.bodyAsText()).jsonObject
+        assertEquals(keyId, selection.getValue("selectedKeyId").jsonPrimitive.content)
+
+        val stale = client.put("/keys/signing-selection") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"selectedKeyId":null,"expectedRevision":$revision}""")
+        }
+        assertEquals(HttpStatusCode.Conflict, stale.status, stale.bodyAsText())
+        val unchanged = Companion.jsonConfig.parseToJsonElement(client.get("/keys/signing-selection").bodyAsText()).jsonObject
+        assertEquals(keyId, unchanged["selectedKeyId"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content)
     }
 
     /**

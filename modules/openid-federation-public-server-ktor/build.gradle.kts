@@ -22,7 +22,7 @@ dependencies {
     api(idklib.sphereon.idk.lib.core.api.public)
     api(idklib.sphereon.idk.lib.core.api.default)
     // IDK YAML config (APP/tenant/principal) — Metro contributions on classpath
-    api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+    api("com.sphereon.idk:lib-conf-yaml:0.26.0-SNAPSHOT")
 
     // Kotlin
     implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
@@ -55,14 +55,14 @@ dependencies {
     // Metro aggregates @ContributesBinding from the compile classpath: jwt-validation-impl
     // needs client + resource-server command impls (they are only runtime-transitive in the POM).
     implementation(idklib.sphereon.idk.ktor.server.kotlin.inject)
-    implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-common-public:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-client-public:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-client-impl:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:ktor-server-jwt-auth:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-common-public:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-public:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-impl:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.26.0-SNAPSHOT")
 
     // DI
     implementation(sphereonlib.software.amazon.app.platform.di.common.public)

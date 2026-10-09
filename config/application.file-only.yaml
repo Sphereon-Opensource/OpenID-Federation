@@ -12,6 +12,10 @@ oidf:
       identifier: http://localhost:8080
     dev:
       mode: false
+    # Lifetime in seconds of signed Entity Configurations and Subordinate Statements (required to sign them).
+    statement:
+      lifetime:
+        seconds: 3600
 
   server:
     admin:

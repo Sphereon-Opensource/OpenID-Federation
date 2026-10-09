@@ -26,6 +26,19 @@ FROM Account
 WHERE id = ?
 AND deleted_at IS NULL;
 
+findActiveForUpdate:
+SELECT *
+FROM Account
+WHERE id = ?
+AND deleted_at IS NULL
+FOR UPDATE;
+
+findByIdentifier:
+SELECT *
+FROM Account
+WHERE identifier = ?
+AND deleted_at IS NULL;
+
 ensureTenantExists:
 INSERT INTO Account (id, username, tenant_source)
 VALUES (:id, :username, :tenant_source)

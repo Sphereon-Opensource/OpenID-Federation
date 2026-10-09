@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
@@ -23,6 +24,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -31,6 +34,8 @@ import dev.zacsweers.metro.SingleIn
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListSubordinatesEndpointCommand.COMMAND_ID)
 class ListSubordinatesEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -68,6 +73,8 @@ class ListSubordinatesEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateSubordinateEndpointCommand.COMMAND_ID)
 class CreateSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -120,6 +127,8 @@ class CreateSubordinateEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteSubordinateEndpointCommand.COMMAND_ID)
 class DeleteSubordinateEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -164,6 +173,8 @@ class DeleteSubordinateEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListSubordinateKeysEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListSubordinateKeysEndpointCommand.COMMAND_ID)
 class ListSubordinateKeysEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -205,6 +216,8 @@ class ListSubordinateKeysEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateKeyEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateSubordinateKeyEndpointCommand.COMMAND_ID)
 class CreateSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -261,6 +274,8 @@ class CreateSubordinateKeyEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateKeyEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteSubordinateKeyEndpointCommand.COMMAND_ID)
 class DeleteSubordinateKeyEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -307,6 +322,8 @@ class DeleteSubordinateKeyEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetSubordinateStatementEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(GetSubordinateStatementEndpointCommand.COMMAND_ID)
 class GetSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -347,6 +364,8 @@ class GetSubordinateStatementEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PublishSubordinateStatementEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PublishSubordinateStatementEndpointCommand.COMMAND_ID)
 class PublishSubordinateStatementEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -408,6 +427,8 @@ class PublishSubordinateStatementEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListSubordinateMetadataEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListSubordinateMetadataEndpointCommand.COMMAND_ID)
 class ListSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val subordinateService: SubordinateService,
@@ -449,6 +470,8 @@ class ListSubordinateMetadataEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateSubordinateMetadataEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(CreateSubordinateMetadataEndpointCommand.COMMAND_ID)
 class CreateSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,
@@ -510,6 +533,8 @@ class CreateSubordinateMetadataEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateMetadataEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(DeleteSubordinateMetadataEndpointCommand.COMMAND_ID)
 class DeleteSubordinateMetadataEndpointCommandImpl(
     execution: SessionExecution,
     private val adminMutationGuard: AdminMutationGuard,

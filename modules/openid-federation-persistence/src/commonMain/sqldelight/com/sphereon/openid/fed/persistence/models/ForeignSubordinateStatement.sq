@@ -1,0 +1,18 @@
+create:
+INSERT INTO ForeignSubordinateStatement (
+    account_id,
+    iss,
+    sub,
+    statement,
+    expires_at
+) VALUES (?, ?, ?, ?, ?)
+RETURNING *;
+
+findLatestByAccountIssSub:
+SELECT *
+FROM ForeignSubordinateStatement
+WHERE account_id = ?
+AND iss = ?
+AND sub = ?
+ORDER BY created_at DESC
+LIMIT 1;

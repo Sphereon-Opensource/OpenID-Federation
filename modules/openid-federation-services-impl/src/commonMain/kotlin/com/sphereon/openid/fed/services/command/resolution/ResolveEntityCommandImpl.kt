@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.resolution
 
+import com.sphereon.openid.fed.client.mapper.mapEntityStatement
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -52,7 +53,6 @@ class ResolveEntityCommandImpl(
 ), ResolveEntityCommand {
 
     private val logger = execution.federationLogger("ResolveEntityCommand")
-    private val ONE_DAY_IN_SEC = 3600 * 24
 
     override suspend fun doExecute(
         args: ResolveEntityArgs,
@@ -99,23 +99,7 @@ class ResolveEntityCommandImpl(
                 "Trust chain resolution completed (${trustChain.size} statements, ta=$selectedTrustAnchor)"
             )
 
-            // 2. Verify Trust Chain cryptographically (§10.2)
-            logger.debug("Verifying trust chain for subject: $sub")
-            val verifyResult = federationClient.trustChainVerify(
-                trustChain = trustChainArray,
-                trustAnchor = selectedTrustAnchor,
-                currentTime = System.currentTimeMillis() / 1000
-            )
-            if (verifyResult.isErr) {
-                logger.error("Trust chain verification failed for entity: $sub")
-                return federationErr(verifyResult.error)
-            }
-            if (!verifyResult.value.isValid) {
-                return federationErr(TrustChainValidationFailedError(
-                    entityId = sub,
-                    reason = verifyResult.value.errorMessage ?: "Trust chain verification returned invalid"
-                ))
-            }
+            // 2. The chain comes back from resolution verified against the Trust Anchor's keys (§10.2).
 
             // 3. Derive Resolved Metadata (§6.1 / §10)
             logger.debug("Applying metadata policies for Resolved Metadata")
@@ -144,23 +128,20 @@ class ResolveEntityCommandImpl(
                     "entityTypes=${entityTypes?.joinToString() ?: "all"})"
             )
 
-            // 4. Verify Trust Marks using Trust Anchor configuration (§7.3 context)
+            // 4. Verify the Trust Marks of the Entity Configuration in the returned chain under the Trust Anchor (§7.3)
             logger.debug("Verifying trust marks for subject: $sub")
-            val leafConfigResult = federationClient.entityConfigurationStatementGet(sub)
-            val trustMarks = if (leafConfigResult.isOk) {
-                getVerifiedTrustMarks(leafConfigResult.value, selectedTrustAnchor)
-            } else {
-                logger.warn("Could not re-fetch leaf EC for trust marks: ${leafConfigResult.error.message.defaultMessage}")
-                emptyArray()
-            }
+            val leafConfiguration = mapEntityStatement(trustChain.first(), EntityConfigurationStatement::class)
+                ?: return federationErr(TrustChainValidationFailedError(entityId = sub, reason = "The chain does not start with an Entity Configuration"))
+            val anchorConfiguration = trustChain.last().takeIf { trustChain.size > 1 }
+                ?.let { mapEntityStatement(it, EntityConfigurationStatement::class) }
+                ?.takeIf { it.iss == selectedTrustAnchor && it.sub == selectedTrustAnchor }
+            val trustMarks = getVerifiedTrustMarks(leafConfiguration, selectedTrustAnchor, anchorConfiguration)
 
+            // §8.3.2: exp is the minimum of the Trust Chain and of every included Trust Mark.
             val currentTime = System.currentTimeMillis() / 1000
             val chainExp = minTrustChainExp(decodedStatements)
-            val exp = if (chainExp != null) {
-                min(chainExp, currentTime + ONE_DAY_IN_SEC)
-            } else {
-                currentTime + ONE_DAY_IN_SEC
-            }
+                ?: return federationErr(TrustChainValidationFailedError(entityId = sub, reason = "The Trust Chain has no exp"))
+            val exp = trustMarks.mapNotNull { trustMarkExpiry(it.trustMark) }.fold(chainExp) { earliest, markExp -> min(earliest, markExp) }
 
             buildResolveResponse(
                 currentTime = currentTime,
@@ -204,6 +185,13 @@ class ResolveEntityCommandImpl(
                 trustChain = trustChain.toList()
             )
         )
+    }
+
+    /** The `exp` of a Trust Mark JWT, or null when it has none. */
+    private fun trustMarkExpiry(trustMark: String): Long? = try {
+        decodeJWTComponents(trustMark).payload["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
+    } catch (_: Exception) {
+        null
     }
 
     /**
@@ -251,22 +239,25 @@ class ResolveEntityCommandImpl(
      */
     private suspend fun getVerifiedTrustMarks(
         subEntityConfigurationStatement: EntityConfigurationStatement,
-        trustAnchor: String
+        trustAnchor: String,
+        anchorConfiguration: EntityConfigurationStatement?,
     ): Array<TrustMark> {
         try {
             val trustMarks = subEntityConfigurationStatement.trustMarks ?: return arrayOf()
             val verifiedTrustMarks = mutableListOf<TrustMark>()
             val subject = subEntityConfigurationStatement.sub
 
-            val taConfigResult = federationClient.entityConfigurationStatementGet(trustAnchor)
-            if (taConfigResult.isErr) {
-                logger.warn(
-                    "Failed to fetch Trust Anchor config for trust mark verification: " +
-                        taConfigResult.error.message.defaultMessage
-                )
-                return arrayOf()
+            val trustAnchorConfig = anchorConfiguration ?: run {
+                val taConfigResult = federationClient.entityConfigurationStatementGet(trustAnchor)
+                if (taConfigResult.isErr) {
+                    logger.warn(
+                        "Failed to fetch Trust Anchor config for trust mark verification: " +
+                            taConfigResult.error.message.defaultMessage
+                    )
+                    return arrayOf()
+                }
+                taConfigResult.value
             }
-            val trustAnchorConfig = taConfigResult.value
 
             for (trustMark in trustMarks) {
                 try {
@@ -277,7 +268,7 @@ class ResolveEntityCommandImpl(
                     )
 
                     when {
-                        validationResult.isOk -> {
+                        validationResult.isOk && validationResult.value.isValid -> {
                             verifiedTrustMarks.add(trustMark)
                             logger.debug(
                                 "Trust mark ${trustMark.trustMarkType} verified for federation TA $trustAnchor"

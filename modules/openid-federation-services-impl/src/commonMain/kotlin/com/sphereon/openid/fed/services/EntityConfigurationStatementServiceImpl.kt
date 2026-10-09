@@ -7,6 +7,8 @@ import com.sphereon.openid.fed.core.error.toFederationResult
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountArgs
 import com.sphereon.openid.fed.services.command.entityConfiguration.FindEntityConfigurationByAccountCommand
+import com.sphereon.openid.fed.services.command.entityConfiguration.FindLatestStoredEntityConfigurationJwtArgs
+import com.sphereon.openid.fed.services.command.entityConfiguration.FindLatestStoredEntityConfigurationJwtCommand
 import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationArgs
 import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntityConfigurationCommand
 import dev.zacsweers.metro.Inject
@@ -30,7 +32,8 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<EntityConfigurationStatementService>())
 class EntityConfigurationStatementServiceImpl(
     private val findEntityConfigurationByAccountCommand: FindEntityConfigurationByAccountCommand,
-    private val publishEntityConfigurationCommand: PublishEntityConfigurationCommand
+    private val publishEntityConfigurationCommand: PublishEntityConfigurationCommand,
+    private val findLatestStoredEntityConfigurationJwtCommand: FindLatestStoredEntityConfigurationJwtCommand,
 ) : EntityConfigurationStatementService {
 
     override suspend fun findByAccount(tenantId: String): FederationResult<EntityConfigurationStatement> =
@@ -43,4 +46,9 @@ class EntityConfigurationStatementServiceImpl(
         kid: String?
     ): FederationResult<String> =
         publishEntityConfigurationCommand.execute(PublishEntityConfigurationArgs(tenantId, dryRun, kmsKeyRef, kid)).toFederationResult()
+
+    override suspend fun findLatestStoredJwtByAccount(accountId: String): FederationResult<String?> =
+        findLatestStoredEntityConfigurationJwtCommand.execute(
+            FindLatestStoredEntityConfigurationJwtArgs(accountId),
+        ).toFederationResult().map { it.compact }
 }

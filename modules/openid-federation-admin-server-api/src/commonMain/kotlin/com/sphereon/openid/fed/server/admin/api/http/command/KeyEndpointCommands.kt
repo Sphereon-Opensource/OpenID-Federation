@@ -56,3 +56,36 @@ interface RevokeKeyEndpointCommand : HttpEndpointCommand {
         )
     }
 }
+
+// ==================== Signing Key Selection Endpoints ====================
+
+interface GetSigningKeySelectionEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.get-signing-key-selection"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/keys/signing-selection",
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "getSigningKeySelection",
+            tags = setOf("keys"),
+            summary = "Get the key that signs the current account's statements"
+        )
+    }
+}
+
+interface SetSigningKeySelectionEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.set-signing-key-selection"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.PUT,
+            pathPattern = "/keys/signing-selection",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "setSigningKeySelection",
+            tags = setOf("keys"),
+            summary = "Select the key that signs the current account's statements"
+        )
+    }
+}

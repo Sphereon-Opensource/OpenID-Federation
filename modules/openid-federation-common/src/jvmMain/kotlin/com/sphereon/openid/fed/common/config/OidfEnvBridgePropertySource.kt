@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.common.config
 
 import com.sphereon.core.api.conf.ConfigLevel
+import com.sphereon.core.api.conf.Env
 import com.sphereon.core.api.conf.PropertyKeyNormalizerImpl
 import com.sphereon.core.api.conf.PropertySource
 import com.sphereon.core.api.conf.RefreshablePropertySource
@@ -40,16 +41,37 @@ class OidfEnvBridgePropertySource(
     RefreshablePropertySource {
 
     private val keyNormalizer = PropertyKeyNormalizerImpl.Default
+    private val stateLock = Any()
     private var revision: Long = 1L
+    private var initialized = false
+    private val observedNames = linkedSetOf<String>()
+    private val trackedNames = linkedSetOf<String>()
+    private var effectiveValues: Map<String, String> = emptyMap()
 
     override val isPlatformSupported: Boolean = true
     override val configLevel: ConfigLevel = ConfigLevel.APP
     override val contentRevision: Long
-        get() = revision
+        get() = synchronized(stateLock) { revision }
 
     override fun refreshIfNeeded() {
-        // Live source — bump revision so caching resolvers re-read after test env overrides.
-        revision++
+        synchronized(stateLock) {
+            val candidates = linkedSetOf<String>()
+            candidates.addAll(knownIdkKeys())
+            candidates.addAll(trackedNames)
+            candidates.addAll(observedNames)
+            candidates.addAll(discoverableNames())
+
+            val current = linkedMapOf<String, String>()
+            for (name in candidates) {
+                getEnvironmentVariable(name)?.takeIf { it.isNotEmpty() }?.let { current[name] = it }
+            }
+            if (initialized && current != effectiveValues) {
+                revision++
+            }
+            effectiveValues = current
+            trackedNames.addAll(candidates)
+            initialized = true
+        }
     }
 
     override fun getName(): String = NAME
@@ -59,11 +81,9 @@ class OidfEnvBridgePropertySource(
     override fun compareTo(other: PropertySource<*>): Int =
         this.getOrder().compareTo(other.getOrder())
 
-    override fun hasProperty(name: String): Boolean =
-        getEnvironmentVariable(name)?.isNotEmpty() == true
+    override fun hasProperty(name: String): Boolean = observedValue(name) != null
 
-    override fun getPropertyAsString(name: String): String? =
-        getEnvironmentVariable(name)?.takeIf { it.isNotEmpty() }
+    override fun getPropertyAsString(name: String): String? = observedValue(name)
 
     override fun <T : Any> getProperty(
         name: String,
@@ -94,6 +114,30 @@ class OidfEnvBridgePropertySource(
         val fromLegacy = LegacyEnvMappingPropertySource.legacyMappings.values.toSet()
         // Also include reverse-map keys and common oidf keys that only exist as OIDF_* form.
         return fromLegacy
+    }
+
+    private fun observedValue(name: String): String? = synchronized(stateLock) {
+        val value = getEnvironmentVariable(name)?.takeIf { it.isNotEmpty() }
+        if (observedNames.add(name) && name !in trackedNames && name !in discoverableNames()) {
+            // A JVM system property may be readable but absent from Env.getAll().
+            // Capture its first observation without manufacturing a content change.
+            trackedNames.add(name)
+            if (value != null) effectiveValues = effectiveValues + (name to value)
+        }
+        value
+    }
+
+    private fun discoverableNames(): Set<String> {
+        // Overrides replace the entire environment; never mix host names into a test override.
+        val rawNames = OidfEnvOverrides.map?.keys ?: Env.getAll().keys
+        return rawNames.asSequence()
+            .filter { raw ->
+                val lower = raw.lowercase()
+                lower.startsWith("oidf_") || lower.startsWith("oidf.") ||
+                    lower.startsWith("kms_") || lower.startsWith("kms.")
+            }
+            .map { keyNormalizer.normalize(it.lowercase()) }
+            .toSet()
     }
 
     @Suppress("UNCHECKED_CAST")

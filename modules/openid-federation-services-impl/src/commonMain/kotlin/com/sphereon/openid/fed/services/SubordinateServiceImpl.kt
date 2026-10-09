@@ -34,6 +34,8 @@ class SubordinateServiceImpl(
     private val getSubordinateStatementCommand: GetSubordinateStatementCommand,
     private val publishSubordinateStatementCommand: PublishSubordinateStatementCommand,
     private val fetchSubordinateStatementCommand: FetchSubordinateStatementCommand,
+    private val persistForeignSubordinateStatementCommand: PersistForeignSubordinateStatementCommand,
+    private val findForeignSubordinateStatementCommand: FindForeignSubordinateStatementCommand,
     private val createSubordinateJwkCommand: CreateSubordinateJwkCommand,
     private val getSubordinateJwksCommand: GetSubordinateJwksCommand,
     private val deleteSubordinateJwkCommand: DeleteSubordinateJwkCommand,
@@ -68,6 +70,25 @@ class SubordinateServiceImpl(
 
     override suspend fun fetchSubordinateStatement(iss: String, sub: String): FederationResult<String> =
         fetchSubordinateStatementCommand.execute(FetchSubordinateStatementArgs(iss, sub)).toFederationResult()
+
+    override suspend fun persistForeignSubordinateStatement(
+        accountId: String,
+        iss: String,
+        sub: String,
+        signedJwt: String,
+    ): FederationResult<Unit> =
+        persistForeignSubordinateStatementCommand.execute(
+            PersistForeignSubordinateStatementArgs(accountId, iss, sub, signedJwt),
+        ).toFederationResult()
+
+    override suspend fun findForeignSubordinateStatement(
+        accountId: String,
+        iss: String,
+        sub: String,
+    ): FederationResult<String?> =
+        findForeignSubordinateStatementCommand.execute(
+            FindForeignSubordinateStatementArgs(accountId, iss, sub),
+        ).toFederationResult().map { it.compact }
 
     override suspend fun createSubordinateJwk(tenantId: String, id: String, jwk: Jwk): FederationResult<SubordinateJwk> =
         createSubordinateJwkCommand.execute(CreateSubordinateJwkArgs(tenantId, id, jwk)).toFederationResult()

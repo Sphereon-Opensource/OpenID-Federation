@@ -60,4 +60,12 @@ interface TrustMarkCommandDescriptors {
     @Provides @IntoSet
     fun removeIssuerFromTrustMarkType(cmd: Lazy<RemoveIssuerFromTrustMarkTypeCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(RemoveIssuerFromTrustMarkTypeCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun getSignedTrustMarkStatusJwt(cmd: Lazy<GetSignedTrustMarkStatusJwtCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(GetSignedTrustMarkStatusJwtCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun listIssuedTrustMarks(cmd: Lazy<ListIssuedTrustMarksCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(ListIssuedTrustMarksCommand.COMMAND_ID) { cmd.value }
 }

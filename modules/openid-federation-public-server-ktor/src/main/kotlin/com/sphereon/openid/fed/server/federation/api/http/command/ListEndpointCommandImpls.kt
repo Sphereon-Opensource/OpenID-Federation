@@ -6,6 +6,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.http.GenericHttpRequest
 import com.sphereon.core.api.http.GenericHttpResponse
+import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
 import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
@@ -22,6 +23,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
@@ -40,6 +43,8 @@ private data class ListFilters(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListSubordinatesRootEndpointCommand.COMMAND_ID)
 class ListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -83,6 +88,8 @@ class ListSubordinatesRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostListSubordinatesRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostListSubordinatesRootEndpointCommand.COMMAND_ID)
 class PostListSubordinatesRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -126,6 +133,8 @@ class PostListSubordinatesRootEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ListSubordinatesAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListSubordinatesAccountEndpointCommand.COMMAND_ID)
 class ListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
@@ -172,6 +181,8 @@ class ListSubordinatesAccountEndpointCommandImpl(
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<PostListSubordinatesAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostListSubordinatesAccountEndpointCommand.COMMAND_ID)
 class PostListSubordinatesAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,

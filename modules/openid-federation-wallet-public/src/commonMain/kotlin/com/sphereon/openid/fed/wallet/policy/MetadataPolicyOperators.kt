@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.wallet.policy
 
+import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import kotlinx.serialization.json.*
 
 /**
@@ -17,6 +18,8 @@ object MetadataPolicyOperators {
     val STANDARD_OPERATORS: Set<String> = setOf(
         "value", "add", "default", "one_of", "subset_of", "superset_of", "essential"
     )
+    private val ARRAY_OPERATORS = setOf("add", "one_of", "subset_of", "superset_of")
+    private val SCOPE_ENTITY_TYPES = setOf("openid_relying_party", "oauth_client")
 
     /**
      * Result of applying a metadata policy.
@@ -40,6 +43,84 @@ object MetadataPolicyOperators {
         data class Error(val reason: String) : PolicyMergeResult()
     }
 
+    /** Validate signed policy structure and operator configuration even for inactive entity types. */
+    private fun validatePolicy(policy: JsonObject): List<String> {
+        val errors = mutableListOf<String>()
+        for ((entityType, entityPolicy) in policy) {
+            if (entityPolicy !is JsonObject) {
+                errors.add("metadata_policy entry for entity type '$entityType' must be a JSON object")
+                continue
+            }
+            for ((claim, claimPolicy) in entityPolicy) {
+                val path = "$entityType.$claim"
+                if (claimPolicy !is JsonObject) {
+                    errors.add("metadata_policy for $path must be a JSON object of operators")
+                    continue
+                }
+                errors.addAll(validateClaimPolicy(claimPolicy, path))
+            }
+        }
+        return errors
+    }
+
+    private fun validateClaimPolicy(operators: JsonObject, path: String): List<String> {
+        val errors = mutableListOf<String>()
+        for (operator in ARRAY_OPERATORS) {
+            operators[operator]?.let { value ->
+                arrayOperatorError(operator, value, path)?.let(errors::add)
+            }
+        }
+        val essential = operators["essential"]
+        if (essential != null &&
+            (essential !is JsonPrimitive || essential.isString || essential.booleanOrNull == null)
+        ) {
+            errors.add("Operator 'essential' at $path must be a boolean")
+        }
+        if (operators["default"] is JsonNull) {
+            errors.add("Operator 'default' at $path must not be null")
+        }
+        if (errors.isNotEmpty()) return errors
+
+        val value = operators["value"]
+        val add = operators["add"] as? JsonArray
+        val oneOf = operators["one_of"] as? JsonArray
+        val subsetOf = operators["subset_of"] as? JsonArray
+        val supersetOf = operators["superset_of"] as? JsonArray
+
+        if (value != null) {
+            if (value is JsonNull) {
+                if ("default" in operators || essential?.jsonPrimitive?.booleanOrNull == true) {
+                    errors.add("Policy at $path cannot combine null value with default or essential=true")
+                }
+            }
+            if (add != null && !containsAll(value as? JsonArray, add)) {
+                errors.add("Policy at $path requires add values to be a subset of value")
+            }
+            if (oneOf != null && value !in oneOf) {
+                errors.add("Policy at $path requires value to be among one_of values")
+            }
+            if (subsetOf != null && !containsAll(subsetOf, value as? JsonArray)) {
+                errors.add("Policy at $path requires value values to be a subset of subset_of")
+            }
+            if (supersetOf != null && !containsAll(value as? JsonArray, supersetOf)) {
+                errors.add("Policy at $path requires value values to be a superset of superset_of")
+            }
+        }
+        if (oneOf != null && (add != null || subsetOf != null || supersetOf != null)) {
+            errors.add("Policy at $path cannot combine one_of with add, subset_of, or superset_of")
+        }
+        if (add != null && subsetOf != null && !containsAll(subsetOf, add)) {
+            errors.add("Policy at $path requires add values to be a subset of subset_of")
+        }
+        if (subsetOf != null && supersetOf != null && !containsAll(subsetOf, supersetOf)) {
+            errors.add("Policy at $path requires subset_of values to contain superset_of values")
+        }
+        return errors
+    }
+
+    private fun containsAll(container: JsonArray?, required: JsonArray?): Boolean =
+        container != null && required != null && required.all { it in container }
+
     /**
      * Merge [subordinate] policy into [superior] (current) policy per §6.1.4.1.
      *
@@ -47,8 +128,11 @@ object MetadataPolicyOperators {
      * more-subordinate policy as [subordinate].
      */
     fun mergePolicies(superior: JsonObject, subordinate: JsonObject): PolicyMergeResult {
-        val result = superior.toMutableMap()
-        for ((entityType, subEntityPolicy) in subordinate) {
+        val inputErrors = validatePolicy(superior) + validatePolicy(subordinate)
+        if (inputErrors.isNotEmpty()) return PolicyMergeResult.Error(inputErrors.first())
+
+        val result = standardOperatorsOnly(superior).toMutableMap()
+        for ((entityType, subEntityPolicy) in standardOperatorsOnly(subordinate)) {
             if (subEntityPolicy !is JsonObject) {
                 return PolicyMergeResult.Error(
                     "metadata_policy entry for entity type '$entityType' must be a JSON object"
@@ -69,23 +153,21 @@ object MetadataPolicyOperators {
                 is PolicyMergeResult.Error -> return merged
             }
         }
-        return PolicyMergeResult.Ok(JsonObject(result))
+        val merged = JsonObject(result)
+        val mergedErrors = validatePolicy(merged)
+        return if (mergedErrors.isEmpty()) PolicyMergeResult.Ok(merged)
+        else PolicyMergeResult.Error(mergedErrors.first())
     }
 
-    /**
-     * Backward-compatible merge that returns the superior policy on error (prefer [mergePolicies]).
-     * Prefer callers that handle [PolicyMergeResult].
-     */
-    @Deprecated(
-        message = "Use mergePolicies and handle PolicyMergeResult",
-        replaceWith = ReplaceWith("mergePolicies(base, overlay)")
-    )
-    fun mergePoliciesLegacy(base: JsonObject, overlay: JsonObject): JsonObject {
-        return when (val r = mergePolicies(base, overlay)) {
-            is PolicyMergeResult.Ok -> r.policy
-            is PolicyMergeResult.Error -> base
+    /** Unknown noncritical operators have no merge or application semantics. */
+    private fun standardOperatorsOnly(policy: JsonObject): JsonObject = JsonObject(
+        policy.mapValues { (_, entityPolicy) ->
+            JsonObject((entityPolicy as JsonObject).mapNotNull { (claim, claimPolicy) ->
+                val known = (claimPolicy as JsonObject).filterKeys { it in STANDARD_OPERATORS }
+                if (known.isEmpty()) null else claim to JsonObject(known)
+            }.toMap())
         }
-    }
+    )
 
     private fun mergeEntityTypePolicies(
         superior: JsonObject,
@@ -158,16 +240,16 @@ object MetadataPolicyOperators {
                 }
             }
             "add", "superset_of" -> {
-                val sup = toJsonArray(superiorValue)
+                val sup = superiorValue as? JsonArray
                     ?: return OperatorMerge.Error("Policy merge error at $path.$op: expected array")
-                val sub = toJsonArray(subordinateValue)
+                val sub = subordinateValue as? JsonArray
                     ?: return OperatorMerge.Error("Policy merge error at $path.$op: expected array")
                 OperatorMerge.Ok(JsonArray(unionPreserveOrder(sup, sub)))
             }
             "one_of", "subset_of" -> {
-                val sup = toJsonArray(superiorValue)
+                val sup = superiorValue as? JsonArray
                     ?: return OperatorMerge.Error("Policy merge error at $path.$op: expected array")
-                val sub = toJsonArray(subordinateValue)
+                val sub = subordinateValue as? JsonArray
                     ?: return OperatorMerge.Error("Policy merge error at $path.$op: expected array")
                 val intersection = sup.filter { sub.contains(it) }
                 if (op == "one_of" && intersection.isEmpty()) {
@@ -184,55 +266,25 @@ object MetadataPolicyOperators {
                     ?: return OperatorMerge.Error("Policy merge error at $path.essential: expected boolean")
                 OperatorMerge.Ok(JsonPrimitive(sup || sub))
             }
-            else -> {
-                if (superiorValue != subordinateValue) {
-                    OperatorMerge.Error(
-                        "Policy merge error at $path.$op: non-standard operator values must be equal"
-                    )
-                } else {
-                    OperatorMerge.Ok(superiorValue)
-                }
-            }
+            else -> OperatorMerge.Error("Unsupported policy operator at $path.$op")
         }
     }
 
     /**
-     * Validate that every operator listed in [criticalOperators] is understood (standard or supported).
+     * Standard names cannot be critical; this primitive supports no additional operators.
      */
     fun validateCriticalOperators(
+        @Suppress("UNUSED_PARAMETER")
         policy: JsonObject,
         criticalOperators: Collection<String>
     ): List<String> {
-        if (criticalOperators.isEmpty()) return emptyList()
-        val errors = mutableListOf<String>()
-        val usedOperators = collectOperatorNames(policy)
-        for (crit in criticalOperators) {
-            if (crit in STANDARD_OPERATORS) continue
-            if (crit !in usedOperators) continue
-            // Critical non-standard operator present and not in standard set → unsupported
-            errors.add("Unsupported critical metadata policy operator: '$crit'")
-        }
-        // Also: if crit lists operators that appear in policy but we don't support them
-        for (op in usedOperators) {
-            if (op !in STANDARD_OPERATORS && op in criticalOperators) {
-                if (errors.none { it.contains("'$op'") }) {
-                    errors.add("Unsupported critical metadata policy operator: '$op'")
-                }
+        return criticalOperators.distinct().map { name ->
+            when {
+                name.isBlank() -> "metadata_policy_crit entries must be non-empty strings"
+                name in STANDARD_OPERATORS -> "Standard metadata policy operator '$name' must not be critical"
+                else -> "Unsupported critical metadata policy operator: '$name'"
             }
         }
-        return errors.distinct()
-    }
-
-    private fun collectOperatorNames(policy: JsonObject): Set<String> {
-        val ops = mutableSetOf<String>()
-        for ((_, entityPolicy) in policy) {
-            val entityObj = entityPolicy as? JsonObject ?: continue
-            for ((_, claimPolicy) in entityObj) {
-                val claimObj = claimPolicy as? JsonObject ?: continue
-                ops.addAll(claimObj.keys)
-            }
-        }
-        return ops
     }
 
     /**
@@ -249,6 +301,12 @@ object MetadataPolicyOperators {
     ): PolicyApplicationResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
+        errors.addAll(validatePolicy(policy))
+        if (errors.isNotEmpty()) {
+            val unchanged = if (entityType == null) metadata
+            else (metadata[entityType] as? JsonObject ?: JsonObject(emptyMap()))
+            return PolicyApplicationResult(metadata = unchanged, errors = errors)
+        }
 
         if (entityType != null) {
             val typePolicy = policy[entityType]?.jsonObject
@@ -256,15 +314,21 @@ object MetadataPolicyOperators {
             if (typePolicy == null) {
                 return PolicyApplicationResult(metadata = typeMetadata, errors = errors, warnings = warnings)
             }
+            if (entityType !in metadata) {
+                return PolicyApplicationResult(metadata = typeMetadata, errors = errors, warnings = warnings)
+            }
             val applied = applyEntityTypePolicy(typeMetadata, typePolicy, entityType, errors, warnings)
             return PolicyApplicationResult(metadata = applied, errors = errors, warnings = warnings)
         }
 
-        // Full metadata: apply each entity-type policy; leave types without policy unchanged
+        // Full metadata: apply policies only to declared entity types; retain types without policy.
         val result = metadata.toMutableMap()
         for ((type, typePolicyElement) in policy) {
             if (typePolicyElement !is JsonObject) {
                 errors.add("metadata_policy for entity type '$type' must be a JSON object")
+                continue
+            }
+            if (type !in metadata) {
                 continue
             }
             val typeMetadata = metadata[type]?.jsonObject ?: JsonObject(emptyMap())
@@ -305,9 +369,9 @@ object MetadataPolicyOperators {
      * Steps:
      * 1. Start from leaf `metadata`
      * 2. Apply Immediate Superior SS `metadata` overrides
-     * 3. Merge `metadata_policy` from SSs superior-first; enforce `metadata_policy_crit`
-     * 4. Apply resolved policy (fail closed)
-     * 5. Optionally scope to a single [entityType] (returns that type's object only)
+     * 3. Filter entity types by each SS `allowed_entity_types` constraint
+     * 4. Merge `metadata_policy` from SSs superior-first; enforce `metadata_policy_crit`
+     * 5. Apply resolved policy (fail closed), then optionally scope to [entityType]
      *
      * @return [TrustChainMetadataResult] with effective metadata and how many policies merged
      */
@@ -324,11 +388,7 @@ object MetadataPolicyOperators {
         }
 
         val leafPayload = decodedStatements.first()
-        val leafMetadata = leafPayload["metadata"]?.jsonObject
-            ?: return TrustChainMetadataResult(
-                metadata = JsonObject(emptyMap()),
-                policiesApplied = 0
-            )
+        val leafMetadata = leafPayload["metadata"]?.jsonObject ?: JsonObject(emptyMap())
 
         val leafSub = leafPayload["sub"]?.jsonPrimitive?.contentOrNull
         val immediateSuperiorSs = decodedStatements.drop(1).firstOrNull { stmt ->
@@ -342,29 +402,57 @@ object MetadataPolicyOperators {
         }
 
         val subordinateStatements = decodedStatements.filter { isSubordinateStatement(it) }
+        for (statement in subordinateStatements) {
+            val constraintsElement = statement["constraints"] ?: continue
+            val parsed = EntityStatementValidation.parseConstraints(constraintsElement)
+            val constraints = parsed.constraints ?: return TrustChainMetadataResult(
+                metadata = workingMetadata,
+                policiesApplied = 0,
+                errors = listOf(parsed.reason ?: "Invalid constraints")
+            )
+            val allowedTypes = constraints.allowedEntityTypes ?: continue
+            workingMetadata = JsonObject(workingMetadata.filterKeys { type ->
+                EntityStatementValidation.isEntityTypeAllowed(type, allowedTypes)
+            })
+        }
         val ssSuperiorFirst = subordinateStatements.asReversed()
 
         var combinedPolicy = JsonObject(emptyMap())
         var policiesApplied = 0
         val criticalOperators = linkedSetOf<String>()
-        val errors = mutableListOf<String>()
+        // Check every signed declaration before merging discards unknown noncritical operators.
+        for (statement in ssSuperiorFirst) {
+            if (!statement.containsKey("metadata_policy_crit")) continue
+            val declarations = statement["metadata_policy_crit"] as? JsonArray
+            if (declarations == null || declarations.isEmpty()) {
+                return TrustChainMetadataResult(
+                    metadata = workingMetadata,
+                    policiesApplied = 0,
+                    errors = listOf("metadata_policy_crit must be a non-empty array of strings")
+                )
+            }
+            for (element in declarations) {
+                val name = element as? JsonPrimitive
+                if (name == null || !name.isString || name.content.isBlank()) {
+                    return TrustChainMetadataResult(
+                        metadata = workingMetadata,
+                        policiesApplied = 0,
+                        errors = listOf("metadata_policy_crit entries must be non-empty strings")
+                    )
+                }
+                criticalOperators.add(name.content)
+            }
+        }
+        val criticalErrors = validateCriticalOperators(combinedPolicy, criticalOperators)
+        if (criticalErrors.isNotEmpty()) {
+            return TrustChainMetadataResult(
+                metadata = workingMetadata,
+                policiesApplied = 0,
+                errors = criticalErrors
+            )
+        }
 
         for (statement in ssSuperiorFirst) {
-            statement["metadata_policy_crit"]?.let { critElement ->
-                when (critElement) {
-                    is JsonArray -> critElement.forEach { el ->
-                        el.jsonPrimitive.contentOrNull?.let { criticalOperators.add(it) }
-                    }
-                    else -> {
-                        return TrustChainMetadataResult(
-                            metadata = workingMetadata,
-                            policiesApplied = policiesApplied,
-                            errors = listOf("metadata_policy_crit must be an array of strings")
-                        )
-                    }
-                }
-            }
-
             val metadataPolicy = statement["metadata_policy"]?.jsonObject ?: continue
             when (val mergeResult = mergePolicies(combinedPolicy, metadataPolicy)) {
                 is PolicyMergeResult.Ok -> {
@@ -381,18 +469,9 @@ object MetadataPolicyOperators {
             }
         }
 
-        errors.addAll(validateCriticalOperators(combinedPolicy, criticalOperators))
-        if (errors.isNotEmpty()) {
-            return TrustChainMetadataResult(
-                metadata = workingMetadata,
-                policiesApplied = policiesApplied,
-                errors = errors
-            )
-        }
-
         if (policiesApplied == 0) {
             val scoped = if (entityType != null) {
-                workingMetadata[entityType]?.jsonObject ?: workingMetadata
+                workingMetadata[entityType]?.jsonObject ?: JsonObject(emptyMap())
             } else {
                 workingMetadata
             }
@@ -468,6 +547,17 @@ object MetadataPolicyOperators {
         warnings: MutableList<String>
     ) {
         val path = "$entityType.$claim"
+        val isClientScope = entityType in SCOPE_ENTITY_TYPES && claim == "scope"
+        if (isClientScope) {
+            val scope = result[claim]
+            if (scope != null) {
+                if (scope !is JsonPrimitive || !scope.isString) {
+                    errors.add("Claim '$path' must be a space-separated string")
+                    return
+                }
+                result[claim] = JsonArray(scope.content.split(' ').filter { it.isNotEmpty() }.map { JsonPrimitive(it) })
+            }
+        }
 
         // 1. value (first) — null removes the parameter
         if (policyEntry.containsKey("value")) {
@@ -482,23 +572,28 @@ object MetadataPolicyOperators {
             if (isEssential && (result[claim] == null || result[claim] is JsonNull)) {
                 errors.add("Essential claim '$path' is missing from metadata after policy application")
             }
+            if (isClientScope) restoreClientScope(result, claim, path, errors)
             return
         }
 
         // 2. add (after value)
         policyEntry["add"]?.let { addOp ->
-            val toAdd = toJsonArray(addOp)
-            if (toAdd == null) {
-                errors.add("Operator 'add' at $path must be an array (or a single value coercible to array)")
-            } else {
-                val current = (result[claim] as? JsonArray)?.toList() ?: emptyList()
-                val merged = current.toMutableList()
-                for (item in toAdd) {
-                    if (!merged.contains(item)) {
-                        merged.add(item)
-                    }
+            val toAdd = checkedArrayOperator("add", addOp, path, errors)
+            if (toAdd != null) {
+                val current = if (result.containsKey(claim)) {
+                    result[claim]?.let { checkedArrayOperator("add", it, path, errors) }
+                } else {
+                    JsonArray(emptyList())
                 }
-                result[claim] = JsonArray(merged)
+                if (current != null) {
+                    val merged = current.toMutableList()
+                    for (item in toAdd) {
+                        if (!merged.contains(item)) {
+                            merged.add(item)
+                        }
+                    }
+                    result[claim] = JsonArray(merged)
+                }
             }
         }
 
@@ -514,10 +609,8 @@ object MetadataPolicyOperators {
 
         // 4. one_of (after default)
         policyEntry["one_of"]?.let { oneOfOp ->
-            val allowed = toJsonArray(oneOfOp)
-            if (allowed == null) {
-                errors.add("Operator 'one_of' at $path must be an array")
-            } else {
+            val allowed = checkedArrayOperator("one_of", oneOfOp, path, errors)
+            if (allowed != null) {
                 val value = result[claim]
                 if (value != null && value !is JsonNull) {
                     if (!allowed.contains(value)) {
@@ -529,10 +622,8 @@ object MetadataPolicyOperators {
 
         // 5. subset_of (after one_of) — filter to intersection
         policyEntry["subset_of"]?.let { subsetOfOp ->
-            val allowed = toJsonArray(subsetOfOp)
-            if (allowed == null) {
-                errors.add("Operator 'subset_of' at $path must be an array")
-            } else {
+            val allowed = checkedArrayOperator("subset_of", subsetOfOp, path, errors)
+            if (allowed != null) {
                 val value = result[claim]
                 if (value is JsonArray) {
                     result[claim] = JsonArray(value.filter { allowed.contains(it) })
@@ -544,10 +635,8 @@ object MetadataPolicyOperators {
 
         // 6. superset_of (after subset_of)
         policyEntry["superset_of"]?.let { supersetOfOp ->
-            val required = toJsonArray(supersetOfOp)
-            if (required == null) {
-                errors.add("Operator 'superset_of' at $path must be an array")
-            } else {
+            val required = checkedArrayOperator("superset_of", supersetOfOp, path, errors)
+            if (required != null) {
                 val value = result[claim]
                 if (value is JsonArray) {
                     for (req in required) {
@@ -566,18 +655,51 @@ object MetadataPolicyOperators {
         if (isEssential && (result[claim] == null || result[claim] is JsonNull)) {
             errors.add("Essential claim '$path' is missing from metadata")
         }
+        if (isClientScope) restoreClientScope(result, claim, path, errors)
 
         // Unknown non-critical operators are ignored (extensions)
         @Suppress("UNUSED_VARIABLE")
         val unusedWarnings = warnings
     }
 
-    private fun toJsonArray(element: JsonElement): JsonArray? {
-        return when (element) {
-            is JsonArray -> element
-            is JsonNull -> null
-            else -> JsonArray(listOf(element)) // coerce single value (common in admin tests for `add`)
+    private fun checkedArrayOperator(
+        operator: String,
+        value: JsonElement,
+        path: String,
+        errors: MutableList<String>
+    ): JsonArray? {
+        arrayOperatorError(operator, value, path)?.let { error ->
+            errors.add(error)
+            return null
         }
+        return value as JsonArray
+    }
+
+    private fun arrayOperatorError(operator: String, value: JsonElement, path: String): String? {
+        val array = value as? JsonArray
+            ?: return "Operator '$operator' at $path must be an array"
+        if (array.any { item ->
+                item is JsonNull || item is JsonArray ||
+                    (item is JsonPrimitive && !item.isString && item.booleanOrNull != null)
+            }) {
+            return "Operator '$operator' at $path contains an unsupported array item"
+        }
+        return null
+    }
+
+    private fun restoreClientScope(
+        result: MutableMap<String, JsonElement>,
+        claim: String,
+        path: String,
+        errors: MutableList<String>
+    ) {
+        val scope = result[claim] ?: return
+        val tokens = scope as? JsonArray
+        if (tokens == null || tokens.any { it !is JsonPrimitive || !it.isString }) {
+            errors.add("Claim '$path' policy result must be an array of strings")
+            return
+        }
+        result[claim] = JsonPrimitive(tokens.joinToString(" ") { it.jsonPrimitive.content })
     }
 
     private fun unionPreserveOrder(a: JsonArray, b: JsonArray): List<JsonElement> {
