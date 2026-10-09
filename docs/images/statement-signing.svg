@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>How the library signs federation statements with the selected Federation Entity Key</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="400" fill="#ffffff"/>
+
+  <rect x="20" y="40" width="200" height="120" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="36" y="68" font-weight="bold" fill="#0f172a">1. Create keys</text>
+  <text x="36" y="92" font-size="13" fill="#334155">fed.jwk.create-key</text>
+  <text x="36" y="114" font-size="13" fill="#334155">Key material stays in</text>
+  <text x="36" y="132" font-size="13" fill="#334155">the configured KMS.</text>
+
+  <rect x="255" y="40" width="200" height="120" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="271" y="68" font-weight="bold" fill="#0f172a">2. Select signing key</text>
+  <text x="271" y="92" font-size="13" fill="#334155">fed.jwk.set-account-</text>
+  <text x="271" y="110" font-size="13" fill="#334155">signing-key-selection</text>
+  <text x="271" y="132" font-size="13" fill="#334155">Revision-checked update.</text>
+
+  <rect x="490" y="40" width="200" height="120" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="506" y="68" font-weight="bold" fill="#0f172a">3. Prepare statement</text>
+  <text x="506" y="92" font-size="13" fill="#334155">iat = now</text>
+  <text x="506" y="112" font-size="13" fill="#334155">exp = iat + oidf.federation.</text>
+  <text x="506" y="130" font-size="13" fill="#334155">statement.lifetime.seconds</text>
+
+  <rect x="725" y="40" width="215" height="120" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+  <text x="741" y="68" font-weight="bold" fill="#0f172a">4. Sign and store</text>
+  <text x="741" y="92" font-size="13" fill="#334155">JWS with the selected key's</text>
+  <text x="741" y="110" font-size="13" fill="#334155">kid and alg. A dryRun returns</text>
+  <text x="741" y="128" font-size="13" fill="#334155">the JWT without storing it.</text>
+
+  <line x1="220" y1="100" x2="251" y2="100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="455" y1="100" x2="486" y2="100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="690" y1="100" x2="721" y2="100" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="20" y="200" width="920" height="180" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.2"/>
+  <text x="36" y="228" font-weight="bold" fill="#1e3a8a">Signed with the selected key (no fallback to another key)</text>
+  <text x="36" y="256" font-size="13" fill="#334155">Entity Configuration (entity-statement+jwt)</text>
+  <text x="36" y="278" font-size="13" fill="#334155">Subordinate Statement (entity-statement+jwt)</text>
+  <text x="36" y="300" font-size="13" fill="#334155">Trust Mark (trust-mark+jwt)</text>
+  <text x="36" y="322" font-size="13" fill="#334155">Trust Mark Status Response (trust-mark-status-response+jwt)</text>
+  <text x="490" y="256" font-size="13" fill="#334155">Resolve Response (resolve-response+jwt)</text>
+  <text x="490" y="278" font-size="13" fill="#334155">Historical keys (jwk-set+jwt)</text>
+  <text x="490" y="300" font-size="13" fill="#334155">Explicit Registration request and response</text>
+  <text x="36" y="358" font-size="13" fill="#334155">The lifetime applies to Entity Configurations and Subordinate Statements. Without it, preparing either statement is refused.</text>
+</svg>

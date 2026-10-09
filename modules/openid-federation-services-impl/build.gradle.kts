@@ -46,7 +46,7 @@ kotlin {
 
                 // IDK YAML property sources (APP + tenant + principal scopes via PropertySourceContribution)
                 // Do not reimplement YAML parsing in OIDFed — use this for application.yaml / tenant YAML.
-                api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+                api("com.sphereon.idk:lib-conf-yaml:0.26.0-SNAPSHOT")
 
             }
         }
@@ -71,6 +71,14 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit"))
                 implementation(sphereonlib.io.mockk.mockk)
+                implementation(sphereonlib.io.ktor.client.mock)
+                implementation(sphereonlib.software.amazon.app.platform.kotlin.inject.impl)
+                implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
+                implementation(idklib.sphereon.idk.lib.core.api.default)
+                implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
+                implementation(sphereonlib.org.postgresql.postgresql)
+                implementation(sphereonlib.org.testcontainers.testcontainers)
+                implementation(sphereonlib.org.testcontainers.postgresql)
             }
         }
     }

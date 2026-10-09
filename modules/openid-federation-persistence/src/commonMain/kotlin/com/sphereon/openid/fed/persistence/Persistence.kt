@@ -1,9 +1,11 @@
 package com.sphereon.openid.fed.persistence
 
 import com.sphereon.openid.fed.persistence.models.AccountQueries
+import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
 import com.sphereon.openid.fed.persistence.models.AuthorityHintQueries
 import com.sphereon.openid.fed.persistence.models.CritQueries
 import com.sphereon.openid.fed.persistence.models.EntityConfigurationStatementQueries
+import com.sphereon.openid.fed.persistence.models.ForeignSubordinateStatementQueries
 import com.sphereon.openid.fed.persistence.models.JwkQueries
 import com.sphereon.openid.fed.persistence.models.LogQueries
 import com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries
@@ -32,6 +34,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
 expect object Persistence {
     val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     val accountQueries: AccountQueries
+    val accountSigningKeyQueries: AccountSigningKeyQueries
     val jwkQueries: JwkQueries
     val subordinateQueries: SubordinateQueries
     val metadataQueries: MetadataQueries
@@ -48,4 +51,5 @@ expect object Persistence {
     val metadataPolicyQueries: MetadataPolicyQueries
     val trustAnchorHintQueries: TrustAnchorHintQueries
     val subordinateConstraintQueries: SubordinateConstraintQueries
+    val foreignSubordinateStatementQueries: ForeignSubordinateStatementQueries
 }

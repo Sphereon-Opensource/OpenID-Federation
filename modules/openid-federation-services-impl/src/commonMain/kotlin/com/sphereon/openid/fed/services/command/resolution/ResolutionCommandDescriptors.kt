@@ -14,6 +14,10 @@ interface ResolutionCommandDescriptors {
         RegistrableServiceCommandDescriptor.of(ResolveEntityCommand.COMMAND_ID) { cmd.value }
 
     @Provides @IntoSet
+    fun verifyImmediateSuperiorStatement(cmd: Lazy<VerifyImmediateSuperiorStatementCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(VerifyImmediateSuperiorStatementCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
     fun getSignedResolveResponseJwt(cmd: Lazy<GetSignedResolveResponseJwtCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(GetSignedResolveResponseJwtCommand.COMMAND_ID) { cmd.value }
 }

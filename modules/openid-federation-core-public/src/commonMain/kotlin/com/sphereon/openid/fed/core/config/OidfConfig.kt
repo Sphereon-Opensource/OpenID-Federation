@@ -33,6 +33,11 @@ data class FederationConfig(
      * Empty = use the host Entity Identifier as the sole Trust Anchor.
      */
     val endpointAuthTrustAnchors: List<String> = emptyList(),
+    /**
+     * Lifetime in seconds of signed Entity Configurations and Subordinate Statements. Null means not configured:
+     * neither is signed.
+     */
+    val statementLifetimeSeconds: Long? = null,
 )
 
 /**

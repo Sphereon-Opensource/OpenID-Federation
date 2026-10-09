@@ -67,18 +67,28 @@ class NamingConstraintsMatcherTest {
     }
 
     @Test
-    fun uriPrefixPatternsStillSupported() {
-        assertTrue(
-            NamingConstraintsMatcher.matches(
-                "https://fed.example.com/org/leaf",
-                "https://fed.example.com/org"
-            )
+    fun onlyFullyQualifiedDomainNamesAreConstraints() {
+        // OpenID Federation 1.1 §6.2.2: "a domain name constraint MUST be specified as a fully qualified domain name"
+        assertFalse(NamingConstraintsMatcher.matches("https://fed.example.com/org/leaf", "https://fed.example.com/org"))
+        assertFalse(NamingConstraintsMatcher.matches("https://a.example.evil.com", "https://a.example"))
+        assertTrue(NamingConstraintsMatcher.isDomainNameConstraint(".example.com"))
+        assertTrue(NamingConstraintsMatcher.isDomainNameConstraint("host.example.com"))
+        assertFalse(NamingConstraintsMatcher.isDomainNameConstraint("https://fed.example.com/org"))
+        assertFalse(NamingConstraintsMatcher.isDomainNameConstraint("host.example.com/path"))
+        assertFalse(NamingConstraintsMatcher.isDomainNameConstraint(".."))
+    }
+
+    @Test
+    fun parsedConstraintsRejectEntriesThatAreNotDomainNames() {
+        val parsed = EntityStatementValidation.parseConstraints(
+            kotlinx.serialization.json.Json.parseToJsonElement("""{"naming_constraints":{"permitted":["https://fed.example.com/org"]}}""")
         )
-        assertFalse(
-            NamingConstraintsMatcher.matches(
-                "https://fed.example.com/other",
-                "https://fed.example.com/org"
-            )
-        )
+        assertTrue(parsed.reason?.contains("fully qualified domain names") == true, "${parsed.reason}")
+    }
+
+    @Test
+    fun userinfoDoesNotStandInForTheHost() {
+        assertEquals("evil.example", NamingConstraintsMatcher.extractHost("https://good.example.com@evil.example/rp"))
+        assertFalse(NamingConstraintsMatcher.matches("https://good.example.com@evil.example/rp", "good.example.com"))
     }
 }

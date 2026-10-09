@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.jwk
 
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -40,7 +42,8 @@ class GetFederationHistoricalKeysJwtCommandImpl(
     execution: SessionExecution,
     private val getKeysCommand: GetKeysCommand,
     private val tenantContextResolver: TenantContextResolver,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
 ) : TypedServiceCommandAdapter<GetFederationHistoricalKeysJwtArgs, String, FederationError>(
     commandId = GetFederationHistoricalKeysJwtCommand.COMMAND_ID,
     execution = execution,
@@ -73,19 +76,12 @@ class GetFederationHistoricalKeysJwtCommandImpl(
                 propertyKeys = historicalKeys
             )
 
-            val keysResult = getKeysCommand.execute(GetKeysArgs(tenantId, includeRevoked = false))
-            if (keysResult.isErr) {
-                return@withContext keysResult.error.asErrorResult()
+            val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, iss))
+            if (resolved.isErr) {
+                return@withContext resolved.error.asErrorResult()
             }
-            val keys = keysResult.value
-
-            if (keys.isEmpty()) {
-                logger.error("No keys found for account: $tenantId")
-                return@withContext federationErr(ServerError("The system is in an invalid state: no keys for account."))
-            }
-
-            val key = keys.first()
-            val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg ?: "RS256")
+            val key = resolved.value
+            val header = JwtHeader(typ = JWT_TYPE, kid = key.kid, alg = key.alg)
             val jwtResult = jwtService.signPayload(federationKeysResponse, header, key.kid, key.kmsKeyRef, key.kms)
 
             if (jwtResult.isErr) {
@@ -105,10 +101,9 @@ class GetFederationHistoricalKeysJwtCommandImpl(
 
     private fun getFederationHistoricalKeys(tenantId: String): List<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: $tenantId")
-        // Include revoked keys — active-only query is insufficient for §8.7 non-repudiation
-        val records = jwkQueries.findAllByAccountId(tenantId).executeAsList()
+        // §8.7: previously used keys only, which here are the revoked ones; keys in use are in the Entity Configuration.
+        val records = jwkQueries.findAllByAccountId(tenantId).executeAsList().filter { it.revoked_at != null }
         logger.debug("Found ${records.size} historical keys for account ID: $tenantId")
-        val now = System.currentTimeMillis() / 1000
-        return records.map { it.toHistoricalKey(nowEpochSeconds = now) }
+        return records.map { it.toHistoricalKey() }
     }
 }

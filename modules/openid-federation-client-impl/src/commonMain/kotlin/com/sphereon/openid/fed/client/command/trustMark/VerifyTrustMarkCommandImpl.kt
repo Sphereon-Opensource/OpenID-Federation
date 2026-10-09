@@ -5,6 +5,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
+import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.context.FederationContext
@@ -179,6 +180,7 @@ class VerifyTrustMarkCommandImpl(
             val issuerTrust = establishIssuerTrust(
                 trustMarkIssuer = trustMarkIssuer,
                 trustAnchorId = trustAnchorId,
+                trustAnchorKeys = trustAnchorConfig.jwks.propertyKeys.orEmpty(),
                 recognition = recognition,
                 timeToUse = timeToUse
             )
@@ -245,14 +247,15 @@ class VerifyTrustMarkCommandImpl(
     }
 
     /**
-     * Trust Mark Issuer must be trustworthy under this federation.
-     * - Issuer == Trust Anchor: self Entity Configuration is enough.
-     * - Authorized issuers: resolve + verify Trust Chain to the TA.
-     * - Anyone-may-issue: only require fetchable issuer Entity Configuration (external issuers).
+     * Trust in the Trust Mark Issuer comes before trust in the Trust Mark (OpenID Federation 1.1 §7.3): an issuer other
+     * than the Trust Anchor needs a valid Trust Chain to it (§10), whether the Trust Anchor names its issuers or lets
+     * anyone issue. The chain is verified with [trustAnchorKeys], the keys of the Trust Anchor Entity Configuration the
+     * caller trusts.
      */
     private suspend fun establishIssuerTrust(
         trustMarkIssuer: String,
         trustAnchorId: String,
+        trustAnchorKeys: List<Jwk>,
         recognition: TrustMarkRecognition,
         timeToUse: Long
     ): IdkResult<EntityConfigurationStatement, FederationError> {
@@ -271,16 +274,19 @@ class VerifyTrustMarkCommandImpl(
         }
 
         when (recognition) {
-            TrustMarkRecognition.ANYONE_MAY_ISSUE -> {
-                // External / open issuance: EC fetch + later signature is sufficient
-                return IdkResult.ok(issuerConfig)
-            }
+            TrustMarkRecognition.ANYONE_MAY_ISSUE,
             TrustMarkRecognition.AUTHORIZED_ISSUERS,
             TrustMarkRecognition.OWNER_DELEGATION -> {
-                val chainResult = resolveTrustChainCommand.resolveTrustChain(
-                    entityIdentifier = trustMarkIssuer,
-                    trustAnchors = arrayOf(trustAnchorId),
-                    maxDepth = 5
+                if (trustAnchorKeys.isEmpty()) {
+                    return IdkResult.err(TrustMarkInvalidError(trustMarkId = "unknown", reason = "The Trust Anchor Entity Configuration has no keys"))
+                }
+                val chainResult = resolveTrustChainCommand.execute(
+                    ResolveTrustChainArgs(
+                        entityIdentifier = trustMarkIssuer,
+                        trustAnchors = arrayOf(trustAnchorId),
+                        maxDepth = 5,
+                        trustAnchorKeys = mapOf(trustAnchorId to trustAnchorKeys),
+                    )
                 )
                 if (chainResult.isErr) {
                     return IdkResult.err(TrustMarkInvalidError(
@@ -300,7 +306,8 @@ class VerifyTrustMarkCommandImpl(
                 val verifyResult = verifyTrustChainCommand.verifyTrustChain(
                     trustChain = chain.toTypedArray(),
                     trustAnchor = trustAnchorId,
-                    currentTime = timeToUse
+                    currentTime = timeToUse,
+                    trustAnchorPublicKeys = trustAnchorKeys,
                 )
                 if (verifyResult.isErr || !verifyResult.value.isValid) {
                     return IdkResult.err(TrustMarkInvalidError(
@@ -394,12 +401,12 @@ class VerifyTrustMarkCommandImpl(
             }
         }
 
-        // §7.2.2 step 8: trust_mark_type match
+        // §7.2.1: trust_mark_type is REQUIRED in a delegation; §7.2.2 step 8: it matches the Trust Mark's type.
         val delType = decodedDelegation.payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull
-        if (delType != null && delType != trustMarkId) {
+        if (delType != trustMarkId) {
             return IdkResult.err(TrustMarkInvalidError(
                 trustMarkId = trustMarkId,
-                reason = "Delegation trust_mark_type does not match Trust Mark"
+                reason = if (delType == null) "Delegation has no trust_mark_type" else "Delegation trust_mark_type does not match Trust Mark"
             ))
         }
 

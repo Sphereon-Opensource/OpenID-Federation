@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.persistence
 
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.asJdbcDriver
+import com.sphereon.core.api.conf.Env
 import com.sphereon.openid.fed.core.tenant.IdentityInstallState
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import com.sphereon.openid.fed.core.tenant.IdentityModeDefaults
@@ -270,7 +271,7 @@ class SchemaMigrationEquivalenceTest {
 
     private fun env(vararg keys: String): String? {
         for (k in keys) {
-            System.getenv(k)?.takeIf { it.isNotBlank() }?.let { return it }
+            Env.get(k)?.takeIf { it.isNotBlank() }?.let { return it }
         }
         return null
     }

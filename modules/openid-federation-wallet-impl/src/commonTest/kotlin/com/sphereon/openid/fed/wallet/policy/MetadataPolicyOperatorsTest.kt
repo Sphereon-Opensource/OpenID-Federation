@@ -691,7 +691,7 @@ class MetadataPolicyOperatorsTest {
     }
 
     @Test
-    fun testValidateCriticalOperatorsStandardIgnored() {
+    fun testValidateCriticalOperatorsStandardRejected() {
         val policy = JsonObject(mapOf(
             "openid_relying_party" to JsonObject(mapOf(
                 "scope" to JsonObject(mapOf(
@@ -700,6 +700,6 @@ class MetadataPolicyOperatorsTest {
             ))
         ))
         val errors = MetadataPolicyOperators.validateCriticalOperators(policy, listOf("essential"))
-        assertTrue(errors.isEmpty())
+        assertTrue(errors.any { it.contains("essential") })
     }
 }

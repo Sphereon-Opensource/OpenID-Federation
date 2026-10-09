@@ -23,6 +23,19 @@ instructions for the project.
 
 ---
 
+## OpenID Federation 1.1 library
+
+The services in this repository are built on a library that implements OpenID Federation 1.1 and the client
+registration part of OpenID Federation for OpenID Connect 1.1 as service commands. An application can embed it to
+join existing federations (Federation Entity Keys, a signed Entity Configuration, Trust Chain and Trust Mark
+verification against Trust Anchors referenced by their Entity Identifier, Automatic and Explicit Registration) or to
+operate a federation as Trust Anchor or intermediate (Subordinate Statements, metadata policies, constraints, Trust
+Marks, resolve responses and historical keys). The [library guide](docs/OPENID-FEDERATION-1.1.md) describes the
+concepts, the command ids and the configuration, and [docs/CLIENT-REGISTRATION.md](docs/CLIENT-REGISTRATION.md)
+covers registration in detail.
+
+---
+
 ## Background
 
 OpenID Federation is a framework designed to facilitate secure and interoperable interactions among entities within a
@@ -90,7 +103,7 @@ For complete API details, please refer to the following resources:
 ### Configuration (files preferred, env still supported)
 
 OIDFed uses the **IDK configuration pipeline**. Application code resolves settings through `OidfConfigBinder` /
-`OidfPropertyResolution` — not via direct `System.getenv`. Full reference:
+`OidfPropertyResolution`, not via direct `System.getenv`. Full reference:
 [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 | Method | When to use |
@@ -105,12 +118,12 @@ OIDFed uses the **IDK configuration pipeline**. Application code resolves settin
 **Precedence (highest first):** AppConfigService (IDK Env + YAML + legacy-env bridge + host sources) →
 programmatic AppMap → env tier → OIDFed reference file tier → hardcoded defaults.
 
-YAML is **only** via IDK — not a second parser inside OIDFed.
+YAML is **only** via IDK, not a second parser inside OIDFed.
 
 | Preference | How |
 |------------|-----|
 | **Recommended** | Copy [application.yaml.example](application.yaml.example) → `application.yaml` or `config/application.yaml` |
-| **Still fully supported** | Env: IDK-normalized `OIDF_*` or legacy `ROOT_IDENTIFIER`, `DATASOURCE_URL`, … — see [.env.example](.env.example) |
+| **Still fully supported** | Env: IDK-normalized `OIDF_*` or legacy `ROOT_IDENTIFIER`, `DATASOURCE_URL`, …; see [.env.example](.env.example) |
 
 **Docker Compose:** copy [.env.example](.env.example) to `.env` / `.env.local` (env overrides files). Optionally place
 file config under `config/` (see [config/application.yaml.example](config/application.yaml.example)); compose mounts
@@ -127,7 +140,7 @@ Uses [config/application.file-only.yaml](config/application.file-only.yaml) moun
 
 ### Docker Setup
 
-For seamless deployment of the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an
+To deploy the OpenID Federation servers, Docker and Docker Compose are recommended. Docker provides an
 efficient and straightforward deployment and orchestration
 environment.
 
@@ -214,8 +227,8 @@ and who is allowed to call the admin API, depends on the **identity mode**. From
 server owns subjects and tenants). Both modes require a valid Bearer access token on every admin call except health and
 debug endpoints. There is no longer a configuration switch to turn admin authentication off.
 
-Detailed design notes live in [docs/IDENTITY_AND_IDK_ALIGNMENT.md](docs/IDENTITY_AND_IDK_ALIGNMENT.md). End-to-end
-testing with an in-process IDK authorization server is described in [docs/PLATFORM_E2E.md](docs/PLATFORM_E2E.md).
+The identity and OAuth2 configuration keys are listed below and in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+Automated end-to-end tests obtain tokens from an in-process IDK authorization server.
 
 ---
 
@@ -268,7 +281,7 @@ never used for identity.
 The access token is still required and validated against `OIDF_OAUTH2_ISSUER_URI`. After validation the server reads
 tenant claims from the token (`tenant_id`, `tid`, and related IDK claim names) and sets `SessionExecution.tenantId` to
 that value. All domain data for the request is isolated under that tenant. If a protected admin route receives a
-token with no usable tenant claim, the request fails closed with 401.
+token with no usable tenant claim, the request is rejected with 401.
 
 On first contact with a new token tenant id the server can auto-provision a federation row
 (`FederationTenantProvisioner`, `tenant_source = idk`). Party, user, and organization management stay in the host
@@ -296,7 +309,7 @@ accept client-supplied headers to change tenant, and does not re-check AS policy
 required tenant claim.
 
 Configure the issuer so tokens carry a stable tenant claim your host already uses. Automated EXTERNAL e2e tests mint
-such tokens with the in-process IDK OAuth2 AS; see [docs/PLATFORM_E2E.md](docs/PLATFORM_E2E.md).
+such tokens with the in-process IDK OAuth2 AS.
 
 ### Admin authentication is always on
 
@@ -319,12 +332,12 @@ Prefer `oidf.*` keys in YAML/properties; env forms remain fully supported.
 | Property key | Env (preferred) | Legacy env (JVM) |
 |--------------|-----------------|------------------|
 | `oidf.identity.mode` | `OIDF_IDENTITY_MODE` | `IDENTITY_MODE` |
-| `oidf.identity.account.header.principal.claim` | `OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM` | — |
-| `oidf.identity.account.header.allowed.principals` | `OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS` | — |
+| `oidf.identity.account.header.principal.claim` | `OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM` | none |
+| `oidf.identity.account.header.allowed.principals` | `OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS` | none |
 | `oidf.identity.external.root.tenant.id` | `OIDF_EXTERNAL_ROOT_TENANT_ID` | `OIDF_PLATFORM_ROOT_TENANT_ID` |
 | `oidf.oauth2.issuer.uri` | `OIDF_OAUTH2_ISSUER_URI` | `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI` |
-| `oidf.oauth2.audience` | `OIDF_OAUTH2_AUDIENCE` | — |
-| `oidf.oauth2.jwt.auth.enabled` | `OIDF_OAUTH2_JWT_AUTH_ENABLED` | — |
+| `oidf.oauth2.audience` | `OIDF_OAUTH2_AUDIENCE` | none |
+| `oidf.oauth2.jwt.auth.enabled` | `OIDF_OAUTH2_JWT_AUTH_ENABLED` | none |
 
 ```yaml
 oidf:
@@ -395,6 +408,9 @@ oidf:
       identifier: http://localhost:8080
     dev:
       mode: false
+    statement:
+      lifetime:
+        seconds: 3600   # required, no default
   server:
     admin:
       port: 8081
@@ -446,6 +462,7 @@ Copy [.env.example](.env.example) to `.env` / `.env.local` for Docker Compose.
 |--------------|----------------------|------------------|
 | `oidf.federation.root.identifier` | `OIDF_FEDERATION_ROOT_IDENTIFIER` | `ROOT_IDENTIFIER` |
 | `oidf.federation.dev.mode` | `OIDF_FEDERATION_DEV_MODE` | `DEV_MODE` / `APP_DEV_MODE` |
+| `oidf.federation.statement.lifetime.seconds` | `OIDF_FEDERATION_STATEMENT_LIFETIME_SECONDS` | none |
 | `oidf.datasource.url` | `OIDF_DATASOURCE_URL` | `DATASOURCE_URL` |
 | `oidf.datasource.user` | `OIDF_DATASOURCE_USER` | `DATASOURCE_USER` |
 | `oidf.datasource.password` | `OIDF_DATASOURCE_PASSWORD` | `DATASOURCE_PASSWORD` |
@@ -772,13 +789,9 @@ To delete a tenant account, follow these steps:
    X-Account-Username: {username}  # Optional, defaults to root
    ```
 
-You can use the param kms_key_ref to assign a name to the key. This value will not end up in the JWK itself, but you can
-use it for selecting which key to sign with. The kid value
-could also be used, but that is typically not known upfront as in most cases it is generated as the SHA1 thumbprint of
-the JWK.
-
-You can also provide a JOSE/JWA signature algorithm provided the KMS configured supports it. Typical values are ES256,
-ES384, ES512
+You can use the `kmsKeyRef` property to give the key a name. This value does not end up in the JWK itself, but it
+identifies the key in the KMS. You can also provide a JOSE/JWA signature algorithm, provided the configured KMS
+supports it. Typical values are ES256, ES384 and ES512.
 
  ```json
 {
@@ -786,6 +799,14 @@ ES384, ES512
   "signatureAlgorithm": "ES256"
 }
    ```
+
+### Select the Signing Key
+
+An account signs all its statements with one selected key, and nothing is signed until a key is selected. Creating a
+key does not select it. The selection is made with the `fed.jwk.set-account-signing-key-selection` command; the admin
+REST API in this repository does not expose an endpoint for it, so a host application or operator tooling sets it.
+Revoking the selected key clears the selection. See
+[Federation Entity Keys and the signing key](docs/OPENID-FEDERATION-1.1.md#federation-entity-keys-and-the-signing-key).
 
 ### List Keys
 
@@ -1056,12 +1077,12 @@ Remember to publish your entity configuration after making changes to authority 
    Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
-2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
-   if both are supplied. If none are specified the first key
-   available will be used
-3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1
-   thumbprint of the key, and generated by the underlying KMS. Opposed
-   to the kmsKeyRef which you choose yourself .
+2. The statement is signed with the account's selected signing key and expires after
+   `oidf.federation.statement.lifetime.seconds`. A `kmsKeyRef` or `kid` parameter, when supplied, must name that
+   selected key; a request naming another key is refused. See
+   [Federation Entity Keys and the signing key](docs/OPENID-FEDERATION-1.1.md#federation-entity-keys-and-the-signing-key).
+3. The statement lists the keys recorded for the subordinate in Step 11. A subordinate without recorded keys gets no
+   statement.
 
 4. Optionally include a `dryRun` parameter in the request body to test the statement publication without making
    changes:
@@ -1095,12 +1116,11 @@ Remember to publish your entity configuration after making changes to authority 
    Authorization: Bearer <access_token>
    X-Account-Username: {username}  # Optional, defaults to root
    ```
-2. Optionally include a `kmsKeyRef` parameter if you want to sign with a specific key. kmsKeyRef always overrides `kid`
-   if both are supplied. If none are specified the first key
-   available will be used
-3. Optionally include a `kid` parameter if you want to sign with a specific key. The kid is typically the sha1
-   thumbprint of the key, and generated by the underlying KMS. Opposed
-   to the kmsKeyRef which you choose yourself.
+2. The Entity Configuration is signed with the account's selected signing key and expires after
+   `oidf.federation.statement.lifetime.seconds`. A `kmsKeyRef` or `kid` parameter, when supplied, must name that
+   selected key; a request naming another key is refused. Publishing fails while no signing key is selected.
+3. Publish again before the statement expires, and after every change to keys, metadata, authority hints or Trust
+   Marks.
 4. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
    changes:
 
@@ -1212,7 +1232,7 @@ Content-Type: application/json
 
 {
     "sub": "http://localhost:8080/trust-mark-holder",
-    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType"
+    "trust_mark_type": "http://localhost:8080/trust-mark-types/exampleType"
 }
 ```
 
@@ -1241,7 +1261,7 @@ Content-Type: application/json
 X-Account-Username: trust-mark-holder
 
 {
-    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType",
+    "trust_mark_type": "http://localhost:8080/trust-mark-types/exampleType",
     "jwt": "eyJ..." # Replace with JWT token issued in step 4
 }
 
@@ -1254,15 +1274,16 @@ X-Account-Username: trust-mark-holder
 ### Step 6: Verify Trust Mark Status
 
 ```http
-# Check Trust Mark status
+# Check Trust Mark status (OpenID Federation 1.1 §8.4)
 POST http://localhost:8080/trust-mark-issuer/trust-mark-status
-Content-Type: application/json
+Content-Type: application/x-www-form-urlencoded
 
-{
-    "trust_mark_id": "http://localhost:8080/trust-mark-types/exampleType",
-    "sub": "http://localhost:8080/trust-mark-holder"
-}
+trust_mark=eyJ...
 ```
+
+The response is a Trust Mark Status Response JWT (`application/trust-mark-status-response+jwt`) signed by the issuer.
+Its `status` claim is `active`, `expired`, `revoked` or `invalid`. Deleting a Trust Mark through
+`DELETE /trust-marks/{trustMarkId}` revokes it, and the status endpoint reports it as `revoked` from then on.
 
 # License
 

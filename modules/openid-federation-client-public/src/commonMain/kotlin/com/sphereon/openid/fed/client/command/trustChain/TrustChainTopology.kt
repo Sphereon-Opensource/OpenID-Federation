@@ -31,24 +31,24 @@ object TrustChainTopology {
     }
 
     /**
-     * Prefer trust anchors earlier in [preferredTrustAnchors], then shorter chains.
-     * Spec §10.3: RP may use any valid chain to a trusted TA — this is a deterministic choice.
+     * Candidates in preference order: Trust Anchors earlier in [preferredTrustAnchors] first, then shorter chains.
+     * OpenID Federation 1.1 §10.3 chooses among valid chains, so callers verify in this order and take the first valid.
      */
+    fun orderPreferredChains(
+        candidates: List<List<String>>,
+        preferredTrustAnchors: Array<String>,
+        trustAnchorOf: (List<String>) -> String?,
+    ): List<List<String>> {
+        val taOrder = preferredTrustAnchors.mapIndexed { index, ta -> ta to index }.toMap()
+        return candidates.sortedWith(
+            compareBy<List<String>> { chain -> taOrder[trustAnchorOf(chain)] ?: Int.MAX_VALUE }.thenBy { it.size }
+        )
+    }
+
+    /** The most preferred candidate by [orderPreferredChains], before any validation. */
     fun selectPreferredChain(
         candidates: List<List<String>>,
         preferredTrustAnchors: Array<String>,
         trustAnchorOf: (List<String>) -> String?,
-    ): List<String>? {
-        if (candidates.isEmpty()) return null
-        if (candidates.size == 1) return candidates.first()
-
-        val taOrder = preferredTrustAnchors.mapIndexed { index, ta -> ta to index }.toMap()
-
-        return candidates.minWithOrNull(
-            compareBy<List<String>> { chain ->
-                val ta = trustAnchorOf(chain)
-                taOrder[ta] ?: Int.MAX_VALUE
-            }.thenBy { it.size }
-        )
-    }
+    ): List<String>? = orderPreferredChains(candidates, preferredTrustAnchors, trustAnchorOf).firstOrNull()
 }

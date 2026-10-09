@@ -85,7 +85,7 @@ class JwtTrustChainHeaderTest {
         val header = buildMap {
             put("alg", JsonPrimitive("ES256"))
             put("kid", JsonPrimitive("k1"))
-            put("typ", JsonPrimitive("entity-statement+jwt"))
+            put("typ", JsonPrimitive("oauth-client-attestation+jwt"))
             put(
                 "trust_chain",
                 kotlinx.serialization.json.JsonArray(chain.map { JsonPrimitive(it) }),

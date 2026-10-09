@@ -18,18 +18,26 @@ val omitAccountHttp =
 
 // Core admin OpenAPI always (no /accounts). Optional LEGACY accounts fragment when
 // account-http is on the classpath so all-in-one still ships the full contract docs.
-tasks.register<Copy>("copyOpenAPI") {
+val copyOpenAPI = tasks.register<Sync>("copyOpenAPI") {
     from("../openid-federation-openapi/src/commonMain/kotlin/com/sphereon/openid/fed/openapi") {
         include("admin-server.yaml")
         if (!omitAccountHttp) {
             include("admin-accounts.yaml")
         }
     }
-    into("src/main/resources/public")
+    into(layout.buildDirectory.dir("generated/openapi"))
 }
 
-tasks.named("processResources") {
-    dependsOn("copyOpenAPI")
+// The checked-in copies are documentation snapshots, not generated task outputs.
+// Package the selected current specs once, preserving their public/* resource paths.
+sourceSets.named("main") {
+    resources.exclude("public/admin-server.yaml", "public/admin-accounts.yaml")
+}
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    from(copyOpenAPI) {
+        into("public")
+    }
 }
 
 dependencies {
@@ -53,7 +61,7 @@ dependencies {
     api(idklib.sphereon.idk.lib.core.api.public)
     api(idklib.sphereon.idk.lib.core.api.default)
     // IDK YAML config (APP/tenant/principal) — Metro contributions on classpath
-    api("com.sphereon.idk:lib-conf-yaml:0.25.0-SNAPSHOT")
+    api("com.sphereon.idk:lib-conf-yaml:0.26.0-SNAPSHOT")
 
     // Kotlin
     implementation(sphereonlib.org.jetbrains.kotlin.stdlib)
@@ -87,13 +95,13 @@ dependencies {
     // needs client + resource-server command impls (they are only runtime-transitive in the POM).
     implementation(idklib.sphereon.idk.ktor.server.kotlin.inject)
     // Catalog may not alias jwt-auth yet — use published Maven coordinates (BOM-aligned version)
-    implementation("com.sphereon.idk:ktor-server-jwt-auth:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-client-public:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-client-impl:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.25.0-SNAPSHOT")
-    implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.25.0-SNAPSHOT")
+    implementation("com.sphereon.idk:ktor-server-jwt-auth:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-api:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-jwt-validation-impl:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-public:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-client-impl:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-public:0.26.0-SNAPSHOT")
+    implementation("com.sphereon.idk:lib-oauth2-server-resource-impl:0.26.0-SNAPSHOT")
 
     // DI
     implementation(sphereonlib.software.amazon.app.platform.di.common.public)

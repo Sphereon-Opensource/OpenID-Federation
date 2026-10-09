@@ -1,5 +1,8 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import kotlinx.serialization.json.JsonPrimitive
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -14,25 +17,36 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.common.builder.FederationEndpointUrls
 import com.sphereon.openid.fed.common.builder.SubordinateStatementObjectBuilder
+import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.core.error.InvalidRequestError
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.SubordinateNotFoundError
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
+import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.CreateSubordinate
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.Subordinate
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries
+import com.sphereon.openid.fed.persistence.models.MetadataQueries
+import com.sphereon.openid.fed.persistence.models.SubordinateConstraintQueries
+import com.sphereon.openid.fed.persistence.models.SubordinateJwkQueries
+import com.sphereon.openid.fed.persistence.models.SubordinateMetadataQueries
+import com.sphereon.openid.fed.persistence.models.SubordinateQueries
 import com.sphereon.openid.fed.services.JwkService
 import com.sphereon.openid.fed.services.mappers.toDTO
 import com.sphereon.openid.fed.services.mappers.toDTOs
 import com.sphereon.openid.fed.services.mappers.toJwk
 import com.sphereon.openid.fed.services.signPayload
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -167,55 +181,85 @@ class CreateSubordinateCommandImpl(
 }
 
 // GetSubordinateStatementCommand Implementation
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetSubordinateStatementCommand>())
-class GetSubordinateStatementCommandImpl(
+class GetSubordinateStatementCommandImpl internal constructor(
     execution: SessionExecution,
-    private val tenantContextResolver: TenantContextResolver
+    private val tenantContextResolver: TenantContextResolver,
+    private val subordinateQueries: SubordinateQueries,
+    private val subordinateJwkQueries: SubordinateJwkQueries,
+    private val subordinateMetadataQueries: SubordinateMetadataQueries,
+    private val subordinateConstraintQueries: SubordinateConstraintQueries,
+    private val metadataPolicyQueries: MetadataPolicyQueries,
+    private val configBinder: OidfConfigBinder,
+    private val accountMetadataQueries: MetadataQueries,
 ) : TypedServiceCommandAdapter<GetSubordinateStatementArgs, SubordinateStatement, FederationError>(
     commandId = GetSubordinateStatementCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetSubordinateStatementArgs>(),
     outputTypeToken = typeToken<SubordinateStatement>()
 ), GetSubordinateStatementCommand {
+    @Inject
+    constructor(execution: SessionExecution, tenantContextResolver: TenantContextResolver, configBinder: OidfConfigBinder) : this(
+        execution,
+        tenantContextResolver,
+        Persistence.subordinateQueries,
+        Persistence.subordinateJwkQueries,
+        Persistence.subordinateMetadataQueries,
+        Persistence.subordinateConstraintQueries,
+        Persistence.metadataPolicyQueries,
+        configBinder,
+        Persistence.metadataQueries,
+    )
+
     private val logger = execution.federationLogger("GetSubordinateStatementCommand")
-    private val subordinateQueries = Persistence.subordinateQueries
-    private val subordinateJwkQueries = Persistence.subordinateJwkQueries
 
     override suspend fun doExecute(args: GetSubordinateStatementArgs, applyDuring: (GetSubordinateStatementArgs) -> GetSubordinateStatementArgs): IdkResult<SubordinateStatement, FederationError> {
         val (tenantId, subordinateId) = applyDuring(args)
         logger.info("Generating subordinate statement for ID: $subordinateId, account: $tenantId")
 
-        val subordinate = subordinateQueries.findById(subordinateId).executeAsOneOrNull()
-        if (subordinate == null) {
-            logger.error("Subordinate not found with ID: $subordinateId")
-            return federationErr(SubordinateNotFoundError(subordinateId))
-        }
-
         return try {
+            val subordinate = subordinateQueries
+                .findByAccountIdAndSubordinateId(tenantId, subordinateId)
+                .executeAsOneOrNull()
+            if (subordinate == null) {
+                logger.error("Subordinate not found with ID: $subordinateId")
+                return federationErr(SubordinateNotFoundError(subordinateId))
+            }
+
             val subordinateJwks = subordinateJwkQueries
                 .findBySubordinateId(subordinate.id)
                 .executeAsList()
                 .map { it.toJwk() }
 
-            val subordinateMetadataList = Persistence.subordinateMetadataQueries
+            val subordinateMetadataList = subordinateMetadataQueries
                 .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsList()
 
             // Load constraints for this subordinate
-            val constraintEntity = Persistence.subordinateConstraintQueries
+            val constraintEntity = subordinateConstraintQueries
                 .findByAccountIdAndSubordinateId(tenantId, subordinate.id)
                 .executeAsOneOrNull()
             val constraints = constraintEntity?.let {
-                try { Json.decodeFromString<Constraints>(it.constraints) } catch (_: Exception) { null }
+                val parsed = EntityStatementValidation.parseConstraints(Json.parseToJsonElement(it.constraints))
+                parsed.constraints ?: return federationErr(
+                    ServerError("Stored subordinate constraints are invalid", parsed.reason)
+                )
             }
 
             buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList, constraints)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Failed to generate subordinate statement for ID: $subordinateId", e)
             federationErr(ServerError("Failed to generate subordinate statement", e.message, e))
         }
     }
+
+    /** The federation_fetch_endpoint of the issuer's own federation_entity metadata; the last row wins, as in its Entity Configuration. */
+    private fun publishedFetchEndpoint(tenantId: String): String? =
+        accountMetadataQueries.findByAccountIdAndKey(tenantId, "federation_entity").executeAsList().lastOrNull()
+            ?.let { (Json.parseToJsonElement(it.metadata) as? JsonObject)?.get("federation_fetch_endpoint") as? JsonPrimitive }
+            ?.takeIf { it.isString }?.content
 
     private suspend fun buildSubordinateStatement(
         tenantId: String,
@@ -227,8 +271,10 @@ class GetSubordinateStatementCommandImpl(
         val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
 
+        val lifetimeSeconds = configBinder.getFederationConfig().statementLifetimeSeconds
+            ?: return federationErr(ServerError("Subordinate statement lifetime is not configured"))
         val currentTimeSeconds = (System.currentTimeMillis() / 1000).toDouble()
-        val expirationTime = currentTimeSeconds + 3600 * 24 * 365
+        val expirationTime = currentTimeSeconds + lifetimeSeconds
 
         check(accountIdentifier.isNotEmpty()) { "Account identifier is empty" }
 
@@ -237,9 +283,12 @@ class GetSubordinateStatementCommandImpl(
             .sub(subordinate.identifier)
             .iat(currentTimeSeconds)
             .exp(expirationTime)
-            // Must equal published federation_fetch_endpoint (OIDFed 1.1 §3.1.3 / §5.1.1)
-            .sourceEndpoint(FederationEndpointUrls.fetch(accountIdentifier))
+            // The fetch endpoint this statement is issued from: the published federation_fetch_endpoint (§3.1.3, §5.1.1)
+            .sourceEndpoint(publishedFetchEndpoint(tenantId) ?: FederationEndpointUrls.fetch(accountIdentifier))
 
+        if (subordinateJwks.isEmpty()) {
+            return federationErr(InvalidRequestError("Subordinate ${subordinate.identifier} has no public keys to vouch for"))
+        }
         subordinateJwks.forEach { statement.jwks(it) }
         subordinateMetadataList.forEach {
             val metadataJson = Json.parseToJsonElement(it.metadata).jsonObject
@@ -248,17 +297,18 @@ class GetSubordinateStatementCommandImpl(
 
         // Account-level metadata policies → Subordinate Statement metadata_policy (OIDFed 1.1 §3.1.3)
         // Each stored policy key is an Entity Type Identifier; policy body is claim → operators.
-        Persistence.metadataPolicyQueries.findByAccountId(tenantId)
+        metadataPolicyQueries.findByAccountId(tenantId)
             .executeAsList()
             .forEach { policyRow ->
-                try {
-                    val policyJson = Json.parseToJsonElement(policyRow.policy).jsonObject
-                    statement.metadataPolicy(Pair(policyRow.key, policyJson))
-                } catch (e: Exception) {
-                    logger.warn(
-                        "Skipping invalid metadata policy key=${policyRow.key} for account=$tenantId: ${e.message}"
-                    )
+                val policyJson = Json.parseToJsonElement(policyRow.policy).jsonObject
+                val checked = MetadataPolicyOperators.mergePolicies(
+                    JsonObject(emptyMap()),
+                    JsonObject(mapOf(policyRow.key to policyJson)),
+                )
+                if (checked is MetadataPolicyOperators.PolicyMergeResult.Error) {
+                    return federationErr(ServerError("Stored metadata policy for ${policyRow.key} is invalid", checked.reason))
                 }
+                statement.metadataPolicy(Pair(policyRow.key, policyJson))
             }
 
         if (constraints != null) {
@@ -276,9 +326,9 @@ class GetSubordinateStatementCommandImpl(
 class PublishSubordinateStatementCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
-    private val jwkService: JwkService,
     private val jwtService: JwtService,
-    private val getSubordinateStatementCommand: GetSubordinateStatementCommand
+    private val getSubordinateStatementCommand: GetSubordinateStatementCommand,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
 ) : TypedServiceCommandAdapter<PublishSubordinateStatementArgs, String, FederationError>(
     commandId = PublishSubordinateStatementCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<PublishSubordinateStatementArgs>(),
@@ -295,13 +345,21 @@ class PublishSubordinateStatementCommandImpl(
         if (statementResult.isErr) return statementResult.error.asErrorResult()
         val subordinateStatement = statementResult.value
 
-        val keysResult = jwkService.getAssertedKeysForAccount(tenantId, includeRevoked = false, kmsKeyRef = kmsKeyRef, kid = kid)
-        if (keysResult.isErr) return keysResult.error.asErrorResult()
-        val keys = keysResult.value
+        val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
+        if (subordinateStatement.iss != accountIdentifier) {
+            return federationErr(InvalidRequestError("Subordinate statement issuer must be this superior"))
+        }
+        // The superior signs with its own persisted signing-key selection; callers cannot choose another key.
+        val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, accountIdentifier))
+        if (resolved.isErr) return resolved.error.asErrorResult()
+        val key = resolved.value
+        if ((kid != null && kid != key.kid) || (kmsKeyRef != null && kmsKeyRef != key.kmsKeyRef)) {
+            return federationErr(InvalidRequestError("Requested key differs from the superior's selected signing key"))
+        }
 
         return try {
-            val key = keys[0]
-            val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")
+            val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg)
             val jwtResult = jwtService.signPayload(
                 payload = subordinateStatement,
                 header = header,
@@ -318,9 +376,6 @@ class PublishSubordinateStatementCommandImpl(
             if (dryRun == true) {
                 return IdkResult.ok(jwt)
             }
-
-            val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
-                ?: return federationErr(TenantNotFoundError(tenantId))
 
             subordinateStatementQueries.create(
                 subordinate_id = subordinateId,

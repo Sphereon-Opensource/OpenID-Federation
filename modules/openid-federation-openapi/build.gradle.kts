@@ -1,3 +1,12 @@
+import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
+import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.TaskAction
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompileCommon
@@ -37,15 +46,22 @@ val isModelsOnlyProfile = profiles.contains("models-only")
  * still produces Account / CreateAccount / AccountsResponse while the published core
  * contract (admin-server.yaml) has no /accounts operations.
  */
-tasks.register("mergeAdminOpenApiSpecs") {
-    group = "openapi tools"
-    description =
-        "Merges admin-server.yaml + admin-accounts.yaml for codegen (core contract stays split)."
-    inputs.files(coreOpenApiSpec, accountsOpenApiSpec)
-    outputs.file(mergedOpenApiSpec)
-    doLast {
-        val core = file(coreOpenApiSpec).readText()
-        val accounts = file(accountsOpenApiSpec).readText()
+abstract class MergeAdminOpenApiSpecs : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val coreSpec: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val accountsSpec: RegularFileProperty
+
+    @get:OutputFile
+    abstract val mergedSpec: RegularFileProperty
+
+    @TaskAction
+    fun merge() {
+        val core = coreSpec.get().asFile.readText()
+        val accounts = accountsSpec.get().asFile.readText()
 
         fun extractBlock(text: String, startMarker: String, endMarker: String?): String {
             val start = text.indexOf(startMarker)
@@ -118,11 +134,20 @@ tasks.register("mergeAdminOpenApiSpecs") {
         merged = stripSchemaAlias(merged, "AccountJwksResponse", "TenantJwksResponse")
         merged = stripSchemaAlias(merged, "AccountJwk", "TenantJwk")
 
-        val out = file(mergedOpenApiSpec)
+        val out = mergedSpec.get().asFile
         out.parentFile.mkdirs()
         out.writeText(merged)
         logger.lifecycle("Wrote merged OpenAPI for codegen: ${out.absolutePath}")
     }
+}
+
+tasks.register<MergeAdminOpenApiSpecs>("mergeAdminOpenApiSpecs") {
+    group = "openapi tools"
+    description =
+        "Merges admin-server.yaml + admin-accounts.yaml for codegen (core contract stays split)."
+    coreSpec.set(file(coreOpenApiSpec))
+    accountsSpec.set(file(accountsOpenApiSpec))
+    mergedSpec.set(file(mergedOpenApiSpec))
 }
 
 tasks.register<GenerateTask>("openApiGenerateKotlin") {
@@ -137,6 +162,8 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
     apiPackage.set(kotlinApiPackage)
     modelPackage.set(kotlinModelPackage)
     library.set("multiplatform")
+    // Wire names follow the specifications; Kotlin property names stay stable.
+    nameMappings.set(mapOf("x5t#S256" to "x5tS256", "revoked_at" to "revokedAt"))
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",
@@ -170,8 +197,8 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
 kotlin {
     tasks.register<Copy>("fixOpenApiKotlinIssues") {
         dependsOn("openApiGenerateKotlin")
-        from("$kotlinOutputDir/src/commonMain/kotlin/$basePackage".replace('.', '/'))
-        into("$projectDir/build/copy/src/commonMain/kotlin/$basePackage".replace('.', '/'))
+        from("$kotlinOutputDir/src/commonMain/kotlin/${basePackage.replace('.', '/')}")
+        into("$projectDir/build/copy/src/commonMain/kotlin/${basePackage.replace('.', '/')}")
 
         filter { line: String ->
             line.replace("io.ktor.util.InternalAPI", "io.ktor.utils.io.InternalAPI")
@@ -237,7 +264,7 @@ kotlin {
         }
     }
 
-    js {
+    configureJsTargetIfEnabled {
         outputModuleName = "@sphereon/openid-federation-open-api"
         tasks.named("compileKotlinJs") {
             dependsOn("fixOpenApiKotlinIssues")
@@ -303,7 +330,7 @@ customField("type", "module")
     }
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
+    configureWasmJsTargetIfEnabled {
         tasks.named("compileKotlinWasmJs") {
             dependsOn("fixOpenApiKotlinIssues")
         }
@@ -341,13 +368,15 @@ npmPublish {
         }
     }
     packages {
-        named("js") {
-            packageJson {
-                "name" by "@sphereon/openid-federation-open-api"
-                "version" by rootProject.extra["npmVersion"] as String
+        if (kotlin.targets.findByName("js") != null) {
+            named("js") {
+                packageJson {
+                    "name" by "@sphereon/openid-federation-open-api"
+                    "version" by rootProject.extra["npmVersion"] as String
+                }
+                scope.set("@sphereon")
+                packageName.set("openid-federation-openapi")
             }
-            scope.set("@sphereon")
-            packageName.set("openid-federation-openapi")
         }
     }
 }

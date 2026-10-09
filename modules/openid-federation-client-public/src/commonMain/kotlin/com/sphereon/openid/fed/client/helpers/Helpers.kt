@@ -1,7 +1,7 @@
 package com.sphereon.openid.fed.client.helpers
 
 import com.sphereon.openid.fed.openapi.models.Jwk
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 fun getEntityConfigurationEndpoint(iss: String): String {
     return "${if (iss.endsWith("/")) iss.dropLast(1) else iss}/.well-known/openid-federation"

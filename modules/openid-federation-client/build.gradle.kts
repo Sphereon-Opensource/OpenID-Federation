@@ -10,6 +10,8 @@
  *
  * This facade ensures backward compatibility for existing consumers.
  */
+import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
+import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -23,7 +25,7 @@ plugins {
 kotlin {
     jvm()
 
-    js {
+    configureJsTargetIfEnabled {
         outputModuleName = "@sphereon/openid-federation-client"
         nodejs {
             useEsModules()
@@ -53,7 +55,7 @@ kotlin {
     }
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
+    configureWasmJsTargetIfEnabled {
         nodejs()
         binaries.library()
         generateTypeScriptDefinitions()
@@ -92,12 +94,12 @@ kotlin {
             }
         }
 
-        val jsMain by getting {
+        findByName("jsMain")?.apply {
             dependencies {
             }
         }
 
-        val jsTest by getting {
+        findByName("jsTest")?.apply {
             dependencies {
                 implementation(kotlin("test-js"))
             }
@@ -113,13 +115,15 @@ npmPublish {
         }
     }
     packages {
-        named("js") {
-            packageJson {
-                "name" by "@sphereon/openid-federation-client"
-                "version" by rootProject.extra["npmVersion"] as String
+        if (kotlin.targets.findByName("js") != null) {
+            named("js") {
+                packageJson {
+                    "name" by "@sphereon/openid-federation-client"
+                    "version" by rootProject.extra["npmVersion"] as String
+                }
+                scope.set("@sphereon")
+                packageName.set("openid-federation-client")
             }
-            scope.set("@sphereon")
-            packageName.set("openid-federation-client")
         }
     }
 }

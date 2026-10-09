@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.services.command.metadataPolicy
 
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.core.error.InvalidRequestError
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
@@ -16,6 +17,8 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.MetadataPolicy
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
+import kotlinx.serialization.json.JsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -45,6 +48,14 @@ class CreateMetadataPolicyCommandImpl(
         applyDuring: (CreateMetadataPolicyArgs) -> CreateMetadataPolicyArgs
     ): IdkResult<MetadataPolicy, FederationError> {
         val (tenantId, key, policy) = applyDuring(args)
+
+        // A policy is signed into every Subordinate Statement of the account, so it must be valid when stored (§6.1).
+        val policyObject = policy as? JsonObject
+            ?: return federationErr(InvalidRequestError("A metadata policy must be an object of claim operators"))
+        val checked = MetadataPolicyOperators.mergePolicies(JsonObject(emptyMap()), JsonObject(mapOf(key to policyObject)))
+        if (checked is MetadataPolicyOperators.PolicyMergeResult.Error) {
+            return federationErr(InvalidRequestError("Invalid metadata policy for $key: ${checked.reason}"))
+        }
 
         logger.info("Creating subordinate metadata policy for account: ${tenantId}, key: $key")
         logger.debug("Using account with ID: ${tenantId}")

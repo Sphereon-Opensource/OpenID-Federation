@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.entityConfiguration
 
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -24,6 +26,9 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
+import com.sphereon.openid.fed.core.error.InvalidRequestError
+import com.sphereon.openid.fed.core.error.TenantNotFoundError
+import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 
 /**
  * Implementation of the PublishEntityConfigurationCommand.
@@ -35,8 +40,9 @@ import dev.zacsweers.metro.SingleIn
 class PublishEntityConfigurationCommandImpl(
     execution: SessionExecution,
     private val findEntityConfigurationCommand: FindEntityConfigurationByAccountCommand,
-    private val jwkService: JwkService,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val tenantContextResolver: TenantContextResolver,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
 ) : TypedServiceCommandAdapter<PublishEntityConfigurationArgs, String, FederationError>(
     commandId = PublishEntityConfigurationCommand.COMMAND_ID,
     execution = execution,
@@ -63,22 +69,18 @@ class PublishEntityConfigurationCommandImpl(
         }
         val entityConfigurationStatement = findResult.value
 
-        // Get the keys for signing
-        val keysResult = jwkService.getAssertedKeysForAccount(
-            tenantId,
-            includeRevoked = false,
-            kmsKeyRef = kmsKeyRef,
-            kid = kid
-        )
-
-        if (keysResult.isErr) {
-            return keysResult.error.asErrorResult()
+        // The account self-signs with its persisted signing-key selection; callers cannot choose another key.
+        val identifier = tenantContextResolver.resolveIdentifier(tenantId)
+            ?: return federationErr(TenantNotFoundError(tenantId))
+        val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, identifier))
+        if (resolved.isErr) return resolved.error.asErrorResult()
+        val key = resolved.value
+        if ((kid != null && kid != key.kid) || (kmsKeyRef != null && kmsKeyRef != key.kmsKeyRef)) {
+            return federationErr(InvalidRequestError("Requested key differs from the account's selected signing key"))
         }
-        val keys = keysResult.value
-        val key = keys[0]
 
         // Create signed JWT
-        val jwtResult = createSignedJwt(entityConfigurationStatement, key)
+        val jwtResult = createSignedJwt(entityConfigurationStatement, key.kid, key.alg, key.kmsKeyRef, key.kms)
         if (jwtResult.isErr) {
             return jwtResult
         }
@@ -100,11 +102,14 @@ class PublishEntityConfigurationCommandImpl(
 
     private suspend fun createSignedJwt(
         statement: EntityConfigurationStatement,
-        key: TenantJwk
+        kid: String,
+        alg: String,
+        kmsKeyRef: String,
+        kms: String,
     ): IdkResult<String, FederationError> {
         return try {
-            val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg ?: "RS256")
-            jwtService.signPayload(statement, header, key.kid, key.kmsKeyRef, key.kms)
+            val header = JwtHeader(typ = "entity-statement+jwt", kid = kid, alg = alg)
+            jwtService.signPayload(statement, header, kid, kmsKeyRef, kms)
         } catch (e: Exception) {
             logger.error("Failed to create signed JWT", e)
             federationErr(ServerError("Failed to sign entity configuration", e.message, e))

@@ -1,0 +1,13 @@
+findByAccountId:
+SELECT *
+FROM AccountSigningKey
+WHERE account_id = ?;
+
+upsert:
+INSERT INTO AccountSigningKey (account_id, jwk_id, revision)
+VALUES (?, ?, ?)
+ON CONFLICT (account_id) DO UPDATE SET
+    jwk_id = excluded.jwk_id,
+    revision = excluded.revision,
+    updated_at = CURRENT_TIMESTAMP
+RETURNING *;

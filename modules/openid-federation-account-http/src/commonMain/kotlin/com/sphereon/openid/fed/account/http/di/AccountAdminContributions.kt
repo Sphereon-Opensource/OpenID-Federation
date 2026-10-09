@@ -41,8 +41,8 @@ class AccountAdminEndpointContributionImpl(
 @ContributesIntoSet(AppScope::class, binding = binding<AdminAccountDescriptorContribution>())
 class AccountAdminDescriptorContributionImpl : AdminAccountDescriptorContribution {
     override val endpointDescriptors: List<HttpEndpointDescriptor> = listOf(
-        ListAccountsEndpointCommand.ENDPOINT,
-        CreateAccountEndpointCommand.ENDPOINT,
-        DeleteAccountEndpointCommand.ENDPOINT,
+        ListAccountsEndpointCommand.ENDPOINT.copy(handlerCommandId = ListAccountsEndpointCommand.COMMAND_ID),
+        CreateAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = CreateAccountEndpointCommand.COMMAND_ID),
+        DeleteAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = DeleteAccountEndpointCommand.COMMAND_ID),
     )
 }

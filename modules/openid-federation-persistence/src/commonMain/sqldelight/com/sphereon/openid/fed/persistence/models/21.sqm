@@ -1,0 +1,10 @@
+ALTER TABLE Jwk ADD CONSTRAINT jwk_account_id_id_unique UNIQUE (account_id, id);
+
+CREATE TABLE AccountSigningKey (
+    account_id UUID AS kotlin.String NOT NULL PRIMARY KEY,
+    jwk_id UUID AS kotlin.String,
+    revision BIGINT NOT NULL CHECK (revision > 0),
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_AccountSigningKeyAccount FOREIGN KEY (account_id) REFERENCES Account (id),
+    CONSTRAINT FK_AccountSigningKeyOwnedJwk FOREIGN KEY (account_id, jwk_id) REFERENCES Jwk (account_id, id)
+);

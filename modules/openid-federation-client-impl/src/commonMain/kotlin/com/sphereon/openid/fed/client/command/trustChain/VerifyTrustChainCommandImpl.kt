@@ -4,8 +4,6 @@ import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetHistoricalKeysCommand
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
@@ -13,11 +11,10 @@ import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
-import com.sphereon.openid.fed.openapi.models.Constraints
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.Jwt
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -30,16 +27,14 @@ import dev.zacsweers.metro.SingleIn
  * Verifies Trust Chains per OpenID Federation 1.1 §3.2, §4, §6.2, §10.2.
  *
  * Includes RFC 5280-style naming constraints, structural Entity Statement checks,
- * and optional out-of-band Trust Anchor public keys as the cryptographic root of trust.
+ * and requires out-of-band Trust Anchor public keys as the cryptographic root of trust.
  */
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<VerifyTrustChainCommand>())
 class VerifyTrustChainCommandImpl(
     execution: SessionExecution,
-    private val context: FederationContext,
-    private val getEntityConfigurationCommand: GetEntityConfigurationCommand,
-    private val getHistoricalKeysCommand: GetHistoricalKeysCommand
+    private val context: FederationContext
 ) : ExecutionScopedCommandAdapter<VerifyTrustChainArgs, VerifyTrustChainResponse, FederationError>(
     id = VerifyTrustChainCommand.COMMAND_ID,
     execution = execution
@@ -215,6 +210,8 @@ class VerifyTrustChainCommandImpl(
 
             logger.debug("Trust chain verification completed successfully (length=${chain.size})")
             return IdkResult.ok(VerifyTrustChainResponse(true))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Chain verification failed with exception", e)
             return IdkResult.err(TrustChainValidationFailedError(
@@ -278,91 +275,51 @@ class VerifyTrustChainCommandImpl(
         return context.trustAnchorPublicKeys[trustAnchorId].orEmpty()
     }
 
-    /**
-     * Verify TA EC signature with out-of-band keys when configured; otherwise self-JWKS
-     * and confirm kid appears on live/historical TA keys (legacy / dev mode).
-     */
+    /** Verify the Trust Anchor only against explicitly supplied or exact-anchor configured keys. */
     private suspend fun verifyTrustAnchorSignature(
         taJwt: String,
         trustAnchorId: String,
         oobKeys: List<Jwk>
     ): IdkResult<Unit, FederationError> {
         val decoded = decodeJWTComponents(taJwt)
-
-        if (oobKeys.isNotEmpty()) {
-            val key = oobKeys.find { it.kid == decoded.header.kid }
-                ?: return IdkResult.err(TrustChainValidationFailedError(
-                    entityId = trustAnchorId,
-                    reason = "Trust Anchor signing kid '${decoded.header.kid}' not found in " +
-                        "out-of-band Trust Anchor public keys"
-                ))
-            if (!context.jwtService.verifyJwtSignature(taJwt, key)) {
-                return IdkResult.err(TrustChainValidationFailedError(
-                    entityId = trustAnchorId,
-                    reason = "Trust Anchor signature verification failed against out-of-band keys"
-                ))
-            }
-            logger.debug("Trust Anchor signature verified with out-of-band keys")
-            return IdkResult.ok(Unit)
-        }
-
-        // Fallback: self-signed EC (weaker — do not use as sole trust root in production)
-        if (!verifySignatureWithOwnJwks(taJwt)) {
+        if (oobKeys.isEmpty()) {
             return IdkResult.err(TrustChainValidationFailedError(
                 entityId = trustAnchorId,
-                reason = "Trust Anchor signature verification failed"
+                reason = "No out-of-band Trust Anchor public keys were provided for '$trustAnchorId'"
             ))
         }
-
-        val trustAnchorEntityConfigResult = getEntityConfigurationCommand.getEntityConfiguration(trustAnchorId)
-        if (trustAnchorEntityConfigResult.isErr) {
+        val key = oobKeys.find { it.kid == decoded.header.kid }
+            ?: return IdkResult.err(TrustChainValidationFailedError(
+                entityId = trustAnchorId,
+                reason = "Trust Anchor signing kid '${decoded.header.kid}' not found in " +
+                    "out-of-band Trust Anchor public keys"
+            ))
+        if (!context.jwtService.verifyJwtSignature(taJwt, key)) {
             return IdkResult.err(TrustChainValidationFailedError(
                 entityId = trustAnchorId,
-                reason = "Failed to fetch trust anchor configuration"
+                reason = "Trust Anchor signature verification failed against out-of-band keys"
             ))
         }
-
-        val trustAnchorEntityConfiguration = trustAnchorEntityConfigResult.value
-        val jwks = trustAnchorEntityConfiguration.jwks.propertyKeys
-        if (jwks != null && jwks.any { it.kid == decoded.header.kid }) {
-            return IdkResult.ok(Unit)
-        }
-
-        val historicalKeysResult = getHistoricalKeysCommand.getHistoricalKeys(trustAnchorEntityConfiguration)
-        if (historicalKeysResult.isErr) {
-            return IdkResult.err(TrustChainValidationFailedError(
-                entityId = trustAnchorId,
-                reason = "Trust Anchor kid not in current JWKS and historical keys fetch failed"
-            ))
-        }
-        if (historicalKeysResult.value.none { it.kid == decoded.header.kid }) {
-            return IdkResult.err(TrustChainValidationFailedError(
-                entityId = trustAnchorId,
-                reason = "Trust Anchor kid not found in current JWKS or historical keys"
-            ))
-        }
+        logger.debug("Trust Anchor signature verified with out-of-band keys")
         return IdkResult.ok(Unit)
     }
 
     private fun validateConstraints(statements: List<Jwt>): TrustChainValidationFailedError? {
-        val constraintsJson = Json { ignoreUnknownKeys = true }
-
         for (j in (statements.size - 1) downTo 1) {
             val statement = statements[j]
             // Constraints only on Subordinate Statements
             if (EntityStatementValidation.isEntityConfiguration(statement.payload)) continue
 
             val constraintsElement = statement.payload["constraints"] ?: continue
-            val constraints: Constraints = try {
-                constraintsJson.decodeFromString(constraintsElement.toString())
-            } catch (e: Exception) {
-                logger.warn("Failed to parse constraints at position $j: ${e.message}")
-                continue
-            }
+            val parsed = EntityStatementValidation.parseConstraints(constraintsElement)
+            val constraints = parsed.constraints ?: return TrustChainValidationFailedError(
+                entityId = statement.payload["sub"]?.jsonPrimitive?.contentOrNull ?: "unknown",
+                reason = "Invalid constraints at position $j: ${parsed.reason ?: "unknown error"}"
+            )
 
             val maxPathLength = constraints.maxPathLength
             if (maxPathLength != null) {
-                val intermediatesBelow = j - 2
+                val intermediatesBelow = j - 1
                 if (intermediatesBelow > maxPathLength) {
                     return TrustChainValidationFailedError(
                         entityId = statement.payload["sub"]?.jsonPrimitive?.contentOrNull ?: "unknown",
@@ -389,22 +346,8 @@ class VerifyTrustChainCommandImpl(
                 }
             }
 
-            val allowedEntityTypes = constraints.allowedEntityTypes
-            // null = any type; empty = only federation_entity; non-empty = listed + federation_entity
-            if (allowedEntityTypes != null) {
-                for (k in 0 until j) {
-                    val entityMetadata = statements[k].payload["metadata"]?.jsonObject ?: continue
-                    for (entityType in entityMetadata.keys) {
-                        if (!EntityStatementValidation.isEntityTypeAllowed(entityType, allowedEntityTypes)) {
-                            return TrustChainValidationFailedError(
-                                entityId = statements[k].payload["sub"]?.jsonPrimitive?.contentOrNull ?: "unknown",
-                                reason = "Constraint violation: entity type '$entityType' at position $k " +
-                                    "not allowed by constraints at position $j"
-                            )
-                        }
-                    }
-                }
-            }
+            // allowed_entity_types removes disallowed roles from Resolved Metadata; it does not
+            // invalidate an otherwise sound signed chain. The metadata resolver applies it.
         }
 
         return null

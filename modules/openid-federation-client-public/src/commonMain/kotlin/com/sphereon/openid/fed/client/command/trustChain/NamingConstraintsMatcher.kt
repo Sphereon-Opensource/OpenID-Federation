@@ -9,8 +9,8 @@ package com.sphereon.openid.fed.client.command.trustChain
  * - Pattern starting with `.` (e.g. `.example.com`): matches one or more DNS labels under that
  *   domain (`host.example.com`, `a.b.example.com`) but **not** the bare domain `example.com`.
  * - Pattern without leading `.` (e.g. `host.example.com`): matches that host exactly.
- * - Patterns that look like absolute URIs (contain `://`) are matched as URI-prefix constraints
- *   for backwards compatibility with deployments that published full URI namespaces.
+ * - A constraint MUST be a fully qualified domain name (§6.2.2); anything else never matches and is rejected when the
+ *   constraints are parsed.
  */
 object NamingConstraintsMatcher {
 
@@ -40,21 +40,17 @@ object NamingConstraintsMatcher {
         val trimmedPattern = pattern.trim()
         if (trimmedPattern.isEmpty()) return false
 
-        // Full-URI namespace (non-RFC5280 extension used by some deployments)
-        if (trimmedPattern.contains("://")) {
-            return matchUriPrefix(entityIdentifier, trimmedPattern)
-        }
+        if (!isDomainNameConstraint(trimmedPattern)) return false
 
         val host = extractHost(entityIdentifier) ?: return false
         return matchHostConstraint(host.lowercase(), trimmedPattern.lowercase())
     }
 
-    private fun matchUriPrefix(identifier: String, pattern: String): Boolean {
-        // Normalize trailing slash on pattern for prefix match of path namespaces
-        val p = pattern.trimEnd('/')
-        val id = identifier.trimEnd('/')
-        return id == p || id.startsWith("$p/") || id.startsWith(p)
-    }
+    private val DOMAIN_LABEL = "[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    private val DOMAIN_NAME_CONSTRAINT = Regex("""^\.?$DOMAIN_LABEL(?:\.$DOMAIN_LABEL)*$""")
+
+    /** A host (`host.example.com`) or a domain (`.example.com`) written as a fully qualified domain name. */
+    fun isDomainNameConstraint(pattern: String): Boolean = DOMAIN_NAME_CONSTRAINT.matches(pattern)
 
     /**
      * Extract host from an Entity Identifier. Supports `https://host[:port]/path` and bare hosts.
@@ -67,8 +63,8 @@ object NamingConstraintsMatcher {
             value.contains("://") -> value.substringAfter("://")
             else -> value
         }
-        // host[:port]/path
-        val hostPort = withoutScheme.substringBefore('/')
+        // [userinfo@]host[:port]/path; the constraint applies to the host only
+        val hostPort = withoutScheme.substringBefore('/').substringAfterLast('@')
         if (hostPort.isEmpty()) return null
         // Strip IPv6 brackets if present, then port
         val host = if (hostPort.startsWith("[")) {
