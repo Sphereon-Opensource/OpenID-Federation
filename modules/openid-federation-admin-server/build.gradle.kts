@@ -5,14 +5,23 @@ plugins {
 }
 
 // Keep static public OpenAPI in sync with openapi module sources (core + LEGACY accounts).
-tasks.register<Copy>("copyOpenAPI") {
+val copyOpenAPI = tasks.register<Sync>("copyOpenAPI") {
     from("../openid-federation-openapi/src/commonMain/kotlin/com/sphereon/openid/fed/openapi") {
         include("admin-server.yaml", "admin-accounts.yaml")
     }
-    into("src/main/resources/public")
+    into(layout.buildDirectory.dir("generated/openapi"))
 }
-tasks.named("processResources") {
-    dependsOn("copyOpenAPI")
+
+// The checked-in copies are documentation snapshots, not generated task outputs.
+// Package the current specs once, preserving their public/* resource paths.
+sourceSets.named("main") {
+    resources.exclude("public/admin-server.yaml", "public/admin-accounts.yaml")
+}
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
+    from(copyOpenAPI) {
+        into("public")
+    }
 }
 
 // Backwards compatibility shim module

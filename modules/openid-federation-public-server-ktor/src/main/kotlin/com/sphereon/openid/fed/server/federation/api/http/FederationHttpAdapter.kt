@@ -10,7 +10,6 @@ import com.sphereon.di.session.SessionScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.binding
-import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.StringKey
 
@@ -56,12 +55,4 @@ class FederationHttpAdapter(
         ),
         operationIdPrefix = "federation"
     )
-
-    /**
-     * DI Component interface for accessing the FederationHttpAdapter from session context.
-     */
-    @ContributesTo(SessionScope::class)
-    interface Graph {
-        val federationHttpAdapter: FederationHttpAdapter
-    }
 }
