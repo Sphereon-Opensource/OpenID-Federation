@@ -29,6 +29,14 @@ def configureLayers = { repositories ->
     repositories.all { repository ->
         if (!isLayer(repository)) {
             repository.content { descriptor ->
+                // Protected SDK families (Sphereon and the App Platform fork) resolve from local Maven only;
+                // public repos, including public software.amazon artifacts, remain normal.
+                def remoteUrl = repository.hasProperty('url') ? repository.url?.toString() : null
+                if (remoteUrl && (remoteUrl.toLowerCase(java.util.Locale.ROOT).startsWith('https://') ||
+                    remoteUrl.toLowerCase(java.util.Locale.ROOT).startsWith('http://'))) {
+                    descriptor.excludeGroupByRegex('com[.]sphereon([.].*)?')
+                    descriptor.excludeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+                }
                 policy.components.keySet().each { coordinate ->
                     def gav = coordinate.split(':', -1)
                     descriptor.excludeVersion(gav[0], gav[1], gav[2])
@@ -50,9 +58,18 @@ def configureLayers = { repositories ->
     }
 }
 gradle.beforeSettings { settings ->
+    configureLayers(settings.pluginManagement.repositories)
     configureLayers(settings.dependencyResolutionManagement.repositories)
 }
 gradle.beforeProject { project ->
+    // Preserve empty buildscript handlers: plugin-management exclusiveContent rejects
+    // an already-populated handler. Copied plugin repositories are already layered.
+    project.buildscript.repositories.all { repository ->
+        if (!repository.name.startsWith('__plugin_repository__') && !isLayer(repository) &&
+            !names.values().every { project.buildscript.repositories.findByName(it) }) {
+            configureLayers(project.buildscript.repositories)
+        }
+    }
     // Leave an empty project handler empty so PREFER_PROJECT keeps settings repos.
     project.repositories.all { repository ->
         if (!isLayer(repository) && !names.values().every { project.repositories.findByName(it) }) {

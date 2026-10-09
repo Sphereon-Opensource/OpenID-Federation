@@ -19,12 +19,15 @@ import org.gradle.api.attributes.Usage
 
 abstract class PrepareWorkspaceArtifacts extends DefaultTask {
     @Input abstract Property<String> getProducerJson()
+    @Input abstract Property<String> getPublicationVariant()
     @Input abstract ListProperty<String> getFileDescriptions()
     @InputFiles abstract ConfigurableFileCollection getPublicationFiles()
     @OutputDirectory abstract DirectoryProperty getDestination()
 
     @TaskAction void prepare() {
         def producer = new JsonSlurper().parseText(producerJson.get())
+        def variant = publicationVariant.get()
+        if (!(variant in ['jvm', 'version-catalog'])) throw new GradleException('Unsupported preparation variant')
         def output = destination.get().asFile
         def repo = new File(output, 'repo')
         // Only this task's fixed build/workspace-artifacts output is replaced.
@@ -46,7 +49,7 @@ abstract class PrepareWorkspaceArtifacts extends DefaultTask {
                 int size
                 while ((size = input.read(buffer)) > 0) digest.update(buffer, 0, size)
             }
-            def record = [path:item.path, sha256:digest.digest().encodeHex().toString(), size:target.length(), kind:item.kind, variant:item.variant ?: 'jvm']
+            def record = [path:item.path, sha256:digest.digest().encodeHex().toString(), size:target.length(), kind:item.kind, variant:item.variant ?: variant]
             if (producer.publicationCoordinates != null || producer.publicationType == 'toml-bom') record.coordinate = item.coordinate
             records << record
         }
@@ -55,11 +58,12 @@ abstract class PrepareWorkspaceArtifacts extends DefaultTask {
             def prefix = parts[0].replace('.', '/') + '/' + parts[1] + '/' + parts[2] + '/' + parts[1] + '-' + parts[2]
             def exact = [(prefix+'.toml'):'artifact', (prefix+'-bom.toml'):'artifact',
                          (prefix+'.pom'):'pom', (prefix+'.module'):'module']
-            if (records.size() != 4 || records.collect { it.path }.toSet() != exact.keySet() ||
+            if (variant != 'jvm' || records.size() != 4 || records.collect { it.path }.toSet() != exact.keySet() ||
                     records.any { it.coordinate != producer.coordinate || it.variant != 'metadata' || it.kind != exact[it.path] }) {
                 throw new GradleException('Incomplete or undeclared exact BOM catalog files')
             }
         } else if (producer.publicationCoordinates != null) {
+            if (variant != 'jvm') throw new GradleException('Finite canonical publications require the JVM preparation variant')
             producer.publicationCoordinates.each { coordinate ->
                 def publicationRecords = records.findAll { it.coordinate == coordinate }
                 def present = publicationRecords.collect { it.kind }.toSet()
@@ -72,11 +76,11 @@ abstract class PrepareWorkspaceArtifacts extends DefaultTask {
                 }
             }
         } else if (!records.any { it.kind == 'artifact' } || !records.any { it.kind == 'pom' } || !records.any { it.kind == 'module' }) {
-            throw new GradleException('JVM preparation requires artifacts, POM and Gradle module metadata')
+            throw new GradleException((variant == 'jvm' ? 'JVM' : 'Catalog') + ' preparation requires artifacts, POM and Gradle module metadata')
         }
         def manifest = [schemaVersion:1, module:producer.module, coordinate:producer.coordinate,
                         producerInputId:producer.producerInputId, buildLogicId:producer.buildLogicId,
-                        dependencyIds:producer.dependencyIds, variants:['jvm'], files:records.sort { it.path }]
+                        dependencyIds:producer.dependencyIds, variants:[variant], files:records.sort { it.path }]
         if (producer.publicationCoordinates != null) manifest.publicationCoordinates = producer.publicationCoordinates
         if (producer.publicationType != null) manifest.publicationType = producer.publicationType
         new File(output, 'manifest.json').setText(JsonOutput.toJson(manifest), 'UTF-8')
@@ -134,6 +138,7 @@ if (raw) {
             def catalog = producer.publicationType == 'toml-bom'
             if (producer.publicationType != null && !catalog) throw new GradleException('Unsupported publication type: ' + producer.publicationType)
             def publications
+            def variant = 'jvm'
             if (catalog) {
                 if (producer.module != 'idk:idk-bom' || name != 'idk-bom' || producer.projectPath != ':idk-bom' ||
                         finite != null || expected[0] != 'com.sphereon.idk' || expected[1] != 'idk-bom' ||
@@ -172,23 +177,27 @@ if (raw) {
                     throw new GradleException('Both standard root and JVM publications are required: ' + name)
                 }
             } else {
-                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm', 'maven', 'mavenJava', 'pluginMaven'] }
+                publications = allPublications.findAll { it.name in ['kotlinMultiplatform', 'jvm', 'android', 'androidRelease', 'maven', 'mavenJava', 'pluginMaven', 'bomCatalog'] }
                 if (publications.isEmpty()) throw new GradleException('No supported JVM publication: ' + name)
+                def catalogs = publications.findAll { it.name == 'bomCatalog' }
+                if (!catalogs.isEmpty() && catalogs.size() != publications.size()) throw new GradleException('Mixed JVM/catalog preparation is unsupported: ' + name)
+                variant = catalogs.isEmpty() ? 'jvm' : 'version-catalog'
             }
             def task = project.tasks.register('prepareWorkspaceArtifacts', PrepareWorkspaceArtifacts) {
                 group = 'build'
                 description = catalog ? 'Prepare selected BOM catalog Maven bytes for coordinator archival; never publish to a repository' :
-                    'Prepare selected JVM Maven bytes for coordinator archival; never publish to a repository'
+                    'Prepare selected JVM and Android library Maven bytes for coordinator archival; never publish to a repository'
                 producerJson.set(JsonOutput.toJson(producer))
+                publicationVariant.set(variant)
                 destination.set(project.layout.buildDirectory.dir('workspace-artifacts'))
             }
             publications.each { publication ->
                 def coordinate = publication.groupId + ':' + publication.artifactId + ':' + publication.version
                 if (catalog ? coordinate != producer.coordinate : finite != null ? coordinate != finite[publication.name == 'kotlinMultiplatform' ? 0 : 1] :
-                    (publication.groupId != expected[0] || publication.version != expected[2] || !(publication.artifactId in [expected[1], expected[1] + '-jvm']))) {
+                    (publication.groupId != expected[0] || publication.version != expected[2] || !(publication.artifactId in [expected[1], expected[1] + '-jvm', expected[1] + '-android']))) {
                     throw new GradleException('Publication coordinates differ from selected component: ' + coordinate)
                 }
-                def variant = catalog || (finite != null && publication.name == 'kotlinMultiplatform') ? 'metadata' : 'jvm'
+                def recordVariant = catalog || (finite != null && publication.name == 'kotlinMultiplatform') ? 'metadata' : variant
                 def prefix = publication.groupId.replace('.', '/') + '/' + publication.artifactId + '/' + publication.version + '/'
                 def base = publication.artifactId + '-' + publication.version
                 def capital = publication.name.substring(0, 1).toUpperCase() + publication.name.substring(1)
@@ -198,15 +207,15 @@ if (raw) {
                 task.configure {
                     dependsOn(pom, metadata)
                     publicationFiles.from(pom.outputs.files, metadata.outputs.files)
-                    fileDescriptions.add(JsonOutput.toJson([source:pom.destination.absolutePath, path:prefix+base+'.pom', kind:'pom', variant:variant, coordinate:coordinate]))
-                    fileDescriptions.add(JsonOutput.toJson([source:metadata.outputFile.get().asFile.absolutePath, path:prefix+base+'.module', kind:'module', variant:variant, coordinate:coordinate]))
+                    fileDescriptions.add(JsonOutput.toJson([source:pom.destination.absolutePath, path:prefix+base+'.pom', kind:'pom', variant:recordVariant, coordinate:coordinate]))
+                    fileDescriptions.add(JsonOutput.toJson([source:metadata.outputFile.get().asFile.absolutePath, path:prefix+base+'.module', kind:'module', variant:recordVariant, coordinate:coordinate]))
                 }
                 publication.artifacts.each { artifact ->
                     def classifier = artifact.classifier ? '-' + artifact.classifier : ''
                     task.configure {
                         dependsOn(artifact.buildDependencies)
                         publicationFiles.from(artifact.file)
-                        fileDescriptions.add(JsonOutput.toJson([source:artifact.file.absolutePath, path:prefix+base+classifier+'.'+artifact.extension, kind:'artifact', variant:variant, coordinate:coordinate]))
+                        fileDescriptions.add(JsonOutput.toJson([source:artifact.file.absolutePath, path:prefix+base+classifier+'.'+artifact.extension, kind:'artifact', variant:recordVariant, coordinate:coordinate]))
                     }
                 }
             }

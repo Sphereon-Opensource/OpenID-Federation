@@ -1,5 +1,9 @@
 package com.sphereon.openid.fed.services.command.registration
 
+import com.sphereon.openid.fed.client.command.trustChain.PublishedTrustAnchorKeyResolver
+import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommandImpl
+import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustArgs
+import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustCommandImpl
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.cache.CacheRequirements
@@ -233,12 +237,13 @@ class FederationRegistrationCommandsTest {
 
     private val anchors get() = listOf(RegistrationTrustAnchor(ta))
 
-    private fun resolver() = ResolveTrustChainCommandImpl(execution, context)
+    private fun resolver() = ResolveTrustChainCommandImpl(execution, context, verifier(), anchorKeys())
     private fun verifier() = VerifyTrustChainCommandImpl(execution, context)
     private fun configurations() = GetEntityConfigurationCommandImpl(execution, context)
+    private fun anchorKeys() = PublishedTrustAnchorKeyResolver(configurations())
 
     private fun automatic(store: RegistrationProofJtiStore = InMemoryRegistrationProofJtiStore()) =
-        VerifyAutomaticRegistrationCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService, store)
+        VerifyAutomaticRegistrationCommandImpl(execution, resolver(), verifier(), anchorKeys(), context, jwtService, store)
 
     private suspend fun requestObject(
         signer: Key = rpClientKey,
@@ -312,7 +317,7 @@ class FederationRegistrationCommandsTest {
 
     @Test
     fun resolvedClientCarriesOnlyPublishedClientSigningKeys() = runTest {
-        val command = ResolveRegistrationClientCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService)
+        val command = ResolveRegistrationClientCommandImpl(execution, resolver(), verifier(), anchorKeys(), context, jwtService)
         val resolved = command.execute(ResolveRegistrationClientArgs(rp, RegistrationProfile.OPENID_CONNECT, anchors))
 
         assertTrue(resolved.isOk, "client must resolve: ${if (resolved.isErr) resolved.error else ""}")
@@ -323,6 +328,73 @@ class FederationRegistrationCommandsTest {
         assertIs<InvalidRegistrationError>(notAnEntity.error)
         val wrongProfile = command.execute(ResolveRegistrationClientArgs(rp, RegistrationProfile.OAUTH2, anchors))
         assertIs<InvalidMetadataError>(wrongProfile.error)
+    }
+
+    @Test
+    fun aHintLoopingBackIntoThePathIsNotFollowedAndEachConfigurationIsFetchedOnce() = runTest {
+        // The RP names itself as an authority: following that hint would loop (§10.1).
+        published["$rp/.well-known/openid-federation"] =
+            sign(statementClaims(rp, rp, jwks(rpFederationKey), rpMetadata, listOf(rp, ta)), rpFederationKey, "entity-statement+jwt")
+        requested.clear()
+
+        val resolved = resolver().execute(ResolveTrustChainArgs(rp, arrayOf(ta)))
+
+        assertTrue(resolved.isOk, "the chain through the anchor resolves: ${if (resolved.isErr) resolved.error else ""}")
+        assertEquals(3, resolved.value.trustChain.size)
+        assertEquals(1, requested.count { it == "$rp/.well-known/openid-federation" }, "$requested")
+    }
+
+    @Test
+    fun aPreferredCandidateThatDoesNotValidateIsPassedOverForAValidOne() = runTest {
+        // A second anchor, preferred over the first, vouches for the RP with an expired statement.
+        val otherAnchor = "https://ta2.example"
+        val otherKey = key()
+        published["$otherAnchor/.well-known/openid-federation"] = sign(
+            statementClaims(otherAnchor, otherAnchor, jwks(otherKey), metadata = buildJsonObject {
+                put("federation_entity", buildJsonObject { put("federation_fetch_endpoint", "$otherAnchor/fetch") })
+            }),
+            otherKey, "entity-statement+jwt",
+        )
+        val expired = JsonObject(statementClaims(otherAnchor, rp, jwks(rpFederationKey)) + ("exp" to JsonPrimitive(now - 5)))
+        published["$otherAnchor/fetch?sub=$rp"] = sign(expired, otherKey, "entity-statement+jwt")
+        published["$rp/.well-known/openid-federation"] =
+            sign(statementClaims(rp, rp, jwks(rpFederationKey), rpMetadata, listOf(otherAnchor, ta)), rpFederationKey, "entity-statement+jwt")
+
+        val resolved = resolver().execute(ResolveTrustChainArgs(rp, arrayOf(otherAnchor, ta)))
+
+        assertTrue(resolved.isOk, "the valid chain is chosen: ${if (resolved.isErr) resolved.error else ""}")
+        assertEquals(taConfiguration, resolved.value.trustChain.last())
+
+        val onlyInvalid = resolver().execute(ResolveTrustChainArgs(rp, arrayOf(otherAnchor)))
+        assertTrue(onlyInvalid.isErr, "an invalid candidate alone yields no chain")
+    }
+
+    @Test
+    fun entityTrustIsVerifiedUnderAByReferenceTrustAnchorAndRequiredMarksAreEnforced() = runTest {
+        val command = VerifyEntityTrustCommandImpl(execution, resolver(), verifier(), configurations(), anchorKeys(),
+            VerifyTrustMarkCommandImpl(execution, context, configurations(), resolver(), verifier()))
+        val trusted = command.execute(VerifyEntityTrustArgs(rp, RegistrationTrustAnchor(ta)))
+        assertTrue(trusted.isOk, "entity must be trusted: ${if (trusted.isErr) trusted.error else ""}")
+        assertEquals(listOf(rp, ta), trusted.value.chainPath)
+        assertEquals(ta, trusted.value.trustAnchor)
+        assertEquals(listOf(rpConfiguration, taAboutRp, taConfiguration), trusted.value.trustChain)
+
+        val elsewhere = command.execute(VerifyEntityTrustArgs(rp, RegistrationTrustAnchor("https://other-ta.example")))
+        assertTrue(elsewhere.isErr)
+        val missingMark = command.execute(VerifyEntityTrustArgs(rp, RegistrationTrustAnchor(ta), listOf("https://ta.example/marks/certified")))
+        assertIs<TrustChainValidationFailedError>(missingMark.error)
+    }
+
+    @Test
+    fun entityTrustThroughOneImmediateSuperiorRequiresThatSuperiorsStatement() = runTest {
+        val command = VerifyEntityTrustCommandImpl(execution, resolver(), verifier(), configurations(), anchorKeys(),
+            VerifyTrustMarkCommandImpl(execution, context, configurations(), resolver(), verifier()))
+        val through = command.execute(VerifyEntityTrustArgs(rp, RegistrationTrustAnchor(ta), viaSuperior = ta))
+        assertTrue(through.isOk, "the chain runs through the anchor itself: ${if (through.isErr) through.error else ""}")
+        assertEquals(listOf(rp, ta), through.value.chainPath)
+
+        val other = command.execute(VerifyEntityTrustArgs(rp, RegistrationTrustAnchor(ta), viaSuperior = "https://unlisted.example"))
+        assertTrue(other.isErr, "a superior that issued no statement about the entity yields no chain")
     }
 
     @Test
@@ -435,11 +507,11 @@ class FederationRegistrationCommandsTest {
     }
 
     private fun create() = CreateExplicitRegistrationRequestCommandImpl(
-        execution, resolver(), verifier(), configurations(), tenants, OwnConfigurations(), SelectedKeys(), jwtService,
+        execution, resolver(), verifier(), anchorKeys(), tenants, OwnConfigurations(), SelectedKeys(), jwtService,
     )
-    private fun verifyRequest() = VerifyExplicitRegistrationRequestCommandImpl(execution, resolver(), verifier(), configurations(), context, jwtService)
+    private fun verifyRequest() = VerifyExplicitRegistrationRequestCommandImpl(execution, resolver(), verifier(), anchorKeys(), context, jwtService)
     private fun signResponse() = SignExplicitRegistrationResponseCommandImpl(execution, tenants, SelectedKeys(), jwtService)
-    private fun verifyResponse() = VerifyExplicitRegistrationResponseCommandImpl(execution, resolver(), verifier(), configurations(), jwtService)
+    private fun verifyResponse() = VerifyExplicitRegistrationResponseCommandImpl(execution, resolver(), verifier(), anchorKeys(), jwtService)
 
     private suspend fun explicitRequest(includeTrustChains: Boolean): ExplicitRegistrationRequest {
         val created = create().execute(

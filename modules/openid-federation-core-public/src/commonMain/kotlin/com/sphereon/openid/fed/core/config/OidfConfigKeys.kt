@@ -53,8 +53,8 @@ object OidfConfigKeys {
         const val ENDPOINT_AUTH_TRUST_ANCHORS = "$PREFIX.endpoint.auth.trust.anchors"
 
         /**
-         * Lifetime in seconds of statements this server issues about its subordinates.
-         * Required to issue them; there is no built-in default.
+         * Lifetime in seconds of the statements this server signs: its Entity Configurations and the Subordinate
+         * Statements about its subordinates. Required to sign either; there is no built-in default.
          */
         const val STATEMENT_LIFETIME_SECONDS = "$PREFIX.statement.lifetime.seconds"
     }

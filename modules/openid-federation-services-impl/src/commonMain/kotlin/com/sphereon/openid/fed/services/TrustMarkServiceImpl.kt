@@ -1,21 +1,15 @@
 package com.sphereon.openid.fed.services
 
-import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
-import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
-import com.sphereon.crypto.jose.jws.JwtService
+import com.sphereon.openid.fed.services.command.trustMark.GetSignedTrustMarkStatusJwtArgs
+import com.sphereon.openid.fed.services.command.trustMark.GetSignedTrustMarkStatusJwtCommand
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.FederationResult
-import com.sphereon.openid.fed.core.error.KeyNotFoundError
-import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.andThenSuspend
-import com.sphereon.openid.fed.core.error.toErr
 import com.sphereon.openid.fed.core.error.toFederationResult
 
-import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkType
-import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.TrustMark
 import com.sphereon.openid.fed.openapi.models.TrustMarkListRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkRequest
@@ -84,9 +78,7 @@ class TrustMarkServiceImpl(
     private val getTrustMarkStatusCommand: GetTrustMarkStatusCommand,
     private val getTrustMarkedSubsCommand: GetTrustMarkedSubsCommand,
     private val getTrustMarkCommand: GetTrustMarkCommand,
-    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
-    private val jwtService: JwtService,
-    private val tenantContextResolver: TenantContextResolver
+    private val getSignedTrustMarkStatusJwtCommand: GetSignedTrustMarkStatusJwtCommand,
 ) : TrustMarkService {
 
     override suspend fun createTrustMarkType(tenantId: String, createDto: CreateTrustMarkType): FederationResult<TrustMarkType> =
@@ -129,39 +121,8 @@ class TrustMarkServiceImpl(
         tenantId: String,
         request: TrustMarkStatusRequest,
         trustMarkJwt: String?,
-    ): FederationResult<String> {
-        return getTrustMarkStatusCommand.execute(
-            GetTrustMarkStatusArgs(tenantId, request, trustMarkJwt)
-        ).toFederationResult().andThenSuspend { detail ->
-            val issuer = tenantContextResolver.resolveIdentifier(tenantId)
-                ?: return@andThenSuspend ServerError("Cannot resolve issuer identifier", null, null).toErr()
-
-            val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, issuer))
-            if (resolved.isErr) {
-                return@andThenSuspend resolved.error.toErr()
-            }
-            val key = resolved.value
-            val now = System.currentTimeMillis() / 1000
-            // Echo the Trust Mark under evaluation (submitted JWT preferred — §8.4.2)
-            val markForResponse = trustMarkJwt?.takeIf { it.isNotBlank() }
-                ?: detail.trustMarkJwt
-
-            val payload = TrustMarkStatusResponsePayload(
-                iss = issuer,
-                iat = now.toInt(),
-                trust_mark = markForResponse,
-                status = detail.status.wire,
-            )
-
-            val header = JwtHeader(
-                kid = key.kid,
-                alg = key.alg,
-                typ = "trust-mark-status-response+jwt"
-            )
-
-            jwtService.signPayload(payload, header, key.kid, key.kmsKeyRef, key.kms)
-        }
-    }
+    ): FederationResult<String> =
+        getSignedTrustMarkStatusJwtCommand.execute(GetSignedTrustMarkStatusJwtArgs(tenantId, request, trustMarkJwt)).toFederationResult()
 
     override suspend fun getTrustMarkedSubs(tenantId: String, request: TrustMarkListRequest): FederationResult<Array<String>> =
         getTrustMarkedSubsCommand.execute(GetTrustMarkedSubsArgs(tenantId, request)).toFederationResult()

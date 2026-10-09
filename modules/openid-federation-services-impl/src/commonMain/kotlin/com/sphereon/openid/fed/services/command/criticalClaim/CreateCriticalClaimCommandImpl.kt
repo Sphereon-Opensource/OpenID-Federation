@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.services.command.criticalClaim
 
+import com.sphereon.openid.fed.core.error.InvalidRequestError
+import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
@@ -45,6 +47,10 @@ class CreateCriticalClaimCommandImpl(
     ): IdkResult<CritEntity, FederationError> {
         val (tenantId, claim) = applyDuring(args)
 
+        // OpenID Federation 1.1 §3.1.1: claims this specification defines MUST NOT be listed in crit.
+        if (claim in EntityStatementValidation.STANDARD_CLAIMS) {
+            return federationErr(InvalidRequestError("$claim is defined by OpenID Federation and cannot be listed in crit"))
+        }
         logger.info("Creating critical claim for account: ${tenantId}, claim: $claim")
         logger.debug("Using account with ID: ${tenantId}")
 

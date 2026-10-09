@@ -101,10 +101,9 @@ class GetFederationHistoricalKeysJwtCommandImpl(
 
     private fun getFederationHistoricalKeys(tenantId: String): List<HistoricalKey> {
         logger.debug("Retrieving federation historical keys for account: $tenantId")
-        // Include revoked keys — active-only query is insufficient for §8.7 non-repudiation
-        val records = jwkQueries.findAllByAccountId(tenantId).executeAsList()
+        // §8.7: previously used keys only, which here are the revoked ones; keys in use are in the Entity Configuration.
+        val records = jwkQueries.findAllByAccountId(tenantId).executeAsList().filter { it.revoked_at != null }
         logger.debug("Found ${records.size} historical keys for account ID: $tenantId")
-        val now = System.currentTimeMillis() / 1000
-        return records.map { it.toHistoricalKey(nowEpochSeconds = now) }
+        return records.map { it.toHistoricalKey() }
     }
 }

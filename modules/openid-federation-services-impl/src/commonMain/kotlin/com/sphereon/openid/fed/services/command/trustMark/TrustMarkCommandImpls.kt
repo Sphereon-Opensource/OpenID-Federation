@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.trustMark
 
+import kotlinx.serialization.Serializable
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
@@ -177,7 +178,8 @@ class GetTrustMarkStatusCommandImpl(
                 submittedJwt = submittedJwt,
                 nowSeconds = nowSeconds,
             )
-            IdkResult.ok(detail)
+            // OpenID Federation 1.1 §8.4.2: a request about an unknown Trust Mark is answered with 404.
+            if (detail == null) federationErr(TrustMarkNotFoundError(statusRequest.trustMarkType)) else IdkResult.ok(detail)
         } catch (e: Exception) {
             logger.error("Failed to check trust mark status", e)
             federationErr(ServerError("Failed to check trust mark status", e.message, e))
@@ -185,7 +187,8 @@ class GetTrustMarkStatusCommandImpl(
     }
 
     /**
-     * OIDFed 1.1 §8.4.2: active | expired | revoked | invalid for the Trust Mark under evaluation.
+     * OIDFed 1.1 §8.4.2: active | expired | revoked | invalid for a Trust Mark this issuer recorded, or null when the
+     * Trust Mark is unknown to it.
      *
      * Prefer exact match on the submitted Trust Mark JWT (`trust_mark` request param).
      * Fall back to sub + trust_mark_type (+ optional iat) when no JWT is provided.
@@ -197,7 +200,7 @@ class GetTrustMarkStatusCommandImpl(
         iat: Double?,
         submittedJwt: String?,
         nowSeconds: Long,
-    ): TrustMarkStatusDetail {
+    ): TrustMarkStatusDetail? {
         val echoJwt = submittedJwt.orEmpty()
 
         if (submittedJwt != null) {
@@ -233,12 +236,8 @@ class GetTrustMarkStatusCommandImpl(
                 return TrustMarkStatusDetail(TrustMarkStatusValue.REVOKED, submittedJwt)
             }
 
-            // Expired JWT we never stored, or unknown mark
-            if (jwtExpired) {
-                return TrustMarkStatusDetail(TrustMarkStatusValue.EXPIRED, submittedJwt)
-            }
-
-            return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, submittedJwt)
+            // Never recorded by this issuer, expired or not: unknown.
+            return null
         }
 
         // Legacy path: sub + trust_mark_type (+ optional iat) without full JWT
@@ -268,7 +267,7 @@ class GetTrustMarkStatusCommandImpl(
             )
         }
 
-        return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, "")
+        return null
     }
 
     private fun readJwtExpSeconds(jwt: String): Long? {
@@ -337,3 +336,80 @@ class GetTrustMarkCommandImpl(
         return IdkResult.ok(trustMark.trust_mark_value)
     }
 }
+
+/** Payload of the Trust Mark Status Response JWT (OpenID Federation 1.1 §8.4.2). */
+@Serializable
+private data class TrustMarkStatusResponsePayload(
+    val iss: String,
+    val iat: Int,
+    val trust_mark: String,
+    val status: String,
+)
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<GetSignedTrustMarkStatusJwtCommand>())
+class GetSignedTrustMarkStatusJwtCommandImpl(
+    execution: SessionExecution,
+    private val getTrustMarkStatus: GetTrustMarkStatusCommand,
+    private val resolveSigningKey: ResolveAccountSigningKeyCommand,
+    private val jwtService: JwtService,
+    private val tenantContextResolver: TenantContextResolver,
+) : TypedServiceCommandAdapter<GetSignedTrustMarkStatusJwtArgs, String, FederationError>(
+    commandId = GetSignedTrustMarkStatusJwtCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<GetSignedTrustMarkStatusJwtArgs>(),
+    outputTypeToken = typeToken<String>()
+), GetSignedTrustMarkStatusJwtCommand {
+    override suspend fun doExecute(
+        args: GetSignedTrustMarkStatusJwtArgs,
+        applyDuring: (GetSignedTrustMarkStatusJwtArgs) -> GetSignedTrustMarkStatusJwtArgs,
+    ): IdkResult<String, FederationError> {
+        val applied = applyDuring(args)
+        val detail = getTrustMarkStatus.execute(GetTrustMarkStatusArgs(applied.tenantId, applied.request, applied.trustMarkJwt))
+        if (detail.isErr) return IdkResult.err(detail.error)
+        val issuer = tenantContextResolver.resolveIdentifier(applied.tenantId)
+            ?: return federationErr(ServerError("Cannot resolve issuer identifier", null, null))
+        val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(applied.tenantId, issuer))
+        if (resolved.isErr) return IdkResult.err(resolved.error)
+        val key = resolved.value
+        // The response echoes the Trust Mark under evaluation, the submitted one when there is one (§8.4.2).
+        val payload = TrustMarkStatusResponsePayload(
+            iss = issuer,
+            iat = (System.currentTimeMillis() / 1000).toInt(),
+            trust_mark = applied.trustMarkJwt?.takeIf { it.isNotBlank() } ?: detail.value.trustMarkJwt,
+            status = detail.value.status.wire,
+        )
+        return jwtService.signPayload(payload, JwtHeader(kid = key.kid, alg = key.alg, typ = "trust-mark-status-response+jwt"),
+            key.kid, key.kmsKeyRef, key.kms)
+    }
+}
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListIssuedTrustMarksCommand>())
+class ListIssuedTrustMarksCommandImpl(
+    execution: SessionExecution
+) : TypedServiceCommandAdapter<ListIssuedTrustMarksArgs, List<IssuedTrustMark>, FederationError>(
+    commandId = ListIssuedTrustMarksCommand.COMMAND_ID, execution = execution,
+    inputTypeToken = typeToken<ListIssuedTrustMarksArgs>(),
+    outputTypeToken = typeToken<List<IssuedTrustMark>>()
+), ListIssuedTrustMarksCommand {
+    private val logger = execution.federationLogger("ListIssuedTrustMarksCommand")
+    private val trustMarkQueries = Persistence.trustMarkQueries
+
+    override suspend fun doExecute(
+        args: ListIssuedTrustMarksArgs,
+        applyDuring: (ListIssuedTrustMarksArgs) -> ListIssuedTrustMarksArgs,
+    ): IdkResult<List<IssuedTrustMark>, FederationError> {
+        val (tenantId) = applyDuring(args)
+        return try {
+            IdkResult.ok(trustMarkQueries.findByAccountId(tenantId).executeAsList().map {
+                IssuedTrustMark(it.id.toString(), it.trust_mark_id, it.sub, it.trust_mark_value, it.iat.toLong(), it.exp?.toLong())
+            })
+        } catch (e: Exception) {
+            logger.error("Failed to list issued trust marks", e)
+            federationErr(ServerError("Failed to list issued trust marks", e.message, e))
+        }
+    }
+}
+

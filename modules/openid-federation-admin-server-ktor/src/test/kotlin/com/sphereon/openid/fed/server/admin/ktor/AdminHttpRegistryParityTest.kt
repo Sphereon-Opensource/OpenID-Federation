@@ -59,6 +59,8 @@ class AdminHttpRegistryParityTest {
                 ListKeysEndpointCommand.COMMAND_ID to ListKeysEndpointCommand.ENDPOINT,
                 CreateKeyEndpointCommand.COMMAND_ID to CreateKeyEndpointCommand.ENDPOINT,
                 RevokeKeyEndpointCommand.COMMAND_ID to RevokeKeyEndpointCommand.ENDPOINT,
+                GetSigningKeySelectionEndpointCommand.COMMAND_ID to GetSigningKeySelectionEndpointCommand.ENDPOINT,
+                SetSigningKeySelectionEndpointCommand.COMMAND_ID to SetSigningKeySelectionEndpointCommand.ENDPOINT,
                 ListSubordinatesEndpointCommand.COMMAND_ID to ListSubordinatesEndpointCommand.ENDPOINT,
                 CreateSubordinateEndpointCommand.COMMAND_ID to CreateSubordinateEndpointCommand.ENDPOINT,
                 DeleteSubordinateEndpointCommand.COMMAND_ID to DeleteSubordinateEndpointCommand.ENDPOINT,

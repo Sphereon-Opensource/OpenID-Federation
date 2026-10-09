@@ -41,8 +41,8 @@ object EntityStatementValidation {
         "trust_mark_owners"
     )
 
-    /** Standard Entity Statement claims that MUST NOT appear in `crit`. */
-    private val STANDARD_CLAIMS = setOf(
+    /** Standard Entity Statement claims that MUST NOT appear in `crit` (OpenID Federation 1.1 §3.1.1). */
+    val STANDARD_CLAIMS = setOf(
         "iss", "sub", "iat", "exp", "jwks", "metadata", "crit",
         "authority_hints", "trust_anchor_hints", "trust_marks",
         "trust_mark_issuers", "trust_mark_owners",
@@ -99,6 +99,9 @@ object EntityStatementValidation {
                             primitive == null || !primitive.isString
                         }) {
                         return ConstraintsResult(reason = "naming_constraints.$name must be an array of strings")
+                    }
+                    if (entries.any { !NamingConstraintsMatcher.isDomainNameConstraint((it as JsonPrimitive).content.trim()) }) {
+                        return ConstraintsResult(reason = "naming_constraints.$name entries must be fully qualified domain names")
                     }
                 }
             }

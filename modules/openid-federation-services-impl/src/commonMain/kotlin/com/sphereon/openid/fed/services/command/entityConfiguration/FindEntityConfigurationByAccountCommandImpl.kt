@@ -1,6 +1,9 @@
 package com.sphereon.openid.fed.services.command.entityConfiguration
 
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
@@ -126,7 +129,7 @@ class FindEntityConfigurationByAccountCommandImpl(
         addTrustAnchorHints(tenantId, builder)
         addCrits(tenantId, builder)
         addTrustMarkIssuers(tenantId, builder)
-        addReceivedTrustMarks(tenantId, builder)
+        addReceivedTrustMarks(tenantId, builder, identifier)
     }
 
     /**
@@ -247,11 +250,37 @@ class FindEntityConfigurationByAccountCommandImpl(
             }
     }
 
-    private fun addReceivedTrustMarks(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+    /**
+     * Only Trust Marks a relying party can still accept (OIDFed 1.1 §7.3): issued to this entity, already issued and not
+     * expired. An expired or undecodable mark stays stored but is left out of the Entity Configuration.
+     */
+    private fun addReceivedTrustMarks(tenantId: String, builder: EntityConfigurationStatementObjectBuilder, identifier: String) {
+        val currentTimeSeconds = System.currentTimeMillis() / 1000
         queries.receivedTrustMarkQueries.findByAccountId(tenantId)
             .executeAsList()
+            .filter { receivedTrustMark ->
+                isPresentableReceivedTrustMark(receivedTrustMark.jwt, identifier, currentTimeSeconds).also { presentable ->
+                    if (!presentable) logger.info("Leaving out received Trust Mark ${receivedTrustMark.id}: not currently valid for $identifier")
+                }
+            }
             .forEach { receivedTrustMark ->
                 builder.trustMark(receivedTrustMark.toTrustMark())
             }
     }
+}
+
+/**
+ * Whether a received Trust Mark can go into [identifier]'s Entity Configuration: a JWT whose `sub` is the entity, already
+ * issued and not expired (OIDFed 1.1 §7.3 steps 4 to 6).
+ */
+internal fun isPresentableReceivedTrustMark(trustMark: String, identifier: String, currentTimeSeconds: Long): Boolean {
+    val claims = try {
+        decodeJWTComponents(trustMark).payload
+    } catch (_: Exception) {
+        return false
+    }
+    val sub = claims["sub"]?.jsonPrimitive?.contentOrNull
+    val iat = claims["iat"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
+    val exp = claims["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
+    return sub == identifier && iat != null && iat <= currentTimeSeconds && (exp == null || currentTimeSeconds < exp)
 }

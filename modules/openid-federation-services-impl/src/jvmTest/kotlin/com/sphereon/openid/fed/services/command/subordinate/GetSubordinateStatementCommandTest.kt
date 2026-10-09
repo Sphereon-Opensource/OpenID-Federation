@@ -19,7 +19,9 @@ import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.models.Account
 import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.MetadataPolicy
+import com.sphereon.openid.fed.persistence.models.Metadata
 import com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries
+import com.sphereon.openid.fed.persistence.models.MetadataQueries
 import com.sphereon.openid.fed.persistence.models.Subordinate
 import com.sphereon.openid.fed.persistence.models.SubordinateConstraint
 import com.sphereon.openid.fed.persistence.models.SubordinateConstraintQueries
@@ -106,6 +108,7 @@ class GetSubordinateStatementCommandTest {
     private lateinit var metadataQueries: SubordinateMetadataQueries
     private lateinit var constraintQueries: SubordinateConstraintQueries
     private lateinit var policyQueries: MetadataPolicyQueries
+    private lateinit var accountMetadataQueries: MetadataQueries
     private lateinit var ownAccount: String
     private lateinit var foreignAccount: String
     private lateinit var ownChild: String
@@ -161,6 +164,7 @@ class GetSubordinateStatementCommandTest {
         policyQueries = MetadataPolicyQueries(
             driver, MetadataPolicy.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
         )
+        accountMetadataQueries = MetadataQueries(driver, Metadata.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
         ownAccount = accounts.create("own-" + UUID.randomUUID(), SUPERIOR).executeAsOne().id
         foreignAccount = accounts.create("foreign-" + UUID.randomUUID(), FOREIGN_SUPERIOR).executeAsOne().id
         ownChild = subordinateQueries.create(ownAccount, CHILD).executeAsOne().id
@@ -186,7 +190,7 @@ class GetSubordinateStatementCommandTest {
 
     private fun command() = GetSubordinateStatementCommandImpl(
         execution, resolver, subordinateQueries, keyQueries, metadataQueries, constraintQueries, policyQueries,
-        configuredLifetime(86_400),
+        configuredLifetime(86_400), accountMetadataQueries,
     )
 
     private fun configuredLifetime(seconds: Long?) =
@@ -280,10 +284,20 @@ class GetSubordinateStatementCommandTest {
 
         val unconfigured = GetSubordinateStatementCommandImpl(
             execution, resolver, subordinateQueries, keyQueries, metadataQueries, constraintQueries, policyQueries,
-            configuredLifetime(null),
+            configuredLifetime(null), accountMetadataQueries,
         ).execute(GetSubordinateStatementArgs(ownAccount, ownChild))
         assertTrue(unconfigured.isErr, "Without a configured lifetime no statement is issued")
         assertIs<ServerError>(unconfigured.error)
+    }
+
+    @Test
+    fun sourceEndpointIsTheFetchEndpointTheIssuerPublishes() = runTest {
+        val generated = observe().value
+        assertEquals("$SUPERIOR/fetch", generated.sourceEndpoint, "without published metadata the generated fetch URL is used")
+
+        val published = "$SUPERIOR/federation_fetch"
+        accountMetadataQueries.create(ownAccount, "federation_entity", """{"federation_fetch_endpoint":"$published"}""").executeAsOne()
+        assertEquals(published, observe().value.sourceEndpoint)
     }
 
     @Test

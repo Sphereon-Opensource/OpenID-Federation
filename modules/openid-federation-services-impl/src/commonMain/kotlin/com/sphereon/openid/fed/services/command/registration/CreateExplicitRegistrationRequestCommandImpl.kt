@@ -1,12 +1,12 @@
 package com.sphereon.openid.fed.services.command.registration
 
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
@@ -47,7 +47,7 @@ class CreateExplicitRegistrationRequestCommandImpl(
     execution: SessionExecution,
     resolveTrustChain: ResolveTrustChainCommand,
     verifyTrustChain: VerifyTrustChainCommand,
-    getEntityConfiguration: GetEntityConfigurationCommand,
+    trustAnchorKeys: TrustAnchorKeyResolver,
     private val tenantContextResolver: TenantContextResolver,
     private val findEntityConfiguration: FindEntityConfigurationByAccountCommand,
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
@@ -59,7 +59,7 @@ class CreateExplicitRegistrationRequestCommandImpl(
     outputTypeToken = typeToken<ExplicitRegistrationRequest>(),
 ), CreateExplicitRegistrationRequestCommand {
 
-    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain, getEntityConfiguration)
+    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain, trustAnchorKeys)
 
     override suspend fun doExecute(
         args: CreateExplicitRegistrationRequestArgs,

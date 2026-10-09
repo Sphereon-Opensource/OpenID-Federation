@@ -1,6 +1,6 @@
 package com.sphereon.openid.fed.services.command.registration
 
-import com.sphereon.di.session.SessionScope
+import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -8,12 +8,12 @@ import dev.zacsweers.metro.binding
 import kotlin.time.Clock
 
 /**
- * Single-node replay guard for Automatic Registration proofs. Hosts with more than one node replace this binding
- * with a shared store.
+ * Single-node replay guard for Automatic Registration proofs, shared by every request of the application. Hosts with
+ * more than one node replace this binding with a shared store.
  */
 @Inject
-@SingleIn(SessionScope::class)
-@ContributesBinding(SessionScope::class, binding = binding<RegistrationProofJtiStore>())
+@SingleIn(AppScope::class)
+@ContributesBinding(AppScope::class, binding = binding<RegistrationProofJtiStore>())
 class InMemoryRegistrationProofJtiStore : RegistrationProofJtiStore {
     private val used = LinkedHashMap<String, Long>()
     private val lock = Any()

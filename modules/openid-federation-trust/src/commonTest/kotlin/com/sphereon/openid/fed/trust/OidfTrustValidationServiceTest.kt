@@ -6,6 +6,7 @@
 
 package com.sphereon.openid.fed.trust
 
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
 import com.sphereon.core.api.IdkOkResult
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Ok
@@ -102,6 +103,28 @@ class OidfTrustValidationServiceTest {
         assertEquals(TrustStatus.TRUSTED, result.status)
         assertEquals(3, result.validationPath.size)
         assertNotNull(result.trustChain)
+    }
+
+    @Test
+    fun aChainWhoseMetadataPoliciesDoNotResolveIsNotTrusted() = runTest {
+        // OpenID Federation 1.1 §10.2: metadata is resolved after validation; a policy error invalidates the chain.
+        val leaf = "https://rp.example.com"
+        val anchor = "https://anchor.example.com"
+        val now = Clock.System.now().epochSeconds
+        val keys = """{"keys":[{"kty":"EC","kid":"key-1","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}]}"""
+        val leafStatement = compactTestJwt("entity-statement+jwt", """{"iss":"$leaf","sub":"$leaf","iat":${now - 60},"exp":${now + 3600},
+            "jwks":$keys,"metadata":{"openid_relying_party":{"token_endpoint_auth_method":"client_secret_basic"}}}""")
+        val anchorAboutLeaf = compactTestJwt("entity-statement+jwt", """{"iss":"$anchor","sub":"$leaf","iat":${now - 60},"exp":${now + 3600},
+            "jwks":$keys,"metadata_policy":{"openid_relying_party":{"token_endpoint_auth_method":{"one_of":["private_key_jwt"]}}}}""")
+        val service = createService(
+            resolveResult = Ok(TrustChainResolveResponse(trustChain = listOf(leafStatement, anchorAboutLeaf, entityStatementJwt(anchor, anchor)))),
+            verifyResult = Ok(VerifyTrustChainResponse(isValid = true)),
+        )
+
+        val result = service.validate(createRequest(entityIdentifier = leaf, trustAnchors = anchor))
+
+        assertEquals(TrustStatus.UNTRUSTED, result.status)
+        assertTrue(result.details?.contains("metadata") == true, result.details)
     }
 
     @Test
@@ -840,6 +863,10 @@ class OidfTrustValidationServiceTest {
             verifyTrustChainCommand = verifyCmd,
             verifyTrustMarkCommand = trustMarkCmd,
             getEntityConfigurationCommand = getEntityConfigCmd,
+            trustAnchorKeys = object : TrustAnchorKeyResolver {
+                override suspend fun publishedKeys(trustAnchor: String, currentTimeSeconds: Long) =
+                    getEntityConfigCmd.getEntityConfiguration(trustAnchor).map { it.jwks.propertyKeys.orEmpty() }
+            },
             trustConfigProvider = configProvider,
             cacheManager = cacheManager,
             execution = TestSessionExecution(createAnonymousSessionContext("oidfed-test", correlationId = "oidfed-test")),

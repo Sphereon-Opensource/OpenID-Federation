@@ -2,7 +2,7 @@ package com.sphereon.openid.fed.services.command.registration
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.crypto.jose.jws.JwtService
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
 import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainArgs
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
@@ -117,19 +117,22 @@ internal data class VerifiedRegistrationChain(
     val payloads: List<JsonObject>,
     val trustAnchor: String,
     val validUntilEpochSeconds: Long,
+    /** The subject's Resolved Metadata under the chain's policies (OpenID Federation 1.1 §6.1.4, §10.2). */
+    val metadata: JsonObject,
 ) {
     val immediateSuperior: String get() = payloads[1].text("iss")!!
     val immediateSuperiorKeys: List<Jwk> get() = payloads[1].jwksKeys()
 }
 
 /**
- * Trust Chain resolution and verification for registration. Only the caller's Trust Anchors are accepted, each with
- * the keys it publishes itself or the keys pinned for it.
+ * Trust Chain resolution and verification (OpenID Federation 1.1 §10). Only the caller's Trust Anchors are accepted,
+ * each with the keys pinned for it or else the keys it publishes itself. A chain is valid only when the subject's
+ * metadata also resolves under the chain's policies (§10.2, §6.1.4).
  */
 internal class RegistrationTrustChains(
     private val resolveTrustChain: ResolveTrustChainCommand,
     private val verifyTrustChain: VerifyTrustChainCommand,
-    private val getEntityConfiguration: GetEntityConfigurationCommand,
+    private val trustAnchorKeys: TrustAnchorKeyResolver,
 ) {
     suspend fun resolve(
         subject: String,
@@ -139,11 +142,15 @@ internal class RegistrationTrustChains(
         if (trustAnchors.isEmpty()) {
             return federationErr(TrustChainValidationFailedError(subject, "At least one accepted Trust Anchor is required"))
         }
+        trustAnchors.firstOrNull { it.pinnedKeys?.isEmpty() == true }?.let { anchor ->
+            return federationErr(InvalidTrustAnchorError(anchor.entityIdentifier, "Pinned keys must not be empty"))
+        }
         val resolved = resolveTrustChain.execute(
             ResolveTrustChainArgs(
                 entityIdentifier = subject,
                 trustAnchors = trustAnchors.map { it.entityIdentifier }.toTypedArray(),
                 startingAuthorityHints = startingAuthorityHints,
+                trustAnchorKeys = trustAnchors.mapNotNull { anchor -> anchor.pinnedKeys?.let { anchor.entityIdentifier to it } }.toMap(),
             )
         )
         if (resolved.isErr) return federationErr(resolved.error)
@@ -187,30 +194,18 @@ internal class RegistrationTrustChains(
         }
         val validUntil = expiries.min()
         if (validUntil <= now) return invalid("Trust Chain has expired")
-        return IdkResult.ok(VerifiedRegistrationChain(chain, payloads, trustAnchorId, validUntil))
+        val metadata = resolveRegistrationMetadata(subject, payloads[0], payloads.drop(1))
+        if (metadata.isErr) return federationErr(metadata.error)
+        return IdkResult.ok(VerifiedRegistrationChain(chain, payloads, trustAnchorId, validUntil, metadata.value))
     }
 
-    /**
-     * The anchor's keys: pinned keys when configured, otherwise the `jwks` of the Entity Configuration the anchor
-     * publishes at its own Entity Identifier, self-signed and current.
-     */
+    /** The anchor's keys: pinned keys when configured, otherwise the keys of its own published Entity Configuration. */
     private suspend fun anchorKeys(anchor: RegistrationTrustAnchor, now: Long): IdkResult<List<Jwk>, FederationError> {
-        val id = anchor.entityIdentifier
         anchor.pinnedKeys?.let { pinned ->
-            if (pinned.isEmpty()) return federationErr(InvalidTrustAnchorError(id, "Pinned keys must not be empty"))
+            if (pinned.isEmpty()) return federationErr(InvalidTrustAnchorError(anchor.entityIdentifier, "Pinned keys must not be empty"))
             return IdkResult.ok(pinned)
         }
-        if (!id.startsWith("https://")) return federationErr(InvalidTrustAnchorError(id, "A Trust Anchor is referenced by its https Entity Identifier"))
-        val published = getEntityConfiguration.getEntityConfiguration(id)
-        if (published.isErr) return federationErr(InvalidTrustAnchorError(id, "Entity Configuration unavailable: ${published.error.message.defaultMessage}"))
-        val statement = published.value
-        if (statement.iss != id || statement.sub != id) {
-            return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration is not issued by the Trust Anchor"))
-        }
-        if (statement.exp.toLong() <= now) return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration has expired"))
-        val keys = statement.jwks.propertyKeys.orEmpty()
-        if (keys.isEmpty()) return federationErr(InvalidTrustAnchorError(id, "The published Entity Configuration has no keys"))
-        return IdkResult.ok(keys)
+        return trustAnchorKeys.publishedKeys(anchor.entityIdentifier, now)
     }
 }
 

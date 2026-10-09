@@ -81,6 +81,8 @@ private fun buildAdminEndpoints(
         ListKeysEndpointCommand.ENDPOINT.copy(handlerCommandId = ListKeysEndpointCommand.COMMAND_ID),
         CreateKeyEndpointCommand.ENDPOINT.copy(handlerCommandId = CreateKeyEndpointCommand.COMMAND_ID),
         RevokeKeyEndpointCommand.ENDPOINT.copy(handlerCommandId = RevokeKeyEndpointCommand.COMMAND_ID),
+        GetSigningKeySelectionEndpointCommand.ENDPOINT.copy(handlerCommandId = GetSigningKeySelectionEndpointCommand.COMMAND_ID),
+        SetSigningKeySelectionEndpointCommand.ENDPOINT.copy(handlerCommandId = SetSigningKeySelectionEndpointCommand.COMMAND_ID),
         // Subordinate endpoints (from endpoint commands)
         ListSubordinatesEndpointCommand.ENDPOINT.copy(handlerCommandId = ListSubordinatesEndpointCommand.COMMAND_ID),
         CreateSubordinateEndpointCommand.ENDPOINT.copy(handlerCommandId = CreateSubordinateEndpointCommand.COMMAND_ID),

@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.client.command.trustChain
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.session.Command
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 
 /**
@@ -15,12 +16,15 @@ import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
  *   instead of every published `authority_hints` entry. Each entry must be one of the subject's published
  *   `authority_hints`. Used where a protocol fixes the starting points, such as Explicit Registration
  *   (OpenID Federation for OpenID Connect 1.1 §12.2.2 and §12.2.5).
+ * @param trustAnchorKeys Keys pinned per Trust Anchor Entity Identifier. A Trust Anchor without pinned keys is
+ *   trusted with the keys of the Entity Configuration it publishes about itself.
  */
 data class ResolveTrustChainArgs(
     val entityIdentifier: String,
     val trustAnchors: Array<String>,
     val maxDepth: Int = 5,
     val startingAuthorityHints: List<String>? = null,
+    val trustAnchorKeys: Map<String, List<Jwk>> = emptyMap(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -32,6 +36,7 @@ data class ResolveTrustChainArgs(
         if (!trustAnchors.contentEquals(other.trustAnchors)) return false
         if (maxDepth != other.maxDepth) return false
         if (startingAuthorityHints != other.startingAuthorityHints) return false
+        if (trustAnchorKeys != other.trustAnchorKeys) return false
 
         return true
     }
@@ -41,6 +46,7 @@ data class ResolveTrustChainArgs(
         result = 31 * result + trustAnchors.contentHashCode()
         result = 31 * result + maxDepth
         result = 31 * result + (startingAuthorityHints?.hashCode() ?: 0)
+        result = 31 * result + trustAnchorKeys.hashCode()
         return result
     }
 }
@@ -50,11 +56,11 @@ data class ResolveTrustChainArgs(
  */
 interface ResolveTrustChainCommandService {
     /**
-     * Builds a trust chain for the given entity identifier using the provided trust anchors.
+     * Builds a valid trust chain for the given entity identifier using the provided trust anchors.
      *
-     * Explores all `authority_hints` paths (OIDFed 1.1 §10.3). Uses leaf
-     * `trust_anchor_hints` to refine Trust Anchor preference. When multiple valid chains
-     * exist, selects by effective Trust Anchor order, then shortest path length.
+     * Explores all `authority_hints` paths without fetching a statement twice or following a hint that loops
+     * (OpenID Federation 1.1 §10.1), verifies each candidate (§10.2) and returns the preferred valid one (§10.3):
+     * effective Trust Anchor order, then shortest path. Leaf `trust_anchor_hints` refine the Trust Anchor order.
      *
      * @param entityIdentifier The entity identifier for which to build the trust chain.
      * @param trustAnchors The trust anchors to use for building the trust chain (preference order).

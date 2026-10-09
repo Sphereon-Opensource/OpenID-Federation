@@ -10,7 +10,13 @@ import stat
 import tempfile
 import uuid
 
-NAMESPACES = ('com/sphereon/gradle', 'software/amazon/app/platform')
+NAMESPACES = ('com/sphereon/gradle', 'software/amazon/app/platform', 'software/amazon/lastmile/kotlin/inject/anvil')
+# kotlin-inject-anvil arrives only as a transitive dependency of the App Platform fork; locks frozen
+# before it was added have no files there.
+OPTIONAL_NAMESPACES = frozenset({'software/amazon/lastmile/kotlin/inject/anvil'})
+# Plugin coordinates are JVM publications. A catalog BOM under the plain
+# com.sphereon.gradle group is accepted only as the typed version-catalog variant.
+PREPARED_GROUPS = {'com.sphereon.gradle.plugin': 'jvm', 'com.sphereon.gradle': 'version-catalog'}
 SUFFIXES = {'.jar', '.aar', '.pom', '.module', '.toml', '.xml', '.sha1', '.sha256', '.sha512', '.md5'}
 
 
@@ -40,6 +46,10 @@ def digest(path, stop=None):
 def inventory(sources):
     records = []
     for source, namespace in zip(sources, NAMESPACES):
+        if source is None:
+            if namespace not in OPTIONAL_NAMESPACES:
+                raise ValueError('Tool namespace source is required: ' + namespace)
+            continue
         source = guarded(source)
         folder = guarded(source / namespace)
         files = []
@@ -117,6 +127,8 @@ def verify(lock):
             raise ValueError('Tool input changed during verification: ' + str(path))
     for namespace in NAMESPACES:
         selected = [name for name in expected if name.startswith(namespace + '/')]
+        if not selected and namespace in OPTIONAL_NAMESPACES:
+            continue
         if not any(name.endswith('.jar') for name in selected) or not any(name.endswith('.pom') for name in selected):
             raise ValueError('Tool namespace requires an artifact and POM: ' + namespace)
     # Ancestors outside the repository are common to every record. Check them
@@ -138,10 +150,10 @@ def atomic_json(path, value):
             temporary.unlink()
 
 
-def freeze(destination, gbs_source, app_platform_source, activate=True):
+def freeze(destination, gbs_source, app_platform_source, activate=True, anvil_source=None):
     destination = guarded(destination)
-    sources = [guarded(gbs_source), guarded(app_platform_source)]
-    if any(destination == source or source in destination.parents or destination in source.parents for source in sources):
+    sources = [guarded(gbs_source), guarded(app_platform_source), guarded(anvil_source) if anvil_source else None]
+    if any(source is not None and (destination == source or source in destination.parents or destination in source.parents) for source in sources):
         raise ValueError('Frozen tool repository must be disjoint from bootstrap sources')
     before = inventory(sources)
     body = dict(schemaVersion=1, files=before)
@@ -215,7 +227,7 @@ def freeze_prepared(destination, base_lock, request, evidence, snapshot):
         if project + ':prepareWorkspaceArtifacts' not in tasks:
             raise ValueError('Missing accepted producing task: ' + project)
         gav = producer['coordinate'].split(':')
-        if len(gav) != 3 or gav[0] != 'com.sphereon.gradle.plugin' or any(not re.fullmatch(r'[A-Za-z0-9_.-]+', part) for part in gav):
+        if len(gav) != 3 or gav[0] not in PREPARED_GROUPS or any(not re.fullmatch(r'[A-Za-z0-9_.-]+', part) for part in gav):
             raise ValueError('Invalid prepared tool coordinate')
         coordinate_folder = gav[0].replace('.', '/') + '/' + gav[1] + '/' + gav[2] + '/'
         if coordinate_folder in replacements:
@@ -234,6 +246,11 @@ def freeze_prepared(destination, base_lock, request, evidence, snapshot):
         records = component.get('files', [])
         if not all(any(item.get('kind') == kind for item in records) for kind in ('artifact', 'pom', 'module')):
             raise ValueError('Prepared tool requires artifact, POM and module metadata')
+        variant = PREPARED_GROUPS[gav[0]]
+        if component.get('variants') != [variant] or any(item.get('variant', variant) != variant for item in records):
+            raise ValueError('Prepared tool variant differs from its coordinate group: ' + producer['coordinate'])
+        if variant == 'version-catalog' and any(item.get('kind') == 'artifact' and not item.get('path', '').endswith('.toml') for item in records):
+            raise ValueError('Prepared catalog BOM may contain only TOML artifacts: ' + producer['coordinate'])
         replacements[coordinate_folder] = component
         for item in records:
             relative = item['path']
@@ -283,6 +300,7 @@ def main():
     capture.add_argument('--destination', required=True)
     capture.add_argument('--gbs-source', required=True)
     capture.add_argument('--app-platform-source', required=True)
+    capture.add_argument('--anvil-source')
     check = commands.add_parser('verify')
     check.add_argument('--lock', required=True)
     prepared = commands.add_parser('freeze-prepared')
@@ -296,7 +314,7 @@ def main():
         load = lambda path: json.loads(guarded(path).read_text('utf-8-sig'))
         result = freeze_prepared(args.destination, args.base_lock, load(args.request), load(args.result), load(args.snapshot_manifest))
     else:
-        result = freeze(args.destination, args.gbs_source, args.app_platform_source) if args.command == 'freeze' else verify(args.lock)
+        result = freeze(args.destination, args.gbs_source, args.app_platform_source, anvil_source=args.anvil_source) if args.command == 'freeze' else verify(args.lock)
     print(json.dumps(result))
 
 

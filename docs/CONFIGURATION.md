@@ -7,7 +7,7 @@ Application code must not call `System.getenv` for product settings.
 ## Preferred: property / YAML files
 
 YAML is loaded by **IDK `lib-conf-yaml`** (APP, tenant, and principal scopes) into
-`AppConfigService` / session config services — **not** by a custom OIDFed YAML parser.
+`AppConfigService` / session config services, **not** by a custom OIDFed YAML parser.
 
 | File | Who loads it |
 |------|----------------|
@@ -25,6 +25,7 @@ See [application.yaml.example](../application.yaml.example) and
 
 ```properties
 oidf.federation.root.identifier=http://localhost:8080
+oidf.federation.statement.lifetime.seconds=3600
 oidf.datasource.url=jdbc:postgresql://localhost:5432/openid-federation-db
 oidf.datasource.user=openid-federation-db-user
 oidf.datasource.password=openid-federation-db-password
@@ -40,6 +41,9 @@ oidf:
   federation:
     root:
       identifier: http://localhost:8080
+    statement:
+      lifetime:
+        seconds: 3600
   datasource:
     url: jdbc:postgresql://localhost:5432/openid-federation-db
     user: openid-federation-db-user
@@ -64,7 +68,7 @@ Env vars are ideal for secrets, container orchestration, and CI. They override f
 |----------------------------|--------|
 | 1 | IDK `AppConfigService` pipeline (includes IDK `EnvPropertySource`, cloud/K8s contributions when present, and OIDFed [OidfEnvBridgePropertySource](../modules/openid-federation-common/src/jvmMain/kotlin/com/sphereon/openid/fed/common/config/OidfEnvBridgePropertySource.kt) for **legacy** SCREAMING_CASE aliases) |
 | 2 | Programmatic `DefaultAppMapPropertySource` (KMS bootstrap, tests) |
-| 3 | OIDFed env lookup (`getEnvironmentVariable` — IDK Env + legacy aliases) |
+| 3 | OIDFed env lookup (`getEnvironmentVariable`: IDK Env + legacy aliases) |
 | 4 | Classpath / file defaults (`OidfFilePropertySource`) |
 | 5 | Hardcoded `OidfConfigDefaults` |
 
@@ -95,7 +99,7 @@ DefaultAppMapPropertySource.addProperty("oidf.identity.mode", "external")
 ```
 
 Commercial EDK/VDX hosts may also contribute cloud config, Kubernetes ConfigMaps, etc., as additional
-IDK `PropertySourceContribution`s — the same binder sees them without OIDFed changes.
+IDK `PropertySourceContribution`s, and the same binder sees them without OIDFed changes.
 
 ## Tenant / principal overrides
 
@@ -124,43 +128,6 @@ win over APP defaults.
 | Header principal claim | `oidf.identity.account.header.principal.claim` | `…identity.account.header.principal.claim` |
 | Header allow-list | `oidf.identity.account.header.allowed.principals` | `…identity.account.header.allowed.principals` |
 
-### Statement lifetime (required)
-
-`oidf.federation.statement.lifetime.seconds` sets how long signed Entity Configurations and Subordinate
-Statements stay valid, as a positive number of seconds. There is no default: preparing or signing a
-statement fails until the host configures it.
-
-```properties
-oidf.federation.statement.lifetime.seconds=86400
-```
-
-### Client offline Trust Chain freshness (optional)
-
-Applied when verifying a pre-built chain offline (`trust_chain` header / `verifyOfflineTrustChain`),
-**in addition to** statement `iat`/`exp`. Empty values = disabled (default).
-
-| Property | Meaning |
-|----------|---------|
-| `oidf.client.offline.trust.chain.max.age.seconds` | Reject if `now - max(iat)` exceeds this |
-| `oidf.client.offline.trust.chain.min.remaining.seconds` | Reject if `min(exp) - now` is below this |
-| `oidf.client.offline.trust.chain.clock.skew.seconds` | Skew for both bounds (default `5`) |
-
-```yaml
-oidf:
-  client:
-    offline:
-      trust:
-        chain:
-          max:
-            age:
-              seconds: "3600"       # 1 hour max snapshot age
-          min:
-            remaining:
-              seconds: "60"         # at least 1 minute remaining
-```
-
-Preset for code: `OfflineTrustChainPolicy.SHORT_LIVED_DEFAULT` (3600 / 60).
-
 **Still APP-only:** ports/host, datasource, `identity.mode`, OAuth2 issuer/audience, CORS, logger.
 
 ```yaml
@@ -188,20 +155,98 @@ oidf:
 Use `getTenantConfig` / `getEffectiveFederationConfig` / `getEffectiveKmsConfig` /
 `getEffectiveIdentityConfig` / `getEffectiveCacheLocality`.
 
+## Federation settings
+
+These keys are read at APP scope. The [library guide](OPENID-FEDERATION-1.1.md) explains the commands that use them.
+
+### Statement lifetime (required)
+
+`oidf.federation.statement.lifetime.seconds` (env `OIDF_FEDERATION_STATEMENT_LIFETIME_SECONDS`) sets how long the
+Entity Configurations and Subordinate Statements the library prepares stay valid. Each statement gets `exp` equal to
+its `iat` plus this number of seconds. The value must be a positive whole number and there is no default: while it is
+missing, empty or not positive, preparing an Entity Configuration or Subordinate Statement fails with a server error
+that names the missing lifetime, so nothing can be published. Deployments typically use 3600 seconds and publish
+statements again before they expire.
+
+```properties
+oidf.federation.statement.lifetime.seconds=3600
+```
+
+### Datasource (required)
+
+The library stores its data in PostgreSQL and applies its schema migrations when the persistence layer starts. The
+connection comes from these keys, all required:
+
+| Property key | Env (IDK-normalized) | Legacy env (JVM) |
+|--------------|----------------------|------------------|
+| `oidf.datasource.url` | `OIDF_DATASOURCE_URL` | `DATASOURCE_URL` |
+| `oidf.datasource.user` | `OIDF_DATASOURCE_USER` | `DATASOURCE_USER` |
+| `oidf.datasource.password` | `OIDF_DATASOURCE_PASSWORD` | `DATASOURCE_PASSWORD` |
+
+Instead of a cleartext password you can set `oidf.datasource.password.secret.id`. The library then resolves the
+password from the environment variable `OIDF_SECRET_<ID>`, where `<ID>` is the secret id in upper case with dots
+replaced by underscores, and refuses to start when that variable is not set. A missing URL, user or password also
+stops startup with a message naming the key.
+
+### Federation endpoint authentication (optional)
+
+Federation endpoints accept unauthenticated requests by default. OpenID Federation 1.1 §8.8 lets an entity require
+client authentication per endpoint and advertise that in its `federation_entity` metadata; the library advertises the
+configured methods for the endpoints it publishes.
+
+| Property | Meaning |
+|----------|---------|
+| `oidf.federation.endpoint.auth.methods.default` | Comma-separated methods for every endpoint (default `none`) |
+| `oidf.federation.endpoint.auth.methods.{fetch,list,resolve,trust.mark.status,trust.mark.list,trust.mark,historical.keys}` | Per-endpoint override of the default |
+| `oidf.federation.endpoint.auth.signing.algs` | JWS algorithms accepted for `private_key_jwt` (default `RS256,ES256,PS256`) |
+| `oidf.federation.endpoint.auth.membership.policy` | Which `private_key_jwt` clients are accepted: `any_fetchable`, `subordinate_of_self`, `trust_chain_to_ta` or `hybrid` (default) |
+| `oidf.federation.endpoint.auth.trust.anchors` | Comma-separated Trust Anchor Entity Identifiers for the chain checks; empty uses the host's own Entity Identifier |
+
+The `hybrid` policy accepts a client that is an Immediate Subordinate of the host and otherwise requires a Trust Chain
+to one of the configured Trust Anchors.
+
+### Client offline Trust Chain freshness (optional)
+
+These limits apply when a pre-built Trust Chain is verified offline (a `trust_chain` header, or
+`verifyOfflineTrustChain`), in addition to the `iat` and `exp` of the statements. They are disabled when empty, which
+is the default.
+
+| Property | Meaning |
+|----------|---------|
+| `oidf.client.offline.trust.chain.max.age.seconds` | Reject if `now - max(iat)` exceeds this |
+| `oidf.client.offline.trust.chain.min.remaining.seconds` | Reject if `min(exp) - now` is below this |
+| `oidf.client.offline.trust.chain.clock.skew.seconds` | Skew for both bounds (default `5`) |
+
+```yaml
+oidf:
+  client:
+    offline:
+      trust:
+        chain:
+          max:
+            age:
+              seconds: "3600"       # 1 hour max snapshot age
+          min:
+            remaining:
+              seconds: "60"         # at least 1 minute remaining
+```
+
+Preset for code: `OfflineTrustChainPolicy.SHORT_LIVED_DEFAULT` (3600 / 60).
+
 ## App graph property sources
 
-1. `OidfConfigEnvironment.install()` — process environment as the config-system env tier
-2. `OidfConfigBootstrap.seed(...)` — OIDFed **reference** defaults + KMS maps
-3. `create*AppGraph` → `initRootScopeProvider` + `ensurePropertySourcesRegistered` — IDK
+1. `OidfConfigEnvironment.install()`: process environment as the config-system env tier
+2. `OidfConfigBootstrap.seed(...)`: OIDFed **reference** defaults + KMS maps
+3. `create*AppGraph` → `initRootScopeProvider` + `ensurePropertySourcesRegistered`: IDK
    contributions including **`yaml.app`** (`lib-conf-yaml`), **`oidf-legacy-env`**, etc.
-4. Session open — IDK tenant/principal YAML contributions when those files exist
+4. Session open: IDK tenant/principal YAML contributions when those files exist
 
 Resolution: `OidfPropertyResolution` / `OidfConfigBinder` on top of `AppConfigService` (and
 session config for effective tenant keys). No parallel OIDFed YAML engine.
 
 ## Identity and OAuth2
 
-See [IDENTITY_AND_IDK_ALIGNMENT.md](IDENTITY_AND_IDK_ALIGNMENT.md). Admin always requires a Bearer JWT and a non-blank
+The identity modes are described in the [README](../README.md#identity-modes-account-and-external). Admin always requires a Bearer JWT and a non-blank
 `oidf.oauth2.issuer.uri`.
 
 ## File-only (zero OIDFed env) Docker

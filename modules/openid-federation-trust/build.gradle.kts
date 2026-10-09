@@ -1,3 +1,5 @@
+import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
+import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -11,7 +13,7 @@ plugins {
 kotlin {
     jvm()
 
-    js {
+    configureJsTargetIfEnabled {
         outputModuleName = "@sphereon/openid-federation-trust"
         nodejs {
             useEsModules()
@@ -21,7 +23,7 @@ kotlin {
     }
 
     @OptIn(ExperimentalWasmDsl::class)
-    wasmJs {
+    configureWasmJsTargetIfEnabled {
         nodejs()
         binaries.library()
         generateTypeScriptDefinitions()
@@ -36,6 +38,7 @@ kotlin {
             dependencies {
                 // OID-Fed client commands (ResolveTrustChain, VerifyTrustChain, VerifyTrustMark)
                 api(projects.modules.openidFederationClientPublic)
+                implementation(projects.modules.openidFederationWalletPublic)
                 api(projects.modules.openidFederationCorePublic)
                 implementation(projects.modules.openidFederationCommon)
 

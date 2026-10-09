@@ -15,7 +15,6 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.SubordinateConstraints
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.mappers.toDTO
-import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -26,7 +25,6 @@ import dev.zacsweers.metro.SingleIn
 @ContributesBinding(SessionScope::class, binding = binding<DeleteSubordinateConstraintsCommand>())
 class DeleteSubordinateConstraintsCommandImpl(
     execution: SessionExecution,
-    private val json: Json
 ) : TypedServiceCommandAdapter<DeleteSubordinateConstraintsArgs, SubordinateConstraints, FederationError>(
     commandId = DeleteSubordinateConstraintsCommand.COMMAND_ID,
     execution = execution,
@@ -60,7 +58,7 @@ class DeleteSubordinateConstraintsCommandImpl(
 
             if (deleted != null) {
                 logger.info("Successfully deleted constraints for subordinate: $subordinateId")
-                IdkResult.ok(deleted.toDTO(json))
+                IdkResult.ok(deleted.toDTO(SubordinateConstraintJson))
             } else {
                 logger.error("Failed to delete constraints for subordinate: $subordinateId")
                 federationErr(ServerError("Failed to delete subordinate constraints"))

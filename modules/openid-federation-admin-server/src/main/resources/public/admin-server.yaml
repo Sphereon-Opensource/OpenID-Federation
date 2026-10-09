@@ -111,6 +111,72 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminErrorResponse'
+  '/keys/signing-selection':
+    get:
+      tags:
+        - keys
+      summary: Get the signing key selection
+      description: >-
+        The key that signs the account's Entity Configuration, Subordinate Statements, Trust Marks and other
+        federation responses. Statements are signed only with the selected key; until a key is selected nothing can
+        be signed.
+      operationId: getSigningKeySelection
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: The current selection and its revision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningKeySelection'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+    put:
+      tags:
+        - keys
+      summary: Select the signing key
+      description: >-
+        Selects an active key of the account as its signing key, or clears the selection with a null
+        selectedKeyId. expectedRevision must equal the revision last read; a concurrent change is refused.
+      operationId: setSigningKeySelection
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetSigningKeySelection'
+      responses:
+        '200':
+          description: The updated selection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningKeySelection'
+        '400':
+          description: Invalid request, or the key is not an active key of this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Account or key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '409':
+          description: The selection changed since expectedRevision
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/keys/{keyId}':
     delete:
       tags:
@@ -1948,9 +2014,9 @@ components:
           description: The SHA-1 thumbprint of the X.509 certificate.
           example: dGhpcyBpcyBqdXN0IGEgdGh1bWJwcmludA
           nullable: true
-        x5tS256:
+        'x5t#S256':
           type: string
-          description: The SHA-256 thumbprint of the X.509 certificate.
+          description: The SHA-256 thumbprint of the X.509 certificate (RFC 7517 member x5t#S256).
           example: sM4KhEI1Y2Sb6-EVr6tJabmJuoP-ZE...
           nullable: true
 
@@ -2240,6 +2306,36 @@ components:
               $ref: '#/components/schemas/TrustMarkOwners'
 
 
+    SigningKeySelection:
+      type: object
+      required: [accountId, entityIdentifier, revision]
+      properties:
+        accountId:
+          type: string
+        entityIdentifier:
+          type: string
+          format: uri
+        selectedKeyId:
+          type: string
+          format: uuid
+          nullable: true
+          description: The selected key, or null when no key is selected.
+        revision:
+          type: integer
+          format: int64
+          description: Changes on every selection change; pass it as expectedRevision when selecting.
+    SetSigningKeySelection:
+      type: object
+      required: [expectedRevision]
+      properties:
+        selectedKeyId:
+          type: string
+          format: uuid
+          nullable: true
+          description: An active key of the account, or null to clear the selection.
+        expectedRevision:
+          type: integer
+          format: int64
     AdminErrorResponse:
       type: object
       required:
@@ -2341,6 +2437,8 @@ components:
         - type: object
           x-tags:
             - federation
+          required:
+            - exp
           properties:
             iat:
               type: number
@@ -2348,7 +2446,7 @@ components:
               example: 1629936000
             exp:
               type: number
-              description: The time the key will expire. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
+              description: Expiration time of the key; after it the key MUST NOT be considered valid. RFC 7519 NumericDate.
               example: 1632528000
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
@@ -2410,13 +2508,14 @@ components:
     JwkRevoked:
       type: object
       required:
-        - revokedAt
+        - revoked_at
       properties:
-        revokedAt:
-          type: string
-          format: date-time
+        revoked_at:
+          type: number
+          description: Time the key was revoked or must be considered revoked. RFC 7519 NumericDate.
         reason:
           type: string
+          description: Revocation reason, one of unspecified, compromised or superseded (OpenID Federation 1.1 §8.7.3).
 
     JwkWithPrivateKey:
       allOf:
@@ -3234,12 +3333,16 @@ components:
       properties:
         max_path_length:
           type: integer
-          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+          minimum: 0
+          description: Maximum number of Intermediate Entities between the Entity setting this constraint and the subject of a Trust Chain containing it; zero permits no Intermediates.
         naming_constraints:
           $ref: '#/components/schemas/NamingConstraints'
         allowed_entity_types:
           type: array
-          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          description: >-
+            Entity Type Identifiers permitted in Resolved Metadata. When absent, all declared
+            types are unrestricted; an empty array permits only federation_entity.
+            federation_entity is always permitted and MUST NOT be explicitly listed.
           items:
             type: string
 
@@ -3290,11 +3393,15 @@ components:
       properties:
         max_path_length:
           type: integer
-          description: Maximum number of Intermediates between a directly Subordinate Entity and the Entities in the leaves of the Trust Chains.
+          minimum: 0
+          description: Maximum number of Intermediate Entities between the Entity setting this constraint and the subject of a Trust Chain containing it; zero permits no Intermediates.
         naming_constraints:
           $ref: '#/components/schemas/NamingConstraints'
         allowed_entity_types:
           type: array
-          description: Entity Type Identifiers that subordinate entities are allowed to have.
+          description: >-
+            Entity Type Identifiers permitted in Resolved Metadata. When absent, all declared
+            types are unrestricted; an empty array permits only federation_entity.
+            federation_entity is always permitted and MUST NOT be explicitly listed.
           items:
             type: string

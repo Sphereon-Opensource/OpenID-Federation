@@ -162,6 +162,8 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
     apiPackage.set(kotlinApiPackage)
     modelPackage.set(kotlinModelPackage)
     library.set("multiplatform")
+    // Wire names follow the specifications; Kotlin property names stay stable.
+    nameMappings.set(mapOf("x5t#S256" to "x5tS256", "revoked_at" to "revokedAt"))
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",

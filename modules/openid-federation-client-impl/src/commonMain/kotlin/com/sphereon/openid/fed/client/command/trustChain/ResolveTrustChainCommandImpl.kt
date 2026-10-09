@@ -8,6 +8,7 @@ import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.TrustAnchorHints
+import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.helpers.checkKidInJwks
 import com.sphereon.openid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.openid.fed.client.helpers.getSubordinateStatementEndpoint
@@ -15,6 +16,7 @@ import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.mapper.mapEntityStatement
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
 import com.sphereon.core.api.cache.ScopedCache
+import kotlinx.coroutines.CancellationException
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.NoTrustChainFoundError
 import com.sphereon.openid.fed.core.error.TrustChainValidationFailedError
@@ -32,20 +34,24 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
 /**
- * Resolves trust chains for entities (OIDFed 1.1 §4 / §9 / §10.3).
+ * Resolves trust chains for entities (OpenID Federation 1.1 §10).
  *
- * - Explores **all** authority_hints paths (not first-success only).
- * - Uses leaf Entity Configuration `trust_anchor_hints` to refine Trust Anchor preference
- *   (fallback when caller supplies none; otherwise reorder configured TAs).
- * - Selects a preferred chain: effective Trust Anchor order, then shortest path.
- * - Uses Subordinate Statement `source_endpoint` when known to skip re-discovering fetch URLs.
+ * - Explores every `authority_hints` path, fetching each Entity Configuration at most once per resolution and never
+ *   following a hint back into the current path (§10.1).
+ * - Verifies every candidate (§10.2) with the Trust Anchor keys pinned in the arguments, or else with the keys of the
+ *   Trust Anchor's own published Entity Configuration.
+ * - Returns the preferred valid candidate (§10.3): effective Trust Anchor order, then shortest path. Leaf
+ *   `trust_anchor_hints` refine the Trust Anchor order.
+ * - Uses a Subordinate Statement's `source_endpoint` when known to skip re-discovering fetch URLs.
  */
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<ResolveTrustChainCommand>())
 class ResolveTrustChainCommandImpl(
     execution: SessionExecution,
-    private val context: FederationContext
+    private val context: FederationContext,
+    private val verifyTrustChain: VerifyTrustChainCommand,
+    private val trustAnchorKeys: TrustAnchorKeyResolver,
 ) : ExecutionScopedCommandAdapter<ResolveTrustChainArgs, TrustChainResolveResponse, FederationError>(
     id = ResolveTrustChainCommand.COMMAND_ID,
     execution = execution
@@ -68,14 +74,18 @@ class ResolveTrustChainCommandImpl(
         args: ResolveTrustChainArgs,
         applyDuring: (ResolveTrustChainArgs) -> ResolveTrustChainArgs
     ): IdkResult<TrustChainResolveResponse, FederationError> {
-        val (entityIdentifier, configuredTrustAnchors, maxDepth, startingAuthorityHints) = applyDuring(args)
+        val applied = applyDuring(args)
+        val entityIdentifier = applied.entityIdentifier
+        val configuredTrustAnchors = applied.trustAnchors
+        val startingAuthorityHints = applied.startingAuthorityHints
+        val resolution = Resolution(applied.maxDepth)
 
         return try {
+            val leafJwt = resolution.selfConfiguration(entityIdentifier)
             if (startingAuthorityHints != null) {
-                val leafJwt = fetchAndVerifySelfEntityConfiguration(entityIdentifier)
-                    ?: return IdkResult.err(
-                        NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = configuredTrustAnchors.toList())
-                    )
+                leafJwt ?: return IdkResult.err(
+                    NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = configuredTrustAnchors.toList())
+                )
                 val published = mapEntityStatement(leafJwt, EntityConfigurationStatement::class)?.authorityHints.orEmpty()
                 val unpublished = startingAuthorityHints.filterNot { it in published }
                 if (startingAuthorityHints.isEmpty() || unpublished.isNotEmpty()) {
@@ -89,68 +99,40 @@ class ResolveTrustChainCommandImpl(
                 }
             }
 
-            // Apply leaf EC trust_anchor_hints (OIDFed 1.1 §3.1.2) before graph walk / selection
-            val publishedHints = fetchLeafTrustAnchorHints(entityIdentifier)
+            // Leaf Entity Configuration trust_anchor_hints (§3.1.2) refine the Trust Anchor preference.
+            val publishedHints = leafJwt?.let(TrustAnchorHints::extractFromCompactJwt)
             val trustAnchors = TrustAnchorHints.effectiveTrustAnchors(configuredTrustAnchors, publishedHints)
-
             logger.info(
                 "Resolving trust chain for entity: $entityIdentifier " +
-                    "(maxDepth=$maxDepth, configuredTAs=${configuredTrustAnchors.joinToString()}, " +
+                    "(maxDepth=${applied.maxDepth}, configuredTAs=${configuredTrustAnchors.joinToString()}, " +
                     "effectiveTAs=${trustAnchors.joinToString()}, " +
                     "publishedHints=${publishedHints?.joinToString() ?: "(none)"})"
             )
-
             if (trustAnchors.isEmpty()) {
-                return IdkResult.err(
-                    NoTrustChainFoundError(
-                        entityId = entityIdentifier,
-                        trustAnchors = emptyList(),
-                    )
-                )
-            }
-
-            // Special case: entity itself is a configured Trust Anchor → single-EC chain
-            if (startingAuthorityHints == null && trustAnchors.contains(entityIdentifier)) {
-                val taEc = fetchAndVerifySelfEntityConfiguration(entityIdentifier)
-                if (taEc != null) {
-                    logger.info("Entity $entityIdentifier is a Trust Anchor; returning self-signed EC chain")
-                    return IdkResult.ok(TrustChainResolveResponse(listOf(taEc)))
-                }
+                return IdkResult.err(NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = emptyList()))
             }
 
             val candidates = mutableListOf<List<String>>()
-            collectTrustChains(
+            if (startingAuthorityHints == null && trustAnchors.contains(entityIdentifier) && leafJwt != null) {
+                // The subject is itself a Trust Anchor: its self-signed Entity Configuration is the chain.
+                candidates += listOf(leafJwt)
+            }
+            resolution.collect(
                 entityIdentifier = entityIdentifier,
                 trustAnchors = trustAnchors,
                 prefix = emptyList(),
+                path = setOf(entityIdentifier),
                 depth = 0,
-                maxDepth = maxDepth,
                 out = candidates,
                 startingAuthorityHints = startingAuthorityHints,
             )
-
-            val selected = TrustChainTopology.selectPreferredChain(
-                candidates = candidates,
-                preferredTrustAnchors = trustAnchors,
-                trustAnchorOf = { chain -> trustAnchorOfChain(chain) },
-            )
-
-            if (selected != null) {
-                logger.info(
-                    "Selected trust chain for $entityIdentifier " +
-                        "(candidates=${candidates.size}, length=${selected.size}, " +
-                        "ta=${trustAnchorOfChain(selected)})"
-                )
-                IdkResult.ok(TrustChainResolveResponse(selected))
-            } else {
+            if (candidates.isEmpty()) {
                 logger.error("Could not establish trust chain for entity: $entityIdentifier")
-                IdkResult.err(
-                    NoTrustChainFoundError(
-                        entityId = entityIdentifier,
-                        trustAnchors = trustAnchors.toList(),
-                    )
-                )
+                return IdkResult.err(NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = trustAnchors.toList()))
             }
+            selectValidChain(entityIdentifier, candidates, trustAnchors, applied.trustAnchorKeys)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Throwable) {
             logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
             IdkResult.err(
@@ -163,126 +145,139 @@ class ResolveTrustChainCommandImpl(
         }
     }
 
-    /**
-     * Depth-first search collecting **all** successful paths to any [trustAnchors] entry.
-     * Each path is independent (prefix is copied when extending).
-     */
-    private suspend fun collectTrustChains(
+    /** The first candidate in preference order that verifies; otherwise why the most preferred one failed. */
+    private suspend fun selectValidChain(
         entityIdentifier: String,
+        candidates: List<List<String>>,
         trustAnchors: Array<String>,
-        prefix: List<String>,
-        depth: Int,
-        maxDepth: Int,
-        out: MutableList<List<String>>,
-        startingAuthorityHints: List<String>? = null,
-    ) {
-        if (depth >= maxDepth) {
-            logger.debug("Maximum depth reached ($maxDepth) at $entityIdentifier")
-            return
+        pinnedKeys: Map<String, List<Jwk>>,
+    ): IdkResult<TrustChainResolveResponse, FederationError> {
+        val now = getCurrentEpochTimeSeconds()
+        val publishedKeys = mutableMapOf<String, IdkResult<List<Jwk>, FederationError>>()
+        var firstFailure: String? = null
+        val ordered = TrustChainTopology.orderPreferredChains(candidates, trustAnchors) { chain -> trustAnchorOfChain(chain) }
+        for (chain in ordered) {
+            val anchor = trustAnchorOfChain(chain) ?: continue
+            val keys = pinnedKeys[anchor] ?: run {
+                val resolved = publishedKeys.getOrPut(anchor) { trustAnchorKeys.publishedKeys(anchor, now) }
+                if (resolved.isErr) {
+                    if (firstFailure == null) firstFailure = resolved.error.message.defaultMessage
+                    null
+                } else {
+                    resolved.value
+                }
+            } ?: continue
+            val verified = verifyTrustChain.verifyTrustChain(chain.toTypedArray(), anchor, now, keys)
+            if (verified.isOk && verified.value.isValid) {
+                logger.info("Selected trust chain for $entityIdentifier (candidates=${candidates.size}, length=${chain.size}, ta=$anchor)")
+                return IdkResult.ok(TrustChainResolveResponse(chain))
+            }
+            if (firstFailure == null) {
+                firstFailure = if (verified.isErr) verified.error.message.defaultMessage else verified.value.errorMessage ?: "Trust Chain is invalid"
+            }
         }
-
-        val entityConfigurationJwt = fetchAndVerifySelfEntityConfiguration(entityIdentifier) ?: return
-        val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
-        val entityStatement = mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class)
-            ?: return
-
-        val chainSoFar = if (prefix.isEmpty()) {
-            listOf(entityConfigurationJwt)
-        } else {
-            prefix
-        }
-
-        val lastKid = decodedEntityConfiguration.header.kid
-
-        // Direct Trust Anchor membership of this entity (intermediate that is also a TA)
-        if (prefix.isNotEmpty() && trustAnchors.contains(entityIdentifier)) {
-            // prefix already ends with SS about this entity; append TA EC
-            out.add(chainSoFar + entityConfigurationJwt)
-            // still explore superiors if any (rare multi-federation TA)
-        }
-
-        val authorityHints = if (prefix.isEmpty() && startingAuthorityHints != null) {
-            entityStatement.authorityHints.orEmpty().filter { it in startingAuthorityHints }
-        } else {
-            entityStatement.authorityHints
-        }
-        if (authorityHints.isNullOrEmpty()) {
-            logger.debug("No authority_hints for $entityIdentifier")
-            return
-        }
-
-        // Prefer configured TAs first when exploring (faster common path) but still visit all
-        val reordered = authorityHints.sortedBy { hint -> if (trustAnchors.contains(hint)) 0 else 1 }
-
-        for (authority in reordered) {
-            processAuthorityPaths(
-                authority = authority,
-                subjectEntityId = entityIdentifier,
-                trustAnchors = trustAnchors,
-                chainPrefix = chainSoFar,
-                lastStatementKid = lastKid,
-                depth = depth + 1,
-                maxDepth = maxDepth,
-                out = out,
+        return IdkResult.err(
+            TrustChainValidationFailedError(
+                entityId = entityIdentifier,
+                reason = "None of the ${candidates.size} Trust Chain candidates is valid: ${firstFailure ?: "no Trust Anchor"}",
             )
-        }
+        )
     }
 
-    private suspend fun processAuthorityPaths(
-        authority: String,
-        subjectEntityId: String,
-        trustAnchors: Array<String>,
-        chainPrefix: List<String>,
-        lastStatementKid: String,
-        depth: Int,
-        maxDepth: Int,
-        out: MutableList<List<String>>,
-    ) {
-        try {
-            val (authorityEntityConfigurationJwt, authorityEntityConfiguration) =
-                fetchAndVerifyAuthorityConfiguration(authority) ?: return
+    /** State of one resolution: every Entity Configuration is fetched and verified at most once. */
+    private inner class Resolution(private val maxDepth: Int) {
+        private val configurations = mutableMapOf<String, String?>()
 
-            val subordinatePair = fetchAndVerifySubordinateStatement(
-                authority = authority,
-                authorityEntityConfiguration = authorityEntityConfiguration,
-                authorityConfigurationJwt = authorityEntityConfigurationJwt,
-                subjectEntityId = subjectEntityId,
-                lastStatementKid = lastStatementKid,
-            ) ?: return
-
-            val (subordinateStatementJwt, _) = subordinatePair
-            val extended = chainPrefix + subordinateStatementJwt
-
-            if (trustAnchors.contains(authority)) {
-                // Complete with Trust Anchor Entity Configuration
-                out.add(extended + authorityEntityConfigurationJwt)
-                return
+        /** The Entity Configuration published at [entityIdentifier], verified as self-signed, or null. */
+        suspend fun selfConfiguration(entityIdentifier: String): String? =
+            if (configurations.containsKey(entityIdentifier)) {
+                configurations[entityIdentifier]
+            } else {
+                fetchAndVerifySelfEntityConfiguration(entityIdentifier).also { configurations[entityIdentifier] = it }
             }
 
-            // Continue toward superiors of this intermediate
-            if (authorityEntityConfiguration.authorityHints.isNullOrEmpty()) {
-                logger.debug("Authority $authority has no authority_hints and is not a trust anchor")
+        /**
+         * Depth-first search collecting every path to a [trustAnchors] entry. [path] holds the Entity Identifiers
+         * already on the current path; a hint back into it is a loop and is not used (§10.1).
+         */
+        suspend fun collect(
+            entityIdentifier: String,
+            trustAnchors: Array<String>,
+            prefix: List<String>,
+            path: Set<String>,
+            depth: Int,
+            out: MutableList<List<String>>,
+            startingAuthorityHints: List<String>? = null,
+        ) {
+            if (depth >= maxDepth) {
+                logger.debug("Maximum depth reached ($maxDepth) at $entityIdentifier")
                 return
             }
-            collectTrustChains(
-                entityIdentifier = authority,
-                trustAnchors = trustAnchors,
-                prefix = extended,
-                depth = depth,
-                maxDepth = maxDepth,
-                out = out,
-            )
-        } catch (e: Exception) {
-            logger.error("Failed to process authority: $authority", e)
+            val entityConfigurationJwt = selfConfiguration(entityIdentifier) ?: return
+            val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
+            val entityStatement = mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return
+            val chainSoFar = prefix.ifEmpty { listOf(entityConfigurationJwt) }
+
+            // An intermediate that is also a Trust Anchor completes a chain here.
+            if (prefix.isNotEmpty() && trustAnchors.contains(entityIdentifier)) {
+                out.add(chainSoFar + entityConfigurationJwt)
+            }
+
+            val authorityHints = if (prefix.isEmpty() && startingAuthorityHints != null) {
+                entityStatement.authorityHints.orEmpty().filter { it in startingAuthorityHints }
+            } else {
+                entityStatement.authorityHints
+            }
+            if (authorityHints.isNullOrEmpty()) {
+                logger.debug("No authority_hints for $entityIdentifier")
+                return
+            }
+            for (authority in authorityHints.sortedBy { hint -> if (trustAnchors.contains(hint)) 0 else 1 }) {
+                if (authority in path) {
+                    logger.debug("authority_hint $authority of $entityIdentifier loops back into the path; not used")
+                    continue
+                }
+                follow(authority, entityIdentifier, trustAnchors, chainSoFar, decodedEntityConfiguration.header.kid, path, depth + 1, out)
+            }
         }
-    }
 
-    /**
-     * Load leaf Entity Configuration and read published `trust_anchor_hints`, if any.
-     */
-    private suspend fun fetchLeafTrustAnchorHints(entityIdentifier: String): List<String>? {
-        val leafJwt = fetchAndVerifySelfEntityConfiguration(entityIdentifier) ?: return null
-        return TrustAnchorHints.extractFromCompactJwt(leafJwt)
+        private suspend fun follow(
+            authority: String,
+            subjectEntityId: String,
+            trustAnchors: Array<String>,
+            chainPrefix: List<String>,
+            lastStatementKid: String,
+            path: Set<String>,
+            depth: Int,
+            out: MutableList<List<String>>,
+        ) {
+            try {
+                val authorityConfigurationJwt = selfConfiguration(authority) ?: return
+                val authorityEntityConfiguration =
+                    mapEntityStatement(authorityConfigurationJwt, EntityConfigurationStatement::class) ?: return
+                val (subordinateStatementJwt, _) = fetchAndVerifySubordinateStatement(
+                    authority = authority,
+                    authorityEntityConfiguration = authorityEntityConfiguration,
+                    authorityConfigurationJwt = authorityConfigurationJwt,
+                    subjectEntityId = subjectEntityId,
+                    lastStatementKid = lastStatementKid,
+                ) ?: return
+                val extended = chainPrefix + subordinateStatementJwt
+                if (trustAnchors.contains(authority)) {
+                    out.add(extended + authorityConfigurationJwt)
+                    return
+                }
+                if (authorityEntityConfiguration.authorityHints.isNullOrEmpty()) {
+                    logger.debug("Authority $authority has no authority_hints and is not a trust anchor")
+                    return
+                }
+                collect(authority, trustAnchors, extended, path + authority, depth, out)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                logger.error("Failed to process authority: $authority", e)
+            }
+        }
     }
 
     private suspend fun fetchAndVerifySelfEntityConfiguration(entityIdentifier: String): String? {
@@ -295,43 +290,12 @@ class ResolveTrustChainCommandImpl(
             val key = jwks.find { it.kid == decoded.header.kid } ?: return null
             if (!context.jwtService.verifyJwtSignature(jwt, key)) return null
             jwt
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.debug("Failed to fetch EC for $entityIdentifier: ${e.message}")
             null
         }
-    }
-
-    private suspend fun fetchAndVerifyAuthorityConfiguration(
-        authority: String
-    ): Pair<String, EntityConfigurationStatement>? {
-        val authorityConfigurationEndpoint = getEntityConfigurationEndpoint(authority)
-
-        val cachedJwt = trustChainCache?.getApp(authorityConfigurationEndpoint)
-        val authorityEntityConfigurationJwt = if (cachedJwt != null) {
-            logger.debug("Authority $authority already fetched, using cached configuration")
-            cachedJwt
-        } else {
-            val jwt = context.jwtService.fetchAndVerifyJwt(authorityConfigurationEndpoint, context.httpResolver)
-            trustChainCache?.putApp(authorityConfigurationEndpoint, jwt)
-            jwt
-        }
-
-        val decodedJwt = decodeJWTComponents(authorityEntityConfigurationJwt)
-        val jwks: Array<Jwk> =
-            context.json.decodeFromString(decodedJwt.payload["jwks"]?.jsonObject?.get("keys").toString())
-        val key = jwks.find { it.kid == decodedJwt.header.kid }
-            ?: throw IllegalStateException("No matching key found for kid: ${decodedJwt.header.kid}")
-
-        if (!context.jwtService.verifyJwtSignature(authorityEntityConfigurationJwt, key)) {
-            throw IllegalStateException("Authority configuration JWT signature verification failed")
-        }
-
-        val authorityEntityConfiguration = mapEntityStatement(
-            authorityEntityConfigurationJwt,
-            EntityConfigurationStatement::class
-        ) ?: return null
-
-        return Pair(authorityEntityConfigurationJwt, authorityEntityConfiguration)
     }
 
     /**

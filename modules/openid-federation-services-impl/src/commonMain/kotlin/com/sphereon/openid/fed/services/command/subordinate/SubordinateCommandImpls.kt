@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import kotlinx.serialization.json.JsonPrimitive
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
@@ -33,6 +34,7 @@ import com.sphereon.openid.fed.openapi.models.Subordinate
 import com.sphereon.openid.fed.openapi.models.SubordinateStatement
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries
+import com.sphereon.openid.fed.persistence.models.MetadataQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateConstraintQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateJwkQueries
 import com.sphereon.openid.fed.persistence.models.SubordinateMetadataQueries
@@ -190,6 +192,7 @@ class GetSubordinateStatementCommandImpl internal constructor(
     private val subordinateConstraintQueries: SubordinateConstraintQueries,
     private val metadataPolicyQueries: MetadataPolicyQueries,
     private val configBinder: OidfConfigBinder,
+    private val accountMetadataQueries: MetadataQueries,
 ) : TypedServiceCommandAdapter<GetSubordinateStatementArgs, SubordinateStatement, FederationError>(
     commandId = GetSubordinateStatementCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetSubordinateStatementArgs>(),
@@ -205,6 +208,7 @@ class GetSubordinateStatementCommandImpl internal constructor(
         Persistence.subordinateConstraintQueries,
         Persistence.metadataPolicyQueries,
         configBinder,
+        Persistence.metadataQueries,
     )
 
     private val logger = execution.federationLogger("GetSubordinateStatementCommand")
@@ -251,6 +255,12 @@ class GetSubordinateStatementCommandImpl internal constructor(
         }
     }
 
+    /** The federation_fetch_endpoint of the issuer's own federation_entity metadata; the last row wins, as in its Entity Configuration. */
+    private fun publishedFetchEndpoint(tenantId: String): String? =
+        accountMetadataQueries.findByAccountIdAndKey(tenantId, "federation_entity").executeAsList().lastOrNull()
+            ?.let { (Json.parseToJsonElement(it.metadata) as? JsonObject)?.get("federation_fetch_endpoint") as? JsonPrimitive }
+            ?.takeIf { it.isString }?.content
+
     private suspend fun buildSubordinateStatement(
         tenantId: String,
         subordinate: SubordinateEntity,
@@ -273,8 +283,8 @@ class GetSubordinateStatementCommandImpl internal constructor(
             .sub(subordinate.identifier)
             .iat(currentTimeSeconds)
             .exp(expirationTime)
-            // Must equal published federation_fetch_endpoint (OIDFed 1.1 §3.1.3 / §5.1.1)
-            .sourceEndpoint(FederationEndpointUrls.fetch(accountIdentifier))
+            // The fetch endpoint this statement is issued from: the published federation_fetch_endpoint (§3.1.3, §5.1.1)
+            .sourceEndpoint(publishedFetchEndpoint(tenantId) ?: FederationEndpointUrls.fetch(accountIdentifier))
 
         if (subordinateJwks.isEmpty()) {
             return federationErr(InvalidRequestError("Subordinate ${subordinate.identifier} has no public keys to vouch for"))

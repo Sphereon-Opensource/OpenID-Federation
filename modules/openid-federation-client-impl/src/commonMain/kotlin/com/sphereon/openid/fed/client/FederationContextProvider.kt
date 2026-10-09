@@ -7,6 +7,7 @@ import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.ktor.http.client.provider.HttpClientFactory
 import com.sphereon.ktor.http.client.provider.HttpClientOptions
+import com.sphereon.ktor.http.client.provider.UrlValidationPolicy
 import com.sphereon.openid.fed.client.cache.FederationCacheRequirements
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.helpers.OfflineTrustChainPolicy
@@ -48,7 +49,10 @@ interface FederationContextComponent {
         execution: SessionExecution,
         tenantConfigService: TenantConfigService,
     ): FederationContext {
-        val httpClient = httpClientFactory.createClient(HttpClientOptions.createDefault())
+        // Federation URLs come from Entity Identifiers and statements other parties sign: never reach internal addresses.
+        val httpClient = httpClientFactory.createClient(
+            HttpClientOptions.createDefault().copy(urlValidation = UrlValidationPolicy.COUNTERPARTY_EGRESS),
+        )
         val tenantId = execution.tenantId.takeUnless {
             it.isBlank() || it.equals("anonymous", ignoreCase = true)
         }

@@ -14,6 +14,7 @@ def restrictTools = { repositories ->
             repository.content { descriptor ->
                 descriptor.excludeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
                 descriptor.excludeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+                descriptor.excludeGroupByRegex('software[.]amazon[.]lastmile[.]kotlin[.]inject[.]anvil([.].*)?')
             }
         }
     }
@@ -26,6 +27,7 @@ def addPinnedTools = { repositories ->
         content { descriptor ->
             descriptor.includeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
             descriptor.includeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+            descriptor.includeGroupByRegex('software[.]amazon[.]lastmile[.]kotlin[.]inject[.]anvil([.].*)?')
         }
     }
 }
@@ -52,6 +54,7 @@ gradle.beforeProject { project ->
             repository.content { descriptor ->
                 descriptor.excludeGroupByRegex('com[.]sphereon[.]gradle([.].*)?')
                 descriptor.excludeGroupByRegex('software[.]amazon[.]app[.]platform([.].*)?')
+                descriptor.excludeGroupByRegex('software[.]amazon[.]lastmile[.]kotlin[.]inject[.]anvil([.].*)?')
             }
         }
     }

@@ -23,6 +23,8 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
 import com.sphereon.trust.core.TrustValidationService
@@ -66,6 +68,7 @@ class OidfTrustValidationService(
     private val verifyTrustChainCommand: VerifyTrustChainCommand,
     private val verifyTrustMarkCommand: VerifyTrustMarkCommand,
     private val getEntityConfigurationCommand: GetEntityConfigurationCommand,
+    private val trustAnchorKeys: TrustAnchorKeyResolver,
     private val trustConfigProvider: TrustConfigProvider,
     private val cacheManager: CacheManager,
     private val execution: SessionExecution,
@@ -175,9 +178,22 @@ class OidfTrustValidationService(
                     details = "No selected trust anchor on the resolved chain",
                     validatedAt = Clock.System.now()
                 ))
+            // The anchor is trusted with the keys of the Entity Configuration it publishes about itself.
+            val anchorKeys = trustAnchorKeys.publishedKeys(selectedAnchor, now.epochSeconds)
+            if (anchorKeys.isErr) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Trust anchor keys unavailable: ${anchorKeys.error.message.defaultMessage}",
+                    validatedAt = Clock.System.now()
+                ))
+            }
             val verifyResult = verifyTrustChainCommand.verifyTrustChain(
                 trustChain = trustChain.toTypedArray(),
-                trustAnchor = selectedAnchor
+                trustAnchor = selectedAnchor,
+                currentTime = now.epochSeconds,
+                trustAnchorPublicKeys = anchorKeys.value,
             )
 
             if (verifyResult.isErr) {
@@ -200,6 +216,18 @@ class OidfTrustValidationService(
                     validationPath = trustChain,
                     trustChain = TrustChain.fromEntityStatementEntries(trustChain, TrustChainLinks.BROKEN),
                     details = "Trust chain is not valid: ${verifyResponse.errorMessage ?: "unknown reason"}",
+                    validatedAt = Clock.System.now()
+                ))
+            }
+
+            // OpenID Federation 1.1 §10.2: metadata is resolved after validation; a policy error invalidates the chain.
+            val resolvedMetadata = MetadataPolicyOperators.resolveFromTrustChainPayloads(statements)
+            if (!resolvedMetadata.isValid) {
+                return cacheAndReturn(cacheKey, TrustValidationResult(
+                    trusted = false,
+                    status = TrustStatus.UNTRUSTED,
+                    validationPath = trustChain,
+                    details = "Trust chain metadata does not resolve: ${resolvedMetadata.errors.joinToString("; ")}",
                     validatedAt = Clock.System.now()
                 ))
             }

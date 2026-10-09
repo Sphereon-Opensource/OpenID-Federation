@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.registration
 
+import com.sphereon.openid.fed.client.command.trustChain.TrustAnchorKeyResolver
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -7,7 +8,6 @@ import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
-import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
 import com.sphereon.openid.fed.client.context.FederationContext
@@ -43,7 +43,7 @@ class VerifyExplicitRegistrationRequestCommandImpl(
     execution: SessionExecution,
     resolveTrustChain: ResolveTrustChainCommand,
     verifyTrustChain: VerifyTrustChainCommand,
-    getEntityConfiguration: GetEntityConfigurationCommand,
+    trustAnchorKeys: TrustAnchorKeyResolver,
     private val context: FederationContext,
     private val jwtService: JwtService,
 ) : TypedServiceCommandAdapter<VerifyExplicitRegistrationRequestArgs, VerifiedExplicitRegistrationRequest, FederationError>(
@@ -53,7 +53,7 @@ class VerifyExplicitRegistrationRequestCommandImpl(
     outputTypeToken = typeToken<VerifiedExplicitRegistrationRequest>(),
 ), VerifyExplicitRegistrationRequestCommand {
 
-    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain, getEntityConfiguration)
+    private val chains = RegistrationTrustChains(resolveTrustChain, verifyTrustChain, trustAnchorKeys)
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun doExecute(

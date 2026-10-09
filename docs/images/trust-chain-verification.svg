@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" width="960" height="560" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>Trust Chain resolution and verification for fed.trust.verify-entity</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="960" height="560" fill="#ffffff"/>
+
+  <text x="30" y="36" font-size="18" font-weight="bold" fill="#0f172a">Federation</text>
+  <text x="520" y="36" font-size="18" font-weight="bold" fill="#0f172a">Trust Chain returned in trustChain</text>
+
+  <!-- Federation boxes -->
+  <rect x="30" y="60" width="380" height="110" rx="10" fill="#eef2ff" stroke="#4338ca" stroke-width="1.5"/>
+  <text x="50" y="88" font-weight="bold" fill="#1e1b4b">Trust Anchor</text>
+  <text x="50" y="110" fill="#1e1b4b">https://anchor.example</text>
+  <text x="50" y="134" font-size="13" fill="#334155">Passed as RegistrationTrustAnchor.</text>
+  <text x="50" y="154" font-size="13" fill="#334155">Keys: jwks of its own Entity Configuration.</text>
+
+  <rect x="30" y="230" width="380" height="100" rx="10" fill="#ecfeff" stroke="#0e7490" stroke-width="1.5"/>
+  <text x="50" y="258" font-weight="bold" fill="#083344">Immediate Superior (Intermediate)</text>
+  <text x="50" y="280" fill="#083344">https://intermediate.example</text>
+  <text x="50" y="304" font-size="13" fill="#334155">Optional viaSuperior: resolution starts here</text>
+  <text x="50" y="322" font-size="13" fill="#334155">and must issue the second chain statement.</text>
+
+  <rect x="30" y="390" width="380" height="90" rx="10" fill="#f0fdf4" stroke="#15803d" stroke-width="1.5"/>
+  <text x="50" y="418" font-weight="bold" fill="#052e16">Entity being verified</text>
+  <text x="50" y="440" fill="#052e16">https://rp.example</text>
+  <text x="50" y="462" font-size="13" fill="#334155">authority_hints lists the Intermediate.</text>
+
+  <!-- Subordinate relationships -->
+  <line x1="220" y1="170" x2="220" y2="226" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="232" y="203" font-size="12" fill="#475569">Subordinate Statement</text>
+  <line x1="220" y1="330" x2="220" y2="386" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="232" y="363" font-size="12" fill="#475569">Subordinate Statement</text>
+
+  <!-- Chain list -->
+  <rect x="520" y="60" width="410" height="70" rx="8" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="536" y="84" font-weight="bold" fill="#052e16">[0] Entity Configuration</text>
+  <text x="536" y="106" font-size="13" fill="#334155">iss = sub = https://rp.example</text>
+
+  <rect x="520" y="150" width="410" height="70" rx="8" fill="#ecfeff" stroke="#0e7490"/>
+  <text x="536" y="174" font-weight="bold" fill="#083344">[1] Subordinate Statement</text>
+  <text x="536" y="196" font-size="13" fill="#334155">iss = https://intermediate.example, sub = https://rp.example</text>
+
+  <rect x="520" y="240" width="410" height="70" rx="8" fill="#eef2ff" stroke="#4338ca"/>
+  <text x="536" y="264" font-weight="bold" fill="#1e1b4b">[2] Subordinate Statement</text>
+  <text x="536" y="286" font-size="13" fill="#334155">iss = https://anchor.example, sub = https://intermediate.example</text>
+
+  <rect x="520" y="330" width="410" height="70" rx="8" fill="#eef2ff" stroke="#4338ca"/>
+  <text x="536" y="354" font-weight="bold" fill="#1e1b4b">[3] Trust Anchor Entity Configuration</text>
+  <text x="536" y="376" font-size="13" fill="#334155">iss = sub = https://anchor.example</text>
+
+  <!-- Key source -->
+  <rect x="520" y="430" width="410" height="100" rx="8" fill="#eff6ff" stroke="#1d4ed8" stroke-dasharray="5 4"/>
+  <text x="536" y="454" font-weight="bold" fill="#1e3a8a">Anchor keys used for verification</text>
+  <text x="536" y="476" font-size="13" fill="#334155">Fetched from https://anchor.example/.well-known/</text>
+  <text x="536" y="494" font-size="13" fill="#334155">openid-federation, issued by the anchor about itself</text>
+  <text x="536" y="512" font-size="13" fill="#334155">and unexpired. pinnedKeys replaces the lookup.</text>
+  <line x1="725" y1="430" x2="725" y2="404" stroke="#1d4ed8" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+
+  <!-- chainPath -->
+  <text x="30" y="520" font-size="13" fill="#0f172a" font-weight="bold">chainPath</text>
+  <text x="30" y="540" font-size="13" fill="#334155">https://rp.example, https://intermediate.example, https://anchor.example</text>
+</svg>
