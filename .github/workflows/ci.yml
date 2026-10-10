@@ -15,10 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: copy .env file
-        uses: canastro/copy-file-action@master
-        with:
-          source: ".env.example"
-          target: ".env.local"
+        run: cp .env.example .env.local
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
