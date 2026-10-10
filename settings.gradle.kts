@@ -189,7 +189,10 @@ includeFederationModule(":modules:openid-federation-common")
 includeFederationModule(":modules:openid-federation-client")
 includeFederationModule(":modules:openid-federation-client-public")
 includeFederationModule(":modules:openid-federation-client-impl")
-includeFederationModule(":modules:openid-federation-client-test-js")
+// The JS test harness only exists in builds that enable the JS targets (kmp.targets), like the modules it consumes.
+val jsTargetsEnabled = (System.getProperty("kmp.targets") ?: "jvm").split(',').map { it.trim().lowercase() }
+    .let { "all" in it || "js" in it }
+if (jsTargetsEnabled) includeFederationModule(":modules:openid-federation-client-test-js")
 
 // Trust bridge module (bridges OID-Fed trust chain to IDK Trust Validation framework)
 includeFederationModule(":modules:openid-federation-trust")
