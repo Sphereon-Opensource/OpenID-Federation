@@ -25,6 +25,7 @@ import com.sphereon.trust.core.model.TrustChainPosition
 import com.sphereon.trust.core.model.TrustContext
 import com.sphereon.trust.core.model.inferContactType
 import dev.zacsweers.metro.ContributesIntoSet
+import dev.zacsweers.metro.ExposeImplBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
@@ -46,6 +47,7 @@ import kotlinx.serialization.json.jsonPrimitive
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesIntoSet(scope = SessionScope::class, binding = binding<EntityInfoExtractor>())
+@ExposeImplBinding
 class OidfEntityInfoExtractor(
     private val getEntityConfigurationCommand: GetEntityConfigurationCommand
 ) : EntityInfoExtractor {
