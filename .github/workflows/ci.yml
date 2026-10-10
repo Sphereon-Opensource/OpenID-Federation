@@ -77,10 +77,19 @@ jobs:
           KMS_PROVIDER: memory
         run: |
           ./gradlew build
-          ./gradlew :modules:openid-federation-openapi:jsPublicPackageJson
-          ./gradlew :modules:openid-federation-common:jsPublicPackageJson
-          ./gradlew publishJsPackageToNpmjsRegistry
           ./gradlew publishAllPublicationsToSphereon-opensourceRepository
+
+      # The npm packages need the JS targets, which need the JS variants of the IDK dependencies.
+      - name: Publish npm packages
+        if: ${{ vars.PUBLISH_JS == 'true' }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          ./gradlew -Dkmp.targets=jvm,js :modules:openid-federation-openapi:jsPublicPackageJson
+          ./gradlew -Dkmp.targets=jvm,js :modules:openid-federation-common:jsPublicPackageJson
+          ./gradlew -Dkmp.targets=jvm,js publishJsPackageToNpmjsRegistry
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
