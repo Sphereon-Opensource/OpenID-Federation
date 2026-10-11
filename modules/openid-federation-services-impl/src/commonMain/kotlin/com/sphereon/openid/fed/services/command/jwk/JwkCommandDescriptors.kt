@@ -26,6 +26,22 @@ interface JwkCommandDescriptors {
         RegistrableServiceCommandDescriptor.of(RevokeKeyCommand.COMMAND_ID) { cmd.value }
 
     @Provides @IntoSet
+    fun updateKeyRevocation(cmd: Lazy<UpdateKeyRevocationCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(UpdateKeyRevocationCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun retireKey(cmd: Lazy<RetireKeyCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(RetireKeyCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun listHistoricalKeys(cmd: Lazy<ListHistoricalKeysCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(ListHistoricalKeysCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
+    fun signAccountRequestJwt(cmd: Lazy<SignAccountRequestJwtCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(SignAccountRequestJwtCommand.COMMAND_ID) { cmd.value }
+
+    @Provides @IntoSet
     fun getFederationHistoricalKeysJwt(cmd: Lazy<GetFederationHistoricalKeysJwtCommand>): RegistrableServiceCommandDescriptor =
         RegistrableServiceCommandDescriptor.of(GetFederationHistoricalKeysJwtCommand.COMMAND_ID) { cmd.value }
 }

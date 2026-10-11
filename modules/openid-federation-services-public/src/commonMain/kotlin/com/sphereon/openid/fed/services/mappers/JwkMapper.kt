@@ -38,16 +38,14 @@ fun JwkEntity.toDTO(): TenantJwk {
     )
 }
 
-/**
- * Map a revoked key row to a federation historical key (OIDFed 1.1 §8.7.2): a previously used key whose REQUIRED
- * [HistoricalKey.exp] is its revocation time, after which it MUST NOT be considered valid, and whose
- * [JwkRevoked.revokedAt] is the same NumericDate. Keys in use are not historical and are not mapped.
- */
+/** Maps a historical key to public JWK members with independent expiry and revocation times. */
 fun JwkEntity.toHistoricalKey(): HistoricalKey {
     val key: Jwk = cryptoJsonSerializer.decodeFromString(this.key)
     val iat = this.created_at?.toEpochSecond()
-    val revokedAtEpoch = requireNotNull(this.revoked_at?.toEpochSecond()) { "Only revoked keys are historical keys" }
-    val exp = revokedAtEpoch
+    val revokedAtEpoch = this.revoked_at?.toEpochSecond()
+    val exp = requireNotNull(this.expires_at?.toEpochSecond() ?: revokedAtEpoch) {
+        "Only expired or revoked keys are historical keys"
+    }
 
     return HistoricalKey(
         e = key.e,
@@ -65,10 +63,9 @@ fun JwkEntity.toHistoricalKey(): HistoricalKey {
         x5tS256 = key.x5t_S256,
         iat = iat?.toDouble(),
         exp = exp.toDouble(),
-        revoked = JwkRevoked(
-            revokedAt = revokedAtEpoch.toDouble(),
-            reason = this.revoked_reason
-        )
+        revoked = revokedAtEpoch?.let {
+            JwkRevoked(revokedAt = it.toDouble(), reason = this.revocation_reason)
+        }
     )
 }
 

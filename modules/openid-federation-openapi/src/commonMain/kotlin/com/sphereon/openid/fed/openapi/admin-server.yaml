@@ -177,13 +177,151 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminErrorResponse'
+  '/keys/historical':
+    get:
+      tags:
+        - keys
+      summary: List historical keys
+      operationId: listHistoricalKeys
+      description: Retrieve revoked or expired public keys without signing a JWT. exp is the end of validity; revoked may record an earlier revocation time and an optional wire reason. Operator descriptions and private key members are omitted.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+      responses:
+        '200':
+          description: Historical keys retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoricalKey'
+        '400':
+          description: Invalid request or key state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Key or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/keys/{keyId}/revocation':
+    post:
+      tags:
+        - keys
+      summary: Update a historical key revocation
+      operationId: updateKeyRevocation
+      description: Update the wire reason for a revoked or expired key. An expired key becomes revoked. Revocation time can only move earlier; exp and the private operator description stay unchanged.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The key record ID.
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: Section 8.7 wire reason token, including federation-defined tokens.
+        - name: revokedAt
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+          description: Revocation time in epoch seconds, no later than now. Defaults to now; an existing earlier time is preserved.
+      responses:
+        '200':
+          description: Key revocation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantJwk'
+        '400':
+          description: Invalid request or key state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Key or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+  '/keys/{keyId}/retire':
+    post:
+      tags:
+        - keys
+      summary: Retire an active key
+      operationId: retireKey
+      description: End the validity of an active key without revoking it. Switch the selected signing key first. The retired key leaves the active set and appears in historical keys.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The key record ID.
+      responses:
+        '200':
+          description: Key retired successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantJwk'
+        '400':
+          description: Invalid request or key state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Key or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '409':
+          description: The key is the selected signing key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
   '/keys/{keyId}':
     delete:
       tags:
         - keys
       summary: Revoke a key
 
-      description: Revoke a key by its ID for the specified tenant (federation entity context).
+      description: Revoke a key by its ID. The selected signing key requires allowSelected=true, which clears the selection.
       operationId: revokeKey
       parameters:
         - $ref: '#/components/parameters/AccountUsername'
@@ -199,7 +337,21 @@ paths:
           required: false
           schema:
             type: string
-          description: The reason for revoking the key.
+            pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: OpenID Federation 1.1 section 8.7 reason token. Registered values are unspecified, compromised and superseded; federation-defined tokens are allowed. Omit for no wire reason.
+        - name: description
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Operator description stored privately and never published in historical keys.
+        - name: allowSelected
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Permit emergency revocation of the selected signing key and clear its selection.
       responses:
         '200':
           description: Key revoked successfully (managed TenantJwk record)
@@ -215,6 +367,12 @@ paths:
                 $ref: '#/components/schemas/AdminErrorResponse'
         '404':
           description: Key or account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '409':
+          description: The key is the selected signing key and allowSelected was not set
           content:
             application/json:
               schema:
@@ -1943,7 +2101,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TenantJwk'
-    # Deprecated OpenAPI schema name — same object as TenantJwksResponse (clients/tools may still resolve AccountJwksResponse).
+    # Deprecated OpenAPI schema name ; same object as TenantJwksResponse (clients/tools may still resolve AccountJwksResponse).
     AccountJwksResponse:
       $ref: '#/components/schemas/TenantJwksResponse'
     Jwk:
@@ -2439,6 +2597,7 @@ components:
             - federation
           required:
             - exp
+            - kid
           properties:
             iat:
               type: number
@@ -2446,7 +2605,7 @@ components:
               example: 1629936000
             exp:
               type: number
-              description: Expiration time of the key; after it the key MUST NOT be considered valid. RFC 7519 NumericDate.
+              description: Time the key stopped being valid, independently of any earlier revocation time. RFC 7519 NumericDate.
               example: 1632528000
             revoked:
               $ref: '#/components/schemas/JwkRevoked'
@@ -2460,7 +2619,7 @@ components:
           description: |
             Managed key record for a federation entity context (tenant).
             JSON property names are stable (including `accountId` for the owner id).
-            The historical OpenAPI schema name was AccountJwk — see schema alias below.
+            The historical OpenAPI schema name was AccountJwk ; see schema alias below.
           required:
             - id
           properties:
@@ -2492,7 +2651,7 @@ components:
               nullable: true
             revokedReason:
               type: string
-              description: 'The reason for revoking the JWK, if applicable.'
+              description: 'Private operator description of the revocation, if applicable. Not the historical wire reason token.'
               example: Key compromise
               nullable: true
             createdAt:
@@ -2501,7 +2660,7 @@ components:
               description: The timestamp when the JWK was created.
               example: '2024-08-06T12:34:56Z'
               nullable: true
-    # Deprecated OpenAPI schema name — same object as TenantJwk (clients/tools may still resolve AccountJwk).
+    # Deprecated OpenAPI schema name ; same object as TenantJwk (clients/tools may still resolve AccountJwk).
     AccountJwk:
       $ref: '#/components/schemas/TenantJwk'
 
@@ -2515,7 +2674,8 @@ components:
           description: Time the key was revoked or must be considered revoked. RFC 7519 NumericDate.
         reason:
           type: string
-          description: Revocation reason, one of unspecified, compromised or superseded (OpenID Federation 1.1 §8.7.3).
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
+          description: Optional OpenID Federation 1.1 section 8.7 reason token. Registered values are unspecified, compromised and superseded; federations may define other tokens.
 
     JwkWithPrivateKey:
       allOf:

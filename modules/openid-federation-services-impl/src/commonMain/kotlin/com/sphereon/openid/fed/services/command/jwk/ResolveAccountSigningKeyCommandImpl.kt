@@ -42,7 +42,7 @@ class ResolveAccountSigningKeyCommandImpl internal constructor(
         val selected = selection.value
         val keyId = selected.selectedKeyId
             ?: return federationErr(InvalidRequestError("No signing key is selected for this account"))
-        val key = jwkQueries.findById(keyId).executeAsOneOrNull()
+        val key = jwkQueries.findActiveById(keyId).executeAsOneOrNull()
             ?: return federationErr(InvalidRequestError("Selected signing key does not exist"))
         if (key.account_id != selected.accountId || key.revoked_at != null) {
             return federationErr(InvalidRequestError("Selected signing key is not active for this account"))

@@ -34,6 +34,118 @@ import dev.zacsweers.metro.StringKey
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<UpdateKeyRevocationEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(UpdateKeyRevocationEndpointCommand.COMMAND_ID)
+class UpdateKeyRevocationEndpointCommandImpl(
+    execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
+    private val jwkService: JwkService,
+    private val tenantContextResolver: TenantContextResolver,
+    private val json: Json,
+) : HttpEndpointCommandAdapter(
+    id = UpdateKeyRevocationEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = UpdateKeyRevocationEndpointCommand.ENDPOINT,
+), UpdateKeyRevocationEndpointCommand {
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest,
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+        val request = applyDuring(args)
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
+        val req = request.withExtractedParams(UpdateKeyRevocationEndpointCommand.ENDPOINT.pathPattern)
+        val keyId = req.pathParams["keyId"]
+            ?: return Ok(errorResponse(400, "Missing path parameter: keyId"))
+        val reason = request.queryParameters["reason"]
+            ?: return Ok(errorResponse(400, "Missing query parameter: reason"))
+        val revokedAt = request.queryParameters["revokedAt"]?.let {
+            it.toLongOrNull()
+                ?: return Ok(errorResponse(400, "revokedAt must be epoch seconds"))
+        }
+        val result = jwkService.updateKeyRevocation(tenantId, keyId, reason, revokedAt)
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(result.value)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<RetireKeyEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(RetireKeyEndpointCommand.COMMAND_ID)
+class RetireKeyEndpointCommandImpl(
+    execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
+    private val jwkService: JwkService,
+    private val tenantContextResolver: TenantContextResolver,
+    private val json: Json,
+) : HttpEndpointCommandAdapter(
+    id = RetireKeyEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = RetireKeyEndpointCommand.ENDPOINT,
+), RetireKeyEndpointCommand {
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest,
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+        val request = applyDuring(args)
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
+        val req = request.withExtractedParams(RetireKeyEndpointCommand.ENDPOINT.pathPattern)
+        val keyId = req.pathParams["keyId"]
+            ?: return Ok(errorResponse(400, "Missing path parameter: keyId"))
+        val result = jwkService.retireKey(tenantId, keyId)
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(result.value)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListHistoricalKeysEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListHistoricalKeysEndpointCommand.COMMAND_ID)
+class ListHistoricalKeysEndpointCommandImpl(
+    execution: SessionExecution,
+    private val jwkService: JwkService,
+    private val tenantContextResolver: TenantContextResolver,
+    private val json: Json,
+) : HttpEndpointCommandAdapter(
+    id = ListHistoricalKeysEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = ListHistoricalKeysEndpointCommand.ENDPOINT,
+), ListHistoricalKeysEndpointCommand {
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest,
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        val request = applyDuring(args)
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
+        val result = jwkService.listHistoricalKeys(tenantId)
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(result.value)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}
+
 // ==================== List Keys Endpoint Implementation ====================
 
 @Inject
@@ -165,8 +277,13 @@ class RevokeKeyEndpointCommandImpl(
             ?: return Ok(errorResponse(400, "Missing path parameter: keyId"))
 
         val reason = request.queryParameters["reason"]
+        val description = request.queryParameters["description"]
+        val allowSelected = request.queryParameters["allowSelected"]?.let {
+            it.toBooleanStrictOrNull()
+                ?: return Ok(errorResponse(400, "allowSelected must be true or false"))
+        } ?: false
 
-        val result = jwkService.revokeKey(tenantId, keyId, reason)
+        val result = jwkService.revokeKey(tenantId, keyId, reason, description, allowSelected)
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

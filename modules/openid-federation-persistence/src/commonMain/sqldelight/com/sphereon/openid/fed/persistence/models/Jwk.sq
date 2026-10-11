@@ -11,8 +11,26 @@ RETURNING *;
 
 revoke:
 UPDATE Jwk
-SET revoked_reason = ?, revoked_at = CURRENT_TIMESTAMP
-WHERE id = ?
+SET revoked_at = CURRENT_TIMESTAMP,
+    expires_at = COALESCE(expires_at, CURRENT_TIMESTAMP),
+    revocation_reason = ?,
+    revoked_reason = ?
+WHERE id = ? AND revoked_at IS NULL
+RETURNING *;
+
+-- A revocation time can only move earlier and never into the future of the database clock.
+updateRevocation:
+UPDATE Jwk
+SET revocation_reason = :reason, revoked_at = LEAST(revoked_at, COALESCE(CAST(:revokedAt AS TIMESTAMP), revoked_at))
+WHERE id = :id AND revoked_at IS NOT NULL
+AND (CAST(:revokedAt AS TIMESTAMP) IS NULL OR CAST(:revokedAt AS TIMESTAMP) <= CURRENT_TIMESTAMP)
+RETURNING *;
+
+retire:
+UPDATE Jwk
+SET expires_at = CURRENT_TIMESTAMP
+WHERE id = ? AND revoked_at IS NULL
+AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
 RETURNING *;
 
 findByAccountId:
@@ -20,9 +38,17 @@ SELECT *
 FROM Jwk
 WHERE account_id = ?
 AND revoked_at IS NULL
+AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
 ORDER BY created_at DESC;
 
--- All keys including revoked (for federation historical-keys endpoint, OIDFed 1.1 §8.7)
+findHistoricalByAccountId:
+SELECT *
+FROM Jwk
+WHERE account_id = ?
+AND (revoked_at IS NOT NULL OR expires_at <= CURRENT_TIMESTAMP)
+ORDER BY created_at DESC;
+
+-- All managed keys, including revoked and expired keys.
 findAllByAccountId:
 SELECT *
 FROM Jwk
@@ -33,6 +59,12 @@ findById:
 SELECT *
 FROM Jwk
 WHERE id = ?;
+
+findActiveById:
+SELECT *
+FROM Jwk
+WHERE id = ? AND revoked_at IS NULL
+AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP);
 
 findByAccountAndKmsKeyRef:
 SELECT *

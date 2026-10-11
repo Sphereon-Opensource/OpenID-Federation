@@ -127,8 +127,13 @@ class MetadataPolicyCriticalAndParameterTypesTest {
         critical?.let { put("metadata_policy_crit", it) }
     }
 
-    private fun resolve(statements: List<JsonObject>): MetadataPolicyOperators.TrustChainMetadataResult =
-        MetadataPolicyOperators.resolveFromTrustChainPayloads(statements)
+    private fun resolve(statements: List<JsonObject>): MetadataPolicyOperators.TrustChainMetadataResult {
+        val legacy = MetadataPolicyOperators.resolveFromTrustChainPayloads(statements)
+        val traced = MetadataPolicyOperators.resolveWithTrace(statements, null)
+        assertEquals(legacy.metadata, traced.metadata, "Trace must preserve existing critical-operator vectors")
+        assertEquals(legacy.isValid, traced.isValid)
+        return legacy
+    }
 
     private fun obj(value: String): JsonObject = Json.parseToJsonElement(value).jsonObject
 }

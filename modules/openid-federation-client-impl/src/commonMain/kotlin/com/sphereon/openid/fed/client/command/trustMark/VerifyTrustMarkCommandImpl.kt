@@ -14,10 +14,9 @@ import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.findKeyInJwks
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
-import com.sphereon.openid.fed.client.services.trustMarkService.TrustMarkServiceConst
 import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.core.error.SignatureVerificationFailedError
-import com.sphereon.openid.fed.core.error.TrustMarkExpiredError
+import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.core.error.TrustMarkInvalidError
 import com.sphereon.openid.fed.core.error.TrustMarkIssuerNotAuthorizedError
 import com.sphereon.openid.fed.core.error.TrustMarkNotRecognizedError
@@ -54,12 +53,7 @@ class VerifyTrustMarkCommandImpl(
     execution = execution
 ), VerifyTrustMarkCommand {
 
-    private val logger = TrustMarkServiceConst.LOG
-
-    companion object {
-        private const val TM_TYP = "trust-mark+jwt"
-        private const val CLOCK_SKEW_SECONDS = 5L
-    }
+    private val logger = execution.federationLogger("VerifyTrustMarkCommand")
 
     override suspend fun verifyTrustMark(
         trustMark: String,
@@ -86,28 +80,7 @@ class VerifyTrustMarkCommandImpl(
             // --- Structural JWT checks (§7.3 steps 1–3) ---
             val decodedTrustMark = decodeJWTComponents(trustMark)
 
-            val typ = decodedTrustMark.header.typ
-            if (typ != null && typ != TM_TYP) {
-                // Allow missing typ for legacy marks only if we want — spec says MUST have typ.
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = "unknown",
-                    reason = "Trust Mark typ must be '$TM_TYP', got '${typ ?: "(missing)"}'"
-                ))
-            }
-            if (typ == null) {
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = "unknown",
-                    reason = "Trust Mark missing required typ header '$TM_TYP'"
-                ))
-            }
-
-            val alg = decodedTrustMark.header.alg
-            if (alg.isBlank() || alg.equals("none", ignoreCase = true)) {
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = "unknown",
-                    reason = "Trust Mark alg must be a signing algorithm and MUST NOT be 'none'"
-                ))
-            }
+            TrustMarkValidation.headerError(decodedTrustMark)?.let { return IdkResult.err(it) }
 
             val trustMarkId = decodedTrustMark.payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull
                 ?: return IdkResult.err(TrustMarkInvalidError(
@@ -121,7 +94,7 @@ class VerifyTrustMarkCommandImpl(
                     reason = "Trust Mark missing required 'iss' claim"
                 ))
 
-            val trustMarkSub = decodedTrustMark.payload["sub"]?.jsonPrimitive?.contentOrNull
+            decodedTrustMark.payload["sub"]?.jsonPrimitive?.contentOrNull
                 ?: return IdkResult.err(TrustMarkInvalidError(
                     trustMarkId = trustMarkId,
                     reason = "Trust Mark missing required 'sub' claim"
@@ -131,7 +104,7 @@ class VerifyTrustMarkCommandImpl(
             val recognition = TrustMarkFederationPolicy.recognize(trustMarkId, trustAnchorConfig)
             if (recognition == TrustMarkRecognition.NOT_RECOGNIZED) {
                 logger.debug(
-                    "Trust Mark type $trustMarkId not recognized by federation TA $trustAnchorId — filter out"
+                    "Trust Mark type $trustMarkId not recognized by federation TA $trustAnchorId; filter out"
                 )
                 return IdkResult.err(TrustMarkNotRecognizedError(
                     trustMarkId = trustMarkId,
@@ -142,31 +115,10 @@ class VerifyTrustMarkCommandImpl(
             }
 
             // --- §7.3 step 4: sub matches subject Entity (when known) ---
-            if (subject != null && trustMarkSub != subject) {
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = trustMarkId,
-                    reason = "Trust Mark sub '$trustMarkSub' does not match subject Entity '$subject'"
-                ))
-            }
+            TrustMarkValidation.subjectError(decodedTrustMark, trustMarkId, subject)?.let { return IdkResult.err(it) }
 
             // --- §7.3 step 5: iat ---
-            val iat = decodedTrustMark.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
-            if (iat == null || iat > timeToUse + CLOCK_SKEW_SECONDS) {
-                return IdkResult.err(TrustMarkInvalidError(
-                    trustMarkId = trustMarkId,
-                    reason = "Trust Mark has invalid or future iat"
-                ))
-            }
-
-            // --- §7.3 step 6: exp is OPTIONAL; if present must be in the future ---
-            val expElement = decodedTrustMark.payload["exp"]
-            if (expElement != null) {
-                val exp = expElement.jsonPrimitive.content.toDoubleOrNull()?.toLong()
-                if (exp == null || exp <= timeToUse - CLOCK_SKEW_SECONDS) {
-                    logger.error("Trust Mark has expired")
-                    return IdkResult.err(TrustMarkExpiredError(trustMarkId = trustMarkId))
-                }
-            }
+            TrustMarkValidation.timeError(decodedTrustMark, trustMarkId, timeToUse)?.let { return IdkResult.err(it) }
 
             // --- Issuer authorization under this federation ---
             if (!TrustMarkFederationPolicy.isIssuerAuthorized(

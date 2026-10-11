@@ -1,0 +1,12 @@
+ALTER TABLE Jwk ADD COLUMN expires_at TIMESTAMP;
+ALTER TABLE Jwk ADD COLUMN revocation_reason TEXT;
+
+UPDATE Jwk SET expires_at = revoked_at WHERE revoked_at IS NOT NULL;
+UPDATE Jwk
+SET revocation_reason = lower(trim(revoked_reason))
+WHERE lower(trim(revoked_reason)) IN ('unspecified', 'compromised', 'superseded');
+
+ALTER TABLE Jwk ADD CONSTRAINT jwk_revocation_reason_token
+CHECK (revocation_reason IS NULL OR revocation_reason ~ '^[a-z][a-z0-9_]{0,63}$');
+ALTER TABLE Jwk ADD CONSTRAINT jwk_revocation_reason_requires_revoked
+CHECK (revocation_reason IS NULL OR revoked_at IS NOT NULL);

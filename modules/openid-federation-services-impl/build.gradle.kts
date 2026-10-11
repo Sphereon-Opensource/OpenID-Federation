@@ -101,3 +101,8 @@ publishing {
         }
     }
 }
+
+// Canonical timestamps are UTC (the mappers read TIMESTAMP columns as UTC); keep the JDBC session clock in UTC too.
+tasks.withType<Test>().configureEach {
+    systemProperty("user.timezone", "UTC")
+}

@@ -9,11 +9,15 @@ import com.sphereon.core.api.service.PublicApiCommand
 import com.sphereon.core.api.service.ServiceCommand
 
 import com.sphereon.openid.fed.openapi.models.TenantJwk
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class RevokeKeyArgs(
     val tenantId: String,
     val keyId: String,
-    val reason: String?
+    val reason: String?,
+    val description: String? = null,
+    val allowSelected: Boolean = false,
 )
 
 interface RevokeKeyCommand : ServiceCommand<RevokeKeyArgs, TenantJwk, FederationError>, PublicApiCommand {

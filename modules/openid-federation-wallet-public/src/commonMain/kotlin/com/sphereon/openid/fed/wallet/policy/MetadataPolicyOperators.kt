@@ -378,8 +378,93 @@ object MetadataPolicyOperators {
     fun resolveFromTrustChainPayloads(
         decodedStatements: List<JsonObject>,
         entityType: String? = null
+    ): TrustChainMetadataResult = resolveTrustChainPayloads(decodedStatements, entityType)
+
+    /**
+     * Resolve full metadata with original statement contributions and typed diagnostics.
+     * The optional [entityTypes] filter applies to returned metadata after full resolution;
+     * trace entries retain all subject and superior parameters, including inactive roles.
+     */
+    fun resolveWithTrace(
+        decodedStatements: List<JsonObject>,
+        entityTypes: List<String>? = null
+    ): TracedPolicyResolution {
+        val diagnostics = TraceDiagnostics()
+        val malformed = decodedStatements.flatMapIndexed { index, statement ->
+            buildList {
+                for (name in listOf("metadata", "metadata_policy")) {
+                    val element = statement[name] ?: continue
+                    if (element !is JsonObject) add("$name at statement $index must be a JSON object")
+                    else if (name == "metadata") for ((type, metadata) in element) {
+                        if (metadata !is JsonObject) add("metadata for $type at statement $index must be a JSON object")
+                    }
+                }
+                for (name in listOf("iss", "sub")) {
+                    if (statement[name] != null && statement[name] !is JsonPrimitive) add("$name at statement $index must be a string")
+                }
+            }
+        }
+        if (malformed.isNotEmpty()) {
+            malformed.forEach { diagnostics.recordGlobalError(PolicyResolutionErrorCode.POLICY_VIOLATION, it) }
+            val metadata = decodedStatements.firstOrNull()?.get("metadata") as? JsonObject ?: JsonObject(emptyMap())
+            return TracedPolicyResolution(filterEntityTypes(metadata, entityTypes), diagnostics.errors,
+                trace = buildTrace(decodedStatements, metadata, diagnostics))
+        }
+        val resolved = resolveTrustChainPayloads(decodedStatements, diagnostics = diagnostics)
+        completeTraceChecks(decodedStatements, diagnostics)
+        return TracedPolicyResolution(
+            metadata = filterEntityTypes(resolved.metadata, entityTypes),
+            errors = diagnostics.errors.toList(),
+            warnings = resolved.warnings,
+            trace = buildTrace(decodedStatements, resolved.metadata, diagnostics)
+        )
+    }
+
+    /** Keep checking other parameters after a conflict, while retaining the resolver's metadata. */
+    private fun completeTraceChecks(statements: List<JsonObject>, diagnostics: TraceDiagnostics) {
+        if (statements.isEmpty()) return
+        val policies = statements.withIndex().filter { isSubordinateStatement(it.value) }.reversed()
+        val working = resolveTrustChainPayloads(statements.map {
+            JsonObject(it.filterKeys { name -> name != "metadata_policy" && name != "metadata_policy_crit" })
+        })
+        if (!working.isValid) return
+        val parameters = linkedSetOf<TraceParameter>()
+        for ((_, statement) in policies) for ((type, entityPolicy) in (statement["metadata_policy"] as? JsonObject).orEmpty()) {
+            if (entityPolicy is JsonObject) for (name in entityPolicy.keys) parameters.add(TraceParameter(type, name))
+        }
+        val mergedTypes = linkedMapOf<String, MutableMap<String, JsonElement>>()
+        for (parameter in parameters) {
+            var merged = JsonObject(emptyMap())
+            var failed = false
+            for ((_, statement) in policies) {
+                val operators = (statement["metadata_policy"] as? JsonObject)?.get(parameter.entityType)
+                    ?.let { it as? JsonObject }?.get(parameter.parameter) ?: continue
+                val fragment = JsonObject(mapOf(parameter.entityType to JsonObject(mapOf(parameter.parameter to operators))))
+                when (val result = mergePolicies(merged, fragment)) {
+                    is PolicyMergeResult.Ok -> merged = result.policy
+                    is PolicyMergeResult.Error -> {
+                        diagnostics.recordParameterError(PolicyResolutionErrorCode.POLICY_CONFLICT, result.reason, parameter)
+                        diagnostics.failedMerges.add(parameter)
+                        failed = true
+                    }
+                }
+            }
+            if (failed) continue
+            val operators = (merged[parameter.entityType] as? JsonObject)?.get(parameter.parameter) ?: continue
+            mergedTypes.getOrPut(parameter.entityType) { linkedMapOf() }[parameter.parameter] = operators
+            val applied = applyPolicy(working.metadata, merged)
+            for (message in applied.errors) diagnostics.recordParameterError(PolicyResolutionErrorCode.POLICY_VIOLATION, message, parameter)
+        }
+        diagnostics.combinedPolicy = JsonObject(mergedTypes.mapValues { JsonObject(it.value) })
+    }
+
+    private fun resolveTrustChainPayloads(
+        decodedStatements: List<JsonObject>,
+        entityType: String? = null,
+        diagnostics: TraceDiagnostics? = null
     ): TrustChainMetadataResult {
         if (decodedStatements.isEmpty()) {
+            diagnostics?.recordGlobalError(PolicyResolutionErrorCode.POLICY_VIOLATION, "Trust chain is empty")
             return TrustChainMetadataResult(
                 metadata = JsonObject(emptyMap()),
                 policiesApplied = 0,
@@ -405,11 +490,16 @@ object MetadataPolicyOperators {
         for (statement in subordinateStatements) {
             val constraintsElement = statement["constraints"] ?: continue
             val parsed = EntityStatementValidation.parseConstraints(constraintsElement)
-            val constraints = parsed.constraints ?: return TrustChainMetadataResult(
-                metadata = workingMetadata,
-                policiesApplied = 0,
-                errors = listOf(parsed.reason ?: "Invalid constraints")
-            )
+            val constraints = parsed.constraints
+            if (constraints == null) {
+                val reason = parsed.reason ?: "Invalid constraints"
+                diagnostics?.recordGlobalError(PolicyResolutionErrorCode.POLICY_VIOLATION, reason)
+                return TrustChainMetadataResult(
+                    metadata = workingMetadata,
+                    policiesApplied = 0,
+                    errors = listOf(reason)
+                )
+            }
             val allowedTypes = constraints.allowedEntityTypes ?: continue
             workingMetadata = JsonObject(workingMetadata.filterKeys { type ->
                 EntityStatementValidation.isEntityTypeAllowed(type, allowedTypes)
@@ -425,6 +515,10 @@ object MetadataPolicyOperators {
             if (!statement.containsKey("metadata_policy_crit")) continue
             val declarations = statement["metadata_policy_crit"] as? JsonArray
             if (declarations == null || declarations.isEmpty()) {
+                diagnostics?.recordGlobalError(
+                    PolicyResolutionErrorCode.POLICY_VIOLATION,
+                    "metadata_policy_crit must be a non-empty array of strings"
+                )
                 return TrustChainMetadataResult(
                     metadata = workingMetadata,
                     policiesApplied = 0,
@@ -434,6 +528,10 @@ object MetadataPolicyOperators {
             for (element in declarations) {
                 val name = element as? JsonPrimitive
                 if (name == null || !name.isString || name.content.isBlank()) {
+                    diagnostics?.recordGlobalError(
+                        PolicyResolutionErrorCode.POLICY_VIOLATION,
+                        "metadata_policy_crit entries must be non-empty strings"
+                    )
                     return TrustChainMetadataResult(
                         metadata = workingMetadata,
                         policiesApplied = 0,
@@ -445,6 +543,7 @@ object MetadataPolicyOperators {
         }
         val criticalErrors = validateCriticalOperators(combinedPolicy, criticalOperators)
         if (criticalErrors.isNotEmpty()) {
+            diagnostics?.recordCriticalErrors(criticalOperators, ssSuperiorFirst)
             return TrustChainMetadataResult(
                 metadata = workingMetadata,
                 policiesApplied = 0,
@@ -457,9 +556,11 @@ object MetadataPolicyOperators {
             when (val mergeResult = mergePolicies(combinedPolicy, metadataPolicy)) {
                 is PolicyMergeResult.Ok -> {
                     combinedPolicy = mergeResult.policy
+                    diagnostics?.combinedPolicy = combinedPolicy
                     policiesApplied++
                 }
                 is PolicyMergeResult.Error -> {
+                    diagnostics?.recordMergeError(combinedPolicy, metadataPolicy, mergeResult.reason)
                     return TrustChainMetadataResult(
                         metadata = workingMetadata,
                         policiesApplied = policiesApplied,
@@ -482,6 +583,7 @@ object MetadataPolicyOperators {
         }
 
         val applied = applyPolicy(workingMetadata, combinedPolicy, entityType)
+        diagnostics?.recordApplicationErrors(workingMetadata, combinedPolicy, applied.errors)
         return TrustChainMetadataResult(
             metadata = applied.metadata,
             policiesApplied = policiesApplied,
@@ -518,6 +620,201 @@ object MetadataPolicyOperators {
         val warnings: List<String> = emptyList()
     ) {
         val isValid: Boolean get() = errors.isEmpty()
+    }
+
+    private data class TraceParameter(val entityType: String, val parameter: String)
+
+    private data class PolicyFailureLocation(val entityType: String, val parameter: String? = null)
+
+    private class TraceDiagnostics {
+        var combinedPolicy = JsonObject(emptyMap())
+        val errors = mutableListOf<PolicyResolutionError>()
+        val parameterMessages = linkedMapOf<TraceParameter, MutableList<String>>()
+        val entityMessages = linkedMapOf<String, MutableList<String>>()
+        val globalMessages = mutableListOf<String>()
+        val failedMerges = mutableSetOf<TraceParameter>()
+
+        fun recordGlobalError(code: PolicyResolutionErrorCode, message: String) {
+            errors.add(PolicyResolutionError(code, message))
+            globalMessages.add(message)
+        }
+
+        fun recordParameterError(code: PolicyResolutionErrorCode, message: String, parameter: TraceParameter) {
+            if (errors.none { it.code == code && it.message == message }) {
+                errors.add(PolicyResolutionError(code, message, parameter.entityType, parameter.parameter))
+            }
+            val messages = parameterMessages.getOrPut(parameter) { mutableListOf() }
+            if (message !in messages) messages.add(message)
+        }
+
+        fun recordCriticalErrors(names: Collection<String>, statements: List<JsonObject>) {
+            for (name in names.distinct()) {
+                val code = if (name in STANDARD_OPERATORS) PolicyResolutionErrorCode.POLICY_VIOLATION
+                else PolicyResolutionErrorCode.UNKNOWN_CRITICAL_OPERATOR
+                val message = validateCriticalOperators(JsonObject(emptyMap()), listOf(name)).single()
+                errors.add(PolicyResolutionError(code, message))
+                var hasParameter = false
+                for (statement in statements) {
+                    val policy = statement["metadata_policy"] as? JsonObject ?: continue
+                    for ((type, entityPolicy) in policy) {
+                        if (entityPolicy !is JsonObject) continue
+                        for ((parameter, operators) in entityPolicy) {
+                            if (operators is JsonObject && name in operators) {
+                                parameterMessages.getOrPut(TraceParameter(type, parameter)) { mutableListOf() }.add(message)
+                                hasParameter = true
+                            }
+                        }
+                    }
+                }
+                // An unused critical declaration still invalidates the chain.
+                if (!hasParameter) globalMessages.add(message)
+            }
+        }
+
+        fun recordMergeError(superior: JsonObject, subordinate: JsonObject, message: String) {
+            val location = findMergeFailure(superior, subordinate)
+            if (location == null) {
+                recordGlobalError(PolicyResolutionErrorCode.POLICY_CONFLICT, message)
+                return
+            }
+            errors.add(PolicyResolutionError(
+                PolicyResolutionErrorCode.POLICY_CONFLICT, message, location.entityType, location.parameter
+            ))
+            if (location.parameter == null) {
+                entityMessages.getOrPut(location.entityType) { mutableListOf() }.add(message)
+            } else {
+                val parameter = TraceParameter(location.entityType, location.parameter)
+                parameterMessages.getOrPut(parameter) { mutableListOf() }.add(message)
+                failedMerges.add(parameter)
+            }
+        }
+
+        fun recordApplicationErrors(metadata: JsonObject, policy: JsonObject, applicationErrors: List<String>) {
+            if (applicationErrors.isEmpty()) return
+            for ((type, entityPolicy) in policy) {
+                if (type !in metadata || entityPolicy !is JsonObject) continue
+                for ((parameter, operators) in entityPolicy) {
+                    val parameterPolicy = JsonObject(mapOf(type to JsonObject(mapOf(parameter to operators))))
+                    val applied = applyPolicy(metadata, parameterPolicy)
+                    for (message in applied.errors) {
+                        errors.add(PolicyResolutionError(
+                            PolicyResolutionErrorCode.POLICY_VIOLATION, message, type, parameter
+                        ))
+                        parameterMessages.getOrPut(TraceParameter(type, parameter)) { mutableListOf() }.add(message)
+                    }
+                }
+            }
+            // Retain fail-closed diagnostics if a future check applies to the whole policy.
+            if (errors.isEmpty()) {
+                for (message in applicationErrors) recordGlobalError(PolicyResolutionErrorCode.POLICY_VIOLATION, message)
+            }
+        }
+    }
+
+    /** Locate the failing parameter by reusing validation and merging, without parsing messages. */
+    private fun findMergeFailure(superior: JsonObject, subordinate: JsonObject): PolicyFailureLocation? {
+        for (policy in listOf(superior, subordinate)) {
+            firstPolicyValidationFailure(policy)?.let { return it }
+        }
+
+        // Preserve the merge's operator-failure order before its final combined-policy
+        // validation order, which can differ when subordinate parameters are reordered.
+        val combined = standardOperatorsOnly(superior).toMutableMap()
+        for ((type, entityPolicy) in standardOperatorsOnly(subordinate)) {
+            val currentEntityPolicy = combined[type] as? JsonObject
+            if (currentEntityPolicy == null) {
+                combined[type] = entityPolicy
+                continue
+            }
+            val mergedEntityPolicy = currentEntityPolicy.toMutableMap()
+            for ((parameter, operators) in entityPolicy.jsonObject) {
+                val current = mergedEntityPolicy[parameter] as? JsonObject
+                if (current == null) {
+                    mergedEntityPolicy[parameter] = operators
+                    continue
+                }
+                when (val merged = mergeClaimOperators(current, operators.jsonObject, "$type.$parameter")) {
+                    is PolicyMergeResult.Error -> return PolicyFailureLocation(type, parameter)
+                    is PolicyMergeResult.Ok -> mergedEntityPolicy[parameter] = merged.policy
+                }
+            }
+            combined[type] = JsonObject(mergedEntityPolicy)
+        }
+        return firstPolicyValidationFailure(JsonObject(combined))
+    }
+
+    private fun firstPolicyValidationFailure(policy: JsonObject): PolicyFailureLocation? {
+        for ((type, entityPolicy) in policy) {
+            if (entityPolicy !is JsonObject) return PolicyFailureLocation(type)
+            for ((parameter, operators) in entityPolicy) {
+                if (operators !is JsonObject || validateClaimPolicy(operators, "$type.$parameter").isNotEmpty()) {
+                    return PolicyFailureLocation(type, parameter)
+                }
+            }
+        }
+        return null
+    }
+
+    private fun buildTrace(
+        decodedStatements: List<JsonObject>,
+        resolvedMetadata: JsonObject,
+        diagnostics: TraceDiagnostics
+    ): List<PolicyTraceEntry> {
+        val contributions = linkedMapOf<TraceParameter, MutableList<PolicyContribution>>()
+        for (index in decodedStatements.indices.reversed()) {
+            val statement = decodedStatements[index]
+            val issuer = (statement["iss"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+            val metadata = statement["metadata"] as? JsonObject
+            if (metadata != null) {
+                for ((type, entityMetadata) in metadata) {
+                    if (entityMetadata !is JsonObject) continue
+                    for ((parameter, value) in entityMetadata) {
+                        contributions.getOrPut(TraceParameter(type, parameter)) { mutableListOf() }.add(
+                            PolicyContribution(issuer, index, PolicyContributionSource.METADATA, value = value)
+                        )
+                    }
+                }
+            }
+            if (index == 0) continue
+            val policy = statement["metadata_policy"] as? JsonObject ?: continue
+            for ((type, entityPolicy) in policy) {
+                if (entityPolicy !is JsonObject) continue
+                for ((parameter, operators) in entityPolicy) {
+                    contributions.getOrPut(TraceParameter(type, parameter)) { mutableListOf() }.add(
+                        PolicyContribution(
+                            issuer, index, PolicyContributionSource.METADATA_POLICY,
+                            value = operators.takeUnless { it is JsonObject },
+                            operators = operators as? JsonObject
+                        )
+                    )
+                }
+            }
+        }
+        val subjectMetadata = decodedStatements.firstOrNull()?.get("metadata") as? JsonObject
+        return contributions.map { (key, originals) ->
+            val before = (subjectMetadata?.get(key.entityType) as? JsonObject)?.get(key.parameter)
+            val after = (resolvedMetadata[key.entityType] as? JsonObject)?.get(key.parameter)
+            val messages = diagnostics.globalMessages + diagnostics.entityMessages[key.entityType].orEmpty() +
+                diagnostics.parameterMessages[key].orEmpty()
+            val outcome = when {
+                messages.isNotEmpty() -> PolicyTraceOutcome.ERROR
+                before == after -> PolicyTraceOutcome.UNCHANGED
+                before == null -> PolicyTraceOutcome.SET
+                after == null -> PolicyTraceOutcome.REMOVED
+                else -> PolicyTraceOutcome.MODIFIED
+            }
+            PolicyTraceEntry(
+                entityType = key.entityType,
+                parameter = key.parameter,
+                contributions = originals.toList(),
+                mergedOperators = if (key in diagnostics.failedMerges) null
+                else (diagnostics.combinedPolicy[key.entityType] as? JsonObject)?.get(key.parameter) as? JsonObject,
+                valueBefore = before,
+                valueAfter = after,
+                outcome = outcome,
+                message = messages.takeIf { it.isNotEmpty() }?.distinct()?.joinToString("; ")
+            )
+        }
     }
 
     private fun applyEntityTypePolicy(
@@ -559,7 +856,7 @@ object MetadataPolicyOperators {
             }
         }
 
-        // 1. value (first) — null removes the parameter
+        // 1. value: null removes the parameter.
         if (policyEntry.containsKey("value")) {
             val valueOp = policyEntry["value"]
             if (valueOp == null || valueOp is JsonNull) {
@@ -620,7 +917,7 @@ object MetadataPolicyOperators {
             }
         }
 
-        // 5. subset_of (after one_of) — filter to intersection
+        // 5. subset_of: filter to the intersection after one_of.
         policyEntry["subset_of"]?.let { subsetOfOp ->
             val allowed = checkedArrayOperator("subset_of", subsetOfOp, path, errors)
             if (allowed != null) {

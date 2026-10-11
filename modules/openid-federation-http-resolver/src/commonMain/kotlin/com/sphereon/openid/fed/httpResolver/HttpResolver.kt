@@ -10,6 +10,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 
 private val logger = HttpResolverConst.LOG
 
@@ -71,6 +72,7 @@ class HttpResolver<V : Any>(
                 }
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             if (attempt < config.httpRetries) {
                 val retryDelayMs = 1000L * (1 shl (attempt - 1))
                 logger.warn(
@@ -148,6 +150,64 @@ class HttpResolver<V : Any>(
         val metadata = fetchFromRemote(url, cached)
         cache.putApp(url, metadata)
         return metadata.value.toString()
+    }
+
+    /** Fetch a typed Entity Statement; bypassing skips cached bodies and conditional headers. */
+    suspend fun getJwt(url: String, bypassCache: Boolean = false): String {
+        val cached = if (bypassCache) null else cache.getApp(url)
+        if (cached?.jwtContentType == ENTITY_STATEMENT_CONTENT_TYPE) return cached.value.toString()
+        val response = try {
+            fetchWithRetry(url, null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw FederationHttpFetchException("Failed to fetch $url: ${e.message}", e)
+        }
+        validateJwtResponse(response, ENTITY_STATEMENT_CONTENT_TYPE)
+        val value = responseMapper(response)
+        if (value.toString().encodeToByteArray().size > MAX_JWT_BYTES) {
+            throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
+        }
+        if (!bypassCache) cache.putApp(url, HttpMetadata(value, jwtContentType = ENTITY_STATEMENT_CONTENT_TYPE))
+        return value.toString()
+    }
+
+    /** Query a Trust Mark status endpoint through the same protected HTTP client. */
+    suspend fun postJwt(url: String, formParameters: Parameters): String {
+        val response = try {
+            httpClient.post(url) {
+                setBody(io.ktor.client.request.forms.FormDataContent(formParameters))
+                timeout { requestTimeoutMillis = config.httpTimeoutMs }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw FederationHttpFetchException("Failed to query $url: ${e.message}", e)
+        }
+        validateJwtResponse(response, "application/trust-mark-status-response+jwt")
+        val value = responseMapper(response).toString()
+        if (value.encodeToByteArray().size > MAX_JWT_BYTES) {
+            throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
+        }
+        return value
+    }
+
+    private fun validateJwtResponse(response: HttpResponse, expectedContentType: String) {
+        if (response.status != HttpStatusCode.OK) {
+            throw FederationHttpFetchException("Expected HTTP 200, received ${response.status.value}")
+        }
+        val contentType = response.headers[HttpHeaders.ContentType]?.substringBefore(';')?.trim()
+        if (!expectedContentType.equals(contentType, ignoreCase = true)) {
+            throw FederationHttpFetchException("Expected $expectedContentType, received ${contentType ?: "no content type"}")
+        }
+        if ((response.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 0L) > MAX_JWT_BYTES) {
+            throw FederationHttpFetchException("JWT response exceeds $MAX_JWT_BYTES bytes")
+        }
+    }
+
+    private companion object {
+        const val ENTITY_STATEMENT_CONTENT_TYPE = "application/entity-statement+jwt"
+        const val MAX_JWT_BYTES = 1_048_576
     }
 
     /**
@@ -264,3 +324,6 @@ class HttpResolver<V : Any>(
         logger.debug("Cleared HTTP resolver cache for tenant: $tenantId")
     }
 }
+
+/** A remote resource could not supply a successful, typed JWT response. */
+class FederationHttpFetchException(message: String, cause: Throwable? = null) : Exception(message, cause)
