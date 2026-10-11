@@ -95,7 +95,7 @@ tasks.named<Test>("jvmTest") {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation HTTP Resolver")
                 description.set("HTTP metadata resolver used by the OpenID Federation client")

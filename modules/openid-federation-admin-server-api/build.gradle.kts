@@ -62,7 +62,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Admin Server API")
                 description.set("KMP-compatible API layer for OpenID Federation Admin Server")

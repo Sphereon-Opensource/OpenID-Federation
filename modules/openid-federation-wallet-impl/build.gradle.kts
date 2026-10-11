@@ -80,7 +80,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Wallet Implementation")
                 description.set("Wallet architecture implementations for OpenID Federation")

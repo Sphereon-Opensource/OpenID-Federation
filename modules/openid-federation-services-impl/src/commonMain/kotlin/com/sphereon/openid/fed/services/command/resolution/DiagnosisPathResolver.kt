@@ -48,15 +48,38 @@ internal class DiagnosisPathResolver(
     private val args: DiagnoseResolutionArgs,
     private val now: Long,
 ) {
+    companion object {
+        internal const val MAX_FETCH_OPERATIONS = 128
+        internal const val MAX_VISITED_BRANCHES = 128
+        internal const val MAX_DIAGNOSED_PATHS = 128
+        internal const val MAX_DISCOVERY_DEPTH = 32
+        private const val BUDGET_ERROR = "DISCOVERY_BUDGET_EXCEEDED"
+    }
+
     private val configurations = mutableMapOf<String, DiagnosisStatement>()
     private val subordinateStatements = mutableMapOf<Pair<String, String>, DiagnosisStatement>()
+    private var fetchOperations = 0
+    private var visitedBranches = 0
+    private var diagnosedPaths = 0
+    private val mutableBudgetErrors = mutableListOf<ResolutionDiagnosticError>()
+    val budgetErrors: List<ResolutionDiagnosticError> get() = mutableBudgetErrors.toList()
+
+    /** Reserve one resolver operation, including Trust Mark status POSTs; HTTP retries stay transport-owned. */
+    fun reserveNetworkFetch(): Boolean {
+        if (fetchOperations >= MAX_FETCH_OPERATIONS) {
+            recordBudgetError("Resolution discovery exceeded the $MAX_FETCH_OPERATIONS fetch operation limit")
+            return false
+        }
+        fetchOperations++
+        return true
+    }
 
     suspend fun configuration(identifier: String): DiagnosisStatement = configurations[identifier] ?: fetch(
         url = getEntityConfigurationEndpoint(identifier),
         issuer = identifier,
         subject = identifier,
         kind = StatementKind.ENTITY_CONFIGURATION,
-    ).also { configurations[identifier] = it }
+    ).also { if (it.failure?.code != BUDGET_ERROR) configurations[identifier] = it }
 
     suspend fun discover(subject: String = args.subject): List<DiagnosisPath> {
         val leaf = configuration(subject)
@@ -67,6 +90,9 @@ internal class DiagnosisPathResolver(
         if (subject == args.trustAnchor) return listOf(DiagnosisPath(listOf(leaf), leafErrors, reachedAnchor = true))
         val paths = mutableListOf<DiagnosisPath>()
         visit(subject, leaf, listOf(leaf), setOf(subject), 0, leafErrors, paths)
+        if (paths.isEmpty() && mutableBudgetErrors.isNotEmpty()) {
+            return listOf(DiagnosisPath(listOf(leaf), leafErrors + mutableBudgetErrors))
+        }
         return paths
     }
 
@@ -83,33 +109,45 @@ internal class DiagnosisPathResolver(
             (it as? JsonPrimitive)?.takeIf { value -> value.isString }?.contentOrNull
         }.orEmpty()
         if (hints.isEmpty()) {
-            paths += DiagnosisPath(prefix, errors + listOf(
+            addPath(paths, DiagnosisPath(prefix, errors + listOf(
                 ResolutionDiagnosticError("AUTHORITY_HINT_MISSING", "$identifier has no authority_hint toward ${args.trustAnchor}", prefix.lastIndex),
                 ResolutionDiagnosticError("NO_PATH_TO_TRUST_ANCHOR", "No path from $identifier to ${args.trustAnchor}", prefix.lastIndex),
-            ), depth = depth)
+            ), depth = depth))
             return
         }
-        if (depth >= args.maxDepth) {
-            paths += DiagnosisPath(prefix, errors + ResolutionDiagnosticError(
-                "MAX_DEPTH_EXCEEDED", "Maximum path depth ${args.maxDepth} reached at $identifier", prefix.size,
-            ), depth = depth)
+        val depthLimit = minOf(args.maxDepth, MAX_DISCOVERY_DEPTH)
+        if (depth >= depthLimit) {
+            val budgeted = args.maxDepth > MAX_DISCOVERY_DEPTH
+            val message = if (budgeted) "Resolution discovery exceeded the $MAX_DISCOVERY_DEPTH depth limit at $identifier"
+                else "Maximum path depth ${args.maxDepth} reached at $identifier"
+            val code = if (budgeted) BUDGET_ERROR else "MAX_DEPTH_EXCEEDED"
+            if (budgeted) recordBudgetError(message)
+            addPath(paths, DiagnosisPath(prefix, errors + ResolutionDiagnosticError(code, message, prefix.size), depth = depth))
             return
         }
         for (authority in hints.distinct().sortedBy { if (it == args.trustAnchor) 0 else 1 }) {
-            // Bound the requested subject's paths; Trust Mark issuer discovery keeps its existing behavior.
+            // Keep the established eight successful-path limit when alternatives are requested.
             // Dead ends and loops are diagnostics, not paths to the requested Trust Anchor.
             if (args.includeAlternativePaths && prefix.first().subject == args.subject &&
                 paths.count { it.entities.lastOrNull() == args.trustAnchor } >= 8) return
+            if (visitedBranches >= MAX_VISITED_BRANCHES) {
+                recordBudgetError("Resolution discovery exceeded the $MAX_VISITED_BRANCHES authority branch limit")
+                addPath(paths, DiagnosisPath(prefix, errors + ResolutionDiagnosticError(
+                    BUDGET_ERROR, "Resolution discovery stopped before checking all authority hints", prefix.lastIndex,
+                ), depth = depth))
+                return
+            }
+            visitedBranches++
             if (authority in visited) {
-                paths += DiagnosisPath(prefix, errors + ResolutionDiagnosticError(
+                addPath(paths, DiagnosisPath(prefix, errors + ResolutionDiagnosticError(
                     "LOOP_DETECTED", "authority_hint $authority loops back into the current path", prefix.size,
-                ), depth = depth)
+                ), depth = depth))
                 continue
             }
             val superior = this.configuration(authority)
             if (superior.claims == null) {
                 val missing = superior.copy(subject = identifier, kind = StatementKind.SUBORDINATE_STATEMENT)
-                paths += DiagnosisPath(prefix + missing, errors + listOfNotNull(superior.failure?.copy(statementIndex = prefix.size)), depth = depth + 1)
+                addPath(paths, DiagnosisPath(prefix + missing, errors + listOfNotNull(superior.failure?.copy(statementIndex = prefix.size)), depth = depth + 1))
                 continue
             }
             // Intermediate ECs supply endpoints and hints, but are not entries of the returned Trust Chain.
@@ -117,16 +155,16 @@ internal class DiagnosisPathResolver(
             val endpoint = ((superior.claims?.get("metadata") as? JsonObject)?.get("federation_entity") as? JsonObject)
                 ?.string("federation_fetch_endpoint")
             if (endpoint.isNullOrBlank()) {
-                paths += DiagnosisPath(prefix, errors + configErrors + ResolutionDiagnosticError(
+                addPath(paths, DiagnosisPath(prefix, errors + configErrors + ResolutionDiagnosticError(
                     "NO_PATH_TO_TRUST_ANCHOR", "$authority publishes no federation_fetch_endpoint", prefix.size,
-                ), depth = depth + 1)
+                ), depth = depth + 1))
                 continue
             }
             val key = authority to identifier
             val fetched = subordinateStatements[key] ?: fetch(
                 getSubordinateStatementEndpoint(endpoint.substringBefore('?'), identifier),
                 authority, identifier, StatementKind.SUBORDINATE_STATEMENT,
-            ).also { subordinateStatements[key] = it }
+            ).also { if (it.failure?.code != BUDGET_ERROR) subordinateStatements[key] = it }
             val signature = if (fetched.decoded != null) verifyDiagnosticSignature(context,
                 requireNotNull(fetched.jwt), keys(superior.claims)) else null
             val subordinate = fetched.copy(issuerSignature = signature)
@@ -141,10 +179,25 @@ internal class DiagnosisPathResolver(
             } else emptyList()
             val pathErrors = errors + configErrors + signatureErrors + listOfNotNull(subordinate.failure?.copy(statementIndex = prefix.size))
             if (authority == args.trustAnchor) {
-                paths += DiagnosisPath(extended + superior, pathErrors, reachedAnchor = true, depth = depth + 1)
+                addPath(paths, DiagnosisPath(extended + superior, pathErrors, reachedAnchor = true, depth = depth + 1))
             } else {
                 visit(authority, superior, extended, visited + authority, depth + 1, pathErrors, paths)
             }
+        }
+    }
+
+    private fun addPath(paths: MutableList<DiagnosisPath>, path: DiagnosisPath) {
+        if (diagnosedPaths < MAX_DIAGNOSED_PATHS) {
+            paths += path
+            diagnosedPaths++
+        } else {
+            recordBudgetError("Resolution discovery exceeded the $MAX_DIAGNOSED_PATHS diagnosed path limit")
+        }
+    }
+
+    private fun recordBudgetError(message: String) {
+        if (mutableBudgetErrors.none { it.code == BUDGET_ERROR }) {
+            mutableBudgetErrors += ResolutionDiagnosticError(BUDGET_ERROR, message)
         }
     }
 
@@ -178,6 +231,8 @@ internal class DiagnosisPathResolver(
     }
 
     private suspend fun fetch(url: String, issuer: String, subject: String, kind: StatementKind): DiagnosisStatement {
+        if (!reserveNetworkFetch()) return DiagnosisStatement(issuer, subject, kind, url,
+            failure = ResolutionDiagnosticError(BUDGET_ERROR, "Resolution discovery exceeded the $MAX_FETCH_OPERATIONS fetch operation limit"))
         val jwt = try {
             context.httpResolver.getJwt(url, bypassCache = args.bypassCache)
         } catch (e: FederationHttpFetchException) {

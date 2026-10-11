@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.floor
 import kotlin.math.nextDown
 
@@ -114,14 +113,14 @@ object EntityStatementValidation {
     }
 
     fun isEntityConfiguration(payload: JsonObject): Boolean {
-        val iss = payload["iss"]?.jsonPrimitive?.contentOrNull
-        val sub = payload["sub"]?.jsonPrimitive?.contentOrNull
+        val iss = (payload["iss"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+        val sub = (payload["sub"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
         return iss != null && iss == sub
     }
 
     fun isSubordinateStatement(payload: JsonObject): Boolean {
-        val iss = payload["iss"]?.jsonPrimitive?.contentOrNull
-        val sub = payload["sub"]?.jsonPrimitive?.contentOrNull
+        val iss = (payload["iss"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+        val sub = (payload["sub"] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
         return iss != null && sub != null && iss != sub
     }
 
@@ -137,8 +136,7 @@ object EntityStatementValidation {
         position: Int,
         understoodCriticalClaims: Set<String> = emptySet(),
     ): StructuralResult {
-        val failure = structureDiagnostics(statement, currentTimeSeconds, position, understoodCriticalClaims,
-            tolerateMalformedPrimitives = false).firstOrNull()
+        val failure = structureDiagnostics(statement, currentTimeSeconds, position, understoodCriticalClaims).firstOrNull()
         return if (failure == null) StructuralResult(true) else StructuralResult(false, failure.message)
     }
 
@@ -148,13 +146,12 @@ object EntityStatementValidation {
         currentTimeSeconds: Long,
         position: Int,
         understoodCriticalClaims: Set<String>,
-        tolerateMalformedPrimitives: Boolean = true,
     ): Sequence<StatementValidationDiagnostic> = sequence {
-        fun primitiveContent(value: JsonElement?): String? = if (tolerateMalformedPrimitives) {
-            (value as? JsonPrimitive)?.contentOrNull
-        } else {
-            value?.jsonPrimitive?.contentOrNull
-        }
+        // Entity identifiers and hint/critical-claim names are JSON strings. Keep
+        // this safe in both strict and diagnostic traversal so malformed JSON is
+        // reported as a structural error instead of throwing while inspecting it.
+        fun primitiveContent(value: JsonElement?): String? =
+            (value as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
 
         val typ = statement.header.typ
         if (typ != ENTITY_STATEMENT_TYP) {
@@ -218,6 +215,20 @@ object EntityStatementValidation {
                     "ISSUER_SUBJECT_MISMATCH",
                     "Entity Configuration at position $position authority_hints must not be empty array"
                 ))
+            }
+            if (hints != null && hints !is JsonArray) {
+                yield(StatementValidationDiagnostic(
+                    "ISSUER_SUBJECT_MISMATCH",
+                    "Entity Configuration at position $position authority_hints must be an array of strings"
+                ))
+            }
+            for (el in (hints as? JsonArray).orEmpty()) {
+                if (primitiveContent(el).isNullOrBlank()) {
+                    yield(StatementValidationDiagnostic(
+                        "ISSUER_SUBJECT_MISMATCH",
+                        "Entity Configuration at position $position authority_hints entries must be non-empty strings"
+                    ))
+                }
             }
             // trust_anchor_hints: EC-only; when present MUST be non-empty array of Entity Identifiers
             // (OIDFed 1.1 §3.1.2 / validation step 15)
@@ -336,7 +347,8 @@ object EntityStatementValidation {
         if (!isEntityConfiguration(subjectEntityConfiguration.payload)) {
             return StructuralResult(true) // only check when we have the subject's EC
         }
-        val superiorIss = superiorSubordinateStatement.payload["iss"]?.jsonPrimitive?.contentOrNull
+        val superiorIss = (superiorSubordinateStatement.payload["iss"] as? JsonPrimitive)
+            ?.takeIf { it.isString }?.contentOrNull
             ?: return StructuralResult(false, "Superior Subordinate Statement missing iss")
         val hints = subjectEntityConfiguration.payload["authority_hints"]
         if (hints !is JsonArray || hints.isEmpty()) {
@@ -345,7 +357,7 @@ object EntityStatementValidation {
                 "Subject Entity Configuration missing authority_hints for superior '$superiorIss'"
             )
         }
-        val hintList = hints.mapNotNull { it.jsonPrimitive.contentOrNull }
+        val hintList = hints.mapNotNull { (it as? JsonPrimitive)?.takeIf { value -> value.isString }?.contentOrNull }
         if (superiorIss !in hintList) {
             return StructuralResult(
                 false,

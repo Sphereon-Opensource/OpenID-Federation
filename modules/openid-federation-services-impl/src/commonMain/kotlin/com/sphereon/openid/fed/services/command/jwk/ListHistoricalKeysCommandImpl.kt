@@ -46,7 +46,7 @@ class ListHistoricalKeysCommandImpl internal constructor(
         val applied = applyDuring(args)
         return try {
             val keys = accountQueries.transactionWithResult {
-                accountQueries.findActiveForUpdate(applied.tenantId).executeAsOneOrNull()
+                accountQueries.findById(applied.tenantId).executeAsOneOrNull()
                     ?: throw FederationErrorException(AccountNotFoundError(applied.tenantId))
                 jwkQueries.findHistoricalByAccountId(applied.tenantId).executeAsList().map { it.toHistoricalKey() }
             }
