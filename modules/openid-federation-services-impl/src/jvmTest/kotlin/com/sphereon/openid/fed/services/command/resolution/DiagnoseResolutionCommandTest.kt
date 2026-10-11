@@ -366,6 +366,175 @@ class DiagnoseResolutionCommandTest {
         assertTrue(multiple.warnings.any { it.code == "NON_TREE_TOPOLOGY" }, "Compare full metadata before caller filtering")
     }
 
+    private suspend fun alternativeTopology(badSignature: Boolean = false, badFirstSignature: Boolean = false,
+        policyConflict: Boolean = false): String {
+        val first = topology(badSignature = badFirstSignature)
+        val otherId = "https://intermediate-2.example"
+        val other = key()
+        publishEc(leafId, statement(leafId, leafId, first.leaf, first.leaf, metadata = leafMetadata,
+            hints = listOf(intermediateId, otherId)))
+        publishEc(otherId, statement(otherId, otherId, other, other,
+            metadata = endpointMetadata(otherId), hints = listOf(anchorId)))
+        publishSs(otherId, leafId, statement(otherId, leafId, if (badSignature) key() else other, first.leaf,
+            policy = obj("""{"openid_provider":{"organization_name":{"value":"resolved"},"removed":{"value":null}}}""")))
+        publishSs(anchorId, otherId, statement(anchorId, otherId, first.anchor, other, expiry = now + 3000,
+            policy = if (policyConflict) obj("""{"openid_provider":{"organization_name":{"one_of":["other"]}}}""") else null))
+        return otherId
+    }
+
+    @Test
+    fun requestedAlternativeReportsTheOtherVerifiedPathToTheSameAnchor() = runTest {
+        val otherId = alternativeTopology()
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome, diagnosis.errors.toString())
+        assertEquals(listOf(leafId, intermediateId, anchorId, anchorId), diagnosis.chain.map { it.issuer })
+        assertTrue(diagnosis.chain.all { it.verified })
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        assertEquals(listOf(leafId, otherId, anchorId), alternative.entities)
+        assertEquals(ResolutionOutcome.VALID, alternative.outcome, alternative.errors.toString())
+        assertTrue(alternative.errors.isEmpty())
+        assertEquals(listOf(0, 1, 2, 3), alternative.chain.map { it.index })
+        assertTrue(alternative.chain.all { it.signatureValid && it.verified })
+        assertEquals(now + 3000, alternative.chainExpiresAt)
+        assertNotNull(alternative.resolvedMetadata)
+        val filtered = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            entityTypes = listOf("openid_provider"), includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(setOf("openid_provider"), assertNotNull(filtered.alternativePaths).single().resolvedMetadata?.keys)
+        assertEquals(diagnosis, Json.decodeFromString(ResolutionDiagnosis.serializer(),
+            Json.encodeToString(ResolutionDiagnosis.serializer(), diagnosis)))
+    }
+
+    @Test
+    fun alternativesAreAbsentUnlessRequestedAndAnotherAnchorPathExists() = runTest {
+        alternativeTopology()
+        assertNull(diagnose().alternativePaths)
+        topology()
+        val single = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, single.outcome)
+        assertNull(single.alternativePaths)
+    }
+
+    @Test
+    fun invalidAlternativeDoesNotInvalidateTheSelectedPathOrExposeMetadata() = runTest {
+        val otherId = alternativeTopology(badSignature = true)
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome, diagnosis.errors.toString())
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        assertEquals(listOf(leafId, otherId, anchorId), alternative.entities)
+        assertEquals(ResolutionOutcome.INVALID, alternative.outcome)
+        assertTrue(alternative.errors.any { it.code == "SIGNATURE_INVALID" && it.statementIndex == 1 })
+        assertEquals(4, alternative.chain.size)
+        assertFalse(alternative.chain.any { it.verified })
+        assertNull(alternative.resolvedMetadata)
+    }
+
+    @Test
+    fun selectedValidCandidateIsExcludedEvenWhenItWasNotTriedFirst() = runTest {
+        val otherId = alternativeTopology(badFirstSignature = true)
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome)
+        assertEquals(otherId, diagnosis.chain[1].issuer)
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        assertEquals(listOf(leafId, intermediateId, anchorId), alternative.entities)
+        assertEquals(ResolutionOutcome.INVALID, alternative.outcome)
+        assertTrue(alternative.errors.any { it.code == "SIGNATURE_INVALID" })
+        assertFalse(alternative.chain.any { it.verified })
+        assertNull(alternative.resolvedMetadata)
+    }
+
+    @Test
+    fun policyInvalidAlternativeHasNoVerifiedLabelsEvenWhenItsSignaturesAreValid() = runTest {
+        alternativeTopology(policyConflict = true)
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome)
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        assertEquals(ResolutionOutcome.INVALID, alternative.outcome)
+        assertTrue(alternative.errors.any { it.code == "POLICY_CONFLICT" })
+        assertTrue(alternative.chain.all { it.signatureValid })
+        assertFalse(alternative.chain.any { it.verified })
+        assertNull(alternative.resolvedMetadata)
+        assertEquals(now + 3000, alternative.chainExpiresAt)
+    }
+
+    @Test
+    fun unavailableSubordinateOnAnAnchorPathIsAnIncompleteAlternative() = runTest {
+        val otherId = alternativeTopology()
+        responses[getSubordinateStatementEndpoint("$otherId/fetch", leafId)] = Response("error", HttpStatusCode.InternalServerError)
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome)
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        assertEquals(listOf(leafId, otherId, anchorId), alternative.entities)
+        assertEquals(ResolutionOutcome.INCOMPLETE, alternative.outcome)
+        assertTrue(alternative.errors.any { it.code == "FETCH_FAILED" && it.statementIndex == 1 })
+        assertEquals(4, alternative.chain.size)
+        assertFalse(alternative.chain.any { it.verified })
+        assertNull(alternative.chainExpiresAt)
+        assertNull(alternative.resolvedMetadata)
+    }
+
+    @Test
+    fun unavailableAnchorConfigurationKeepsTheKnownAnchorPathsIncomplete() = runTest {
+        val otherId = alternativeTopology()
+        responses[getEntityConfigurationEndpoint(anchorId)] = Response("error", HttpStatusCode.InternalServerError)
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.INCOMPLETE, diagnosis.outcome)
+        val alternative = assertNotNull(diagnosis.alternativePaths).single()
+        val selectedIntermediate = diagnosis.chain[1].issuer
+        assertEquals(listOf(leafId, if (selectedIntermediate == intermediateId) otherId else intermediateId, anchorId), alternative.entities)
+        assertEquals(ResolutionOutcome.INCOMPLETE, alternative.outcome)
+        assertTrue(alternative.errors.any { it.code == "FETCH_FAILED" && it.statementIndex == 2 })
+        assertFalse(alternative.chain.any { it.verified })
+        assertNull(alternative.chainExpiresAt)
+        assertNull(alternative.resolvedMetadata)
+    }
+
+    @Test
+    fun deadEndsAndLoopsTowardAnotherAnchorAreNotAlternatives() = runTest {
+        val otherId = alternativeTopology()
+        val other = key()
+        publishEc(otherId, statement(otherId, otherId, other, other, metadata = endpointMetadata(otherId)))
+        val args = DiagnoseResolutionArgs(leafId, anchorId, includeTrustMarks = false, includeAlternativePaths = true)
+        assertNull(diagnose(args = args).alternativePaths)
+        publishEc(otherId, statement(otherId, otherId, other, other,
+            metadata = endpointMetadata(otherId), hints = listOf(leafId)))
+        assertNull(diagnose(args = args).alternativePaths)
+    }
+
+    @Test
+    fun requestedAlternativeDiscoveryStopsAfterEightAnchorPathsInResolverOrder() = runTest {
+        val first = topology()
+        val others = (2..9).map { "https://intermediate-$it.example" }
+        val deadEndId = "https://dead-end.example"
+        val deadEnd = key()
+        publishEc(deadEndId, statement(deadEndId, deadEndId, deadEnd, deadEnd, metadata = endpointMetadata(deadEndId)))
+        publishSs(deadEndId, leafId, statement(deadEndId, leafId, deadEnd, first.leaf))
+        publishEc(leafId, statement(leafId, leafId, first.leaf, first.leaf, metadata = leafMetadata,
+            hints = listOf(deadEndId, intermediateId) + others))
+        for (id in others) {
+            val intermediate = key()
+            publishEc(id, statement(id, id, intermediate, intermediate,
+                metadata = endpointMetadata(id), hints = listOf(anchorId)))
+            publishSs(id, leafId, statement(id, leafId, intermediate, first.leaf,
+                policy = obj("""{"openid_provider":{"organization_name":{"value":"resolved"}}}""")))
+            publishSs(anchorId, id, statement(anchorId, id, first.anchor, intermediate))
+        }
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+            includeTrustMarks = false, includeAlternativePaths = true))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome)
+        assertEquals(others.take(7), assertNotNull(diagnosis.alternativePaths).map { it.entities[1] })
+        assertFalse(requests.any { it.contains("intermediate-9.example") }, "The ninth path must not be fetched")
+        requests.clear()
+        assertNull(diagnose().alternativePaths)
+        assertTrue(requests.any { it.contains("intermediate-9.example") }, "Unrequested alternatives preserve existing discovery behavior")
+    }
+
     @Test
     fun noHintsLoopAndDepthEachProduceInvalidDiagnostics() = runTest {
         val topology = topology()

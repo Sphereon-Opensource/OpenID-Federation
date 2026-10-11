@@ -25,6 +25,7 @@ data class DiagnoseResolutionArgs(
     val includeTrustMarks: Boolean = true,
     val checkTrustMarkStatus: Boolean = true,
     val maxDepth: Int = 5,
+    val includeAlternativePaths: Boolean = false,
 )
 
 @Serializable
@@ -38,6 +39,16 @@ enum class AnchorKeyComparison { NOT_PINNED, MATCH, MISMATCH, UNAVAILABLE }
 
 @Serializable
 data class ResolutionDiagnosticError(val code: String, val message: String, val statementIndex: Int? = null)
+
+@Serializable
+data class ResolutionPathDiagnosis(
+    val entities: List<String>,
+    val outcome: ResolutionOutcome,
+    val errors: List<ResolutionDiagnosticError>,
+    val chain: List<DiagnosedStatement>,
+    val chainExpiresAt: Long?,
+    val resolvedMetadata: JsonObject?,
+)
 
 @Serializable
 data class ResolutionDiagnosis(
@@ -57,6 +68,7 @@ data class ResolutionDiagnosis(
     val trustAnchorKeyComparison: AnchorKeyComparison,
     val trustAnchorKeyThumbprints: List<String>,
     val warnings: List<ResolutionDiagnosticError>,
+    val alternativePaths: List<ResolutionPathDiagnosis>? = null,
 )
 
 @Serializable

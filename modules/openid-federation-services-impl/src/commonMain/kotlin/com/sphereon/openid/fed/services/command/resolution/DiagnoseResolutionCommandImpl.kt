@@ -100,6 +100,27 @@ class DiagnoseResolutionCommandImpl(
                 } else emptyList(),
                 constraintChecks = selected.constraints, trustMarks = marks,
                 trustAnchorKeyComparison = comparison, trustAnchorKeyThumbprints = thumbprints, warnings = warnings,
+                alternativePaths = if (input.includeAlternativePaths) candidates
+                    .filter { it !== selected && it.path.entities.size >= 2 && it.path.entities.last() == input.trustAnchor }
+                    .take(7)
+                    .map { candidate ->
+                        val pathOutcome = when {
+                            candidate.valid -> ResolutionOutcome.VALID
+                            candidate.errors.any { it.code == "FETCH_FAILED" } -> ResolutionOutcome.INCOMPLETE
+                            else -> ResolutionOutcome.INVALID
+                        }
+                        ResolutionPathDiagnosis(
+                            entities = candidate.path.entities,
+                            outcome = pathOutcome,
+                            errors = candidate.errors,
+                            chain = candidate.chain.map { it.copy(verified = pathOutcome == ResolutionOutcome.VALID) },
+                            chainExpiresAt = if (candidate.path.reachedAnchor && candidate.chain.all { it.expiresAt != null })
+                                candidate.chain.mapNotNull { it.expiresAt }.minOrNull() else null,
+                            resolvedMetadata = candidate.policy?.metadata
+                                ?.let { MetadataPolicyOperators.filterEntityTypes(it, input.entityTypes) }
+                                .takeIf { pathOutcome == ResolutionOutcome.VALID },
+                        )
+                    }.takeIf { it.isNotEmpty() } else null,
             ))
         } catch (e: CancellationException) {
             throw e

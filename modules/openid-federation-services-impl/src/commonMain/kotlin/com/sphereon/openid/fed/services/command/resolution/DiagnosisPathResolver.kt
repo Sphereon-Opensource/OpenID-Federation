@@ -36,7 +36,11 @@ internal data class DiagnosisPath(
     val errors: List<ResolutionDiagnosticError> = emptyList(),
     val reachedAnchor: Boolean = false,
     val depth: Int = 0,
-)
+) {
+    // Use discovered identifiers even when a statement is unavailable or has mismatched claims.
+    val entities: List<String> get() = listOf(statements.first().subject) +
+        statements.filter { it.kind == StatementKind.SUBORDINATE_STATEMENT }.map { it.issuer }
+}
 
 /** Discovery state belongs to a single invocation, including failed HTTP fetches. */
 internal class DiagnosisPathResolver(
@@ -92,6 +96,10 @@ internal class DiagnosisPathResolver(
             return
         }
         for (authority in hints.distinct().sortedBy { if (it == args.trustAnchor) 0 else 1 }) {
+            // Bound the requested subject's paths; Trust Mark issuer discovery keeps its existing behavior.
+            // Dead ends and loops are diagnostics, not paths to the requested Trust Anchor.
+            if (args.includeAlternativePaths && prefix.first().subject == args.subject &&
+                paths.count { it.entities.lastOrNull() == args.trustAnchor } >= 8) return
             if (authority in visited) {
                 paths += DiagnosisPath(prefix, errors + ResolutionDiagnosticError(
                     "LOOP_DETECTED", "authority_hint $authority loops back into the current path", prefix.size,
