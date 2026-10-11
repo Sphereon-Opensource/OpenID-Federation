@@ -12,6 +12,8 @@ import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.AccountNotFoundError
 import com.sphereon.openid.fed.core.error.FederationErrorException
+import com.sphereon.openid.fed.core.error.InvalidRequestError
+import com.sphereon.openid.fed.core.error.SelectedSigningKeyConflictError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.persistence.Persistence
@@ -57,7 +59,11 @@ class RevokeKeyCommandImpl internal constructor(
         args: RevokeKeyArgs,
         applyDuring: (RevokeKeyArgs) -> RevokeKeyArgs
     ): IdkResult<TenantJwk, FederationError> {
-        val (tenantId, keyId, reason) = applyDuring(args)
+        val (tenantId, keyId, reason, description, allowSelected) = applyDuring(args)
+        val parsedReason = reason?.let { FederationKeyRevocationReason.parse(it) }
+        if (reason != null && parsedReason == null) {
+            return federationErr(InvalidRequestError("Invalid key revocation reason token"))
+        }
 
         logger.info("Attempting to revoke key ID: $keyId for account: $tenantId")
         return try {
@@ -70,8 +76,14 @@ class RevokeKeyCommandImpl internal constructor(
                     throw FederationErrorException(KeyNotFoundError(keyId))
                 }
 
-                val revoked = jwkQueries.revoke(reason, existingKey.id).executeAsOne()
+                if (existingKey.revoked_at != null) {
+                    throw FederationErrorException(InvalidRequestError("Key is already revoked"))
+                }
                 val selection = accountSigningKeyQueries.findByAccountId(account.id).executeAsOneOrNull()
+                if (selection?.jwk_id == existingKey.id && !allowSelected) {
+                    throw FederationErrorException(SelectedSigningKeyConflictError(account.id))
+                }
+                val revoked = jwkQueries.revoke(parsedReason?.value, description, existingKey.id).executeAsOne()
                 if (selection?.jwk_id == existingKey.id) {
                     // Emergency revocation remains possible at exhaustion; MAX is terminal for setters.
                     val nextRevision = if (selection.revision == Long.MAX_VALUE) {

@@ -83,7 +83,7 @@ class SetAccountSigningKeySelectionCommandImpl internal constructor(
                 }
 
                 val selectedKey = selectedKeyId?.let { id ->
-                    val key = jwkQueries.findById(id).executeAsOneOrNull()
+                    val key = jwkQueries.findActiveById(id).executeAsOneOrNull()
                     if (key == null || key.account_id != account.id || key.revoked_at != null) {
                         throw FederationErrorException(KeyNotFoundError(applied.selectedKeyId!!))
                     }

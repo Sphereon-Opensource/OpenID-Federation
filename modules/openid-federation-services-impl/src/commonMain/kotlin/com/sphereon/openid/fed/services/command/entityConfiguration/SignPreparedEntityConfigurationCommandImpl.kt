@@ -112,7 +112,7 @@ class SignPreparedEntityConfigurationCommandImpl internal constructor(
             }
             val selectedKeyId = QueryParamUtils.parseUuid(applied.selectedKeyId)?.toString()
                 ?: return invalid("Selected key ID must be a persisted UUID")
-            val selected = jwkQueries.findById(selectedKeyId).executeAsOneOrNull()
+            val selected = jwkQueries.findActiveById(selectedKeyId).executeAsOneOrNull()
                 ?: return invalid("Selected signing key does not exist")
             if (selected.account_id != account.id || selected.revoked_at != null) {
                 return invalid("Selected signing key is not active for this account")

@@ -321,6 +321,43 @@ class HttpResolverTest {
         assertEquals("app", cache.getApp("shared")?.value)
     }
 
+    @Test
+    fun typedJwtBypassSkipsCachedBodiesAndConditionalHeaders() = runTest {
+        val url = "https://entity.example/.well-known/openid-federation"
+        cache.putApp(url, HttpMetadata("cached.jwt.value", etag = "old-tag", jwtContentType = "application/entity-statement+jwt"))
+        val client = createMockClient(responseBody = "fresh.jwt.value",
+            responseHeaders = mapOf(HttpHeaders.ContentType to "application/entity-statement+jwt"))
+        try {
+            val resolver = createResolver(client)
+            assertEquals("cached.jwt.value", resolver.getJwt(url))
+            assertEquals(0, requestCount)
+            assertEquals("fresh.jwt.value", resolver.getJwt(url, bypassCache = true))
+            assertEquals(1, requestCount)
+            assertNull(lastRequestHeaders?.get(HttpHeaders.IfNoneMatch))
+            assertNull(lastRequestHeaders?.get(HttpHeaders.IfModifiedSince))
+            assertEquals("cached.jwt.value", resolver.getJwt(url), "A bypass does not overwrite another caller's cache")
+        } finally { client.close() }
+    }
+
+    @Test
+    fun typedJwtRejectsUntypedCacheNon200WrongMediaTypeAndOversizedBodies() = runTest {
+        val url = "https://entity.example/statement"
+        cache.putApp(url, HttpMetadata("legacy cached body"))
+        val cases = listOf(
+            Triple(HttpStatusCode.InternalServerError, "application/entity-statement+jwt", "error"),
+            Triple(HttpStatusCode.OK, "text/plain", "jwt"),
+            Triple(HttpStatusCode.OK, "application/entity-statement+jwt", "x".repeat(1_048_577)),
+            Triple(HttpStatusCode.NotModified, "application/entity-statement+jwt", ""),
+        )
+        for ((status, type, body) in cases) {
+            val client = createMockClient(body, status, mapOf(HttpHeaders.ContentType to type))
+            try {
+                assertFailsWith<FederationHttpFetchException> { createResolver(client).getJwt(url) }
+            } finally { client.close() }
+        }
+        assertEquals(cases.size, requestCount, "An untyped legacy cache entry cannot bypass media-type validation")
+    }
+
     private class TestHttpResolverConfig(
         override val httpTimeoutMs: Long = 30000,
         override val httpRetries: Int = 1,

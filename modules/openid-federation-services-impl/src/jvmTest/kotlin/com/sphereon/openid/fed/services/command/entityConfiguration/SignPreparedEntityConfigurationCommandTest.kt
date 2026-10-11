@@ -473,7 +473,7 @@ class SignPreparedEntityConfigurationCommandTest {
         val accountId = account()
         val selected = selectedSigningKey(accountId)
         val payload = statement(identifier, Json.parseToJsonElement(selected.key).jsonObject)
-        jwkQueries.revoke("retired", selected.id).executeAsOne()
+        jwkQueries.revoke(null, "retired", selected.id).executeAsOne()
         assertTrue(jwkQueries.findById(selected.id).executeAsOneOrNull()?.revoked_at != null)
 
         val result = command().execute(preparedArgs(accountId, selected.id, payload))
@@ -1150,7 +1150,7 @@ class SignPreparedEntityConfigurationCommandTest {
         val current = key(accountId)
         val revoked = key(accountId)
         accountSigningKeyQueries.upsert(accountId, current.id, 1L).executeAsOne()
-        jwkQueries.revoke("test-revocation", revoked.id).executeAsOne()
+        jwkQueries.revoke(null, "test-revocation", revoked.id).executeAsOne()
 
         val result = selectionCommand().execute(
             SetAccountSigningKeySelectionArgs(accountId, identifier, 1L, revoked.id),
@@ -1268,7 +1268,7 @@ class SignPreparedEntityConfigurationCommandTest {
         val selectedKey = key(accountId)
         val cancellation = CancellationException("cancel selected signing-key lookup")
         val cancellingQueries = spyk(jwkQueries)
-        every { cancellingQueries.findById(selectedKey.id) } throws cancellation
+        every { cancellingQueries.findActiveById(selectedKey.id) } throws cancellation
 
         val escaped = assertFailsWith<CancellationException> {
             SetAccountSigningKeySelectionCommandImpl(
@@ -1286,7 +1286,8 @@ class SignPreparedEntityConfigurationCommandTest {
         val selectedKey = key(accountId)
         accountSigningKeyQueries.upsert(accountId, selectedKey.id, 7L).executeAsOne()
 
-        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "rotation complete"))
+        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "superseded",
+            description = "rotation complete", allowSelected = true))
 
         assertTrue(revoked.isOk)
         val storedKey = requireNotNull(jwkQueries.findById(selectedKey.id).executeAsOneOrNull())
@@ -1302,7 +1303,7 @@ class SignPreparedEntityConfigurationCommandTest {
         val selectedKey = key(accountId)
         val cancellation = CancellationException("cancel selected-key revocation")
         val cancellingQueries = spyk(jwkQueries)
-        every { cancellingQueries.revoke(any(), selectedKey.id) } throws cancellation
+        every { cancellingQueries.revoke(any(), any(), selectedKey.id) } throws cancellation
 
         val escaped = assertFailsWith<CancellationException> {
             revokeCommand(cancellingQueries).execute(RevokeKeyArgs(accountId, selectedKey.id, "test"))
@@ -1320,7 +1321,8 @@ class SignPreparedEntityConfigurationCommandTest {
         val otherKey = key(accountId)
         val before = accountSigningKeyQueries.upsert(accountId, selectedKey.id, 7L).executeAsOne()
 
-        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, otherKey.id, "rotate other key"))
+        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, otherKey.id, "superseded",
+            description = "rotate other key"))
 
         assertTrue(revoked.isOk)
         assertNotNull(jwkQueries.findById(otherKey.id).executeAsOneOrNull()?.revoked_at)
@@ -1335,7 +1337,8 @@ class SignPreparedEntityConfigurationCommandTest {
         assertNull(neverSelectedKey.revoked_at)
         assertNull(selection(accountId))
 
-        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, neverSelectedKey.id, "retire unused key"))
+        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, neverSelectedKey.id, "superseded",
+            description = "retire unused key"))
 
         assertTrue(revoked.isOk)
         assertNotNull(jwkQueries.findById(neverSelectedKey.id).executeAsOneOrNull()?.revoked_at)
@@ -1360,7 +1363,8 @@ class SignPreparedEntityConfigurationCommandTest {
         val unrelatedKeys = jwkQueries.findByAccountId(unrelatedAccountId).executeAsList()
         assertEquals(listOf(unrelatedKey), unrelatedKeys)
 
-        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "terminal rotation"))
+        val revoked = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "superseded",
+            description = "terminal rotation", allowSelected = true))
 
         assertTrue(revoked.isOk)
         assertNotNull(jwkQueries.findById(selectedKey.id).executeAsOneOrNull()?.revoked_at)
@@ -1416,7 +1420,8 @@ class SignPreparedEntityConfigurationCommandTest {
                 val beforeBinding = accountSigningKeyQueries.upsert(accountId, selectedKey.id, revision).executeAsOne()
                 val beforeKey = requireNotNull(jwkQueries.findById(selectedKey.id).executeAsOneOrNull())
 
-                val rejected = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "injected rollback"))
+                val rejected = revokeCommand().execute(RevokeKeyArgs(accountId, selectedKey.id, "superseded",
+                    description = "injected rollback", allowSelected = true))
 
                 assertTrue(rejected.isErr, "the schema-local post-revoke failure must be controlled")
                 assertSqlStateInCauseChain(requireNotNull(rejected.error.exception), "P0001")
@@ -1488,7 +1493,7 @@ class SignPreparedEntityConfigurationCommandTest {
 
             revokeFuture = CompletableFuture.supplyAsync({
                 runBlocking { revokeCommand(revokerDriver, revokerExecution).execute(
-                    RevokeKeyArgs(accountId, selectedKey.id, "serialize revoke"),
+                    RevokeKeyArgs(accountId, selectedKey.id, "superseded", description = "serialize revoke", allowSelected = true),
                 ) }
             }, workers)
             var revokerPid: Int? = null
@@ -1775,19 +1780,42 @@ class SignPreparedEntityConfigurationCommandTest {
             val oldJwkQueries = JwkQueries(upgradeDriver, Jwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
             val oldAccount = oldAccountQueries.create("upgrade-" + UUID.randomUUID(), identifier).executeAsOne()
             val generated = keyManager.generateKeyAsync(alg = SignatureAlgorithm.ECDSA_SHA256)
-            val oldJwk = oldJwkQueries.create(
-                account_id = oldAccount.id,
-                alg = "ES256",
-                kid = requireNotNull(generated.kid),
-                kms = generated.providerId,
-                kms_key_ref = requireNotNull(generated.alias),
-                key = generated.jose.publicJwk.toJsonString(),
-            ).executeAsOne()
+            // Current generated Jwk mappers need the columns added by migration 23.
+            val oldKeyId = UUID.randomUUID().toString()
+            val oldKeyJson = upgradeSource.connection.use { connection ->
+                connection.prepareStatement("""
+                    INSERT INTO Jwk (id, account_id, alg, kid, kms, kms_key_ref, key)
+                    VALUES (?::uuid, ?::uuid, 'ES256', ?, ?, ?, ?)
+                """.trimIndent()).use { statement ->
+                    statement.setString(1, oldKeyId)
+                    statement.setString(2, oldAccount.id)
+                    statement.setString(3, requireNotNull(generated.kid))
+                    statement.setString(4, generated.providerId)
+                    statement.setString(5, requireNotNull(generated.alias))
+                    statement.setString(6, generated.jose.publicJwk.toJsonString())
+                    statement.executeUpdate()
+                }
+                connection.prepareStatement("SELECT to_jsonb(Jwk)::text FROM Jwk WHERE id = ?::uuid").use { statement ->
+                    statement.setString(1, oldKeyId)
+                    statement.executeQuery().use { rows -> assertTrue(rows.next()); rows.getString(1) }
+                }
+            }
 
             Database.Schema.migrate(upgradeDriver, baseline, Database.Schema.version)
 
             assertEquals(oldAccount, oldAccountQueries.findById(oldAccount.id).executeAsOneOrNull())
-            assertEquals(oldJwk, oldJwkQueries.findById(oldJwk.id).executeAsOneOrNull())
+            val upgradedKey = oldJwkQueries.findById(oldKeyId).executeAsOne()
+            assertNull(upgradedKey.expires_at)
+            assertNull(upgradedKey.revocation_reason)
+            val upgradedKeyJson = upgradeSource.connection.use { connection ->
+                connection.prepareStatement("""
+                    SELECT (to_jsonb(Jwk) - 'expires_at' - 'revocation_reason')::text FROM Jwk WHERE id = ?::uuid
+                """.trimIndent()).use { statement ->
+                    statement.setString(1, oldKeyId)
+                    statement.executeQuery().use { rows -> assertTrue(rows.next()); rows.getString(1) }
+                }
+            }
+            assertEquals(Json.parseToJsonElement(oldKeyJson), Json.parseToJsonElement(upgradedKeyJson))
             val upgradedSelections = AccountSigningKeyQueries(
                 upgradeDriver,
                 AccountSigningKey.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),

@@ -5,6 +5,51 @@ import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
 import com.sphereon.core.api.http.describe.MediaType
 
+interface UpdateKeyRevocationEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.update-key-revocation"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/keys/{keyId}/revocation",
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "updateKeyRevocation",
+            tags = setOf("keys"),
+            summary = "Update a historical key revocation",
+        )
+    }
+}
+
+interface RetireKeyEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.retire-key"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.POST,
+            pathPattern = "/keys/{keyId}/retire",
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "retireKey",
+            tags = setOf("keys"),
+            summary = "Retire an active key",
+        )
+    }
+}
+
+interface ListHistoricalKeysEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.list-historical-keys"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/keys/historical",
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "listHistoricalKeys",
+            tags = setOf("keys"),
+            summary = "List public historical keys",
+        )
+    }
+}
+
 // ==================== List Keys Endpoint ====================
 
 interface ListKeysEndpointCommand : HttpEndpointCommand {

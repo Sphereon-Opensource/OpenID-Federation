@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.floor
 import kotlin.math.nextDown
@@ -138,127 +137,154 @@ object EntityStatementValidation {
         position: Int,
         understoodCriticalClaims: Set<String> = emptySet(),
     ): StructuralResult {
+        val failure = structureDiagnostics(statement, currentTimeSeconds, position, understoodCriticalClaims,
+            tolerateMalformedPrimitives = false).firstOrNull()
+        return if (failure == null) StructuralResult(true) else StructuralResult(false, failure.message)
+    }
+
+    /** Lazy traversal preserves the first-error behavior of [validateStructure]. */
+    internal fun structureDiagnostics(
+        statement: Jwt,
+        currentTimeSeconds: Long,
+        position: Int,
+        understoodCriticalClaims: Set<String>,
+        tolerateMalformedPrimitives: Boolean = true,
+    ): Sequence<StatementValidationDiagnostic> = sequence {
+        fun primitiveContent(value: JsonElement?): String? = if (tolerateMalformedPrimitives) {
+            (value as? JsonPrimitive)?.contentOrNull
+        } else {
+            value?.jsonPrimitive?.contentOrNull
+        }
+
         val typ = statement.header.typ
         if (typ != ENTITY_STATEMENT_TYP) {
-            return StructuralResult(
-                false,
+            yield(StatementValidationDiagnostic(
+                "TYP_INVALID",
                 "Statement at position $position typ must be '$ENTITY_STATEMENT_TYP', got '${typ ?: "(missing)"}'"
-            )
+            ))
         }
 
         if (statement.header.trustChain != null) {
-            return StructuralResult(false, "Statement at position $position must not contain trust_chain header")
+            yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position must not contain trust_chain header"))
         }
         if (statement.header.peerTrustChain != null) {
-            return StructuralResult(false, "Statement at position $position must not contain peer_trust_chain header")
+            yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position must not contain peer_trust_chain header"))
         }
 
         val alg = statement.header.alg
         if (alg.isBlank() || alg.equals("none", ignoreCase = true)) {
-            return StructuralResult(
-                false,
+            yield(StatementValidationDiagnostic(
+                "SIGNATURE_INVALID",
                 "Statement at position $position alg must be a signing algorithm and MUST NOT be 'none'"
-            )
+            ))
         }
 
         if (statement.header.kid.isBlank()) {
-            return StructuralResult(false, "Statement at position $position missing kid header")
+            yield(StatementValidationDiagnostic("KID_NOT_FOUND", "Statement at position $position missing kid header"))
         }
 
         val payload = statement.payload
         for (claim in listOf("iss", "sub", "iat", "exp", "jwks")) {
             if (payload[claim] == null) {
-                return StructuralResult(false, "Statement at position $position missing required claim '$claim'")
+                val code = when (claim) {
+                    "iss", "sub" -> "ISSUER_SUBJECT_MISMATCH"
+                    "exp" -> "STATEMENT_EXPIRED"
+                    else -> "SIGNATURE_INVALID"
+                }
+                yield(StatementValidationDiagnostic(code, "Statement at position $position missing required claim '$claim'"))
             }
         }
 
-        val iss = payload["iss"]?.jsonPrimitive?.contentOrNull
-        val sub = payload["sub"]?.jsonPrimitive?.contentOrNull
-        if (iss.isNullOrBlank() || sub.isNullOrBlank()) {
-            return StructuralResult(false, "Statement at position $position has empty iss or sub")
+        val iss = primitiveContent(payload["iss"])
+        val sub = primitiveContent(payload["sub"])
+        if ((payload["iss"] != null && iss.isNullOrBlank()) || (payload["sub"] != null && sub.isNullOrBlank())) {
+            yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position has empty iss or sub"))
         }
 
-        val isEc = iss == sub
+        val isEc = !iss.isNullOrBlank() && !sub.isNullOrBlank() && iss == sub
         if (isEc) {
             for (claim in SUBORDINATE_ONLY_CLAIMS) {
                 if (payload.containsKey(claim)) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "ISSUER_SUBJECT_MISMATCH",
                         "Entity Configuration at position $position must not contain '$claim'"
-                    )
+                    ))
                 }
             }
             // authority_hints must not be empty array when present
             val hints = payload["authority_hints"]
             if (hints is JsonArray && hints.isEmpty()) {
-                return StructuralResult(
-                    false,
+                yield(StatementValidationDiagnostic(
+                    "ISSUER_SUBJECT_MISMATCH",
                     "Entity Configuration at position $position authority_hints must not be empty array"
-                )
+                ))
             }
             // trust_anchor_hints: EC-only; when present MUST be non-empty array of Entity Identifiers
             // (OIDFed 1.1 §3.1.2 / validation step 15)
             val taHints = payload["trust_anchor_hints"]
             if (taHints != null) {
                 if (taHints !is JsonArray || taHints.isEmpty()) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "ISSUER_SUBJECT_MISMATCH",
                         "Entity Configuration at position $position trust_anchor_hints must be a non-empty array when present"
-                    )
+                    ))
                 }
-                for (el in taHints) {
-                    val id = el.jsonPrimitive.contentOrNull
+                for (el in (taHints as? JsonArray).orEmpty()) {
+                    val id = primitiveContent(el)
                     if (id.isNullOrBlank()) {
-                        return StructuralResult(
-                            false,
+                        yield(StatementValidationDiagnostic(
+                            "ISSUER_SUBJECT_MISMATCH",
                             "Entity Configuration at position $position trust_anchor_hints entries must be non-empty strings"
-                        )
+                        ))
                     }
                 }
             }
-        } else {
+        } else if (!iss.isNullOrBlank() && !sub.isNullOrBlank()) {
             for (claim in ENTITY_CONFIGURATION_ONLY_CLAIMS) {
                 if (payload.containsKey(claim)) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "ISSUER_SUBJECT_MISMATCH",
                         "Subordinate Statement at position $position must not contain '$claim'"
-                    )
+                    ))
                 }
             }
         }
 
         // crit: each name must be a non-standard claim that is understood and processable
-        // (OIDFed 1.1 §3.2 step 13 / §13.4) — fail closed for unknown extensions
+        // OIDFed 1.1 sections 3.2 and 13.4 require unknown critical extensions to fail closed.
         val crit = payload["crit"]
         if (crit != null) {
             if (crit !is JsonArray || crit.isEmpty()) {
-                return StructuralResult(
-                    false,
+                yield(StatementValidationDiagnostic(
+                    "SIGNATURE_INVALID",
                     "Statement at position $position crit must be a non-empty array when present"
-                )
+                ))
             }
-            for (el in crit) {
-                val name = el.jsonPrimitive.contentOrNull
-                    ?: return StructuralResult(false, "Statement at position $position crit entry must be a string")
+            for (el in (crit as? JsonArray).orEmpty()) {
+                val name = primitiveContent(el)
+                if (name == null) {
+                    yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position crit entry must be a string"))
+                    continue
+                }
                 if (name in STANDARD_CLAIMS) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "SIGNATURE_INVALID",
                         "Statement at position $position crit must not list standard claim '$name'"
-                    )
+                    ))
                 }
                 if (name !in understoodCriticalClaims) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "SIGNATURE_INVALID",
                         "Statement at position $position has unsupported critical claim '$name' " +
                             "(understood: ${understoodCriticalClaims.ifEmpty { setOf("(none)") }})"
-                    )
+                    ))
                 }
                 // Claim must actually be present when listed as critical
                 if (!payload.containsKey(name)) {
-                    return StructuralResult(
-                        false,
+                    yield(StatementValidationDiagnostic(
+                        "SIGNATURE_INVALID",
                         "Statement at position $position critical claim '$name' is listed in crit but missing from payload"
-                    )
+                    ))
                 }
             }
         }
@@ -266,15 +292,13 @@ object EntityStatementValidation {
         val iat = numericDate(payload["iat"])
         val now = currentTimeSeconds.toDouble()
         val skew = CLOCK_SKEW_SECONDS.toDouble()
-        if (iat == null || iat > now + skew) {
-            return StructuralResult(false, "Statement at position $position has invalid or future iat")
+        if (payload["iat"] != null && (iat == null || iat > now + skew)) {
+            yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position has invalid or future iat"))
         }
         val exp = numericDate(payload["exp"])
-        if (exp == null || exp <= now - skew) {
-            return StructuralResult(false, "Statement at position $position has expired exp")
+        if (payload["exp"] != null && (exp == null || exp <= now - skew)) {
+            yield(StatementValidationDiagnostic("STATEMENT_EXPIRED", "Statement at position $position has expired exp"))
         }
-
-        return StructuralResult(true)
     }
 
     private fun numericDate(value: JsonElement?): Double? {

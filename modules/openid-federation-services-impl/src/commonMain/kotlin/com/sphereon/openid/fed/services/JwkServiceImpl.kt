@@ -15,6 +15,16 @@ import com.sphereon.openid.fed.services.command.jwk.GetKeysArgs
 import com.sphereon.openid.fed.services.command.jwk.GetKeysCommand
 import com.sphereon.openid.fed.services.command.jwk.RevokeKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.RevokeKeyCommand
+import com.sphereon.openid.fed.services.command.jwk.UpdateKeyRevocationArgs
+import com.sphereon.openid.fed.services.command.jwk.UpdateKeyRevocationCommand
+import com.sphereon.openid.fed.services.command.jwk.RetireKeyArgs
+import com.sphereon.openid.fed.services.command.jwk.RetireKeyCommand
+import com.sphereon.openid.fed.services.command.jwk.ListHistoricalKeysArgs
+import com.sphereon.openid.fed.services.command.jwk.ListHistoricalKeysCommand
+import com.sphereon.openid.fed.services.command.jwk.SignAccountRequestJwtArgs
+import com.sphereon.openid.fed.services.command.jwk.SignAccountRequestJwtCommand
+import com.sphereon.openid.fed.openapi.models.HistoricalKey
+import kotlinx.serialization.json.JsonObject
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -39,6 +49,10 @@ class JwkServiceImpl(
     private val getKeysCommand: GetKeysCommand,
     private val getAssertedKeysCommand: GetAssertedKeysCommand,
     private val revokeKeyCommand: RevokeKeyCommand,
+    private val updateKeyRevocationCommand: UpdateKeyRevocationCommand,
+    private val retireKeyCommand: RetireKeyCommand,
+    private val listHistoricalKeysCommand: ListHistoricalKeysCommand,
+    private val signAccountRequestJwtCommand: SignAccountRequestJwtCommand,
     private val getFederationHistoricalKeysJwtCommand: GetFederationHistoricalKeysJwtCommand
 ) : JwkService {
 
@@ -56,8 +70,26 @@ class JwkServiceImpl(
     ): FederationResult<Array<TenantJwk>> =
         getAssertedKeysCommand.execute(GetAssertedKeysArgs(tenantId, includeRevoked, kmsKeyRef, kid)).toFederationResult()
 
-    override suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<TenantJwk> =
-        revokeKeyCommand.execute(RevokeKeyArgs(tenantId, keyId, reason)).toFederationResult()
+    override suspend fun revokeKey(
+        tenantId: String, keyId: String, reason: String?, description: String?, allowSelected: Boolean,
+    ): FederationResult<TenantJwk> =
+        revokeKeyCommand.execute(RevokeKeyArgs(tenantId, keyId, reason, description, allowSelected)).toFederationResult()
+
+    override suspend fun updateKeyRevocation(
+        tenantId: String, keyId: String, reason: String, revokedAt: Long?,
+    ): FederationResult<TenantJwk> =
+        updateKeyRevocationCommand.execute(UpdateKeyRevocationArgs(tenantId, keyId, reason, revokedAt)).toFederationResult()
+
+    override suspend fun retireKey(tenantId: String, keyId: String): FederationResult<TenantJwk> =
+        retireKeyCommand.execute(RetireKeyArgs(tenantId, keyId)).toFederationResult()
+
+    override suspend fun listHistoricalKeys(tenantId: String): FederationResult<List<HistoricalKey>> =
+        listHistoricalKeysCommand.execute(ListHistoricalKeysArgs(tenantId)).toFederationResult()
+
+    override suspend fun signAccountRequestJwt(
+        tenantId: String, typ: String, claims: JsonObject, kid: String?,
+    ): FederationResult<String> =
+        signAccountRequestJwtCommand.execute(SignAccountRequestJwtArgs(tenantId, typ, claims, kid)).toFederationResult()
 
     override suspend fun getFederationHistoricalKeysJwt(tenantId: String): FederationResult<String> =
         getFederationHistoricalKeysJwtCommand.execute(GetFederationHistoricalKeysJwtArgs(tenantId)).toFederationResult()

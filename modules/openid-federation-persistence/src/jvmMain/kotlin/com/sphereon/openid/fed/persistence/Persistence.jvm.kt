@@ -100,6 +100,7 @@ actual object Persistence {
         20L to ("20.sqm" to "Create ForeignSubordinateStatement table for received Immediate Superior JWTs"),
         21L to ("21.sqm" to "Create account-selected signing key binding with revision tracking"),
         22L to ("22.sqm" to "Create TrustMarkOwner table and the issuer's Trust Mark delegation per type"),
+        23L to ("23.sqm" to "Separate historical key expiry, revocation reason tokens and operator descriptions"),
     )
 
     private val driver: SqlDriver

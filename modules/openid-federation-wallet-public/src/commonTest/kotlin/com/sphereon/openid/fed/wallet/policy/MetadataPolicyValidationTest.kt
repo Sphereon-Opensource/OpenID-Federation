@@ -154,7 +154,11 @@ class MetadataPolicyValidationTest {
             )
             listOf(leaf, immediateSuperior, anchor)
         }
-        return MetadataPolicyOperators.resolveFromTrustChainPayloads(chain)
+        val legacy = MetadataPolicyOperators.resolveFromTrustChainPayloads(chain)
+        val traced = MetadataPolicyOperators.resolveWithTrace(chain, null)
+        assertEquals(legacy.metadata, traced.metadata, "Trace must preserve existing policy vector metadata")
+        assertEquals(legacy.isValid, traced.isValid)
+        return legacy
     }
 
     private fun assertMergeRejected(superior: JsonObject, subordinate: JsonObject, context: String = "") {

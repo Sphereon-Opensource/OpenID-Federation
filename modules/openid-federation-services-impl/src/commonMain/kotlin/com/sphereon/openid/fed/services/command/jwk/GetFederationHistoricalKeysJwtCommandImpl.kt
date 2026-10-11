@@ -1,14 +1,11 @@
 package com.sphereon.openid.fed.services.command.jwk
 
-import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
-import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
-import com.sphereon.core.api.error.IdkError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.jose.jws.JwtService
@@ -16,31 +13,25 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.error.federationErr
-import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.openapi.models.FederationHistoricalKeysResponse
-import com.sphereon.openid.fed.openapi.models.HistoricalKey
 import com.sphereon.openid.fed.openapi.models.JwtHeader
-import com.sphereon.openid.fed.persistence.Persistence
-import com.sphereon.openid.fed.services.mappers.toHistoricalKey
 import com.sphereon.openid.fed.services.signPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
 
-/**
- * Implementation of the GetFederationHistoricalKeysJwtCommand.
- * Generates a JWT representing the historical federation keys.
- */
+/** Signs the account's revoked and expired public keys as a historical keys JWT. */
 @Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetFederationHistoricalKeysJwtCommand>())
 class GetFederationHistoricalKeysJwtCommandImpl(
     execution: SessionExecution,
-    private val getKeysCommand: GetKeysCommand,
+    private val listHistoricalKeys: ListHistoricalKeysCommand,
     private val tenantContextResolver: TenantContextResolver,
     private val jwtService: JwtService,
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
@@ -56,7 +47,6 @@ class GetFederationHistoricalKeysJwtCommandImpl(
     }
 
     private val logger = execution.federationLogger("GetFederationHistoricalKeysJwtCommand")
-    private val jwkQueries = Persistence.jwkQueries
 
     override suspend fun doExecute(
         args: GetFederationHistoricalKeysJwtArgs,
@@ -68,12 +58,13 @@ class GetFederationHistoricalKeysJwtCommandImpl(
             val iss = tenantContextResolver.resolveIdentifier(tenantId)
                 ?: return@withContext federationErr(TenantNotFoundError(tenantId))
 
-            val historicalKeys = getFederationHistoricalKeys(tenantId)
+            val historicalKeys = listHistoricalKeys.execute(ListHistoricalKeysArgs(tenantId))
+            if (historicalKeys.isErr) return@withContext historicalKeys.error.asErrorResult()
 
             val federationKeysResponse = FederationHistoricalKeysResponse(
                 iss = iss,
                 iat = (System.currentTimeMillis() / 1000).toDouble(),
-                propertyKeys = historicalKeys
+                propertyKeys = historicalKeys.value
             )
 
             val resolved = resolveSigningKey.execute(ResolveAccountSigningKeyArgs(tenantId, iss))
@@ -93,17 +84,12 @@ class GetFederationHistoricalKeysJwtCommandImpl(
             logger.trace("Successfully built federation historical keys JWT for tenant: $tenantId")
             logger.debug("JWT: $jwt")
             IdkResult.ok(jwt)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.error("Failed to generate federation historical keys JWT", e)
             federationErr(ServerError("Failed to generate federation historical keys JWT", e.message, e))
         }
     }
 
-    private fun getFederationHistoricalKeys(tenantId: String): List<HistoricalKey> {
-        logger.debug("Retrieving federation historical keys for account: $tenantId")
-        // §8.7: previously used keys only, which here are the revoked ones; keys in use are in the Entity Configuration.
-        val records = jwkQueries.findAllByAccountId(tenantId).executeAsList().filter { it.revoked_at != null }
-        logger.debug("Found ${records.size} historical keys for account ID: $tenantId")
-        return records.map { it.toHistoricalKey() }
-    }
 }

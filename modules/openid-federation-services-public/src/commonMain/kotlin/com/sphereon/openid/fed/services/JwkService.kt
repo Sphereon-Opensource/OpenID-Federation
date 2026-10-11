@@ -3,6 +3,8 @@ package com.sphereon.openid.fed.services
 import com.sphereon.openid.fed.core.error.FederationResult
 
 import com.sphereon.openid.fed.openapi.models.TenantJwk
+import com.sphereon.openid.fed.openapi.models.HistoricalKey
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Service interface responsible for operations related to JSON Web Keys (JWK).
@@ -51,15 +53,30 @@ interface JwkService {
         kid: String?
     ): FederationResult<Array<TenantJwk>>
 
-    /**
-     * Revokes a specific key associated with the provided account.
-     *
-     * @param account The account associated with the key to be revoked.
-     * @param keyId The unique identifier of the key to be revoked.
-     * @param reason An optional reason for revoking the key.
-     * @return FederationResult containing the revoked TenantJwk or an error.
-     */
-    suspend fun revokeKey(tenantId: String, keyId: String, reason: String?): FederationResult<TenantJwk>
+    /** Revokes a key with an optional wire reason token and a private operator description. */
+    suspend fun revokeKey(
+        tenantId: String,
+        keyId: String,
+        reason: String?,
+        description: String? = null,
+        allowSelected: Boolean = false,
+    ): FederationResult<TenantJwk>
+
+    /** Updates the reason and earliest revocation time of a historical key. */
+    suspend fun updateKeyRevocation(
+        tenantId: String, keyId: String, reason: String, revokedAt: Long? = null,
+    ): FederationResult<TenantJwk>
+
+    /** Retires an active key after switching the signing selection. */
+    suspend fun retireKey(tenantId: String, keyId: String): FederationResult<TenantJwk>
+
+    /** Lists public historical keys without signing a response. */
+    suspend fun listHistoricalKeys(tenantId: String): FederationResult<List<HistoricalKey>>
+
+    /** Signs request claims verbatim with an active Federation Entity Key. */
+    suspend fun signAccountRequestJwt(
+        tenantId: String, typ: String, claims: JsonObject, kid: String? = null,
+    ): FederationResult<String>
 
     /**
      * Generates and returns a JWT representing the historical federation keys.

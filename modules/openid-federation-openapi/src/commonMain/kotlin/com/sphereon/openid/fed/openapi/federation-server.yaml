@@ -554,7 +554,7 @@ paths:
       tags:
         - federation
       summary: Get Historical Keys
-      description: Retrieve previously used keys for non-repudiation of statements.
+      description: Retrieve revoked or expired public keys in a signed JWT with typ jwk-set+jwt and required iss, iat and keys claims. Key exp is when validity ended; optional revoked records the earliest revocation time and an optional reason token.
       responses:
         '200':
           description: Successful retrieval of historical keys

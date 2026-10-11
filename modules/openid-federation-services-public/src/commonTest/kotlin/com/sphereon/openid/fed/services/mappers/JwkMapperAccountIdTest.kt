@@ -17,6 +17,8 @@ class JwkMapperAccountIdTest {
             key = """{"kty":"EC","crv":"P-256","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0","kid":"mapper-account-id-key","use":"sig","alg":"ES256"}""",
             created_at = null,
             revoked_at = null,
+            expires_at = null,
+            revocation_reason = null,
             revoked_reason = null,
         )
 
