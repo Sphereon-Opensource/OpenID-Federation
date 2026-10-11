@@ -177,7 +177,7 @@ afterEvaluate {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Client Implementation")
                 description.set("Client implementations for OpenID Federation")

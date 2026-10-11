@@ -85,7 +85,8 @@ internal class DiagnosisEvaluator(
             val index = entry?.contributions?.lastOrNull { it.source == com.sphereon.openid.fed.wallet.policy.PolicyContributionSource.METADATA_POLICY }?.statementIndex
             ResolutionDiagnosticError(error.code.name, error.message, index)
         }
-        return EvaluatedDiagnosisPath(path, chain.map { it.copy(verified = chainValid) }, errors.distinct(), constraints, policy, chainValid)
+        val pathValid = chainValid && policy?.isValid == true
+        return EvaluatedDiagnosisPath(path, chain.map { it.copy(verified = pathValid) }, errors.distinct(), constraints, policy, chainValid)
     }
 
     private fun constraintChecks(path: DiagnosisPath): List<ConstraintCheck> = buildList {

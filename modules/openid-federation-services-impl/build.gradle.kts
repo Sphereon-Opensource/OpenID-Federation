@@ -86,7 +86,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Services Implementation")
                 description.set("Service implementations for OpenID Federation")

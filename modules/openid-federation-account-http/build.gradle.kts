@@ -41,7 +41,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Account HTTP")
                 description.set("LEGACY /accounts REST endpoint commands for OpenID Federation admin")

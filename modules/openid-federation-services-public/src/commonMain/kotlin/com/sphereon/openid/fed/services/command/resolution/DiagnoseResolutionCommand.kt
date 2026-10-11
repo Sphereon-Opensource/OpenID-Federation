@@ -24,6 +24,7 @@ data class DiagnoseResolutionArgs(
     val includePolicyTrace: Boolean = true,
     val includeTrustMarks: Boolean = true,
     val checkTrustMarkStatus: Boolean = true,
+    /** Requested traversal depth; discovery reports INCOMPLETE if the internal safety cap is reached. */
     val maxDepth: Int = 5,
     val includeAlternativePaths: Boolean = false,
 )

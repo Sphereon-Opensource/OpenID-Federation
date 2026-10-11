@@ -284,6 +284,16 @@ class DiagnoseResolutionCommandTest {
     }
 
     @Test
+    fun primaryPolicyInvalidPathDoesNotLabelItsStatementsVerified() = runTest {
+        topology(conflict = true)
+        val diagnosis = diagnose()
+        assertEquals(ResolutionOutcome.INVALID, diagnosis.outcome)
+        assertTrue(diagnosis.errors.any { it.code == "POLICY_CONFLICT" })
+        assertTrue(diagnosis.chain.all { it.signatureValid })
+        assertFalse(diagnosis.chain.any { it.verified })
+    }
+
+    @Test
     fun thumbprintsComparePublishedKeysAsSetsWithoutReplacingThem() = runTest {
         val topology = topology()
         val published = thumbprint(topology.anchor.publicJson)
@@ -320,6 +330,30 @@ class DiagnoseResolutionCommandTest {
         assertEquals(TrustMarkStatus.ACTIVE, diagnosis.trustMarks.single { it.issuer == issuerId }.status)
         assertTrue(diagnosis.trustMarks.all { it.statusSource == TrustMarkStatusSource.SIGNATURE_ONLY })
         assertFalse(requests.any { it.endsWith("/status") })
+    }
+
+    @Test
+    fun invalidAndUnacceptedTrustMarksDoNotCallTheirStatusEndpoints() = runTest {
+        val topology = topology(marks = true)
+        val leaf = com.sphereon.openid.fed.client.mapper.decodeJWTComponents(topology.chain.first()).payload
+        val marks = (leaf["trust_marks"] as JsonArray).toMutableList()
+        val accepted = marks[0].jsonObject
+        val parts = accepted.getValue("trust_mark").jsonPrimitive.content.split('.')
+        val signature = parts[2]
+        marks[0] = JsonObject(accepted + ("trust_mark" to JsonPrimitive(
+            "${parts[0]}.${parts[1]}.${if (signature[0] == 'A') 'B' else 'A'}${signature.drop(1)}",
+        )))
+        publishEc(leafId, statement(leafId, leafId, topology.leaf, topology.leaf, metadata = leafMetadata,
+            hints = listOf(intermediateId), extra = buildJsonObject { put("trust_marks", JsonArray(marks)) }))
+
+        requests.clear()
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome)
+        val invalid = diagnosis.trustMarks.single { it.issuer == issuerId }
+        assertFalse(invalid.signatureValid)
+        assertEquals(TrustMarkStatusSource.SIGNATURE_ONLY, invalid.statusSource)
+        assertFalse(diagnosis.trustMarks.single { it.issuer == unlistedId }.acceptedByTrustAnchor)
+        assertFalse(requests.any { it.endsWith("/status") }, "Invalid or unaccepted marks must not disclose JWTs to status endpoints")
     }
 
     @Test
@@ -533,6 +567,24 @@ class DiagnoseResolutionCommandTest {
         requests.clear()
         assertNull(diagnose().alternativePaths)
         assertTrue(requests.any { it.contains("intermediate-9.example") }, "Unrequested alternatives preserve existing discovery behavior")
+    }
+
+    @Test
+    fun deadEndAuthorityFanoutIsBoundedWhetherAlternativesAreRequestedOrNot() = runTest {
+        val topology = topology()
+        val deadEnds = (1..150).map { "https://dead-end-$it.example" }
+        publishEc(leafId, statement(leafId, leafId, topology.leaf, topology.leaf,
+            metadata = leafMetadata, hints = deadEnds))
+
+        for (includeAlternatives in listOf(false, true)) {
+            requests.clear()
+            val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId,
+                includeTrustMarks = false, includeAlternativePaths = includeAlternatives))
+            assertEquals(ResolutionOutcome.INCOMPLETE, diagnosis.outcome)
+            assertTrue(diagnosis.errors.any { it.code == "DISCOVERY_BUDGET_EXCEEDED" })
+            assertTrue(requests.size <= DiagnosisPathResolver.MAX_FETCH_OPERATIONS,
+                "Expected at most ${DiagnosisPathResolver.MAX_FETCH_OPERATIONS} fetch operations, got ${requests.size}")
+        }
     }
 
     @Test

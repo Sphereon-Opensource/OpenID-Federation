@@ -63,7 +63,7 @@ class DiagnoseResolutionCommandImpl(
             if (anchor.failure != null && errors.none { it.code == anchor.failure.code }) errors += anchor.failure.copy(
                 statementIndex = selected.chain.size,
             )
-            val outcome = when {
+            val validationOutcome = when {
                 comparison == AnchorKeyComparison.MISMATCH -> ResolutionOutcome.INVALID
                 selected.valid -> ResolutionOutcome.VALID
                 // An unavailable resource takes precedence over validation errors on a partial path.
@@ -71,7 +71,7 @@ class DiagnoseResolutionCommandImpl(
                 else -> ResolutionOutcome.INVALID
             }
             // Keep a fetch diagnostic in the chosen record when another failed branch was unavailable.
-            if (outcome == ResolutionOutcome.INCOMPLETE && errors.none { it.code == "FETCH_FAILED" }) {
+            if (validationOutcome == ResolutionOutcome.INCOMPLETE && errors.none { it.code == "FETCH_FAILED" }) {
                 errors += candidates.flatMap { it.errors }.first { it.code == "FETCH_FAILED" }
             }
             val warnings = selected.policy?.warnings.orEmpty().map { ResolutionDiagnosticError("POLICY_WARNING", it) }.toMutableList()
@@ -81,6 +81,8 @@ class DiagnoseResolutionCommandImpl(
             )
             val marks = if (input.includeTrustMarks) DiagnosisTrustMarks(context, input, resolver, evaluator, verifyDelegation, now)
                 .diagnose(selected.path.statements.first().claims, anchor) else emptyList()
+            errors += resolver.budgetErrors
+            val outcome = if (resolver.budgetErrors.isNotEmpty()) ResolutionOutcome.INCOMPLETE else validationOutcome
             val chainExpiry = if (selected.path.reachedAnchor && selected.chain.all { it.expiresAt != null })
                 selected.chain.mapNotNull { it.expiresAt }.minOrNull() else null
             val includedMarkExpiries = marks.filter {
