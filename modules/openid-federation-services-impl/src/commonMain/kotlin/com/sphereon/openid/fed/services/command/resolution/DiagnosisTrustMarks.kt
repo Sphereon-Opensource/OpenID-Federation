@@ -84,14 +84,16 @@ internal class DiagnosisTrustMarks(
             else -> TrustMarkStatus.ACTIVE
         }
         var source = TrustMarkStatusSource.SIGNATURE_ONLY
-        if (args.checkTrustMarkStatus) {
+        if (args.checkTrustMarkStatus && locallyValid && accepted && status != TrustMarkStatus.EXPIRED) {
             val endpoint = ((configuration?.claims?.get("metadata") as? JsonObject)?.get("federation_entity") as? JsonObject)
                 ?.string("federation_trust_mark_status_endpoint")
             if (!endpoint.isNullOrBlank()) {
-                source = TrustMarkStatusSource.STATUS_ENDPOINT
-                val remoteStatus = status(endpoint, jwt, issuer, configuration)
-                // Remote status cannot repair a locally invalid signature, chain or delegation.
-                status = if (locallyValid && status != TrustMarkStatus.EXPIRED) remoteStatus else status
+                if (resolver.reserveNetworkFetch()) {
+                    source = TrustMarkStatusSource.STATUS_ENDPOINT
+                    status = status(endpoint, jwt, issuer, configuration)
+                } else {
+                    status = TrustMarkStatus.UNKNOWN
+                }
             } else if (locallyValid) status = TrustMarkStatus.UNKNOWN
         }
         return DiagnosedTrustMark(type, issuer, mark.payload.epoch("iat"), expiry, signature, issuerChainValid,

@@ -82,7 +82,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Trust Bridge")
                 description.set("Bridges OpenID Federation trust chain resolution to IDK Trust Validation framework")

@@ -40,7 +40,7 @@ kotlin {
 
 publishing {
     publications {
-        create<MavenPublication>("mavenKotlin") {
+        withType<MavenPublication>().configureEach {
             pom {
                 name.set("OpenID Federation Account Public")
                 description.set("Account service interfaces for OpenID Federation")

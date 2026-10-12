@@ -1,3 +1,4 @@
+import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.process.ExecOperations
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
@@ -150,14 +151,29 @@ subprojects {
                 }
             }
 
-            // Ensure unique coordinates for different publication types
+            // The KMP root publication is consumed as <name>-multiplatform; its target publications
+            // (<name>-jvm, <name>-js, ...) keep the coordinates the Kotlin plugin derives from it.
             publications.withType<MavenPublication> {
-                val publicationName = name
-                if (publicationName == "kotlinMultiplatform") {
+                if (name == "kotlinMultiplatform") {
                     artifactId = "${project.name}-multiplatform"
-                } else if (publicationName == "mavenKotlin") {
-                    artifactId = "${project.name}-jvm"
                 }
+            }
+        }
+
+        // Two publications with the same coordinates overwrite each other in the target repository, and
+        // whichever writes last wins. A component-less publication renamed onto a KMP target's coordinates
+        // replaced its POM with an empty one (no dependencies, no Gradle metadata marker).
+        val publishingProject = project
+        gradle.taskGraph.whenReady {
+            if (allTasks.none { it.project == publishingProject && it is AbstractPublishToMaven }) return@whenReady
+            val duplicates = publishingProject.the<PublishingExtension>().publications.withType<MavenPublication>()
+                .groupBy { "${it.groupId}:${it.artifactId}:${it.version}" }
+                .filterValues { it.size > 1 }
+            if (duplicates.isNotEmpty()) {
+                throw GradleException(
+                    "Publications in ${publishingProject.path} share coordinates: " +
+                        duplicates.entries.joinToString { (gav, pubs) -> "$gav <- ${pubs.map { it.name }}" }
+                )
             }
         }
     }

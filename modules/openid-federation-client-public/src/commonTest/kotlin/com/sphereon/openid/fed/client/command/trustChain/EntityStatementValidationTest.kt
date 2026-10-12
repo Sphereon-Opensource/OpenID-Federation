@@ -308,6 +308,34 @@ class EntityStatementValidationTest {
     }
 
     @Test
+    fun rejectsNonStringIdentifiersAndMalformedHintEntriesWithoutThrowing() {
+        val now = 1_700_000_000L
+        val malformedIdentifiers = listOf(
+            JsonPrimitive(7), JsonPrimitive(true), JsonObject(emptyMap()), JsonArray(emptyList()),
+        )
+        for (claim in listOf("iss", "sub")) {
+            for (value in malformedIdentifiers) {
+                val claims = baseClaims("https://leaf", "https://leaf") + (claim to value)
+                val result = runCatching {
+                    EntityStatementValidation.validateStructure(jwt(payload = claims), now, 0)
+                }.getOrThrow()
+                assertFalse(result.ok, "$claim must be a string: $value")
+            }
+        }
+
+        for (claim in listOf("authority_hints", "trust_anchor_hints")) {
+            for (value in malformedIdentifiers) {
+                val result = runCatching {
+                    EntityStatementValidation.validateStructure(jwt(payload = baseClaims(
+                        "https://leaf", "https://leaf", mapOf(claim to JsonArray(listOf(value))),
+                    )), now, 0)
+                }.getOrThrow()
+                assertFalse(result.ok, "$claim entries must be strings: $value")
+            }
+        }
+    }
+
+    @Test
     fun authorityHintsMustListSuperior() {
         val leaf = jwt(
             payload = baseClaims(
