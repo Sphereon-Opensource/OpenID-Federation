@@ -62,7 +62,7 @@ class EntityStatementNumericDateTest {
         exp: String = "1700003600"
     ): EntityStatementValidation.StructuralResult {
         val payload = Json.parseToJsonElement(
-            """{"iss":"https://entity.example","sub":"https://entity.example","iat":$iat,"exp":$exp,"jwks":{"keys":[]}}"""
+            """{"iss":"https://entity.example","sub":"https://entity.example","iat":$iat,"exp":$exp,"jwks":{"keys":[]},"metadata":{"federation_entity":{}}}"""
         ).jsonObject
         val statement = Jwt(
             header = JwtHeader(alg = "ES256", kid = "k1", typ = "entity-statement+jwt"),

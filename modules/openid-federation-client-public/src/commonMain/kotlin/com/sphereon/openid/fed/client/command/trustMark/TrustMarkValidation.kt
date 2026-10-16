@@ -6,9 +6,13 @@ import com.sphereon.openid.fed.core.error.TrustMarkInvalidError
 import com.sphereon.openid.fed.openapi.models.Jwt
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 /** Shared local checks used by Trust Mark verification and resolution diagnostics. */
 object TrustMarkValidation {
+    fun numericDate(value: JsonElement?): Double? = (value as? JsonPrimitive)?.takeUnless { it.isString }
+        ?.content?.toDoubleOrNull()?.takeIf { it.isFinite() }
     fun headerError(mark: Jwt): FederationError? {
         if (mark.header.typ != "trust-mark+jwt") return TrustMarkInvalidError("unknown",
             if (mark.header.typ == null) "Trust Mark missing required typ header 'trust-mark+jwt'"
@@ -26,11 +30,11 @@ object TrustMarkValidation {
     }
 
     fun timeError(mark: Jwt, type: String, now: Long): FederationError? {
-        val iat = mark.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
-        if (iat == null || iat > now + 5L) return TrustMarkInvalidError(type, "Trust Mark has invalid or future iat")
+        val iat = numericDate(mark.payload["iat"])
+        if (iat == null || iat > now.toDouble() + 5.0) return TrustMarkInvalidError(type, "Trust Mark has invalid or future iat")
         mark.payload["exp"]?.let {
-            val exp = it.jsonPrimitive.content.toDoubleOrNull()?.toLong()
-            if (exp == null || exp <= now - 5L) return TrustMarkExpiredError(type)
+            val exp = numericDate(it)
+            if (exp == null || exp <= now.toDouble() - 5.0) return TrustMarkExpiredError(type)
         }
         return null
     }

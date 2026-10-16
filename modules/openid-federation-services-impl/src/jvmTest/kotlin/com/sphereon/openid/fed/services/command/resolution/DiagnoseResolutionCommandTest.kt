@@ -637,13 +637,20 @@ class DiagnoseResolutionCommandTest {
     }
 
     @Test
-    fun malformedTrustMarkAndInvalidStatusSignatureDoNotFailTheChain() = runTest {
-        val topology = topology(marks = true)
-        val leaf = com.sphereon.openid.fed.client.mapper.decodeJWTComponents(topology.chain.first()).payload
+    fun syntacticallyMalformedTrustMarkInvalidatesTheEntityStatement() = runTest {
+        val topology = topology()
         publishEc(leafId, statement(leafId, leafId, topology.leaf, topology.leaf, metadata = leafMetadata,
             hints = listOf(intermediateId), extra = buildJsonObject {
-                put("trust_marks", JsonArray((leaf["trust_marks"] as JsonArray) + obj("""{"trust_mark_type":"malformed","trust_mark":"invalid"}""")))
+                put("trust_marks", JsonArray(listOf(obj("""{"trust_mark_type":"https://marks.example/malformed","trust_mark":"invalid"}"""))))
             }))
+        val diagnosis = diagnose()
+        assertEquals(ResolutionOutcome.INVALID, diagnosis.outcome)
+        assertTrue(diagnosis.errors.any { it.code == "SIGNATURE_INVALID" && it.statementIndex == 0 })
+    }
+
+    @Test
+    fun invalidTrustMarkStatusSignatureDoesNotFailTheChain() = runTest {
+        topology(marks = true)
         val status = responses.getValue("$issuerId/status")
         val parts = status.body.split('.')
         val signature = parts[2]
@@ -651,7 +658,6 @@ class DiagnoseResolutionCommandTest {
         val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, anchorId))
         assertEquals(ResolutionOutcome.VALID, diagnosis.outcome, diagnosis.errors.toString())
         assertEquals(TrustMarkStatus.UNKNOWN, diagnosis.trustMarks.single { it.issuer == issuerId }.status)
-        assertEquals(TrustMarkStatus.INVALID, diagnosis.trustMarks.single { it.trustMarkType == "malformed" }.status)
         assertEquals(now + 3600, diagnosis.expiresAt, "Only included, accepted active marks shorten resolution lifetime")
     }
 

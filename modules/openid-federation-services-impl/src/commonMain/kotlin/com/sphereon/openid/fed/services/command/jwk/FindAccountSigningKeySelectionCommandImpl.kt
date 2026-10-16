@@ -12,6 +12,7 @@ import com.sphereon.openid.fed.core.error.FederationErrorException
 import com.sphereon.openid.fed.core.error.InvalidRequestError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
@@ -28,6 +29,7 @@ class FindAccountSigningKeySelectionCommandImpl internal constructor(
     execution: SessionExecution,
     private val accountQueries: AccountQueries,
     private val accountSigningKeyQueries: AccountSigningKeyQueries,
+    private val tenantServiceConfig: TenantServiceConfig = TenantServiceConfig(""),
 ) : TypedServiceCommandAdapter<
     FindAccountSigningKeySelectionArgs,
     AccountSigningKeySelection,
@@ -39,10 +41,11 @@ class FindAccountSigningKeySelectionCommandImpl internal constructor(
     outputTypeToken = typeToken<AccountSigningKeySelection>(),
 ), FindAccountSigningKeySelectionCommand {
     @Inject
-    constructor(execution: SessionExecution) : this(
+    constructor(execution: SessionExecution, tenantServiceConfig: TenantServiceConfig) : this(
         execution,
         Persistence.accountQueries,
         Persistence.accountSigningKeyQueries,
+        tenantServiceConfig,
     )
 
     @OptIn(ExperimentalUuidApi::class)
@@ -61,7 +64,9 @@ class FindAccountSigningKeySelectionCommandImpl internal constructor(
             val selection = accountQueries.transactionWithResult {
                 val account = accountQueries.findActiveForUpdate(accountId).executeAsOneOrNull()
                     ?: throw FederationErrorException(AccountNotFoundError(accountId))
-                val accountIdentifier = account.identifier
+                val accountIdentifier = effectiveSigningSelectionIdentifier(
+                    account.username, account.identifier, tenantServiceConfig.rootIdentifier,
+                )
                 if (accountIdentifier == null || accountIdentifier != applied.expectedEntityIdentifier) {
                     throw FederationErrorException(
                         InvalidRequestError("Account identifier does not match expectedEntityIdentifier")

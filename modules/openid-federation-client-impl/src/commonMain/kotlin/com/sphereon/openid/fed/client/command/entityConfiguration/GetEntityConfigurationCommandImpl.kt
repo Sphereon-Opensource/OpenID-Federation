@@ -5,10 +5,13 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
-import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
+import com.sphereon.openid.fed.client.crypto.fetchTypedFederationJwt
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
+import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
+import com.sphereon.openid.fed.core.isValidEntityIdentifier
 import com.sphereon.openid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementServiceConst
 import com.sphereon.openid.fed.core.error.EntityNotFoundError
 import com.sphereon.openid.fed.core.error.FederationError
@@ -17,6 +20,8 @@ import com.sphereon.openid.fed.core.error.SignatureVerificationFailedError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.Jwk
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.coroutines.CancellationException
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -52,6 +57,9 @@ class GetEntityConfigurationCommandImpl(
         applyDuring: (GetEntityConfigurationArgs) -> GetEntityConfigurationArgs
     ): IdkResult<EntityConfigurationStatement, FederationError> {
         val (entityIdentifier) = applyDuring(args)
+        if (!isValidEntityIdentifier(entityIdentifier)) {
+            return IdkResult.err(InvalidEntityConfigurationError(entityIdentifier, "Invalid Entity Identifier"))
+        }
 
         logger.info("Starting entity configuration resolution for: $entityIdentifier")
 
@@ -60,8 +68,17 @@ class GetEntityConfigurationCommandImpl(
 
         return try {
             // Fetch the JWT
-            val jwt = context.jwtService.fetchAndVerifyJwt(endpoint, context.httpResolver)
+            val jwt = context.jwtService.fetchTypedFederationJwt(endpoint, context.httpResolver, "application/entity-statement+jwt")
             val decodedJwt = decodeJWTComponents(jwt)
+            val structure = EntityStatementValidation.validateStructure(decodedJwt, getCurrentEpochTimeSeconds(), 0,
+                context.understoodCriticalClaims)
+            if (!structure.ok) {
+                return IdkResult.err(InvalidEntityConfigurationError(entityIdentifier, structure.reason ?: "Invalid Entity Configuration"))
+            }
+            if ((decodedJwt.payload["iss"] as? JsonPrimitive)?.content != entityIdentifier ||
+                (decodedJwt.payload["sub"] as? JsonPrimitive)?.content != entityIdentifier) {
+                return IdkResult.err(InvalidEntityConfigurationError(entityIdentifier, "Entity Configuration issuer and subject must match the requested Entity Identifier"))
+            }
 
             // Verify the self-signed JWT using its embedded JWKS
             val jwksJson = decodedJwt.payload["jwks"]?.jsonObject
@@ -80,6 +97,8 @@ class GetEntityConfigurationCommandImpl(
             val result: EntityConfigurationStatement = context.json.decodeFromString(decodedJwt.payload.toString())
             logger.info("Successfully resolved entity configuration for: $entityIdentifier")
             IdkResult.ok(result)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Failed to fetch entity configuration", e)
             IdkResult.err(EntityNotFoundError(entityIdentifier, e))

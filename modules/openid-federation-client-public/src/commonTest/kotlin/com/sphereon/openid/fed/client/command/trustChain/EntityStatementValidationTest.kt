@@ -6,6 +6,7 @@ import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonNull
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test
@@ -15,6 +16,132 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class EntityStatementValidationTest {
+
+    @Test
+    fun numericDatesPermitFractionalSecondsAsDefinedByRfc7519() {
+        val claims = baseClaims("https://entity.example", "https://entity.example", mapOf(
+            "iat" to JsonPrimitive(1_699_999_999.25),
+            "exp" to JsonPrimitive(1_700_000_060.75),
+        ))
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload = claims), 1_700_000_000L, 0).ok)
+        assertEquals(1_700_000_060L, EntityStatementValidation.conservativeExpiryEpochSeconds(claims["exp"]))
+    }
+
+    @Test
+    fun entityConfigurationRequiresAnEntityTypeButSubordinateMetadataIsOptional() {
+        val claims = baseClaims("https://entity.example", "https://entity.example")
+        for (missing in listOf(claims - "metadata", claims + ("metadata" to JsonObject(emptyMap())))) {
+            assertFalse(EntityStatementValidation.validateStructure(jwt(payload = missing), 1_700_000_000L, 0).ok)
+        }
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload =
+            baseClaims("https://superior.example", "https://entity.example") - "metadata"), 1_700_000_000L, 1).ok)
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload = claims + ("metadata" to JsonObject(
+            mapOf("openid_relying_party" to JsonObject(emptyMap()))))), 1_700_000_000L, 0).ok)
+    }
+
+    @Test
+    fun federationEntityMetadataCannotCarryProtocolKeyLocations() {
+        for (claim in listOf("jwks", "jwks_uri", "signed_jwks_uri")) {
+            val metadata = JsonObject(mapOf("federation_entity" to JsonObject(mapOf(claim to JsonPrimitive("https://keys.example")))))
+            assertFalse(EntityStatementValidation.validateStructure(jwt(payload = baseClaims("https://entity.example", "https://entity.example",
+                mapOf("metadata" to metadata))), 1_700_000_000L, 0).ok)
+        }
+    }
+
+    @Test
+    fun permitsStandardDefaultValueDeletionAndUnknownNoncriticalExtensions() {
+        val policy = JsonObject(mapOf("openid_provider" to JsonObject(mapOf(
+            "organization_name" to JsonObject(mapOf("default" to JsonPrimitive("Example"))),
+            "logo_uri" to JsonObject(mapOf("value" to JsonNull)),
+            "vendor" to JsonObject(mapOf("vendor_operator" to JsonObject(emptyMap()))),
+        ))))
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload = baseClaims("https://superior.example", "https://entity.example",
+            mapOf("metadata_policy" to policy, "vendor_claim" to JsonObject(emptyMap())))), 1_700_000_000L, 1).ok)
+    }
+
+    @Test
+    fun rejectsMalformedTrustMarkClaimsAndMismatchedEmbeddedTypes() {
+        val compactMark = compact("""{"alg":"ES256","kid":"key","typ":"trust-mark+jwt"}""",
+            """{"trust_mark_type":"https://marks.example/actual"}""")
+        val cases = listOf(
+            "trust_marks" to JsonPrimitive("invalid"),
+            "trust_marks" to JsonArray(listOf(JsonObject(mapOf("trust_mark_type" to JsonPrimitive("https://marks.example/other"), "trust_mark" to JsonPrimitive(compactMark))))),
+            "trust_mark_issuers" to JsonObject(mapOf("mark" to JsonArray(listOf(JsonPrimitive("http://issuer.example"))))),
+            "trust_mark_owners" to JsonObject(mapOf("mark" to JsonObject(mapOf("sub" to JsonPrimitive("https://owner.example"))))),
+        )
+        for ((claim, value) in cases) assertFalse(EntityStatementValidation.validateStructure(
+            jwt(payload = baseClaims("https://entity.example", "https://entity.example", mapOf(claim to value))),
+            1_700_000_000L, 0).ok, "$claim: $value")
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload = baseClaims("https://entity.example", "https://entity.example",
+            mapOf("trust_marks" to JsonArray(listOf(JsonObject(mapOf("trust_mark_type" to JsonPrimitive("https://marks.example/actual"), "trust_mark" to JsonPrimitive(compactMark)))))))),
+            1_700_000_000L, 0).ok)
+    }
+
+    @Test
+    fun rejectsMalformedPoliciesCriticalOperatorsAndSourceEndpoints() {
+        val cases = listOf(
+            "metadata_policy" to JsonArray(emptyList()),
+            "metadata_policy" to JsonObject(mapOf("openid_provider" to JsonObject(mapOf("scopes_supported" to JsonObject(mapOf("subset_of" to JsonPrimitive("openid"))))))),
+            "metadata_policy" to JsonObject(mapOf("openid_provider" to JsonObject(mapOf("scopes_supported" to JsonObject(mapOf("essential" to JsonPrimitive("true"))))))),
+            "metadata_policy_crit" to JsonArray(listOf(JsonPrimitive("subset_of"))),
+            "metadata_policy_crit" to JsonArray(listOf(JsonPrimitive("unknown_operator"))),
+            "metadata_policy_crit" to JsonNull,
+            "source_endpoint" to JsonPrimitive("http://superior.example/fetch"),
+            "source_endpoint" to JsonObject(emptyMap()),
+        )
+        for ((claim, value) in cases) assertFalse(EntityStatementValidation.validateStructure(
+            jwt(payload = baseClaims("https://superior.example", "https://entity.example", mapOf(claim to value))),
+            1_700_000_000L, 1).ok, "$claim: $value")
+        assertTrue(EntityStatementValidation.validateStructure(jwt(payload = baseClaims("https://superior.example", "https://entity.example",
+            mapOf("source_endpoint" to JsonPrimitive("https://superior.example/fetch?version=2"), "metadata_policy" to JsonObject(mapOf(
+                "openid_provider" to JsonObject(mapOf("scopes_supported" to JsonObject(mapOf("subset_of" to JsonArray(listOf(JsonPrimitive("openid")))))))))))),
+            1_700_000_000L, 1).ok)
+    }
+
+    @Test
+    fun rejectsInvalidEntityIdentifiersAndDiscoveryHints() {
+        for (invalid in listOf("http://entity.example", "https://entity.example?query=1", "https://entity.example#fragment", "urn:entity:example")) {
+            for (claim in listOf("iss", "sub", "authority_hints", "trust_anchor_hints")) {
+                val value = if (claim.endsWith("hints")) JsonArray(listOf(JsonPrimitive(invalid))) else JsonPrimitive(invalid)
+                val result = EntityStatementValidation.validateStructure(
+                    jwt(payload = baseClaims("https://entity.example", "https://entity.example", mapOf(claim to value))),
+                    1_700_000_000L, 0,
+                )
+                assertFalse(result.ok, "$claim: $invalid")
+            }
+        }
+    }
+
+    @Test
+    fun rejectsMalformedJwkSetsAndDuplicateKeyIdentifiers() {
+        val key = JsonObject(mapOf("kid" to JsonPrimitive("key"), "kty" to JsonPrimitive("EC")))
+        for (invalid in listOf(JsonNull, JsonArray(emptyList()), JsonObject(emptyMap()),
+            JsonObject(mapOf("keys" to JsonArray(listOf(JsonPrimitive("key"))))),
+            JsonObject(mapOf("keys" to JsonArray(listOf(JsonObject(mapOf("kid" to JsonPrimitive(1))))))),
+            JsonObject(mapOf("keys" to JsonArray(listOf(key, key)))))) {
+            val result = EntityStatementValidation.validateStructure(
+                jwt(payload = baseClaims("https://entity.example", "https://entity.example", mapOf("jwks" to invalid))),
+                1_700_000_000L, 0,
+            )
+            assertFalse(result.ok, invalid.toString())
+        }
+    }
+
+    @Test
+    fun rejectsMalformedMetadataRolesAndNullParameterValues() {
+        for (invalid in listOf(JsonNull, JsonArray(emptyList()),
+            JsonObject(mapOf("federation_entity" to JsonPrimitive("invalid"))),
+            JsonObject(mapOf("federation_entity" to JsonObject(mapOf("organization_name" to JsonNull)))))) {
+            val result = EntityStatementValidation.validateStructure(
+                jwt(payload = baseClaims("https://entity.example", "https://entity.example", mapOf("metadata" to invalid))),
+                1_700_000_000L, 0,
+            )
+            assertFalse(result.ok, invalid.toString())
+        }
+        assertTrue(EntityStatementValidation.validateStructure(
+            jwt(payload = baseClaims("https://entity.example", "https://entity.example", mapOf("metadata" to
+                JsonObject(mapOf("federation_entity" to JsonObject(emptyMap())))))), 1_700_000_000L, 0).ok)
+    }
 
     @OptIn(ExperimentalEncodingApi::class)
     private fun compact(header: String, payload: String): String {
@@ -46,7 +173,8 @@ class EntityStatementValidationTest {
             "sub" to JsonPrimitive(sub),
             "iat" to JsonPrimitive(now - 100),
             "exp" to JsonPrimitive(now + 3600),
-            "jwks" to JsonObject(mapOf("keys" to JsonArray(emptyList())))
+            "jwks" to JsonObject(mapOf("keys" to JsonArray(emptyList()))),
+            "metadata" to JsonObject(mapOf("federation_entity" to JsonObject(emptyMap()))),
         ) + extra
     }
 

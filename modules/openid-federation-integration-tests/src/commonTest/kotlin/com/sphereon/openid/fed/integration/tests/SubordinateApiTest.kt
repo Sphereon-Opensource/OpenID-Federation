@@ -126,6 +126,7 @@ class SubordinateApiTest {
         try {
             // Step 1: Create a new account
             createTestAccount()
+            createAndSelectAccountSigningKey(client, baseUrl, testUsername!!)
 
             // Step 2: Create a subordinate for this account
             val subordinate = createSubordinate()

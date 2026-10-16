@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+
 package com.sphereon.openid.fed.services.command.resolution
 
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
@@ -21,6 +23,12 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.services.JwkService
+import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.openid.fed.openapi.models.ResolveResponse
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonUnquotedLiteral
+import kotlinx.serialization.json.jsonObject
 import com.sphereon.openid.fed.services.signPayload
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -86,7 +94,16 @@ class GetSignedResolveResponseJwtCommandImpl(
                         typ = "resolve-response+jwt"
                     )
 
-                    jwtService.signPayload(response, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
+                    val expiries = requireNotNull(response.trustChain).map { statement ->
+                        requireNotNull(ExactResolveExpiry.parse(decodeJWTComponents(statement).payload["exp"]))
+                    } + response.trustMarks.orEmpty().mapNotNull { mark ->
+                        val claims = decodeJWTComponents(mark.trustMark).payload
+                        if (!claims.containsKey("exp")) null else requireNotNull(ExactResolveExpiry.parse(claims["exp"]))
+                    }
+                    val expiry = requireNotNull(expiries.minOrNull())
+                    val payload = JsonObject(Json.encodeToJsonElement(ResolveResponse.serializer(), response).jsonObject +
+                        ("exp" to JsonUnquotedLiteral(expiry.json.content)))
+                    jwtService.signPayload(payload, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
                 } catch (e: Exception) {
                     logger.error("Failed to sign resolve response JWT", e)
                     federationErr(ServerError("Failed to sign resolve response", e.message, e))

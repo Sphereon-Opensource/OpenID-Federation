@@ -9,6 +9,26 @@ import kotlin.test.assertTrue
 class CredentialVerifierPolicyTest {
 
     @Test
+    fun malformedPresentFederationQueriesDoNotDisableTheConstraint() {
+        for (bad in listOf(JsonNull, JsonObject(emptyMap()), JsonArray(emptyList()), JsonArray(listOf(JsonPrimitive("query"))))) {
+            assertFalse(CredentialVerifierPolicy.validateDcqlQuery(JsonObject(emptyMap()),
+                JsonObject(mapOf("dcql_queries" to bad))).valid)
+        }
+    }
+
+    @Test
+    fun availableFederatedMetadataNeverFallsBackToRequestKeys() {
+        val client = JsonObject(mapOf("jwks" to JsonObject(mapOf("keys" to JsonArray(listOf(
+            JsonObject(mapOf("kid" to JsonPrimitive("attacker"), "kty" to JsonPrimitive("EC")))))))))
+        for (federated in listOf(JsonObject(emptyMap()), JsonObject(mapOf("jwks" to JsonNull)),
+            JsonObject(mapOf("jwks" to JsonObject(mapOf("keys" to JsonArray(emptyList()))))))) {
+            val resolved = CredentialVerifierPolicy.resolveJwks(federated, client)
+            assertTrue(resolved.fromFederation)
+            assertEquals(null, resolved.jwks)
+        }
+    }
+
+    @Test
     fun prefersFederatedJwksOverClientMetadata() {
         val fed = JsonObject(
             mapOf(

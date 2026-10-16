@@ -1,0 +1,17 @@
+import kotlin.String;
+
+-- Existing policies and account rows are unchanged. Missing fence means genuine revision zero.
+CREATE TABLE AccountMetadataPolicyRevision (
+    account_id UUID AS kotlin.String NOT NULL REFERENCES Account(id),
+    entity_type TEXT NOT NULL,
+    revision BIGINT NOT NULL CHECK (revision > 0),
+    last_operation_generation BIGINT CHECK (last_operation_generation > 0),
+    last_operation_token TEXT,
+    last_request_snapshot TEXT,
+    PRIMARY KEY (account_id, entity_type),
+    CHECK ((last_operation_token IS NULL) = (last_request_snapshot IS NULL))
+);
+
+-- Role uniqueness applies to live policies; soft-deleted rows retain their historical identity.
+ALTER TABLE MetadataPolicy DROP CONSTRAINT metadatapolicy_account_id_key_key;
+CREATE UNIQUE INDEX unique_metadatapolicy_role_active ON MetadataPolicy(account_id, key) WHERE deleted_at IS NULL;

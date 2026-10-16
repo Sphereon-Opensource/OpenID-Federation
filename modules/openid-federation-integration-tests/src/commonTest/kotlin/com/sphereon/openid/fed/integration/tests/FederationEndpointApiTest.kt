@@ -1,5 +1,8 @@
 package com.sphereon.openid.fed.integration.tests
 
+import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
+import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
+import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.CreateAccount
 import com.sphereon.openid.fed.openapi.models.CreateKey
 import com.sphereon.openid.fed.openapi.models.CreateMetadata
@@ -17,12 +20,11 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.*
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -222,6 +224,30 @@ class FederationEndpointApiTest {
     }
 
     @Test
+    fun `GET fetch stops serving a subordinate after its account registration is deleted`() = runTest {
+        val subordinateId = requireNotNull(testSubordinateId)
+        val beforeDelete = client.get("$fedBaseUrl/$testUsername/fetch") {
+            parameter("sub", testSubordinateIdentifier!!)
+        }
+        assertEquals(HttpStatusCode.OK, beforeDelete.status, "Published statement must be fetchable before deletion")
+
+        val deletion = client.delete("$adminBaseUrl/subordinates/$subordinateId") {
+            headers { append("X-Account-Username", testUsername!!) }
+        }
+        assertEquals(HttpStatusCode.OK, deletion.status, "Admin API should delete the registered subordinate")
+        testSubordinateId = null
+
+        val afterDelete = client.get("$fedBaseUrl/$testUsername/fetch") {
+            parameter("sub", testSubordinateIdentifier!!)
+        }
+        assertEquals(
+            HttpStatusCode.NotFound,
+            afterDelete.status,
+            "Fetch must stop publishing a statement for a deleted subordinate",
+        )
+    }
+
+    @Test
     fun `GET fetch with missing sub should return 400`() = runTest {
         try {
             val response = client.get("$fedBaseUrl/$testUsername/fetch")
@@ -236,7 +262,7 @@ class FederationEndpointApiTest {
     // ====== Trust Mark Status Tests ======
 
     @Test
-    fun `POST trust-mark-status should return signed JWT or 500 with memory KMS`() = runTest {
+    fun `POST trust-mark-status should return a signed JWT`() = runTest {
         try {
             assertNotNull(testTrustMarkJwt, "Trust mark JWT should be available from setup")
             val response = client.post("$fedBaseUrl/$testUsername/trust-mark-status") {
@@ -246,16 +272,6 @@ class FederationEndpointApiTest {
                 }))
             }
 
-            if (response.status == HttpStatusCode.InternalServerError) {
-                // With memory KMS, the federation server doesn't have the private keys
-                // created by the admin server (they're in separate JVM processes).
-                // This is expected and would work with a shared KMS (AWS/Azure).
-                val body = response.bodyAsText()
-                assertTrue(body.contains("Key not found"),
-                    "500 error should be due to key not found with memory KMS, got: $body")
-                println("SKIPPED: trust-mark-status signing not available with memory KMS (expected)")
-                return@runTest
-            }
 
             assertEquals(HttpStatusCode.OK, response.status,
                 "Trust mark status request failed: ${response.bodyAsText()}")
@@ -269,28 +285,20 @@ class FederationEndpointApiTest {
             val body = response.bodyAsText()
             assertTrue(body.count { it == '.' } >= 2,
                 "Trust mark status response should be a signed JWT, got: $body")
+            assertSignedStatus(body)
         } catch (e: Exception) {
             fail("POST /trust-mark-status test failed: ${e.message}")
         }
     }
 
     @Test
-    fun `GET trust-mark-status should return signed JWT or 500 with memory KMS`() = runTest {
+    fun `GET trust-mark-status should return a signed JWT`() = runTest {
         try {
             assertNotNull(testTrustMarkJwt, "Trust mark JWT should be available from setup")
             val response = client.get("$fedBaseUrl/$testUsername/trust-mark-status") {
                 parameter("trust_mark", testTrustMarkJwt)
             }
 
-            if (response.status == HttpStatusCode.InternalServerError) {
-                // With memory KMS, the federation server doesn't have the private keys
-                // created by the admin server (they're in separate JVM processes).
-                val body = response.bodyAsText()
-                assertTrue(body.contains("Key not found"),
-                    "500 error should be due to key not found with memory KMS, got: $body")
-                println("SKIPPED: trust-mark-status signing not available with memory KMS (expected)")
-                return@runTest
-            }
 
             assertEquals(HttpStatusCode.OK, response.status,
                 "GET trust mark status request failed: ${response.bodyAsText()}")
@@ -304,6 +312,7 @@ class FederationEndpointApiTest {
             val body = response.bodyAsText()
             assertTrue(body.count { it == '.' } >= 2,
                 "GET trust mark status response should be a signed JWT, got: $body")
+            assertSignedStatus(body)
         } catch (e: Exception) {
             fail("GET /trust-mark-status test failed: ${e.message}")
         }
@@ -405,6 +414,36 @@ class FederationEndpointApiTest {
         }
     }
 
+    @Test
+    fun `public federation graph excludes admin routes`() = runTest {
+        for (path in listOf("/accounts", "/keys/signing-selection")) {
+            val response = client.get("$fedBaseUrl$path")
+            assertEquals(HttpStatusCode.NotFound, response.status, response.bodyAsText())
+        }
+    }
+
+    private suspend fun assertSignedStatus(jwt: String) {
+        val statement = decodeJWTComponents(jwt)
+        assertEquals("trust-mark-status-response+jwt", statement.header.typ)
+        assertEquals(testAccountIdentifier, statement.payload["iss"]?.jsonPrimitive?.content)
+        assertEquals(testTrustMarkJwt, statement.payload["trust_mark"]?.jsonPrimitive?.content)
+        assertEquals("active", statement.payload["status"]?.jsonPrimitive?.content)
+        val issuedAt = statement.payload.getValue("iat").jsonPrimitive
+        assertFalse(issuedAt.isString)
+        val now = getCurrentEpochTimeSeconds().toDouble()
+        assertTrue(issuedAt.double.isFinite() && issuedAt.double <= now + 1 && issuedAt.double >= now - 60)
+        val ec = client.get("$fedBaseUrl/$testUsername/.well-known/openid-federation")
+        assertEquals(HttpStatusCode.OK, ec.status, ec.bodyAsText())
+        val keys = decodeJWTComponents(ec.bodyAsText()).payload.getValue("jwks").jsonObject.getValue("keys").jsonArray
+        val keyJson = keys.single { it.jsonObject["kid"]?.jsonPrimitive?.content == statement.header.kid }
+        val key = json.decodeFromJsonElement(Jwk.serializer(), keyJson)
+        assertTrue(verifyFederationTestJwt(ec.bodyAsText(), key), "Published EC must verify against its declared key")
+        assertTrue(verifyFederationTestJwt(jwt, key), "Status must verify against the issuer's published EC keys")
+        val parts = jwt.split('.')
+        val changed = (if (parts[2].first() == 'A') "B" else "A") + parts[2].drop(1)
+        assertFalse(verifyFederationTestJwt("${parts[0]}.${parts[1]}.$changed", key), "Altered signature must fail")
+    }
+
     // ====== Helper Methods (Admin API setup) ======
 
     private suspend fun createTestAccount() {
@@ -427,15 +466,14 @@ class FederationEndpointApiTest {
 
         val body = response.bodyAsText()
         val key = json.decodeFromString<com.sphereon.openid.fed.openapi.models.TenantJwk>(body)
+        selectAccountSigningKey(client, adminBaseUrl, testUsername!!, key)
         testKeyKid = key.kid
     }
 
     private suspend fun createMetadata() {
         val metadataJson = buildJsonObject {
-            put("openid_provider", buildJsonObject {
-                put("issuer", JsonPrimitive(testAccountIdentifier))
-                put("organization_name", JsonPrimitive("Federation Test"))
-            })
+            put("issuer", JsonPrimitive(testAccountIdentifier))
+            put("organization_name", JsonPrimitive("Federation Test"))
         }
 
         val response = client.post("$adminBaseUrl/metadata") {

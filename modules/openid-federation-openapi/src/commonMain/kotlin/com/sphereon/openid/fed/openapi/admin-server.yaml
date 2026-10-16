@@ -2264,6 +2264,7 @@ components:
         - ES256
         - ES384
         - ES512
+        - RS256
       default: ES256
 
     MetadataResponse:

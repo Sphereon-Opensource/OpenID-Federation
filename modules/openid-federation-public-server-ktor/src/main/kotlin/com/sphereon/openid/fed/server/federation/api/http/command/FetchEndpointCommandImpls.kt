@@ -215,8 +215,12 @@ private suspend fun fetchSubordinateStatement(
             ?: return Ok(FederationErrorResponses.invalidIssuer("Tenant identifier not found"))
     }
 
+    if (iss == sub) {
+        return Ok(FederationErrorResponses.invalidRequest("The subject must differ from the issuing entity"))
+    }
+
     val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
-        ?: return Ok(FederationErrorResponses.invalidSubject("Subordinate statement not found"))
+        ?: return Ok(FederationErrorResponses.notFound("Subordinate statement not found"))
 
     return Ok(GenericHttpResponse(
         statusCode = 200,

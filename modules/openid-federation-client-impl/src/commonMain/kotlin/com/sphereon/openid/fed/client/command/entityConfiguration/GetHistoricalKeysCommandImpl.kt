@@ -5,7 +5,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
-import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
+import com.sphereon.openid.fed.client.crypto.fetchTypedFederationJwt
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.services.entityConfigurationStatementService.EntityConfigurationStatementServiceConst
@@ -18,6 +18,7 @@ import com.sphereon.openid.fed.openapi.models.FederationEntityMetadata
 import com.sphereon.openid.fed.openapi.models.FederationHistoricalKeysResponse
 import com.sphereon.openid.fed.openapi.models.HistoricalKey
 import kotlinx.serialization.json.jsonObject
+import kotlinx.coroutines.CancellationException
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -94,9 +95,11 @@ class GetHistoricalKeysCommandImpl(
 
         logger.debug("Fetching historical keys from endpoint: $historicalKeysEndpoint")
         return try {
-            val jwt = context.jwtService.fetchAndVerifyJwt(historicalKeysEndpoint, context.httpResolver)
+            val jwt = context.jwtService.fetchTypedFederationJwt(historicalKeysEndpoint, context.httpResolver, "application/jwk-set+jwt")
             logger.debug("Successfully fetched historical keys JWT")
             IdkResult.ok(jwt)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Failed to fetch historical keys", e)
             IdkResult.err(InvalidEntityConfigurationError(entityId, "Failed to fetch historical keys: ${e.message}", e))

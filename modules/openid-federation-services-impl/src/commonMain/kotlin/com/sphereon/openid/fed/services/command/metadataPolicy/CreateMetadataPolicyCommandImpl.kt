@@ -28,11 +28,13 @@ import dev.zacsweers.metro.SingleIn
  * Implementation of the CreateMetadataPolicyCommand.
  * Creates a new metadata policy entry for an account.
  */
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateMetadataPolicyCommand>())
-class CreateMetadataPolicyCommandImpl(
-    execution: SessionExecution
+class CreateMetadataPolicyCommandImpl internal constructor(
+    execution: SessionExecution,
+    private val accountQueries: com.sphereon.openid.fed.persistence.models.AccountQueries,
+    private val metadataPolicyQueries: com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries,
+    private val revisionQueries: com.sphereon.openid.fed.persistence.models.AccountMetadataPolicyRevisionQueries,
 ) : TypedServiceCommandAdapter<CreateMetadataPolicyArgs, MetadataPolicy, FederationError>(
     commandId = CreateMetadataPolicyCommand.COMMAND_ID,
     execution = execution,
@@ -41,49 +43,37 @@ class CreateMetadataPolicyCommandImpl(
 ), CreateMetadataPolicyCommand {
 
     private val logger = execution.federationLogger("CreateMetadataPolicyCommand")
-    private val metadataPolicyQueries = Persistence.metadataPolicyQueries
+    @Inject
+    constructor(execution: SessionExecution) : this(execution, Persistence.accountQueries, Persistence.metadataPolicyQueries, Persistence.accountMetadataPolicyRevisionQueries)
 
     override suspend fun doExecute(
         args: CreateMetadataPolicyArgs,
         applyDuring: (CreateMetadataPolicyArgs) -> CreateMetadataPolicyArgs
     ): IdkResult<MetadataPolicy, FederationError> {
-        val (tenantId, key, policy) = applyDuring(args)
-
-        // A policy is signed into every Subordinate Statement of the account, so it must be valid when stored (§6.1).
-        val policyObject = policy as? JsonObject
-            ?: return federationErr(InvalidRequestError("A metadata policy must be an object of claim operators"))
-        val checked = MetadataPolicyOperators.mergePolicies(JsonObject(emptyMap()), JsonObject(mapOf(key to policyObject)))
-        if (checked is MetadataPolicyOperators.PolicyMergeResult.Error) {
-            return federationErr(InvalidRequestError("Invalid metadata policy for $key: ${checked.reason}"))
-        }
-
-        logger.info("Creating subordinate metadata policy for account: ${tenantId}, key: $key")
-        logger.debug("Using account with ID: ${tenantId}")
-
-        val policyAlreadyExists = metadataPolicyQueries
-            .findByAccountIdAndKey(tenantId, key)
-            .executeAsOneOrNull()
-
-        if (policyAlreadyExists != null) {
-            logger.error("Metadata policy already exists for account ID: ${tenantId}, key: $key")
-            return federationErr(MetadataPolicyAlreadyExistsError(tenantId, key))
-        }
-
         return try {
-            val createdPolicy = metadataPolicyQueries
-                .create(tenantId, key, policy.toString())
-                .executeAsOneOrNull()
-
-            if (createdPolicy != null) {
-                logger.info("Successfully created metadata policy with ID: ${createdPolicy.id}")
-                IdkResult.ok(createdPolicy.toDTO())
-            } else {
-                logger.error("Failed to create metadata policy for account ID: ${tenantId}, key: $key")
-                federationErr(ServerError(Constants.FAILED_TO_CREATE_ENTITY_CONFIGURATION_METADATA_POLICY))
+            val applied = applyDuring(args)
+            val tenantId = policyAccountId(applied.tenantId)
+            val key = applied.key
+            val policy = applied.policy as? JsonObject
+                ?: return federationErr(InvalidRequestError("A metadata policy must be an object of claim operators"))
+            val frozen = kotlinx.serialization.json.Json.parseToJsonElement(policy.toString()) as JsonObject
+            validateRolePolicy(key, frozen)
+            val created = accountQueries.transactionWithResult {
+                lockPolicyAccount(accountQueries, tenantId)
+                if (metadataPolicyQueries.findByAccountIdAndKey(tenantId, key).executeAsList().isNotEmpty()) {
+                    throw com.sphereon.openid.fed.core.error.FederationErrorException(MetadataPolicyAlreadyExistsError(tenantId, key))
+                }
+                val row = metadataPolicyQueries.create(tenantId, key, frozen.toString()).executeAsOne()
+                advanceLegacyPolicyRevision(revisionQueries, tenantId, key)
+                row.toDTO()
             }
-        } catch (e: Exception) {
-            logger.error("Failed to create metadata policy for account: ${tenantId}, key: $key", e)
-            federationErr(ServerError("Failed to create metadata policy", e.message, e))
+            IdkResult.ok(created)
+        } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+            throw cancelled
+        } catch (refused: com.sphereon.openid.fed.core.error.FederationErrorException) {
+            federationErr(refused.federationError)
+        } catch (failure: Exception) {
+            federationErr(ServerError("Failed to create metadata policy", failure.message, failure))
         }
     }
 }

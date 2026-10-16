@@ -26,6 +26,13 @@ import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import io.ktor.http.Parameters
+import io.ktor.http.Url
+import io.ktor.http.URLProtocol
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.jsonPrimitive
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -187,7 +194,12 @@ class VerifyTrustMarkCommandImpl(
                 }
             }
 
+            advertisedActivityError(trustMark, trustMarkId, trustMarkIssuer, issuerConfig, timeToUse)?.let {
+                return IdkResult.err(it)
+            }
             return IdkResult.ok(TrustMarkValidationResponse(true))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.error("Trust Mark validation failed", e)
             return IdkResult.err(TrustMarkInvalidError(
@@ -196,6 +208,42 @@ class VerifyTrustMarkCommandImpl(
                 exception = e
             ))
         }
+    }
+
+    /** An advertised authoritative status answer must be active; absence preserves signature/time validation. */
+    private suspend fun advertisedActivityError(
+        compactMark: String,
+        type: String,
+        issuer: String,
+        configuration: EntityConfigurationStatement,
+        now: Long,
+    ): FederationError? {
+        val metadata = configuration.metadata?.get("federation_entity") as? JsonObject ?: return null
+        val advertised = metadata["federation_trust_mark_status_endpoint"] ?: return null
+        fun invalid(reason: String) = TrustMarkInvalidError(trustMarkId = type, reason = reason)
+        val primitive = advertised as? JsonPrimitive
+        if (primitive == null || !primitive.isString || primitive.content.isBlank()) return invalid("Advertised Trust Mark status endpoint is invalid")
+        val endpoint = primitive.content
+        val url = Url(endpoint)
+        if (url.protocol != URLProtocol.HTTPS || !url.user.isNullOrEmpty() || !url.password.isNullOrEmpty() || '#' in endpoint) {
+            return invalid("Advertised Trust Mark status endpoint must be credential-free HTTPS without a fragment")
+        }
+        val response = context.httpResolver.postJwt(endpoint, Parameters.build { append("trust_mark", compactMark) })
+        val decoded = decodeJWTComponents(response)
+        if (decoded.header.typ != "trust-mark-status-response+jwt" || decoded.header.kid.isNullOrBlank()) return invalid("Trust Mark status response has invalid type or key identifier")
+        val key = configuration.jwks.propertyKeys.orEmpty().singleOrNull { it.kid == decoded.header.kid }
+            ?: return invalid("Trust Mark status response signing key is not an issuer Federation Entity Key")
+        if (!context.jwtService.verifyJwtSignature(response, key)) return invalid("Trust Mark status response signature is invalid")
+        val claims = decoded.payload
+        fun text(name: String): String? = (claims[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
+        if (text("iss") != issuer || text("trust_mark") != compactMark) return invalid("Trust Mark status response does not match issuer and queried mark")
+        val issuedAt = (claims["iat"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
+        if (issuedAt == null || !issuedAt.isFinite() || issuedAt > now.toDouble() + 5) return invalid("Trust Mark status response has invalid issued-at time")
+        if (claims.containsKey("exp")) {
+            val expiry = (claims["exp"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
+            if (expiry == null || !expiry.isFinite() || expiry <= now.toDouble()) return invalid("Trust Mark status response is expired or has invalid expiry")
+        }
+        return if (text("status") == "active") null else invalid("Advertised issuer status does not establish an active Trust Mark")
     }
 
     /**
@@ -353,7 +401,7 @@ internal suspend fun validateTrustMarkDelegation(
     }
 
     // §7.2.2 steps 6–7: iat / optional exp
-    val delIat = decodedDelegation.payload["iat"]?.jsonPrimitive?.content?.toDoubleOrNull()?.toLong()
+    val delIat = TrustMarkValidation.numericDate(decodedDelegation.payload["iat"])
     if (delIat == null || delIat > timeToUse + DELEGATION_CLOCK_SKEW_SECONDS) {
         return IdkResult.err(TrustMarkInvalidError(
             trustMarkId = trustMarkId,
@@ -362,7 +410,7 @@ internal suspend fun validateTrustMarkDelegation(
     }
     val delExpEl = decodedDelegation.payload["exp"]
     if (delExpEl != null) {
-        val delExp = delExpEl.jsonPrimitive.content.toDoubleOrNull()?.toLong()
+        val delExp = TrustMarkValidation.numericDate(delExpEl)
         if (delExp == null || delExp <= timeToUse - DELEGATION_CLOCK_SKEW_SECONDS) {
             return IdkResult.err(TrustMarkInvalidError(
                 trustMarkId = trustMarkId,

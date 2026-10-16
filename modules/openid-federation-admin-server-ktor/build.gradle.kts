@@ -157,3 +157,6 @@ publishing {
         }
     }
 }
+
+// Optional reviewed CIO generation; absent consumed inputs preserve the public build.
+apply(from = rootProject.file("gradle/cio-runtime-verification.gradle.kts"))

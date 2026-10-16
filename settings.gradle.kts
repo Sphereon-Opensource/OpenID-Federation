@@ -204,6 +204,7 @@ includeFederationModule(":modules:openid-federation-http-resolver")
 includeFederationModule(":modules:openid-federation-persistence")
 includeFederationModule(":modules:openid-federation-integration-tests")
 includeFederationModule(":modules:openid-federation-conformance-tests")
+includeFederationModule(":modules:openid-federation-interop-tests")
 
 // Admin server modules (API layer is KMP, Ktor layer is JVM)
 includeFederationModule(":modules:openid-federation-admin-server-api")

@@ -17,6 +17,7 @@ import com.sphereon.ktor.server.inject.ValidatedJwtClaimsAttribute
 import com.sphereon.ktor.server.inject.context.RequestScopedContext
 import com.sphereon.ktor.server.inject.interceptor.UserContextInterceptor
 import com.sphereon.ktor.server.jwt.JwtAuthentication
+import com.sphereon.ktor.server.jwt.JwtRouteAuthentication
 import com.sphereon.ktor.server.jwt.SessionContextAttributeKey
 import com.sphereon.openid.fed.account.LegacyAccountSessionTenantLookup
 import com.sphereon.openid.fed.core.config.OAuth2Config
@@ -25,14 +26,16 @@ import com.sphereon.openid.fed.core.tenant.AccountEntityHeaderAuth
 import com.sphereon.openid.fed.core.tenant.BearerTokenSupport
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import com.sphereon.openid.fed.core.tenant.PlatformJwtTenantClaims
+import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerBindings
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
-import dev.zacsweers.metro.asContribution
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
+import io.ktor.server.application.createRouteScopedPlugin
+import io.ktor.server.routing.routing
 import io.ktor.server.request.header
 import io.ktor.server.request.path
 import io.ktor.server.response.header
@@ -51,7 +54,7 @@ private val logger = Log.app().withTag("OidfJwtAuthSupport")
  * ## Order (matches IDK BYO)
  * 1. [com.sphereon.ktor.server.inject.KotlinInjectPlugin] — bootstrap User+Session
  *    (fixed/root tenant; principal still anonymous until claims exist)
- * 2. [JwtAuthentication] — validate Bearer with **request** SessionScope
+ * 2. [JwtRouteAuthentication] — validate Bearer with **request** SessionScope
  *    [com.sphereon.oauth2.jwt.validation.JwtValidationService]
  * 3. [OidfPostJwtIdentityPlugin] — stamp [ValidatedJwtClaimsAttribute] from the
  *    already-validated token; EXTERNAL fail-closed without tenant claim; align
@@ -76,33 +79,42 @@ object OidfJwtAuthSupport {
         configBinder: OidfConfigBinder,
         requireAuth: Boolean = true,
         anonymousPaths: List<String> = listOf("/health", "/debug/**"),
+    ) = installOidfJwtAuthAfterSession(appGraph as AdminServerBindings, configBinder, requireAuth, anonymousPaths)
+
+    fun Application.installOidfJwtAuthAfterSession(
+        appGraph: AdminServerBindings,
+        configBinder: OidfConfigBinder,
+        requireAuth: Boolean = true,
+        anonymousPaths: List<String> = listOf("/health", "/debug/**"),
     ) {
         if (!shouldInstall(configBinder)) return
         val oauth = configBinder.getOAuth2Config()
         logger.info(
-            "Installing JwtAuthentication + post-JWT identity alignment " +
+            "Installing JwtRouteAuthentication + post-JWT identity alignment " +
                 "(issuer=${oauth.issuerUri}, requireAuth=$requireAuth, " +
                 "mode=${configBinder.getIdentityConfig().mode})",
         )
-        install(JwtAuthentication) {
-            this.requireAuth = requireAuth
-            this.anonymousPaths = anonymousPaths
-            if (oauth.audience.isNotBlank()) {
-                this.expectedAudience = oauth.audience
+        routing {
+            install(JwtRouteAuthentication) {
+                this.requireAuth = requireAuth
+                this.anonymousPaths = anonymousPaths
+                if (oauth.audience.isNotBlank()) {
+                    this.expectedAudience = oauth.audience
+                }
             }
+            install(
+                OidfPostJwtRouteIdentityPlugin(
+                    appGraph = appGraph,
+                    configBinder = configBinder,
+                    anonymousPaths = anonymousPaths,
+                ),
+            )
         }
-        install(
-            OidfPostJwtIdentityPlugin(
-                appGraph = appGraph,
-                configBinder = configBinder,
-                anonymousPaths = anonymousPaths,
-            ),
-        )
     }
 }
 
 /**
- * After [JwtAuthentication]: stamp claims, EXTERNAL tenant claim gate, session align + ACCOUNT rebind.
+ * After [JwtRouteAuthentication]: stamp claims, EXTERNAL tenant claim gate, session align + ACCOUNT rebind.
  */
 @OptIn(ExperimentalUuidApi::class)
 fun OidfPostJwtIdentityPlugin(
@@ -110,116 +122,133 @@ fun OidfPostJwtIdentityPlugin(
     configBinder: OidfConfigBinder,
     anonymousPaths: List<String>,
 ) = createApplicationPlugin(name = "OidfPostJwtIdentity") {
-    onCall { call ->
-        if (matchesAnonymousPath(call.request.path(), anonymousPaths)) return@onCall
+    val align = oidfPostJwtIdentityHandler(appGraph, configBinder, anonymousPaths)
+    onCall { call -> align(call) }
+}
 
-        val jwtSession = call.attributes.getOrNull(SessionContextAttributeKey)
-        if (jwtSession == null || jwtSession.isAnonymous()) {
-            // JwtAuthentication already 401'd when requireAuth=true
-            return@onCall
-        }
+private fun OidfPostJwtRouteIdentityPlugin(
+    appGraph: AdminServerBindings,
+    configBinder: OidfConfigBinder,
+    anonymousPaths: List<String>,
+) = createRouteScopedPlugin(name = "OidfPostJwtIdentity") {
+    val align = oidfPostJwtIdentityHandler(appGraph, configBinder, anonymousPaths)
+    onCall { call -> align(call) }
+}
 
-        // Stamp claims only after JwtAuthentication accepted the token (signature/iss/exp).
-        if (!call.attributes.contains(ValidatedJwtClaimsAttribute)) {
-            val token =
-                BearerTokenSupport.extractAccessToken(call.request.header(HttpHeaders.Authorization))
-                    ?: return@onCall
-            val claimsInput = JwtClaimsParser.toJwtClaimsInput(token) ?: return@onCall
-            call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
-        }
+@OptIn(ExperimentalUuidApi::class)
+private fun oidfPostJwtIdentityHandler(
+    appGraph: AdminServerBindings,
+    configBinder: OidfConfigBinder,
+    anonymousPaths: List<String>,
+): suspend (ApplicationCall) -> Unit = handler@ { call ->
+    if (matchesAnonymousPath(call.request.path(), anonymousPaths)) return@handler
 
-        val validated = call.attributes[ValidatedJwtClaimsAttribute]
-        val claims = validated.claimsInput.claims
-        val appIdentity = configBinder.getIdentityConfig()
-        val headerLookup: (String) -> String? = { name -> call.request.header(name) }
-        // Tenant-overridable header policy uses JWT tenant (or root) as catalog key before rebind.
-        val jwtTenantForPolicy = PlatformJwtTenantClaims.extractTenantId(claims)
-        val identity = configBinder.getEffectiveIdentityConfig(jwtTenantForPolicy)
+    val jwtSession = call.attributes.getOrNull(SessionContextAttributeKey)
+    if (jwtSession == null || jwtSession.isAnonymous()) {
+        // JwtAuthentication already 401'd when requireAuth=true
+        return@handler
+    }
 
-        if (appIdentity.isExternal) {
-            val jwtTenant = jwtTenantForPolicy
-            if (jwtTenant.isNullOrBlank()) {
-                call.respondUnauthorized(
-                    "EXTERNAL mode requires a tenant claim on the access token " +
-                        "(tenant_id / tid / …). Impersonation must be expressed by the AS in the token.",
-                )
-                return@onCall
-            }
-            call.alignSessionToIdentity(
-                appGraph = appGraph,
-                targetTenantId = jwtTenant,
-                claims = claims,
-                principalClaim = identity.accountHeaderPrincipalClaim,
-                validated = validated,
-                reason = "EXTERNAL JWT tenant",
+    // Stamp claims only after JwtAuthentication accepted the token (signature/iss/exp).
+    if (!call.attributes.contains(ValidatedJwtClaimsAttribute)) {
+        val token =
+            BearerTokenSupport.extractAccessToken(call.request.header(HttpHeaders.Authorization))
+                ?: return@handler
+        val claimsInput = JwtClaimsParser.toJwtClaimsInput(token) ?: return@handler
+        call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
+    }
+
+    val validated = call.attributes[ValidatedJwtClaimsAttribute]
+    val claims = validated.claimsInput.claims
+    val appIdentity = configBinder.getIdentityConfig()
+    val headerLookup: (String) -> String? = { name -> call.request.header(name) }
+    // Tenant-overridable header policy uses JWT tenant (or root) as catalog key before rebind.
+    val jwtTenantForPolicy = PlatformJwtTenantClaims.extractTenantId(claims)
+    val identity = configBinder.getEffectiveIdentityConfig(jwtTenantForPolicy)
+
+    if (appIdentity.isExternal) {
+        val jwtTenant = jwtTenantForPolicy
+        if (jwtTenant.isNullOrBlank()) {
+            call.respondUnauthorized(
+                "EXTERNAL mode requires a tenant claim on the access token " +
+                    "(tenant_id / tid / …). Impersonation must be expressed by the AS in the token.",
             )
-            return@onCall
+            return@handler
         }
-
-        // ACCOUNT mode (mode stays APP-fixed)
-        if (!appIdentity.isAccount || !appIdentity.isSessionAccountAligned) return@onCall
-
-        if (AccountEntityHeaderAuth.hasEntitySelectionHeader(headerLookup)) {
-            val denied =
-                AccountEntityHeaderAuth.denyReasonIfHeaderForbidden(claims, headerLookup, identity)
-            if (denied != null) {
-                call.respondForbidden(denied)
-                return@onCall
-            }
-            val entityUsername =
-                AccountEntityHeaderAuth.entityUsernameFromHeaders(headerLookup)
-                    ?: return@onCall
-            val targetAccountId =
-                LegacyAccountSessionTenantLookup.resolveAccountId(entityUsername)
-            if (targetAccountId == null) {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    """{"error":"not_found","error_description":"Unknown account username for entity selection: $entityUsername"}""",
-                )
-                return@onCall
-            }
-            call.alignSessionToIdentity(
-                appGraph = appGraph,
-                targetTenantId = targetAccountId,
-                claims = claims,
-                principalClaim = identity.accountHeaderPrincipalClaim,
-                validated = validated,
-                reason = "ACCOUNT header rebind username=$entityUsername",
-            )
-            return@onCall
-        }
-
-        // No header: align to JWT tenant claim if any, else seeded root Account.id.
-        // Never demote an already-aligned Account UUID to bootstrap "default".
-        val jwtTenant = PlatformJwtTenantClaims.extractTenantId(claims)
-        val rootAccountId =
-            LegacyAccountSessionTenantLookup.resolveAccountId(AccountEntityHeaderAuth.ROOT_USERNAME)
-        val requestContext =
-            call.attributes.getOrNull(UserContextInterceptor.RequestContextKey)
-        val currentTenantId =
-            requestContext?.sessionInstance?.sessionExecution?.tenantId
-        val targetTenantId =
-            jwtTenant
-                ?: rootAccountId
-                ?: currentTenantId?.takeUnless {
-                    it.equals("default", ignoreCase = true) ||
-                        it.equals("anonymous", ignoreCase = true)
-                }
-                ?: identity.sessionFixedTenantId.ifBlank { "default" }
         call.alignSessionToIdentity(
             appGraph = appGraph,
-            targetTenantId = targetTenantId,
+            targetTenantId = jwtTenant,
             claims = claims,
             principalClaim = identity.accountHeaderPrincipalClaim,
             validated = validated,
-            reason = "ACCOUNT JWT-first entity",
+            reason = "EXTERNAL JWT tenant",
         )
+        return@handler
     }
+
+    // ACCOUNT mode (mode stays APP-fixed)
+    if (!appIdentity.isAccount || !appIdentity.isSessionAccountAligned) return@handler
+
+    if (AccountEntityHeaderAuth.hasEntitySelectionHeader(headerLookup)) {
+        val denied =
+            AccountEntityHeaderAuth.denyReasonIfHeaderForbidden(claims, headerLookup, identity)
+        if (denied != null) {
+            call.respondForbidden(denied)
+            return@handler
+        }
+        val entityUsername =
+            AccountEntityHeaderAuth.entityUsernameFromHeaders(headerLookup)
+                ?: return@handler
+        val targetAccountId =
+            LegacyAccountSessionTenantLookup.resolveAccountId(entityUsername)
+        if (targetAccountId == null) {
+            call.respond(
+                HttpStatusCode.NotFound,
+                """{"error":"not_found","error_description":"Unknown account username for entity selection: $entityUsername"}""",
+            )
+            return@handler
+        }
+        call.alignSessionToIdentity(
+            appGraph = appGraph,
+            targetTenantId = targetAccountId,
+            claims = claims,
+            principalClaim = identity.accountHeaderPrincipalClaim,
+            validated = validated,
+            reason = "ACCOUNT header rebind username=$entityUsername",
+        )
+        return@handler
+    }
+
+    // No header: align to JWT tenant claim if any, else seeded root Account.id.
+    // Never demote an already-aligned Account UUID to bootstrap "default".
+    val jwtTenant = PlatformJwtTenantClaims.extractTenantId(claims)
+    val rootAccountId =
+        LegacyAccountSessionTenantLookup.resolveAccountId(AccountEntityHeaderAuth.ROOT_USERNAME)
+    val requestContext =
+        call.attributes.getOrNull(UserContextInterceptor.RequestContextKey)
+    val currentTenantId =
+        requestContext?.sessionInstance?.sessionExecution?.tenantId
+    val targetTenantId =
+        jwtTenant
+            ?: rootAccountId
+            ?: currentTenantId?.takeUnless {
+                it.equals("default", ignoreCase = true) ||
+                    it.equals("anonymous", ignoreCase = true)
+            }
+            ?: identity.sessionFixedTenantId.ifBlank { "default" }
+    call.alignSessionToIdentity(
+        appGraph = appGraph,
+        targetTenantId = targetTenantId,
+        claims = claims,
+        principalClaim = identity.accountHeaderPrincipalClaim,
+        validated = validated,
+        reason = "ACCOUNT JWT-first entity",
+    )
 }
 
 @OptIn(ExperimentalUuidApi::class)
 private suspend fun ApplicationCall.alignSessionToIdentity(
-    appGraph: AdminServerAppGraph,
+    appGraph: AdminServerBindings,
     targetTenantId: String,
     claims: Map<String, JsonElement>,
     principalClaim: String,
@@ -246,7 +275,7 @@ private suspend fun ApplicationCall.alignSessionToIdentity(
         "Align session: $currentTenantId → $targetTenantId ($reason, principal=$principalId)",
     )
 
-    val core = appGraph.asContribution<CoreApiAppExtensionGraph>()
+    val core: CoreApiAppExtensionGraph = appGraph
     val identityResolution =
         runCatching {
             core.identityResolutionPipeline.resolve(

@@ -1,0 +1,15 @@
+findByAccountId:
+SELECT * FROM AccountMetadataPolicyRevision WHERE account_id = ? ORDER BY entity_type;
+
+findByAccountIdAndEntityType:
+SELECT * FROM AccountMetadataPolicyRevision WHERE account_id = ? AND entity_type = ?;
+
+upsert:
+INSERT INTO AccountMetadataPolicyRevision (account_id, entity_type, revision, last_operation_generation, last_operation_token, last_request_snapshot)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT (account_id, entity_type) DO UPDATE SET
+ revision = excluded.revision,
+ last_operation_generation = excluded.last_operation_generation,
+ last_operation_token = excluded.last_operation_token,
+ last_request_snapshot = excluded.last_request_snapshot
+RETURNING *;

@@ -12,6 +12,7 @@ import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.openapi.models.ErrorResponse
 import com.sphereon.openid.fed.server.federation.ktor.auth.OidfJwtAuthSupport.installOidfJwtAuthIfConfigured
+import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerBindings
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerAppGraph
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerConfig
 import com.sphereon.openid.fed.server.federation.ktor.di.createFederationServerAppGraph
@@ -80,7 +81,10 @@ fun main() {
 /**
  * Configure the Ktor application for federation server.
  */
-fun Application.configureFederation(appGraph: FederationServerAppGraph, config: FederationServerConfig) {
+fun Application.configureFederation(appGraph: FederationServerAppGraph, config: FederationServerConfig) =
+    configureFederation(appGraph as FederationServerBindings, config)
+
+fun Application.configureFederation(appGraph: FederationServerBindings, config: FederationServerConfig) {
     // Install kotlin-inject plugin with AppGraph.
     //
     // ## Session tenant boundary (L2)
