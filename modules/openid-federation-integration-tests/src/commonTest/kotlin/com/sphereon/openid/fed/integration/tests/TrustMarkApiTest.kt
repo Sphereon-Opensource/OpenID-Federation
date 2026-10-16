@@ -117,9 +117,7 @@ class TrustMarkApiTest {
                 }
             assertEquals(HttpStatusCode.Created, response.status, "Account creation failed: ${response.bodyAsText()}")
 
-            val key = client.post("$baseUrl/keys") { contentType(ContentType.Application.Json) }
 
-            assertEquals(HttpStatusCode.Created, key.status, "Key creation failed")
         } catch (e: Exception) {
             fail("Failed to create test account for TM test: ${e.message}")
         }
@@ -136,7 +134,9 @@ class TrustMarkApiTest {
                 setBody(CreateKey()) // Assuming default key creation is sufficient
             }
         assertEquals(HttpStatusCode.Created, response.status, "Key creation failed")
-        return response.body<TenantJwk>()
+        val key = response.body<TenantJwk>()
+        selectAccountSigningKey(client, baseUrl, testUsername!!, key)
+        return key
     }
 
     /**

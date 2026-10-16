@@ -25,11 +25,13 @@ import dev.zacsweers.metro.SingleIn
  * Implementation of the DeleteMetadataPolicyCommand.
  * Deletes a metadata policy entry.
  */
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<DeleteMetadataPolicyCommand>())
-class DeleteMetadataPolicyCommandImpl(
-    execution: SessionExecution
+class DeleteMetadataPolicyCommandImpl internal constructor(
+    execution: SessionExecution,
+    private val accountQueries: com.sphereon.openid.fed.persistence.models.AccountQueries,
+    private val metadataPolicyQueries: com.sphereon.openid.fed.persistence.models.MetadataPolicyQueries,
+    private val revisionQueries: com.sphereon.openid.fed.persistence.models.AccountMetadataPolicyRevisionQueries,
 ) : TypedServiceCommandAdapter<DeleteMetadataPolicyArgs, MetadataPolicy, FederationError>(
     commandId = DeleteMetadataPolicyCommand.COMMAND_ID,
     execution = execution,
@@ -38,42 +40,34 @@ class DeleteMetadataPolicyCommandImpl(
 ), DeleteMetadataPolicyCommand {
 
     private val logger = execution.federationLogger("DeleteMetadataPolicyCommand")
-    private val metadataPolicyQueries = Persistence.metadataPolicyQueries
+    @Inject
+    constructor(execution: SessionExecution) : this(execution, Persistence.accountQueries, Persistence.metadataPolicyQueries, Persistence.accountMetadataPolicyRevisionQueries)
 
     override suspend fun doExecute(
         args: DeleteMetadataPolicyArgs,
         applyDuring: (DeleteMetadataPolicyArgs) -> DeleteMetadataPolicyArgs
     ): IdkResult<MetadataPolicy, FederationError> {
-        val (tenantId, id) = applyDuring(args)
-
-        logger.info("Deleting metadata policy ID: $id for account: ${tenantId}")
-        logger.debug("Using account with ID: ${tenantId}")
-
-        val policy = metadataPolicyQueries.findById(id).executeAsOneOrNull()
-
-        if (policy == null) {
-            logger.error("Metadata policy not found with ID: $id")
-            return federationErr(MetadataPolicyNotFoundError(id))
-        }
-
-        if (policy.account_id != tenantId) {
-            logger.error("Metadata policy ID: $id does not belong to account: ${tenantId}")
-            return federationErr(MetadataPolicyNotFoundError(id))
-        }
-
         return try {
-            val deletedPolicy = metadataPolicyQueries.delete(id).executeAsOneOrNull()
-
-            if (deletedPolicy != null) {
-                logger.info("Successfully deleted metadata policy ID: $id")
-                IdkResult.ok(deletedPolicy.toDTO())
-            } else {
-                logger.error("Failed to delete metadata policy ID: $id")
-                federationErr(ServerError(Constants.FAILED_TO_DELETE_ENTITY_CONFIGURATION_METADATA_POLICY))
+            val applied = applyDuring(args)
+            val tenantId = policyAccountId(applied.tenantId)
+            val deleted = accountQueries.transactionWithResult {
+                lockPolicyAccount(accountQueries, tenantId)
+                val policy = metadataPolicyQueries.findById(applied.id).executeAsOneOrNull()
+                if (policy == null || policy.account_id != tenantId) {
+                    throw com.sphereon.openid.fed.core.error.FederationErrorException(MetadataPolicyNotFoundError(applied.id))
+                }
+                val row = metadataPolicyQueries.delete(applied.id).executeAsOneOrNull()
+                    ?: throw com.sphereon.openid.fed.core.error.FederationErrorException(MetadataPolicyNotFoundError(applied.id))
+                advanceLegacyPolicyRevision(revisionQueries, tenantId, policy.key)
+                row.toDTO()
             }
-        } catch (e: Exception) {
-            logger.error("Failed to delete metadata policy ID: $id for account: ${tenantId}", e)
-            federationErr(ServerError("Failed to delete metadata policy", e.message, e))
+            IdkResult.ok(deleted)
+        } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+            throw cancelled
+        } catch (refused: com.sphereon.openid.fed.core.error.FederationErrorException) {
+            federationErr(refused.federationError)
+        } catch (failure: Exception) {
+            federationErr(ServerError("Failed to delete metadata policy", failure.message, failure))
         }
     }
 }

@@ -22,6 +22,9 @@ expect fun federationTestBaseUrl(): String
 /** Valid access token accepted by the admin under test. */
 expect fun adminTestBearerToken(): String
 
+/** Genuine IDK JWS verification against a public issuer key, without signer or resolver substitutes. */
+expect suspend fun verifyFederationTestJwt(jwt: String, key: com.sphereon.openid.fed.openapi.models.Jwk): Boolean
+
 val adminTestJson: Json = Json {
     ignoreUnknownKeys = true
     isLenient = true

@@ -34,8 +34,31 @@ class HttpResolver<V : Any>(
     private val config: HttpResolverConfig = DefaultHttpResolverConfig(),
     private val httpClient: HttpClient,
     private val cache: ScopedCache<String, HttpMetadata<V>>,
-    private val responseMapper: suspend (HttpResponse) -> V
+    private val responseMapper: suspend (HttpResponse) -> V,
 ) {
+    private var validateUrl: ((String) -> Unit)? = null
+    private var cacheNamespace: String? = null
+    private var requestPolicyInstalled: Boolean = false
+
+    /** Installs the immutable request-policy identity and URL check before sharing this resolver with callers. */
+    fun installRequestPolicy(
+        cacheNamespace: String,
+        validator: (String) -> Unit,
+    ) {
+        check(!requestPolicyInstalled) { "A request policy is already installed" }
+        require(cacheNamespace.isNotBlank() && cacheNamespace.length <= 16_384) {
+            "The cache namespace must be non-empty and at most 16384 characters"
+        }
+        this.cacheNamespace = cacheNamespace
+        validateUrl = validator
+        requestPolicyInstalled = true
+    }
+
+    private fun validate(url: String) {
+        validateUrl?.invoke(url)
+    }
+
+    private fun cacheKey(url: String): String = cacheNamespace?.let { namespace -> "ns:${namespace.length}:$namespace|url:${url.length}:$url" } ?: url
     /**
      * Adds conditional cache headers to the HTTP request based on cached metadata.
      * Uses the APP scope to check for existing cache entries.
@@ -58,28 +81,32 @@ class HttpResolver<V : Any>(
     /**
      * Executes an HTTP GET request with retry mechanisms and exponential backoff.
      */
-    private suspend fun fetchWithRetry(
+    private suspend fun <R> fetchWithRetry(
         url: String,
         cachedMetadata: HttpMetadata<V>?,
-        attempt: Int = 1
-    ): HttpResponse {
+        attempt: Int = 1,
+        expectedContentType: String? = null,
+        mapResponse: suspend (HttpResponse) -> R,
+    ): R {
         try {
             logger.debug("Attempting HTTP request for $url (attempt $attempt/${config.httpRetries})")
-            return httpClient.get(url) {
+            return httpClient.prepareGet(url) {
                 applyCacheHeaders(url, cachedMetadata)
+                expectedContentType?.let { header(HttpHeaders.Accept, it) }
                 timeout {
                     requestTimeoutMillis = config.httpTimeoutMs
                 }
-            }
+            }.execute(mapResponse)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            if (e is FederationHttpFetchException) throw e
             if (attempt < config.httpRetries) {
                 val retryDelayMs = 1000L * (1 shl (attempt - 1))
                 logger.warn(
                     "HTTP request failed for $url, retrying in ${retryDelayMs}ms (attempt $attempt): ${e.message ?: "Unknown error"}"
                 )
                 delay(retryDelayMs)
-                return fetchWithRetry(url, cachedMetadata, attempt + 1)
+                return fetchWithRetry(url, cachedMetadata, attempt + 1, expectedContentType, mapResponse)
             }
             logger.error("HTTP request failed for $url after $attempt attempts", e)
             throw e
@@ -91,20 +118,14 @@ class HttpResolver<V : Any>(
      */
     private suspend fun fetchFromRemote(url: String, cachedMetadata: HttpMetadata<V>?): HttpMetadata<V> {
         logger.debug("Fetching from remote: $url")
-        val response = fetchWithRetry(url, cachedMetadata)
-
-        // Handle 304 Not Modified - return cached value
-        if (response.status == HttpStatusCode.NotModified && cachedMetadata != null) {
-            logger.debug("Received 304 Not Modified, using cached value for $url")
-            return cachedMetadata
+        return fetchWithRetry(url, cachedMetadata) { response ->
+            if (response.status == HttpStatusCode.NotModified && cachedMetadata != null) cachedMetadata
+            else HttpMetadata(
+                value = responseMapper(response),
+                etag = if (config.enableHttpCaching) response.headers[HttpHeaders.ETag] else null,
+                lastModified = if (config.enableHttpCaching) response.headers[HttpHeaders.LastModified] else null,
+            )
         }
-
-        val value = responseMapper(response)
-        return HttpMetadata(
-            value = value,
-            etag = if (config.enableHttpCaching) response.headers[HttpHeaders.ETag] else null,
-            lastModified = if (config.enableHttpCaching) response.headers[HttpHeaders.LastModified] else null
-        )
     }
 
     // ========== APP-scoped operations (shared across all tenants) ==========
@@ -119,9 +140,10 @@ class HttpResolver<V : Any>(
      * @return The resource content as a string.
      */
     suspend fun get(url: String): String {
+        validate(url)
         logger.debug("Retrieving resource from $url (APP scope)")
 
-        val cached = cache.getApp(url)
+        val cached = cache.getApp(cacheKey(url))
         if (cached != null) {
             logger.debug("Cache hit for $url (APP scope)")
             return cached.value.toString()
@@ -129,7 +151,7 @@ class HttpResolver<V : Any>(
 
         logger.debug("Cache miss for $url (APP scope), fetching from remote")
         val metadata = fetchFromRemote(url, null)
-        cache.putApp(url, metadata)
+        cache.putApp(cacheKey(url), metadata)
         return metadata.value.toString()
     }
 
@@ -141,51 +163,60 @@ class HttpResolver<V : Any>(
      * @return The resource content as a string.
      */
     suspend fun get(url: String, forceRefresh: Boolean): String {
+        validate(url)
         if (!forceRefresh) {
             return get(url)
         }
 
         logger.debug("Force refresh for $url (APP scope)")
-        val cached = cache.getApp(url)
+        val cached = cache.getApp(cacheKey(url))
         val metadata = fetchFromRemote(url, cached)
-        cache.putApp(url, metadata)
+        cache.putApp(cacheKey(url), metadata)
         return metadata.value.toString()
     }
 
     /** Fetch a typed Entity Statement; bypassing skips cached bodies and conditional headers. */
-    suspend fun getJwt(url: String, bypassCache: Boolean = false): String {
-        val cached = if (bypassCache) null else cache.getApp(url)
-        if (cached?.jwtContentType == ENTITY_STATEMENT_CONTENT_TYPE) return cached.value.toString()
-        val response = try {
-            fetchWithRetry(url, null)
+    suspend fun getJwt(url: String, bypassCache: Boolean = false): String =
+        getTypedJwt(url, ENTITY_STATEMENT_CONTENT_TYPE, bypassCache)
+
+    /** Other signed federation documents retain their own media type without changing getJwt's public ABI. */
+    suspend fun getTypedJwt(url: String, expectedContentType: String, bypassCache: Boolean = false): String {
+        validate(url)
+        val cached = if (bypassCache) null else cache.getApp(cacheKey(url))
+        if (cached?.jwtContentType == expectedContentType) return cached.value.toString()
+        val value = try {
+            fetchWithRetry(url, null, expectedContentType = expectedContentType) { response ->
+                validateJwtResponse(response, expectedContentType)
+                responseMapper(response)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             throw FederationHttpFetchException("Failed to fetch $url: ${e.message}", e)
         }
-        validateJwtResponse(response, ENTITY_STATEMENT_CONTENT_TYPE)
-        val value = responseMapper(response)
         if (value.toString().encodeToByteArray().size > MAX_JWT_BYTES) {
             throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
         }
-        if (!bypassCache) cache.putApp(url, HttpMetadata(value, jwtContentType = ENTITY_STATEMENT_CONTENT_TYPE))
+        if (!bypassCache) cache.putApp(cacheKey(url), HttpMetadata(value, jwtContentType = expectedContentType))
         return value.toString()
     }
 
     /** Query a Trust Mark status endpoint through the same protected HTTP client. */
     suspend fun postJwt(url: String, formParameters: Parameters): String {
-        val response = try {
-            httpClient.post(url) {
+        validate(url)
+        val value = try {
+            httpClient.preparePost(url) {
                 setBody(io.ktor.client.request.forms.FormDataContent(formParameters))
                 timeout { requestTimeoutMillis = config.httpTimeoutMs }
+            }.execute { response ->
+                validateJwtResponse(response, "application/trust-mark-status-response+jwt")
+                responseMapper(response).toString()
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             throw FederationHttpFetchException("Failed to query $url: ${e.message}", e)
         }
-        validateJwtResponse(response, "application/trust-mark-status-response+jwt")
-        val value = responseMapper(response).toString()
         if (value.encodeToByteArray().size > MAX_JWT_BYTES) {
             throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
         }
@@ -217,7 +248,8 @@ class HttpResolver<V : Any>(
      * @return The cached value, or null if not cached.
      */
     suspend fun getCachedApp(url: String): String? {
-        return cache.getApp(url)?.value?.toString()
+        validate(url)
+        return cache.getApp(cacheKey(url))?.value?.toString()
     }
 
     // ========== TENANT-scoped operations (per-account isolation) ==========
@@ -233,9 +265,10 @@ class HttpResolver<V : Any>(
      * @return The resource content as a string.
      */
     suspend fun getForTenant(url: String, tenantId: String): String {
+        validate(url)
         logger.debug("Retrieving resource from $url (TENANT scope: $tenantId)")
 
-        val cached = cache.getTenant(tenantId, url)
+        val cached = cache.getTenant(tenantId, cacheKey(url))
         if (cached != null) {
             logger.debug("Cache hit for $url (TENANT scope: $tenantId)")
             return cached.value.toString()
@@ -243,7 +276,7 @@ class HttpResolver<V : Any>(
 
         logger.debug("Cache miss for $url (TENANT scope: $tenantId), fetching from remote")
         val metadata = fetchFromRemote(url, null)
-        cache.putTenant(tenantId, url, metadata)
+        cache.putTenant(tenantId, cacheKey(url), metadata)
         return metadata.value.toString()
     }
 
@@ -256,14 +289,15 @@ class HttpResolver<V : Any>(
      * @return The resource content as a string.
      */
     suspend fun getForTenant(url: String, tenantId: String, forceRefresh: Boolean): String {
+        validate(url)
         if (!forceRefresh) {
             return getForTenant(url, tenantId)
         }
 
         logger.debug("Force refresh for $url (TENANT scope: $tenantId)")
-        val cached = cache.getTenant(tenantId, url)
+        val cached = cache.getTenant(tenantId, cacheKey(url))
         val metadata = fetchFromRemote(url, cached)
-        cache.putTenant(tenantId, url, metadata)
+        cache.putTenant(tenantId, cacheKey(url), metadata)
         return metadata.value.toString()
     }
 
@@ -275,7 +309,8 @@ class HttpResolver<V : Any>(
      * @return The cached value, or null if not cached.
      */
     suspend fun getCachedTenant(url: String, tenantId: String): String? {
-        return cache.getTenant(tenantId, url)?.value?.toString()
+        validate(url)
+        return cache.getTenant(tenantId, cacheKey(url))?.value?.toString()
     }
 
     // ========== Generic scoped operations ==========

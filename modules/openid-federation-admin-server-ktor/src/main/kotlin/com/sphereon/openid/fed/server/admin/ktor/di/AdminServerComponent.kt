@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.server.admin.ktor.di
 
+import com.sphereon.core.api.app.CoreApiAppExtensionGraph
 import com.sphereon.core.defaults.app.DefaultRootScopeProvider
 import com.sphereon.di.app.RootScopeProvider
 import com.sphereon.crypto.core.kms.KmsProviderConfigBinder
@@ -49,9 +50,8 @@ data class AdminServerConfig(
  * Uses Metro's DependencyGraph to automatically include all contributed
  * bindings from IDK modules (KMS providers, services, etc.).
  */
-@SingleIn(AppScope::class)
-@DependencyGraph(AppScope::class)
-abstract class AdminServerAppGraph : AbstractAppGraph() {
+/** Shared production providers; concrete hosts compose their own graph and storage inputs. */
+abstract class AdminServerBindings : AbstractAppGraph(), CoreApiAppExtensionGraph {
     abstract val configBinder: OidfConfigBinder
     abstract val kmsProviderConfigBinder: KmsProviderConfigBinder
     abstract val memoryKeyStoreBackingStorage: MemoryKeyStoreBackingStorage
@@ -128,6 +128,11 @@ abstract class AdminServerAppGraph : AbstractAppGraph() {
         )
     }
 
+}
+
+@SingleIn(AppScope::class)
+@DependencyGraph(AppScope::class)
+abstract class AdminServerAppGraph : AdminServerBindings() {
     @DependencyGraph.Factory
     fun interface Factory {
         fun create(

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-10-15",
+  "qualificationIsInteropAcceptance": false,
+  "peers": {
+    "lighthouse": {
+      "repository": "https://github.com/go-oidfed/lighthouse",
+      "commit": "20c4a4e4a9b91b489014a2f1b009fcaaa186401b",
+      "license": "MIT",
+      "image": "oidfed/lighthouse@sha256:20eab44c0360985c5687283644622e50fe27599ccea603392948e61e0bc3f505",
+      "imageSourceReference": "https://hub.docker.com/v2/repositories/oidfed/lighthouse/tags/sha-20c4a4e",
+      "upstreamBuildRecipe": "https://github.com/go-oidfed/lighthouse/blob/20c4a4e4a9b91b489014a2f1b009fcaaa186401b/Dockerfile",
+      "configuration": "https://github.com/go-oidfed/lighthouse/blob/20c4a4e4a9b91b489014a2f1b009fcaaa186401b/config-example.yaml",
+      "persistentStores": ["SQLite /data/lighthouse.db", "filesystem signing keys /data/keys"],
+      "qualification": "source-and-registry-inspected-runtime-pending",
+      "protocolRevision": "must-be-qualified-against-scenario-pin"
+    },
+    "offa": {
+      "repository": "https://github.com/go-oidfed/offa",
+      "commit": "52e0743c5b667930c2719f776f7dbdccdb4aa929",
+      "license": "MIT",
+      "image": "oidfed/offa@sha256:0476f938994fcfdd841320fd1839f96cee2872388658c7bafe587af7e3500f63",
+      "imageSourceReference": "https://hub.docker.com/v2/repositories/oidfed/offa/tags/sha-52e0743",
+      "qualification": "candidate-source-and-registry-inspected",
+      "protocolRevision": "not-qualified",
+      "limitations": ["Upstream describes a proof of concept", "Login-link unit tests do not demonstrate complete OIDC login", "Requires an actual OP host and Playwright lane"]
+    },
+    "fedservice": {
+      "repository": "https://github.com/SUNET/fedservice",
+      "commit": "d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f",
+      "license": "Apache-2.0",
+      "qualification": "candidate-source-inspected-no-locked-runnable-image",
+      "protocolRevision": "not-qualified",
+      "limitations": ["Upstream dependency ranges and Git dependencies need a transitive lock", "Most upstream federation tests mock HTTP", "Upstream live scripts disable TLS verification; that setting must not be reused"]
+    },
+    "ofcli": {
+      "repository": "https://github.com/dianagudu/ofcli",
+      "commit": "289e97f45d1fd225f16ff77976a7ede1ea6390f0",
+      "license": "MIT",
+      "qualification": "candidate-source-inspected-no-locked-runnable-image",
+      "protocolRevision": "not-qualified",
+      "limitations": ["Metadata policy application remains TODO in fedtree.py", "Cannot serve as an independently qualified effective-metadata policy oracle", "Graphviz build dependencies require pinning"]
+    }
+  },
+  "harnessImages": {
+    "curl": "curlimages/curl@sha256:d9b4541e214bcd85196d6e92e2753ac6d0ea699f0af5741f8c6cccbfcf00ef4b",
+    "postgres": "postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "nginx": "nginx@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10",
+    "jre": "eclipse-temurin@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5",
+    "keycloak": "quay.io/keycloak/keycloak@sha256:4883630ef9db14031cde3e60700c9a9a8eaf1b5c24db1589d6a2d43de38ba2a9",
+    "ryuk": "testcontainers/ryuk@sha256:dd3f023a6ed7015b3f95a49ccd65a2daf0c56e681422c12952b19a810dfa6298",
+    "startupAlpine": "alpine@sha256:8fc3dacfb6d69da8d44e42390de777e48577085db99aa4e4af35f483eb08b989"
+  },
+  "specifications": {
+    "federation11": {
+      "url": "https://openid.net/specs/openid-federation-1_1.html",
+      "retrievedOn": "2026-10-15",
+      "sha256": "3b7f9a14f97e3b668f3a58dbc6460aab4f612a05621b1c864c9fef2a2a3982ba",
+      "scope": "reference-snapshot-not-counterpart-conformance-evidence"
+    }
+  }
+}

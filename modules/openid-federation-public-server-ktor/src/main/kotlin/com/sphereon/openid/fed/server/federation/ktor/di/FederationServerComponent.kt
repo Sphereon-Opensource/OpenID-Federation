@@ -49,9 +49,8 @@ data class FederationServerConfig(
  * Uses Metro's DependencyGraph to automatically include all contributed
  * bindings from IDK modules (KMS providers, services, etc.).
  */
-@SingleIn(AppScope::class)
-@DependencyGraph(AppScope::class)
-abstract class FederationServerAppGraph : AbstractAppGraph() {
+/** Shared production providers; concrete hosts compose their own graph and storage inputs. */
+abstract class FederationServerBindings : AbstractAppGraph() {
     abstract val configBinder: OidfConfigBinder
     abstract val kmsProviderConfigBinder: KmsProviderConfigBinder
     abstract val memoryKeyStoreBackingStorage: MemoryKeyStoreBackingStorage
@@ -123,6 +122,11 @@ abstract class FederationServerAppGraph : AbstractAppGraph() {
         )
     }
 
+}
+
+@SingleIn(AppScope::class)
+@DependencyGraph(AppScope::class)
+abstract class FederationServerAppGraph : FederationServerBindings() {
     @DependencyGraph.Factory
     fun interface Factory {
         fun create(

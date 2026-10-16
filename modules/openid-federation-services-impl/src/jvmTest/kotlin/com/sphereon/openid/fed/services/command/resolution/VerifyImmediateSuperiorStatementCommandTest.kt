@@ -135,7 +135,11 @@ class VerifyImmediateSuperiorStatementCommandTest {
             put("iat", baseNow - 100)
             put("exp", expiry)
             put("jwks", buildJsonObject { put("keys", JsonArray(listOf(subjectKey.publicJson))) })
-            metadata?.let { put("metadata", it) }
+            if (metadata != null) {
+                put("metadata", metadata)
+            } else if (issuer == subject) {
+                put("metadata", buildJsonObject { put("federation_entity", buildJsonObject { }) })
+            }
             metadataPolicy?.let { put("metadata_policy", it) }
             authorityHint?.let { put("authority_hints", JsonArray(listOf(JsonPrimitive(it)))) }
         }

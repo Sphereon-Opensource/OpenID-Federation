@@ -57,14 +57,20 @@ class HttpResolverTest {
 
     private fun createResolver(
         httpClient: HttpClient,
-        config: HttpResolverConfig = TestHttpResolverConfig()
+        config: HttpResolverConfig = TestHttpResolverConfig(),
+        cacheNamespace: String? = null,
+        validateUrl: ((String) -> Unit)? = null,
     ): HttpResolver<String> {
-        return HttpResolver(
+        val resolver = HttpResolver(
             config = config,
             httpClient = httpClient,
             cache = cache,
-            responseMapper = { response -> response.bodyAsText() }
+            responseMapper = { response -> response.bodyAsText() },
         )
+        if (cacheNamespace != null || validateUrl != null) {
+            resolver.installRequestPolicy(cacheNamespace ?: "test-url-policy-v1", validateUrl ?: {})
+        }
+        return resolver
     }
 
     // ========== APP Scope Tests ==========
@@ -81,6 +87,45 @@ class HttpResolverTest {
 
         assertEquals("cached value", result)
         assertEquals(0, requestCount, "Should not make HTTP request on cache hit")
+    }
+
+    @Test
+    fun `current URL policy is checked before returning a cached APP value`() = runTest {
+        val url = "https://sphereon.test/.well-known/openid-federation"
+        cache.putApp(url, HttpMetadata("previously cached signed object"))
+
+        val resolver = createResolver(
+            httpClient = createMockClient(),
+            cacheNamespace = "test-revoked-policy-v1",
+            validateUrl = { requested ->
+                if (requested == url) throw IllegalArgumentException("authority is no longer allowed")
+            },
+        )
+
+        val failure = assertFailsWith<IllegalArgumentException> { resolver.get(url) }
+        assertEquals("authority is no longer allowed", failure.message)
+        assertEquals(0, requestCount, "The URL validator must run before returning cache data or making HTTP")
+    }
+
+    @Test
+    fun `APP and tenant entries from an approved policy are not reused by a new default policy`() = runTest {
+        val url = "https://sphereon.test/.well-known/openid-federation"
+        val approved = createResolver(
+            httpClient = createMockClient(responseBody = "approved-policy data"),
+            cacheNamespace = "oidf-counterparty-egress-cache-v1|targets=sphereon.test:443=10.253.140.12",
+            validateUrl = {},
+        )
+        assertEquals("approved-policy data", approved.get(url))
+        assertEquals("approved-policy data", approved.getForTenant(url, "tenant-a"))
+
+        val default = createResolver(
+            httpClient = createMockClient(responseBody = "default-policy fetch"),
+            cacheNamespace = "oidf-counterparty-egress-cache-v1|targets=none",
+            validateUrl = {},
+        )
+        assertEquals("default-policy fetch", default.get(url))
+        assertEquals("default-policy fetch", default.getForTenant(url, "tenant-a"))
+        assertEquals(4, requestCount, "Both cache scopes must miss entries written under the old policy")
     }
 
     @Test

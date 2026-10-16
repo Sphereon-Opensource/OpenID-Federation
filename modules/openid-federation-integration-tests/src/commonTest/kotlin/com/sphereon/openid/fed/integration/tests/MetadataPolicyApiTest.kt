@@ -12,6 +12,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlin.test.AfterTest
@@ -118,7 +119,7 @@ class MetadataPolicyApiTest {
                     put("value", JsonPrimitive("openid profile email"))
                 })
                 put("contacts", buildJsonObject {
-                    put("add", JsonPrimitive("info@example.com"))
+                    put("add", JsonArray(listOf(JsonPrimitive("info@example.com"))))
                 })
             }
 
@@ -183,7 +184,7 @@ class MetadataPolicyApiTest {
             val policyKey = "policy_to_delete"
             val policyJson = buildJsonObject {
                 put("redirect_uris", buildJsonObject {
-                    put("add", JsonPrimitive("https://client.example.org/callback"))
+                    put("add", JsonArray(listOf(JsonPrimitive("https://client.example.org/callback"))))
                 })
             }
 
@@ -298,10 +299,10 @@ class MetadataPolicyApiTest {
         val policyKey = "openid_relying_party"
         val policyJson = buildJsonObject {
             put("application_type", buildJsonObject {
-                put("one_of", JsonPrimitive("web native"))
+                put("one_of", JsonArray(listOf(JsonPrimitive("web"), JsonPrimitive("native"))))
             })
             put("contacts", buildJsonObject {
-                put("add", JsonPrimitive("ops@rp.example.com"))
+                put("add", JsonArray(listOf(JsonPrimitive("ops@rp.example.com"))))
             })
         }
 

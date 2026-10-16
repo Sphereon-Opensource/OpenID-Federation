@@ -11,6 +11,7 @@ import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustCommandIm
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.cache.CacheRequirements
+import com.sphereon.core.api.cache.CacheSerializers
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.core.api.session.asCoreApiServiceGraph
@@ -55,6 +56,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -70,6 +72,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -92,6 +95,7 @@ class FederationRegistrationCommandsTest {
     private val published = mutableMapOf<String, String>()
     private var networkRequests = 0
     private val requested = mutableListOf<String>()
+    private var cancelFetchKey: String? = null
     private var now = 0L
 
     private data class Key(val kid: String, val alias: String, val provider: String, val public: JsonObject) {
@@ -132,7 +136,12 @@ class FederationRegistrationCommandsTest {
                         "${url.protocol.name}://${url.host}${url.encodedPath}"
                     }
                     requested += key
-                    published[key]?.let { respond(it, HttpStatusCode.OK) }
+                    if (key == cancelFetchKey) throw CancellationException("subordinate read cancelled")
+                    published[key]?.let { body -> respond(body, HttpStatusCode.OK, io.ktor.http.headersOf(
+                        io.ktor.http.HttpHeaders.ContentType,
+                        if (body.trimStart().startsWith("{")) "application/json" else
+                            "application/" + (parseCompactJws(body)?.header?.text("typ") ?: "entity-statement+jwt"),
+                    )) }
                         ?: respond("not published", HttpStatusCode.NotFound)
                 }
             }
@@ -195,7 +204,8 @@ class FederationRegistrationCommandsTest {
         put("iat", now - 10)
         put("exp", now + 3_600)
         put("jwks", keys)
-        metadata?.let { put("metadata", it) }
+        (metadata ?: if (iss == sub) buildJsonObject { put("federation_entity", JsonObject(emptyMap())) } else null)
+            ?.let { put("metadata", it) }
         authorityHints?.let { put("authority_hints", JsonArray(it.map(::JsonPrimitive))) }
         policy?.let { put("metadata_policy", it) }
     }
@@ -244,6 +254,64 @@ class FederationRegistrationCommandsTest {
     private fun resolver() = ResolveTrustChainCommandImpl(execution, context, verifier(), anchorKeys())
     private fun verifier() = VerifyTrustChainCommandImpl(execution, context)
     private fun configurations() = GetEntityConfigurationCommandImpl(execution, context)
+
+    @Test
+    fun cancellationDuringCachedSourceReadEscapesWithoutTryingTheFallback() = runTest {
+        val sourceCache = OidfCache.createStringKeyCache(OidfCache.newManager(),
+            CacheRequirements(namespace = "cancel-source-${hashCode()}"), CacheSerializers.string)
+        sourceCache.putApp("oidf:source_endpoint:$ta|$rp", "$ta/cached-source")
+        context = FederationContext(jwtService, context.httpResolver, trustChainCache = sourceCache)
+        cancelFetchKey = "$ta/cached-source"
+
+        val escaped = assertFailsWith<CancellationException> {
+            resolver().execute(ResolveTrustChainArgs(rp, arrayOf(ta)))
+        }
+        assertEquals("subordinate read cancelled", escaped.message)
+        assertEquals(1, requested.count { it == cancelFetchKey })
+        assertTrue(requested.none { it == "$ta/fetch?sub=$rp" }, "Cancellation must not trigger fallback work")
+    }
+
+    @Test
+    fun entityConfigurationFetchRejectsSignedDocumentsForAnotherEntity() = runTest {
+        published["$rp/.well-known/openid-federation"] = taConfiguration
+        val result = configurations().getEntityConfiguration(rp)
+        assertTrue(result.isErr, "A valid self signature does not bind a document to the requested URL")
+    }
+
+    @Test
+    fun entityConfigurationFetchRefreshesAnExpiredHttpCachedDocument() = runTest {
+        val endpoint = "$rp/.well-known/openid-federation"
+        val expired = sign(JsonObject(statementClaims(rp, rp, jwks(rpFederationKey), rpMetadata, listOf(ta)) +
+            ("exp" to JsonPrimitive(now - 60))), rpFederationKey, "entity-statement+jwt")
+        published[endpoint] = expired
+        assertEquals(expired, context.httpResolver.getJwt(endpoint))
+        published[endpoint] = rpConfiguration
+        val before = networkRequests
+        assertTrue(configurations().getEntityConfiguration(rp).isOk)
+        assertEquals(before + 1, networkRequests, "Expired signed cache data must trigger one bounded refresh")
+    }
+
+    @Test
+    fun chainDiscoveryRejectsWrongIdentityFetchedConfiguration() = runTest {
+        published["$rp/.well-known/openid-federation"] = taConfiguration
+        val result = automatic().execute(automaticArgs(AutomaticRegistrationProof.RequestObject(requestObject())))
+        assertTrue(result.isErr, "Discovery must bind every fetched configuration to its origin identity")
+    }
+
+    @Test
+    fun entityConfigurationFetchRejectsExpiredFutureAndWrongTypeStatements() = runTest {
+        val base = statementClaims(rp, rp, jwks(rpFederationKey), rpMetadata, listOf(ta))
+        for ((claims, typ) in listOf(
+            JsonObject(base + ("exp" to JsonPrimitive(now - 60))) to "entity-statement+jwt",
+            JsonObject(base + ("iat" to JsonPrimitive(now + 60))) to "entity-statement+jwt",
+            base to "trust-mark+jwt",
+        )) {
+            val identifier = "$rp/rejected-${published.size}"
+            val matching = JsonObject(claims + mapOf("iss" to JsonPrimitive(identifier), "sub" to JsonPrimitive(identifier)))
+            published["$identifier/.well-known/openid-federation"] = sign(matching, rpFederationKey, typ)
+            assertTrue(configurations().getEntityConfiguration(identifier).isErr, "$typ $claims")
+        }
+    }
     private fun anchorKeys() = PublishedTrustAnchorKeyResolver(configurations())
 
     private fun automatic(store: RegistrationProofJtiStore = InMemoryRegistrationProofJtiStore()) =
@@ -577,6 +645,33 @@ class FederationRegistrationCommandsTest {
     }
 
     @Test
+    fun explicitResponseRejectsFutureTimeCriticalExtensionsAndChangedEchoedKeys() = runTest {
+        val request = explicitRequest(includeTrustChains = false)
+        val atProvider = verified(request)
+        val response = signResponse().execute(SignExplicitRegistrationResponseArgs("op-account", atProvider,
+            registered(atProvider), atProvider.validUntilEpochSeconds - 5, includeClientJwks = true))
+        assertTrue(response.isOk)
+        val baseline = parseCompactJws(response.value.body)!!.payload
+        for (change in listOf(
+            mapOf("iat" to JsonPrimitive(now + 60)),
+            mapOf("iat" to JsonPrimitive("12345")),
+            mapOf("crit" to JsonArray(listOf(JsonPrimitive("vendor_claim"))), "vendor_claim" to JsonPrimitive(true)),
+            mapOf("crit" to JsonArray(emptyList())),
+            mapOf("jwks" to jwks(rpClientKey)),
+        )) {
+            val altered = sign(JsonObject(baseline + change), opFederationKey, FederationRegistration.EXPLICIT_RESPONSE_TYP)
+            assertTrue(verifyResponse().execute(VerifyExplicitRegistrationResponseArgs(request, altered, anchors)).isErr,
+                "Signed response must reject $change")
+        }
+        val extended = sign(JsonObject(baseline + ("vendor_claim" to JsonPrimitive(true))), opFederationKey,
+            FederationRegistration.EXPLICIT_RESPONSE_TYP)
+        assertTrue(verifyResponse().execute(VerifyExplicitRegistrationResponseArgs(request, extended, anchors)).isOk)
+        val fractional = sign(JsonObject(baseline + ("iat" to JsonPrimitive(now.toDouble() - 0.25))),
+            opFederationKey, FederationRegistration.EXPLICIT_RESPONSE_TYP)
+        assertTrue(verifyResponse().execute(VerifyExplicitRegistrationResponseArgs(request, fractional, anchors)).isOk)
+    }
+
+    @Test
     fun explicitTrustChainBodyIsAccepted() = runTest {
         val requestConfiguration = sign(
             JsonObject(statementClaims(rp, rp, jwks(rpFederationKey), rpMetadata, listOf(ta)) + ("aud" to JsonPrimitive(op))),
@@ -700,6 +795,13 @@ class FederationRegistrationCommandsTest {
 
         val valid = verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, rp, anchorWithOwner(jwks(opFederationKey)), now))
         assertTrue(valid.isOk && valid.value.isValid, "a delegation from the recorded owner to this issuer is valid")
+        val originalClaims = parseCompactJws(delegation)!!.payload
+        for (claim in listOf("iat", "exp")) {
+            val altered = sign(JsonObject(originalClaims + (claim to JsonPrimitive(originalClaims.getValue(claim).jsonPrimitive.content))),
+                opFederationKey, "trust-mark-delegation+jwt")
+            assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(altered, delegatedType, rp,
+                anchorWithOwner(jwks(opFederationKey)), now)).isErr, "Delegation $claim must be a JSON number")
+        }
 
         assertTrue(verify.execute(VerifyTrustMarkDelegationArgs(delegation, delegatedType, op, anchorWithOwner(jwks(opFederationKey)), now)).isErr,
             "the delegation names another issuer")

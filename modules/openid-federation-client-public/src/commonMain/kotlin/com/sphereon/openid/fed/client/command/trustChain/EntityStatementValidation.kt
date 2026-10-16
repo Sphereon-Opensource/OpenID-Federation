@@ -2,14 +2,20 @@ package com.sphereon.openid.fed.client.command.trustChain
 
 import com.sphereon.openid.fed.openapi.models.Jwt
 import com.sphereon.openid.fed.openapi.models.Constraints
+import com.sphereon.openid.fed.core.isValidEntityIdentifier
+import com.sphereon.core.api.http.util.validateHttpsUrlSyntax
+import com.sphereon.crypto.core.jose.hasWellFormedPublicJwkMaterial
+import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.booleanOrNull
 import kotlin.math.floor
 import kotlin.math.nextDown
 
@@ -18,6 +24,15 @@ import kotlin.math.nextDown
  * that do not require network or crypto.
  */
 object EntityStatementValidation {
+
+    val STANDARD_POLICY_OPERATORS = setOf("value", "add", "default", "one_of", "subset_of", "superset_of", "essential")
+
+    private fun validJwkSet(value: JsonElement?): Boolean {
+        val keys = (value as? JsonObject)?.get("keys") as? JsonArray ?: return false
+        val kids = keys.map { key -> (key as? JsonObject)?.get("kid") as? JsonPrimitive }
+        return keys.all { key -> key is JsonObject && hasWellFormedPublicJwkMaterial(key) } &&
+            kids.all { it?.isString == true && it.content.isNotEmpty() } && kids.map { it?.content }.distinct().size == kids.size
+    }
 
     const val ENTITY_STATEMENT_TYP = "entity-statement+jwt"
     private const val CLOCK_SKEW_SECONDS = 5L
@@ -197,9 +212,92 @@ object EntityStatementValidation {
         if ((payload["iss"] != null && iss.isNullOrBlank()) || (payload["sub"] != null && sub.isNullOrBlank())) {
             yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position has empty iss or sub"))
         }
+        for ((name, identifier) in listOf("iss" to iss, "sub" to sub)) {
+            if (!identifier.isNullOrBlank() && !isValidEntityIdentifier(identifier)) {
+                yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position $name must be a valid Entity Identifier"))
+            }
+        }
+        payload["jwks"]?.let { value ->
+            if (!validJwkSet(value)) {
+                yield(StatementValidationDiagnostic("KID_NOT_FOUND", "Statement at position $position jwks must be a JWK Set with unique nonempty string key IDs"))
+            }
+        }
+        payload["metadata"]?.let { value ->
+            if (value !is JsonObject || value.values.any { role -> role !is JsonObject || role.values.any { it == JsonNull } }) {
+                yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position metadata must contain Entity Type objects without null metadata values"))
+            }
+            val federation = (value as? JsonObject)?.get("federation_entity") as? JsonObject
+            if (federation != null && listOf("jwks", "jwks_uri", "signed_jwks_uri").any { it in federation }) {
+                yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position federation_entity metadata must not contain protocol JWK Set parameters"))
+            }
+        }
+        payload["metadata_policy"]?.let { policy ->
+            val valid = policy is JsonObject && policy.values.all { role -> role is JsonObject && role.values.all { parameter ->
+                parameter is JsonObject && parameter.all { (operator, value) ->
+                    when (operator) {
+                        "add", "one_of", "subset_of", "superset_of" -> value is JsonArray
+                        "essential" -> value is JsonPrimitive && !value.isString && value.booleanOrNull != null
+                        "default" -> value != JsonNull
+                        else -> true
+                    }
+                }
+            } }
+            if (!valid) yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position metadata_policy has invalid operator structure or values"))
+        }
+        payload["metadata_policy_crit"]?.let { value ->
+            // This structural verifier implements standard operators only. Unknown non-critical operators are ignored.
+            if (value !is JsonArray || value.isEmpty() || value.any { primitiveContent(it).isNullOrBlank() }) {
+                yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position metadata_policy_crit must be a nonempty array of strings"))
+            } else for (entry in value) {
+                val operator = primitiveContent(entry)
+                yield(StatementValidationDiagnostic("SIGNATURE_INVALID", if (operator in STANDARD_POLICY_OPERATORS)
+                    "Statement at position $position must not list standard policy operator '$operator' as critical"
+                else "Statement at position $position has unsupported critical policy operator '$operator'"))
+            }
+        }
+        payload["trust_marks"]?.let { value ->
+            val valid = value is JsonArray && value.all { entry ->
+                val objectValue = entry as? JsonObject
+                val type = primitiveContent(objectValue?.get("trust_mark_type"))
+                val compact = primitiveContent(objectValue?.get("trust_mark"))
+                if (type.isNullOrEmpty() || compact.isNullOrEmpty()) false else runCatching {
+                    val mark = decodeJWTComponents(compact)
+                    mark.header.typ == "trust-mark+jwt" && mark.header.alg.isNotBlank() &&
+                        !mark.header.alg.equals("none", ignoreCase = true) &&
+                        primitiveContent(mark.payload["trust_mark_type"]) == type
+                }.getOrDefault(false)
+            }
+            if (!valid) yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position trust_marks must contain signed Trust Marks with matching types"))
+        }
+        payload["trust_mark_issuers"]?.let { value ->
+            if (value !is JsonObject || value.any { (type, issuers) -> type.isEmpty() || issuers !is JsonArray ||
+                    issuers.any { primitiveContent(it)?.let(::isValidEntityIdentifier) != true } }) {
+                yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position trust_mark_issuers must map Trust Mark types to Entity Identifier arrays"))
+            }
+        }
+        payload["trust_mark_owners"]?.let { value ->
+            if (value !is JsonObject || value.any { (type, owner) -> type.isEmpty() || owner !is JsonObject ||
+                    primitiveContent(owner["sub"])?.let(::isValidEntityIdentifier) != true || !validJwkSet(owner["jwks"]) }) {
+                yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position trust_mark_owners must contain Entity Identifiers and JWK Sets"))
+            }
+        }
+        payload["source_endpoint"]?.let { value ->
+            val endpoint = primitiveContent(value)
+            if (endpoint == null || validateHttpsUrlSyntax(endpoint, allowQuery = true).isErr) {
+                yield(StatementValidationDiagnostic("ISSUER_SUBJECT_MISMATCH", "Statement at position $position source_endpoint must be a valid HTTPS URL"))
+            }
+        }
+        payload["constraints"]?.let { value ->
+            val syntax = parseConstraints(value)
+            if (syntax.reason != null) yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Statement at position $position has invalid constraints: ${syntax.reason}"))
+        }
 
         val isEc = !iss.isNullOrBlank() && !sub.isNullOrBlank() && iss == sub
         if (isEc) {
+            val metadata = payload["metadata"] as? JsonObject
+            if (metadata == null || metadata.isEmpty()) {
+                yield(StatementValidationDiagnostic("SIGNATURE_INVALID", "Entity Configuration at position $position must declare at least one Entity Type in metadata"))
+            }
             for (claim in SUBORDINATE_ONLY_CLAIMS) {
                 if (payload.containsKey(claim)) {
                     yield(StatementValidationDiagnostic(
@@ -223,7 +321,7 @@ object EntityStatementValidation {
                 ))
             }
             for (el in (hints as? JsonArray).orEmpty()) {
-                if (primitiveContent(el).isNullOrBlank()) {
+                if (primitiveContent(el)?.let(::isValidEntityIdentifier) != true) {
                     yield(StatementValidationDiagnostic(
                         "ISSUER_SUBJECT_MISMATCH",
                         "Entity Configuration at position $position authority_hints entries must be non-empty strings"
@@ -242,7 +340,7 @@ object EntityStatementValidation {
                 }
                 for (el in (taHints as? JsonArray).orEmpty()) {
                     val id = primitiveContent(el)
-                    if (id.isNullOrBlank()) {
+                    if (id?.let(::isValidEntityIdentifier) != true) {
                         yield(StatementValidationDiagnostic(
                             "ISSUER_SUBJECT_MISMATCH",
                             "Entity Configuration at position $position trust_anchor_hints entries must be non-empty strings"

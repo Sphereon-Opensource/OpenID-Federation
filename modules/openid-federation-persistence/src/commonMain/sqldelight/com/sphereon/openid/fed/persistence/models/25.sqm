@@ -1,0 +1,8 @@
+-- Existing selected UUID/revision/timestamp and ownership constraints are unchanged.
+ALTER TABLE AccountSigningKey ADD COLUMN last_operation_generation BIGINT;
+ALTER TABLE AccountSigningKey ADD CONSTRAINT account_signing_operation_generation_positive
+CHECK (last_operation_generation > 0);
+ALTER TABLE AccountSigningKey ADD COLUMN last_operation_token TEXT;
+ALTER TABLE AccountSigningKey ADD COLUMN last_request_snapshot TEXT;
+ALTER TABLE AccountSigningKey ADD CONSTRAINT account_signing_operation_request_pair
+CHECK ((last_operation_token IS NULL) = (last_request_snapshot IS NULL));
