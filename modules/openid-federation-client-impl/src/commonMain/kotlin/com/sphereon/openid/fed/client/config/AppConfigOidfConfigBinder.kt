@@ -14,6 +14,7 @@ import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.core.config.OidfPropertyResolution
 import com.sphereon.openid.fed.core.config.ServerConfig
+import com.sphereon.openid.fed.core.config.StatementRenewalConfig
 import com.sphereon.openid.fed.core.config.TenantConfig
 import com.sphereon.openid.fed.core.tenant.IdentityConfig
 import com.sphereon.openid.fed.core.tenant.IdentityModeDefaults
@@ -73,6 +74,11 @@ open class AppConfigOidfConfigBinder(
             ),
             statementLifetimeSeconds = getProperty(OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS, "")
                 .trim().toLongOrNull()?.takeIf { it > 0 },
+            statementRenewal = StatementRenewalConfig(
+                enabled = getBooleanProperty(OidfConfigKeys.Federation.STATEMENT_RENEWAL_ENABLED, true),
+                renewBeforeSeconds = optionalSeconds(OidfConfigKeys.Federation.STATEMENT_RENEWAL_BEFORE_SECONDS),
+                intervalSeconds = optionalSeconds(OidfConfigKeys.Federation.STATEMENT_RENEWAL_INTERVAL_SECONDS),
+            ),
         )
     }
 
@@ -217,6 +223,13 @@ open class AppConfigOidfConfigBinder(
             default = default,
             appConfig = appConfigService,
         )
+    }
+
+    /** Unset is null (use the default); a value that is not a whole number is kept as invalid (-1). */
+    private fun optionalSeconds(key: String): Long? {
+        val value = getProperty(key, "").trim()
+        if (value.isEmpty()) return null
+        return value.toLongOrNull() ?: -1L
     }
 
     override fun getBooleanProperty(key: String, default: Boolean): Boolean {

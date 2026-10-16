@@ -197,6 +197,9 @@ class AccountInProcessFixture(
                     OidfConfigKeys.Datasource.PASSWORD to dsPass,
                     // Declared protocol identity is distinct from the fixture's loopback API transport.
                     OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS to "3600",
+                    // The fixture database outlives a test run; background renewal of earlier runs' statements would
+                    // race these tests' publish assertions. Renewal has its own tests.
+                    OidfConfigKeys.Federation.STATEMENT_RENEWAL_ENABLED to "false",
                     OidfConfigKeys.Federation.ROOT_IDENTIFIER to "https://federation-root.example",
                 )
             props.forEach { (k, v) ->

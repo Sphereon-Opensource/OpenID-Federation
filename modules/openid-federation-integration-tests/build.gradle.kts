@@ -114,6 +114,9 @@ publishing {
     }
 }
 
+// Optional reviewed CIO generation for the in-process server test runtime; absent consumed inputs preserve the public build.
+apply(from = rootProject.file("gradle/cio-runtime-verification.gradle.kts"))
+
 val integrationTests by tasks.registering {
     group = "verification"
     description = "Runs the integration tests by triggering the jvmTest task."

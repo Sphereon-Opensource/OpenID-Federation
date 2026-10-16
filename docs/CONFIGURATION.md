@@ -165,12 +165,33 @@ These keys are read at APP scope. The [library guide](OPENID-FEDERATION-1.1.md) 
 Entity Configurations and Subordinate Statements the library prepares stay valid. Each statement gets `exp` equal to
 its `iat` plus this number of seconds. The value must be a positive whole number and there is no default: while it is
 missing, empty or not positive, preparing an Entity Configuration or Subordinate Statement fails with a server error
-that names the missing lifetime, so nothing can be published. Deployments typically use 3600 seconds and publish
-statements again before they expire.
+that names the missing lifetime, so nothing can be published. Deployments typically use 3600 seconds.
 
 ```properties
 oidf.federation.statement.lifetime.seconds=3600
 ```
+
+### Statement renewal
+
+The admin server republishes every stored Entity Configuration and Subordinate Statement before it expires, so the
+federation endpoints never serve an expired statement. A statement is renewed once its `exp` is within the renewal
+margin. Renewal rebuilds the statement from the account's current configuration and signs it with the account's
+currently selected signing key, exactly like a publish request. It only renews statements that were published at
+least once, and skips deleted accounts and subordinates.
+
+| Property key | Env (IDK-normalized) | Default |
+|--------------|----------------------|---------|
+| `oidf.federation.statement.renewal.enabled` | `OIDF_FEDERATION_STATEMENT_RENEWAL_ENABLED` | `true` |
+| `oidf.federation.statement.renewal.before.seconds` | `OIDF_FEDERATION_STATEMENT_RENEWAL_BEFORE_SECONDS` | half the statement lifetime |
+| `oidf.federation.statement.renewal.interval.seconds` | `OIDF_FEDERATION_STATEMENT_RENEWAL_INTERVAL_SECONDS` | 60, or a quarter of the margin when that is shorter |
+
+The margin must be shorter than the statement lifetime and the check interval shorter than the margin; the admin
+server refuses to start otherwise. Without a statement lifetime nothing is signed and renewal stays off.
+
+Several admin server instances can share one database. Each renewal is stored with a compare-and-set under the
+issuing account's database row lock: a statement another instance or an operator renewed meanwhile, or one signed
+with a key that is no longer selected, is discarded. The stored statements are the only schedule state, so restarts
+need no recovery. Every renewal and every cycle with due statements is logged with running totals.
 
 ### Datasource (required)
 

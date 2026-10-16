@@ -1,0 +1,20 @@
+[project]
+name = "ofcli-probe-runtime-lock"
+version = "0.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "click",
+  "click_logging",
+  "requests",
+  "cryptojwt",
+  "pygraphviz",
+  "fastapi",
+  "uvicorn[standard]",
+  "oidcmsg",
+  "pydantic_settings",
+  "typing_extensions",
+  "aiohttp[speedups]",
+]
+
+[tool.uv]
+package = false

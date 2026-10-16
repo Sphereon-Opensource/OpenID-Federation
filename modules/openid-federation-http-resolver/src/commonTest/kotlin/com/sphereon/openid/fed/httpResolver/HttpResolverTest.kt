@@ -369,7 +369,8 @@ class HttpResolverTest {
     @Test
     fun typedJwtBypassSkipsCachedBodiesAndConditionalHeaders() = runTest {
         val url = "https://entity.example/.well-known/openid-federation"
-        cache.putApp(url, HttpMetadata("cached.jwt.value", etag = "old-tag", jwtContentType = "application/entity-statement+jwt"))
+        cache.putApp(url, HttpMetadata("cached.jwt.value", etag = "old-tag", jwtContentType = "application/entity-statement+jwt",
+            expiresAtEpochSeconds = Long.MAX_VALUE / 2))
         val client = createMockClient(responseBody = "fresh.jwt.value",
             responseHeaders = mapOf(HttpHeaders.ContentType to "application/entity-statement+jwt"))
         try {
@@ -380,7 +381,9 @@ class HttpResolverTest {
             assertEquals(1, requestCount)
             assertNull(lastRequestHeaders?.get(HttpHeaders.IfNoneMatch))
             assertNull(lastRequestHeaders?.get(HttpHeaders.IfModifiedSince))
-            assertEquals("cached.jwt.value", resolver.getJwt(url), "A bypass does not overwrite another caller's cache")
+            // The refetched body carries no signed exp: it is not cacheable, and the superseded entry is not kept.
+            assertEquals("fresh.jwt.value", resolver.getJwt(url))
+            assertEquals(2, requestCount)
         } finally { client.close() }
     }
 

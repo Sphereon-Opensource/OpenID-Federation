@@ -1,0 +1,1 @@
+Candidate v4 changes only the local bounded wrapper and its source/proof metadata. The pinned OFCLI archive, requirements lock, Dockerfile, base-image digest, and source commit are byte-identical to v3. Negative control is a live starting-entity anchor request; the no-chain response is reported as OFCLI structural behavior only. Not built or executed.

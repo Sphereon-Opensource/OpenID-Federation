@@ -1,0 +1,226 @@
+{
+  "candidate": "fedservice-rh-new-config-producer-recipe-v4",
+  "status": "private source-only recipe candidate; experimental upstream native example path; no image build, Docker execution, or runtime qualification",
+  "upstream": {
+    "repository": "https://github.com/SUNET/fedservice",
+    "branch": "rh_new_config",
+    "commit": "0304f72453214c4f85bed7f792a6b5ad39f357d3",
+    "tree": "ff13cafa2714eb3680e7c76aca55e080f9b91c78",
+    "version": "6.0.0",
+    "commitDate": "2026-04-02T10:32:43Z",
+    "classification": "official upstream branch, unmerged and untagged experimental",
+    "protectedTyp": "creator defaults protected typ entity-statement+jwt and supplies jws_headers"
+  },
+  "dependencyPins": [
+    {
+      "name": "fedservice",
+      "repository": "https://github.com/SUNET/fedservice",
+      "commit": "0304f72453214c4f85bed7f792a6b5ad39f357d3",
+      "tree": "ff13cafa2714eb3680e7c76aca55e080f9b91c78",
+      "archive": "sources/fedservice-0304f72453214c4f85bed7f792a6b5ad39f357d3.tar.gz",
+      "sha256": "2086908175a6e1bcf72fe756daad43bec7075b06419479e1378c19d95589ac1a",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "name": "idpyoidc",
+      "repository": "https://github.com/IdentityPython/idpy-oidc",
+      "requirementRef": "Official IdentityPython/idpy-oidc commit 1a66289b5f788d5b54024de94e9cfd860fb36a8c; exact archived 6.0.1 source",
+      "commit": "1a66289b5f788d5b54024de94e9cfd860fb36a8c",
+      "archive": "sources/idpy-oidc-1a66289b5f788d5b54024de94e9cfd860fb36a8c.tar.gz",
+      "sha256": "61a00ee6337a698b38c005d80328718c27a2131d1abf3fa7f68a667bc27df7d7",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE",
+      "version": "6.0.1",
+      "tree": "5386d9cb7c2db14da74f8a045f83c054a0d506ff"
+    },
+    {
+      "name": "openid4v",
+      "repository": "https://github.com/SUNET/openid4v",
+      "requirementRef": "default branch (mutable upstream ref in fedservice Docker requirements)",
+      "commit": "dfcea1c10a038f67766d453433840c64a9aa2b10",
+      "tree": "8432f0ae3b171665da1c893c25d72f22bc9c7689",
+      "archive": "sources/openid4v-dfcea1c10a038f67766d453433840c64a9aa2b10.tar.gz",
+      "sha256": "25b1e6dbcdb220cbd2cad901a6e2047cbae6b93ef1f8253318856492dfd87c0c",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE"
+    },
+    {
+      "name": "idpysdjwt",
+      "repository": "https://github.com/SUNET/idpy-sdjwt",
+      "requirementRef": "default branch (mutable upstream ref in fedservice Docker requirements)",
+      "commit": "de1715ef89c7f3db5daf3cdc53fec26d6ade03d9",
+      "tree": "4c2aa8c31bb022b48b5b346a753efd8d0f171528",
+      "archive": "sources/idpy-sdjwt-de1715ef89c7f3db5daf3cdc53fec26d6ade03d9.tar.gz",
+      "sha256": "74cd8b018963e51738c3fd3d62c21b8e6a21954eda6d2bb944643569d7e88287",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSE"
+    }
+  ],
+  "declaredRequirements": [
+    "idpyoidc>=6.0.0 (pinned source version 6.0.1)",
+    "cryptojwt>=1.8.4 (provided by locked runtime closure)",
+    "IdentityPython/idpy-oidc source pinned to official commit 1a66289b5f788d5b54024de94e9cfd860fb36a8c",
+    "SUNET/openid4v source pinned to archived commit dfcea1c10a038f67766d453433840c64a9aa2b10",
+    "SUNET/idpy-sdjwt source pinned to archived commit de1715ef89c7f3db5daf3cdc53fec26d6ade03d9"
+  ],
+  "apiDeltaFromMaster": [
+    "fedservice master comparator d64d300c... is version 5.1.0; branch is 6.0.0",
+    "create_entity_statement changes to class-first signature and calls cryptojwt pack with protected typ",
+    "create_entity_configuration and create_subordinate_statement forward signing_alg and jws_header_param",
+    "branch imports idpyoidc.client.oidc.rp instead of master RPHandler path",
+    "idpy-oidc commit 1a66289 restores client.configure.Configuration and util.conf_get required by the pinned fedservice import paths, while retaining client.oidc.rp.RP",
+    "idpy-oidc is pinned to official pre-refactor 6.0.1 commit 1a66289..., which source-defines the fedservice-imported Configuration, conf_get, and RP symbols"
+  ],
+  "runtimeConfiguration": {
+    "path": "trust-anchor-config.rs256.json",
+    "sha256": "c9ec872ed649d9afdcab863e61cca4af30d97494cd55d4aafb8cbf33fe555dee",
+    "entityId": "https://fedservice.test:7003",
+    "keyDefinitions": [
+      "RSA signing key",
+      "EC P-256 signing key"
+    ],
+    "freshStateRequired": true,
+    "normalShape": "entity.entity_type.federation_entity; singular endpoint; trust_mark_issuers omitted",
+    "unchangedFromV3": true
+  },
+  "build": {
+    "dockerfile": "Dockerfile",
+    "baseImageDigest": "sha256:edd0b3ec946cc68bd20e39480bd03929016d0fb6254cbf870cd3bc55ea25116d",
+    "platform": "linux/amd64",
+    "runtime": "Python 3.12",
+    "pypiRuntimeClosure": "pypi-closure/requirements.txt (hash locked)",
+    "pypiBuildClosure": "build-closure/requirements.txt (hash locked)",
+    "sourceIntegrity": "sources.sha256 verified against all four source archive bytes",
+    "imageBuilt": false,
+    "applicationRoot": "/opt/fedservice/edu_federation",
+    "sourceApplicationTree": "/src/fedservice/edu_federation -> /opt/fedservice/edu_federation",
+    "workingDirectory": "/opt/fedservice/edu_federation",
+    "runtimeEntryPoint": "python /usr/local/bin/fedservice-entrypoint.py trust_anchor -> native /opt/fedservice/edu_federation/entity.py trust_anchor"
+  },
+  "evidenceBoundaries": [
+    "No pinned upstream source archive was modified; the image includes the documented same-commit edu_federation package and the owned wrapper selects its trust_anchor role.",
+    "The failed v3 dc4eu_federation process startup remains preserved as predecessor failure evidence; v4 has not been built or run.",
+    "The mounted role config is byte-identical to v3 and retains scoped peer CA verification, mounted TLS, normal RSA and P-256 keys, persistent paths, and the approved AbstractFileSystem class.",
+    "The helper is the separately reviewed repair-v1 candidate, differing from the v3 helper by exactly one CR byte removed from one CRLF terminator; no helper execution occurred.",
+    "The same pinned source archives and hash-locked runtime/build dependency closures are inherited byte-for-byte from v3 and enumerated in closure-manifest.json.",
+    "No test in the pinned source directly exercises edu_federation/entity.py main; docs/source are static evidence only.",
+    "Static evidence does not establish image build, successful native startup, TLS fetch, signed EC production, persistence/restart, or interoperability.",
+    "Trust-mark issuance/configuration is omitted; no trust-mark behavior is claimed."
+  ],
+  "recipeFiles": [
+    {
+      "path": "build-closure/requirements.txt",
+      "bytes": 1118,
+      "sha256": "91e5996d322ae6a15a05016b09da2d3ccda33066ea836c5d27772c109cdfa922"
+    },
+    {
+      "path": "closure-manifest.json",
+      "bytes": 1838,
+      "sha256": "a15927c1e9c5b59c8c2cbc665550af0401ee0fc7a46bdb9b44972987011cdc41"
+    },
+    {
+      "path": "Dockerfile",
+      "bytes": 3622,
+      "sha256": "c4d6196168751f21ed41f8818ef865b12782f20a482991d40b90eebd6a2385bd"
+    },
+    {
+      "path": "fedservice-entrypoint.py",
+      "bytes": 5463,
+      "sha256": "a4523809ec45fec8a0f4a8101c659634735154a5cd76590763716c0cc434d506"
+    },
+    {
+      "path": "native-entrypoint-alternative.md",
+      "bytes": 4051,
+      "sha256": "d43264eb5c66799dc87a90c8a454d30ac98b3f7a4fc0a8d7ab076f3a5aeca274"
+    },
+    {
+      "path": "provision-subordinate.sh",
+      "bytes": 1834,
+      "sha256": "0a6f346a58689cedc8a78633dfefc30b5da317257659005e5da983ef2083791c"
+    },
+    {
+      "path": "pypi-closure/requirements.txt",
+      "bytes": 13680,
+      "sha256": "746a75bc8f4a0b44f198843c89328496de43a29c23a35dd02152f9380f1b4ee5"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3828,
+      "sha256": "eab096342c591d07516a52cb8f809d61ac7f16e7cdde9298fe8b221f45b360a5"
+    },
+    {
+      "path": "source-lock.json",
+      "bytes": 7012,
+      "sha256": "0f82883300be130e09fa9089ea7958430fa865cddf4860d3d0cbedf24a4680d2"
+    },
+    {
+      "path": "sources/fedservice-0304f72453214c4f85bed7f792a6b5ad39f357d3.tar.gz",
+      "bytes": 381068,
+      "sha256": "2086908175a6e1bcf72fe756daad43bec7075b06419479e1378c19d95589ac1a"
+    },
+    {
+      "path": "sources/idpy-oidc-1a66289b5f788d5b54024de94e9cfd860fb36a8c.tar.gz",
+      "bytes": 785774,
+      "sha256": "61a00ee6337a698b38c005d80328718c27a2131d1abf3fa7f68a667bc27df7d7"
+    },
+    {
+      "path": "sources/idpy-sdjwt-de1715ef89c7f3db5daf3cdc53fec26d6ade03d9.tar.gz",
+      "bytes": 16409,
+      "sha256": "74cd8b018963e51738c3fd3d62c21b8e6a21954eda6d2bb944643569d7e88287"
+    },
+    {
+      "path": "sources/openid4v-dfcea1c10a038f67766d453433840c64a9aa2b10.tar.gz",
+      "bytes": 221679,
+      "sha256": "25b1e6dbcdb220cbd2cad901a6e2047cbae6b93ef1f8253318856492dfd87c0c"
+    },
+    {
+      "path": "sources.sha256",
+      "bytes": 528,
+      "sha256": "ebc9083a2ed69715c39814721642d1f217f3dd273854b6f9e3c51ffcf970d3c9"
+    },
+    {
+      "path": "trust-anchor-config.rs256.json",
+      "bytes": 1664,
+      "sha256": "c9ec872ed649d9afdcab863e61cca4af30d97494cd55d4aafb8cbf33fe555dee"
+    }
+  ],
+  "upstreamEntityConstruction": {
+    "entry": "edu_federation/entity.py:init_app loads the role config and calls make_federation_combo(**app.cnf[\"entity\"])",
+    "factory": "src/fedservice/utils.py:make_federation_combo(entity_id, entity_type, key_config=None)",
+    "nativeBranch": "sole federation_entity entity_type invokes make_federation_entity(entity_id, **entity_type[\"federation_entity\"])",
+    "entity": "build_entity_config accepts httpc_params, key_config, and endpoint list; FederationEntity is constructed; args_eval executes subordinate class/kwargs descriptor",
+    "filesystemCompatibility": "pinned idpyoidc storage/abfile.py AbstractFileSystem accepts fdir/key_conv/value_conv; the unchanged role config uses this class and those constructor names",
+    "trustAnchorField": "pinned FederationContext initializes context.trust_anchor; edu_federation/entity.py line 55 reads that field",
+    "sourceArchive": "sources/fedservice-0304f72453214c4f85bed7f792a6b5ad39f357d3.tar.gz",
+    "sourceArchiveSha256": "2086908175a6e1bcf72fe756daad43bec7075b06419479e1378c19d95589ac1a",
+    "testEvidence": "no pinned tests reference edu_federation or execute its entity.py main block; static source and README evidence only",
+    "runtimeEvidence": "none"
+  },
+  "nativeEntrypointCorrection": {
+    "failedV3Path": "dc4eu_federation/entity.py",
+    "observedFailure": "__main__ reads federation_entity.function.trust_chain_collector.trust_anchors, which is not defined by pinned TrustChainCollector",
+    "candidatePath": "edu_federation/entity.py trust_anchor",
+    "sameCommit": "0304f72453214c4f85bed7f792a6b5ad39f357d3",
+    "upstreamDocumentedInvocation": "edu_federation/README_identity.rst:20-48",
+    "entrypointSource": "edu_federation/entity.py:20-59; line 55 reads FederationContext.trust_anchor",
+    "signedEcEndpoint": "edu_federation/trust_anchor/views.py:182-195; uses create_entity_configuration and returns application/entity-statement+jwt",
+    "notAnUpstreamPatch": true,
+    "status": "same-commit documented example; experimental upstream branch, unmerged and untagged"
+  },
+  "provisioningHelperCorrection": {
+    "parentCandidate": "fedservice-provision-subordinate-lf-repair-v1",
+    "parentOriginalPath": "fedservice-rh-new-config-producer-recipe-v3/provision-subordinate.sh",
+    "parentOriginalBytes": 1835,
+    "parentOriginalSha256": "c98fa12cbbeb7b1e0366d4989380c8c3b0b4a6fb697eb66bea55342bff83d62a",
+    "candidateBytes": 1834,
+    "candidateSha256": "0a6f346a58689cedc8a78633dfefc30b5da317257659005e5da983ef2083791c",
+    "change": "exact one-byte CR removal from the final continued --target argument line; all other helper bytes retained",
+    "argument": "--target \"$state_dir/subordinates\" resolves to the intended mounted state path",
+    "executionPerformed": false
+  },
+  "closureManifest": {
+    "path": "closure-manifest.json",
+    "sha256": "a15927c1e9c5b59c8c2cbc665550af0401ee0fc7a46bdb9b44972987011cdc41"
+  }
+}

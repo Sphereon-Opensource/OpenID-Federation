@@ -21,6 +21,7 @@ import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.JwkService
+import com.sphereon.openid.fed.services.command.renewal.PublishedStatementCacheInvalidator
 import com.sphereon.openid.fed.services.signPayload
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -43,6 +44,7 @@ class PublishEntityConfigurationCommandImpl(
     private val jwtService: JwtService,
     private val tenantContextResolver: TenantContextResolver,
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
+    private val cacheInvalidator: PublishedStatementCacheInvalidator,
 ) : TypedServiceCommandAdapter<PublishEntityConfigurationArgs, String, FederationError>(
     commandId = PublishEntityConfigurationCommand.COMMAND_ID,
     execution = execution,
@@ -95,6 +97,8 @@ class PublishEntityConfigurationCommandImpl(
             if (persistResult.isErr) {
                 return persistResult.error.asErrorResult()
             }
+            // A resolver in this process must not keep serving the superseded statement from its cache.
+            cacheInvalidator.published(jwt)
             logger.info("Successfully published entity configuration statement for account: $tenantId")
             IdkResult.ok(jwt)
         }

@@ -16,6 +16,10 @@ oidf:
     statement:
       lifetime:
         seconds: 3600
+      # The admin server republishes stored statements this many seconds before they expire (default: half the lifetime).
+      renewal:
+        before:
+          seconds: 1800
 
   server:
     admin:

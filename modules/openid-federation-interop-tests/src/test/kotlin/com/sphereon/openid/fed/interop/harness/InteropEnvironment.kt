@@ -47,6 +47,7 @@ class InteropEnvironment private constructor(
 ) : AutoCloseable {
     val publicEntityId: String = PUBLIC_ENTITY_ID
     private var selectedKeyId: String? = null
+    private var counterpartyTargetsConfigured = false
     private val runtimeStateChecks = mutableListOf<Map<String, Any?>>()
 
     /** Hash the exact installDist runtime JARs used by the packaged JVMs. */
@@ -113,6 +114,18 @@ class InteropEnvironment private constructor(
             "invalid bearer token value"
         }
         return curlRequest(method, url, body, bearer, account)
+    }
+
+    /** Bounded URL-encoded form request for LightHouse Trust Mark Status. */
+    fun requestForm(method: String, url: String, fields: Map<String, String>): InteropHttpResponse {
+        require(url.startsWith("https://")) { "interop requests must use HTTPS" }
+        require(url.length <= MAX_URL_LENGTH) { "interop URL exceeds the length limit" }
+        require(method.matches(Regex("[A-Z]{3,10}"))) { "invalid HTTP method" }
+        require(fields.isNotEmpty() && fields.size <= 8) { "invalid form field count" }
+        require(fields.all { (name, value) -> name.matches(Regex("[a-z_]{1,64}")) && value.length <= 16_384 && value.none(Char::isISOControl) }) {
+            "invalid bounded form fields"
+        }
+        return curlRequest(method, url, null, null, null, fields.map { (name, value) -> "$name=$value" })
     }
 
     /** Fetch an actual Keycloak client-credentials JWT and use it against the admin endpoint. */
@@ -197,18 +210,39 @@ class InteropEnvironment private constructor(
      * The JVM containers receive a fresh copy of the normal full operator YAML because their
      * startup configuration is copied into the container rather than mounted from the host.
      */
-    internal fun configureCounterpartyPrivateTargets(peer: GenericContainer<*>) {
+    internal fun configureCounterpartyPrivateTargets(
+        targets: Map<String, GenericContainer<*>>,
+        sphereonHttpsTarget: GenericContainer<*> = gateway,
+        requiredAuthorities: Set<String> = setOf("lighthouse.test:443"),
+    ) {
         check(!closed) { "interop environment is closed" }
+        check(!counterpartyTargetsConfigured) { "counterparty target snapshot has already been configured" }
         check(selectedKeyId == null && runtimeStateChecks.isEmpty()) {
             "counterparty operator configuration must precede federation provisioning"
+        }
+        val snapshot = targets.entries.map { it.key to it.value }
+        require(snapshot.isNotEmpty()) { "at least one counterparty target is required" }
+        val authorities = snapshot.map { (authority, _) -> authority }
+        require(authorities.distinct().size == authorities.size) { "counterparty authorities must be unique" }
+        require(authorities.none { it == "sphereon.test:443" }) { "Sphereon HTTPS target is selected separately" }
+        require(authorities.all(::isSupportedCounterpartyAuthority)) { "counterparty authority is not allowlisted" }
+        require("lighthouse.test:443" in requiredAuthorities) {
+            "the target snapshot must require the Lighthouse peer"
+        }
+        require(requiredAuthorities.all(::isSupportedCounterpartyAuthority)) {
+            "required target authority is not allowlisted"
+        }
+        require(authorities.containsAll(requiredAuthorities)) {
+            "the target snapshot is missing a required peer authority"
         }
 
         val docker = DockerClientFactory.instance().client()
         val ownNetworkId = network.getId()
         fun ownNetworkIpv4(container: GenericContainer<*>): String {
             val containerId = requireNotNull(container.containerId) { "counterparty container has no Docker identity" }
-            val networkSettings = docker.inspectContainerCmd(containerId).exec().getNetworkSettings()
-            val ownedEndpoints = networkSettings?.getNetworks()?.values
+            val inspected = docker.inspectContainerCmd(containerId).exec()
+            check(inspected.getState()?.getRunning() == true) { "counterparty container must be running" }
+            val ownedEndpoints = inspected.getNetworkSettings()?.getNetworks()?.values
                 ?.filter { it.getNetworkID() == ownNetworkId }
                 .orEmpty()
             check(ownedEndpoints.size == 1) {
@@ -233,10 +267,13 @@ class InteropEnvironment private constructor(
             return address
         }
 
-        val gatewayAddress = ownNetworkIpv4(gateway)
-        val lighthouseAddress = ownNetworkIpv4(peer)
-        require(gatewayAddress != lighthouseAddress) { "counterparty endpoints must have distinct addresses" }
-        val targets = "sphereon.test:443=$gatewayAddress;lighthouse.test:443=$lighthouseAddress"
+        val resolved = snapshot.associate { (authority, container) -> authority to ownNetworkIpv4(container) }
+        val sphereonAddress = ownNetworkIpv4(sphereonHttpsTarget)
+        val orderedTargets = (resolved + ("sphereon.test:443" to sphereonAddress)).toSortedMap()
+        require(orderedTargets.values.distinct().size == orderedTargets.size) {
+            "counterparty authorities must resolve to distinct owned peer endpoints"
+        }
+        val targetsValue = orderedTargets.entries.joinToString(";") { (authority, address) -> "$authority=$address" }
         val configuration = kmsConfiguration(kmsPassword) + "\n" +
             """
             oidf:
@@ -245,9 +282,12 @@ class InteropEnvironment private constructor(
                   egress:
                     private:
                       ipv4:
-                        targets: '$targets'
+                        targets: '$targetsValue'
             """.trimIndent() + "\n"
 
+        // Freeze the complete map before mutating the copied Sphereon startup configuration.
+        // A partial failure aborts this environment; a later call may not replace the snapshot.
+        counterpartyTargetsConfigured = true
         val servers = listOf(publicServer, adminServer)
         servers.forEach { server ->
             val id = requireNotNull(server.containerId) { "Sphereon container has no Docker identity" }
@@ -267,9 +307,24 @@ class InteropEnvironment private constructor(
         awaitHttps("https://admin.test/health")
     }
 
+    private fun isSupportedCounterpartyAuthority(authority: String): Boolean {
+        val splitAt = authority.lastIndexOf(':')
+        if (splitAt <= 0 || splitAt == authority.lastIndex) return false
+        val host = authority.substring(0, splitAt)
+        val portText = authority.substring(splitAt + 1)
+        val port = portText.toIntOrNull() ?: return false
+        if (port !in 1..65535 || port.toString() != portText) return false
+        return when (host) {
+            "lighthouse.test" -> port == 443
+            "fedservice.test" -> port == 7003
+            "offa.test" -> port == 443
+            else -> false
+        }
+    }
+
     /** Retain bounded, redacted Sphereon server logs outside the normal interop evidence directory. */
     fun retainSafeServerErrorLogs(scenario: String): Path {
-        require(scenario in setOf("sphereon-resolves-under-lighthouse-anchor", "lighthouse-resolves-under-sphereon-anchor"))
+        require(scenario in setOf("sphereon-resolves-under-lighthouse-anchor", "lighthouse-resolves-under-sphereon-anchor", "lighthouse-kms-key-rollover-overlap"))
         val directory = workRoot.parent.resolve("private-diagnostics").normalize()
         require(directory.parent == workRoot.parent) { "private diagnostics path escaped the interop build directory" }
         Files.createDirectories(directory)
@@ -531,7 +586,7 @@ class InteropEnvironment private constructor(
             var env: InteropEnvironment? = null
             try {
                 val network = InteropNetwork.create().also { allocatedNetwork = it }
-                val material = PeerTlsCertificateFactory.create("sphereon.test", "admin.test", "auth.test", "lighthouse.test")
+                val material = PeerTlsCertificateFactory.create("sphereon.test", "admin.test", "auth.test", "lighthouse.test", "fedservice.test", "offa.test")
                 val tlsDirectory = Files.createDirectories(work.resolve("tls"))
                 val caPath = tlsDirectory.resolve("ca.pem")
                 val certPath = tlsDirectory.resolve("leaf.pem")
@@ -848,3 +903,4 @@ data class InteropHttpResponse(
     internal val requestStartedAt: Instant? = null,
     internal val requestEndedAt: Instant? = null,
 )
+

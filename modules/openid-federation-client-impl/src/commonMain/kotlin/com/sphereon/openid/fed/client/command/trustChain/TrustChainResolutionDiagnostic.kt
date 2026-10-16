@@ -11,6 +11,7 @@ internal enum class TrustChainDiagnosticStage {
 
 internal enum class TrustChainDiagnosticReason {
     UNEXPECTED_FAILURE,
+    RETRY_WITH_FRESH_STATEMENTS,
     NO_CANDIDATE,
     TRUST_ANCHORS_EMPTY,
     MAX_DEPTH_REACHED,

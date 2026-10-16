@@ -22,6 +22,7 @@ internal class LighthousePeer private constructor(
 ) : AutoCloseable {
     private var closed = false
 
+    internal val egressContainer: GenericContainer<*> get() = container
     val entityId: String = ENTITY_ID
 
     fun createInitialAdmin() {
@@ -35,6 +36,32 @@ internal class LighthousePeer private constructor(
 
     fun admin(method: String, path: String, json: Map<String, Any?>? = null): PeerHttpResponse =
         request(method, path, json, adminUsername, adminPassword)
+
+    /** Replaces a trust-mark issuer allow-list using LightHouse's JSON-array API body. */
+    fun replaceTrustMarkIssuers(typeId: String, issuerIds: List<String>): PeerHttpResponse {
+        require(typeId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid LightHouse trust-mark type ID" }
+        require(issuerIds.isNotEmpty() && issuerIds.size <= 8) { "issuer allow-list is outside its bounded range" }
+        require(issuerIds.all { it.startsWith("https://") && it.length <= 2048 && it.none(Char::isISOControl) }) {
+            "issuer allow-list contains an invalid bounded HTTPS identifier"
+        }
+        val jsonArray = issuerIds.joinToString(separator = ",", prefix = "[", postfix = "]") {
+            JSONObjectUtils.toJSONString(mapOf("issuer" to it))
+        }
+        return request(
+            "PUT", "/api/v1/admin/trust-marks/types/$typeId/issuers",
+            username = adminUsername, password = adminPassword, rawJsonBody = jsonArray,
+        )
+    }
+    fun adminText(method: String, path: String, body: String): PeerHttpResponse {
+        require(body.length <= 64 && body.all { it.isLetter() }) { "invalid bounded status value" }
+        return request(method, path, username = adminUsername, password = adminPassword, rawBody = body, contentType = "text/plain")
+    }
+
+    fun setEntityConfigurationLifetime(seconds: Int): PeerHttpResponse {
+        require(seconds in 1..3_600) { "test Entity Configuration lifetime is outside the bounded range" }
+        return request("PUT", "/api/v1/admin/entity-configuration/lifetime", username = adminUsername, password = adminPassword,
+            rawBody = seconds.toString(), contentType = "application/json")
+    }
 
     fun public(path: String): PeerHttpResponse = request("GET", path)
 
@@ -54,7 +81,7 @@ internal class LighthousePeer private constructor(
     )
 
     fun registerEndpoint(type: String, path: String, config: String? = null): PeerHttpResponse {
-        require(type in setOf("fetch", "resolve"))
+        require(type in setOf("fetch", "resolve", "trust_mark", "trust_mark_status"))
         val body = linkedMapOf<String, Any?>("type" to type, "path" to path, "auth_enabled" to false)
         if (config != null) body["config"] = config
         return admin("POST", "/api/v1/admin/federation-endpoints/", body)
@@ -95,10 +122,14 @@ internal class LighthousePeer private constructor(
         json: Map<String, Any?>? = null,
         username: String? = null,
         password: String? = null,
+        rawBody: String? = null,
+        contentType: String = "application/json",
+        rawJsonBody: String? = null,
     ): PeerHttpResponse {
         check(!closed) { "LightHouse peer is closed" }
         require(method.matches(Regex("[A-Z]{3,10}")))
         require(path.startsWith('/') && !path.startsWith("//"))
+        require(listOf(json != null, rawBody != null, rawJsonBody != null).count { it } <= 1) { "only one LightHouse request body form may be supplied" }
         val command = mutableListOf(
             "curl", "--silent", "--show-error", "--max-time", "20", "--connect-timeout", "5",
             "--max-filesize", MAX_BODY_BYTES.toString(), "--cacert", "/run/interop/ca.pem",
@@ -107,8 +138,19 @@ internal class LighthousePeer private constructor(
         if (username != null) {
             command += listOf("--user", "$username:${requireNotNull(password)}")
         }
+        if (rawBody != null) {
+            require(json == null && rawBody.length <= 64 && rawBody.none(Char::isISOControl)) { "invalid bounded LightHouse raw body" }
+            require(contentType in setOf("application/json", "text/plain")) { "unsupported LightHouse raw content type" }
+            command += listOf("--header", "Content-Type: $contentType", "--data-binary", rawBody)
+        }
         if (json != null) {
             command += listOf("--header", "Content-Type: application/json", "--data-binary", JSONObjectUtils.toJSONString(json))
+        }
+        if (rawJsonBody != null) {
+            require(rawJsonBody.length <= MAX_BODY_BYTES && rawJsonBody.startsWith("[") && rawJsonBody.endsWith("]") && rawJsonBody.none(Char::isISOControl)) {
+                "invalid bounded LightHouse JSON-array body"
+            }
+            command += listOf("--header", "Content-Type: application/json", "--data-binary", rawJsonBody)
         }
         command += "https://lighthouse.test$path"
         val result = client.execInContainer(*command.toTypedArray())
@@ -127,7 +169,7 @@ internal class LighthousePeer private constructor(
         const val ENTITY_CONFIGURATION_PATH = "/.well-known/openid-federation"
         private const val MAX_BODY_BYTES = 1_048_576
 
-        fun start(environment: InteropEnvironment): LighthousePeer {
+        fun start(environment: InteropEnvironment, configureCounterpartyTargets: Boolean = true): LighthousePeer {
             val lock = PeerLock.load("lighthouse")
             val password = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32).also(SecureRandom()::nextBytes))
             val tls = environment.tls
@@ -161,7 +203,9 @@ internal class LighthousePeer private constructor(
                 peer.start()
                 adapter.awaitReady()
                 adapter.createInitialAdmin()
-                environment.configureCounterpartyPrivateTargets(peer)
+                if (configureCounterpartyTargets) {
+                    environment.configureCounterpartyPrivateTargets(mapOf("lighthouse.test:443" to peer))
+                }
                 return adapter
             } catch (failure: Throwable) {
                 try { adapter.close() } catch (cleanup: Throwable) { failure.addSuppressed(cleanup) }

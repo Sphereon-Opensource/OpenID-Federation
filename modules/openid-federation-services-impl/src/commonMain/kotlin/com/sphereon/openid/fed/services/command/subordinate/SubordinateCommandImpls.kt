@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import com.sphereon.openid.fed.services.command.renewal.PublishedStatementCacheInvalidator
 import kotlinx.serialization.json.JsonPrimitive
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
@@ -301,6 +302,7 @@ class PublishSubordinateStatementCommandImpl(
     private val jwtService: JwtService,
     private val getSubordinateStatementCommand: GetSubordinateStatementCommand,
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
+    private val cacheInvalidator: PublishedStatementCacheInvalidator,
 ) : TypedServiceCommandAdapter<PublishSubordinateStatementArgs, String, FederationError>(
     commandId = PublishSubordinateStatementCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<PublishSubordinateStatementArgs>(),
@@ -356,6 +358,8 @@ class PublishSubordinateStatementCommandImpl(
                 statement = jwt,
                 expires_at = subordinateStatement.exp.toLong()
             ).executeAsOne()
+            // A resolver in this process must not keep serving the superseded statement from its cache.
+            cacheInvalidator.published(jwt)
             IdkResult.ok(jwt)
         } catch (e: Exception) {
             logger.error("Failed to publish subordinate statement for ID: $subordinateId", e)

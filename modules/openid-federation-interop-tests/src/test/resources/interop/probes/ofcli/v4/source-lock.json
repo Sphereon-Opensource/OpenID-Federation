@@ -1,0 +1,31 @@
+{
+  "candidateStatus": "private structural probe source candidate; not built or run",
+  "source": {
+    "repository": "https://github.com/dianagudu/ofcli",
+    "commit": "289e97f45d1fd225f16ff77976a7ede1ea6390f0",
+    "version": "0.7.2",
+    "archive": "sources/ofcli-289e97f45d1fd225f16ff77976a7ede1ea6390f0.tar.gz",
+    "archiveSha256": "32173ee18f059fe351adf3de677fbf2efc9b53dc48e12458288bde86fa5fdb13",
+    "license": "MIT",
+    "sourcePackageMode": "run the exact committed src/ofcli tree with python -m ofcli; no source patch or package resolver"
+  },
+  "runtime": {
+    "python": "3.12.15 Bookworm linux/amd64 child image digest sha256:edd0b3ec946cc68bd20e39480bd03929016d0fb6254cbf870cd3bc55ea25116d",
+    "dependencyLock": "uv.lock",
+    "dependencyCount": 47,
+    "requirementsExport": "runtime-requirements.txt generated from every non-virtual lock package with all artifact SHA-256 values; pip installs only binary wheels and uses only https://pypi.org/simple",
+    "networkTls": "aiohttp default verified TLS, supplied scoped test CA through SSL_CERT_FILE; never pass ofcli --insecure"
+  },
+  "ofcliUse": {
+    "command": "python -m ofcli trustchains ENTITY_ID --trust-anchor TRUST_ANCHOR --details --log-level WARNING",
+    "output": "parse issuers/sub identifiers in detailed chain JSON; never retain or display raw entity_statement JWTs",
+    "negativeControl": "optional unrelated anchor; require the pinned CLI no-trust-chain marker and zero emitted chains",
+    "limits": "one selected chain, 120-second command deadline, 4 MiB stdout cap, 64 KiB stderr cap"
+  },
+  "evidenceBoundary": {
+    "reported": "transport/TLS success, chain presence, exact structural iss/sub links, selected terminal anchor identifier, tool and source version",
+    "notReportedAsVerified": "entity-statement signatures, JOSE algorithms/kids, metadata-policy correctness, or Federation trustworthiness",
+    "reason": "pinned TrustTree.verify_signatures explicitly returns true with TODO verify signatures; chain traversal and policy output are not cryptographic acceptance"
+  }
+}
+

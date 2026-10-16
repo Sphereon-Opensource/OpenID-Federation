@@ -57,6 +57,18 @@ object OidfConfigKeys {
          * Statements about its subordinates. Required to sign either; there is no built-in default.
          */
         const val STATEMENT_LIFETIME_SECONDS = "$PREFIX.statement.lifetime.seconds"
+
+        /** Whether the admin server republishes stored statements automatically before they expire. Default `true`. */
+        const val STATEMENT_RENEWAL_ENABLED = "$PREFIX.statement.renewal.enabled"
+
+        /**
+         * Renew a stored statement once it expires within this many seconds. Must be shorter than the statement
+         * lifetime. Default: half the statement lifetime.
+         */
+        const val STATEMENT_RENEWAL_BEFORE_SECONDS = "$PREFIX.statement.renewal.before.seconds"
+
+        /** Seconds between renewal checks. Must be shorter than the renewal margin. Default: 60, or less for small margins. */
+        const val STATEMENT_RENEWAL_INTERVAL_SECONDS = "$PREFIX.statement.renewal.interval.seconds"
     }
 
     // ========================================================================

@@ -261,12 +261,21 @@ fun Project.configureCioRuntimeSelectionVerification(
     tasks.matching { it.name in guardedTasks }.configureEach { dependsOn(check) }
 }
 
-require(project.path in setOf(
+when (project.path) {
     ":modules:openid-federation-public-server-ktor",
-    ":modules:openid-federation-admin-server-ktor",
-)) { "CIO application verifier belongs only to the public and admin server applications" }
-configureCioRuntimeSelectionVerification(
-    "implementation", "runtimeClasspath",
-    setOf("test", "check", "jar", "assemble", "startScripts", "installDist", "distTar", "distZip", "run"),
-    inputRecordFile = rootProject.file("gradle/oidfed-cio-inputs.json"),
-)
+    ":modules:openid-federation-admin-server-ktor" -> configureCioRuntimeSelectionVerification(
+        "implementation", "runtimeClasspath",
+        setOf("test", "check", "jar", "assemble", "startScripts", "installDist", "distTar", "distZip", "run"),
+        inputRecordFile = rootProject.file("gradle/oidfed-cio-inputs.json"),
+    )
+    // The in-process integration fixtures run both server applications plus the IDK AS in one JVM test
+    // runtime. A strict constraint inherited from the server projects is transitive there and cannot
+    // override the SDK's ktor-bom requirement, so this test runtime declares the same reviewed
+    // constraint directly and verifies its own resolved CIO selection.
+    ":modules:openid-federation-integration-tests" -> configureCioRuntimeSelectionVerification(
+        "jvmTestImplementation", "jvmTestRuntimeClasspath",
+        setOf("jvmTest", "allTests", "check"),
+        inputRecordFile = rootProject.file("gradle/oidfed-cio-inputs.json"),
+    )
+    else -> error("CIO runtime verifier belongs only to the public and admin server applications and their integration tests")
+}
