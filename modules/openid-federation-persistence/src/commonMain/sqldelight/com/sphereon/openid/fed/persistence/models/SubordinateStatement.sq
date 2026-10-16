@@ -26,3 +26,26 @@ LIMIT 1;
 
 findByIss:
 SELECT * FROM SubordinateStatement WHERE iss = ?;
+
+-- Latest stored statement of every active subordinate of an active account that expires at or before the given epoch second.
+findRenewalDue:
+SELECT SubordinateStatement.subordinate_id, Subordinate.account_id, SubordinateStatement.expires_at
+FROM SubordinateStatement
+INNER JOIN Subordinate ON Subordinate.id = SubordinateStatement.subordinate_id
+INNER JOIN Account ON Account.id = Subordinate.account_id
+WHERE Subordinate.deleted_at IS NULL
+  AND Account.deleted_at IS NULL
+  AND SubordinateStatement.expires_at <= ?
+  AND NOT EXISTS (
+      SELECT 1 FROM SubordinateStatement AS newer
+      WHERE newer.subordinate_id = SubordinateStatement.subordinate_id
+        AND newer.created_at > SubordinateStatement.created_at
+  )
+ORDER BY SubordinateStatement.expires_at ASC;
+
+findLatestBySubordinateId:
+SELECT *
+FROM SubordinateStatement
+WHERE subordinate_id = ?
+ORDER BY created_at DESC
+LIMIT 1;

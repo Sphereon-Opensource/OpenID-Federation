@@ -40,6 +40,9 @@ class HttpResolver<V : Any>(
     private var cacheNamespace: String? = null
     private var requestPolicyInstalled: Boolean = false
 
+    /** Current time in epoch seconds; tests replace it to move past a cached document's freshness bound. */
+    internal var epochSeconds: () -> Long = { currentEpochSeconds() }
+
     /** Installs the immutable request-policy identity and URL check before sharing this resolver with callers. */
     fun installRequestPolicy(
         cacheNamespace: String,
@@ -179,14 +182,31 @@ class HttpResolver<V : Any>(
     suspend fun getJwt(url: String, bypassCache: Boolean = false): String =
         getTypedJwt(url, ENTITY_STATEMENT_CONTENT_TYPE, bypassCache)
 
-    /** Other signed federation documents retain their own media type without changing getJwt's public ABI. */
+    /**
+     * Other signed federation documents retain their own media type without changing getJwt's public ABI.
+     *
+     * A cached document is served only until the earlier of its signed `exp` and the response's `Cache-Control`
+     * freshness lifetime, so a statement is never returned past its `exp`. Documents without a usable `exp`, already
+     * expired, or marked `no-store`/`no-cache` are not cached. [bypassCache] skips cached bodies and conditional
+     * headers and replaces the cached entry with the freshly fetched document, so later cached reads see it too.
+     */
     suspend fun getTypedJwt(url: String, expectedContentType: String, bypassCache: Boolean = false): String {
         validate(url)
-        val cached = if (bypassCache) null else cache.getApp(cacheKey(url))
-        if (cached?.jwtContentType == expectedContentType) return cached.value.toString()
+        val key = cacheKey(url)
+        if (!bypassCache) {
+            val cached = cache.getApp(key)
+            val freshUntil = cached?.expiresAtEpochSeconds
+            if (cached?.jwtContentType == expectedContentType && freshUntil != null && freshUntil > epochSeconds()) {
+                return cached.value.toString()
+            }
+        }
+        var cacheControl: String? = null
+        var age: String? = null
         val value = try {
             fetchWithRetry(url, null, expectedContentType = expectedContentType) { response ->
                 validateJwtResponse(response, expectedContentType)
+                cacheControl = response.headers.getAll(HttpHeaders.CacheControl)?.joinToString(",")
+                age = response.headers[HttpHeaders.Age]
                 responseMapper(response)
             }
         } catch (e: CancellationException) {
@@ -197,8 +217,21 @@ class HttpResolver<V : Any>(
         if (value.toString().encodeToByteArray().size > MAX_JWT_BYTES) {
             throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
         }
-        if (!bypassCache) cache.putApp(cacheKey(url), HttpMetadata(value, jwtContentType = expectedContentType))
+        val now = epochSeconds()
+        val freshUntil = typedJwtFreshUntil(value.toString(), cacheControl, age, now)
+        if (freshUntil != null && freshUntil > now) {
+            cache.putApp(key, HttpMetadata(value, jwtContentType = expectedContentType, expiresAtEpochSeconds = freshUntil))
+        } else {
+            // Never leave an older entry behind for a document that may not be served from the cache.
+            cache.removeApp(key)
+        }
         return value.toString()
+    }
+
+    /** Removes the cached typed or untyped APP entry for [url], e.g. after the co-located issuer republished it. */
+    suspend fun invalidate(url: String) {
+        validate(url)
+        cache.removeApp(cacheKey(url))
     }
 
     /** Query a Trust Mark status endpoint through the same protected HTTP client. */

@@ -38,7 +38,46 @@ data class FederationConfig(
      * neither is signed.
      */
     val statementLifetimeSeconds: Long? = null,
+    /** Automatic republishing of stored statements before they expire. */
+    val statementRenewal: StatementRenewalConfig = StatementRenewalConfig(),
 )
+
+/**
+ * Automatic statement renewal settings as configured; [resolve] validates them against the statement lifetime.
+ * Null margin and interval mean the defaults: half the lifetime, and 60 seconds or a quarter of the margin.
+ */
+data class StatementRenewalConfig(
+    val enabled: Boolean = true,
+    val renewBeforeSeconds: Long? = null,
+    val intervalSeconds: Long? = null,
+) {
+    /** Effective renewal schedule for [lifetimeSeconds], or why renewal cannot run. */
+    sealed interface Resolved {
+        data class Active(val lifetimeSeconds: Long, val renewBeforeSeconds: Long, val intervalSeconds: Long) : Resolved
+        data class Disabled(val reason: String) : Resolved
+        data class Invalid(val reason: String) : Resolved
+    }
+
+    fun resolve(lifetimeSeconds: Long?): Resolved {
+        if (!enabled) return Resolved.Disabled("statement renewal is disabled")
+        if (lifetimeSeconds == null || lifetimeSeconds <= 0L) {
+            return Resolved.Disabled("no statement lifetime is configured, so no statement is signed")
+        }
+        val before = renewBeforeSeconds ?: (lifetimeSeconds / 2)
+        if (before <= 0L || before >= lifetimeSeconds) {
+            return Resolved.Invalid(
+                "the renewal margin ($before s) must be positive and shorter than the statement lifetime ($lifetimeSeconds s)"
+            )
+        }
+        val interval = intervalSeconds ?: minOf(60L, maxOf(1L, before / 4))
+        if (interval <= 0L || interval >= before) {
+            return Resolved.Invalid(
+                "the renewal check interval ($interval s) must be positive and shorter than the renewal margin ($before s)"
+            )
+        }
+        return Resolved.Active(lifetimeSeconds, before, interval)
+    }
+}
 
 /**
  * Membership check for entities authenticating to federation endpoints (§8.8).

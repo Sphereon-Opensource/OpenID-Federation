@@ -463,6 +463,7 @@ Copy [.env.example](.env.example) to `.env` / `.env.local` for Docker Compose.
 | `oidf.federation.root.identifier` | `OIDF_FEDERATION_ROOT_IDENTIFIER` | `ROOT_IDENTIFIER` |
 | `oidf.federation.dev.mode` | `OIDF_FEDERATION_DEV_MODE` | `DEV_MODE` / `APP_DEV_MODE` |
 | `oidf.federation.statement.lifetime.seconds` | `OIDF_FEDERATION_STATEMENT_LIFETIME_SECONDS` | none |
+| `oidf.federation.statement.renewal.before.seconds` | `OIDF_FEDERATION_STATEMENT_RENEWAL_BEFORE_SECONDS` | none |
 | `oidf.datasource.url` | `OIDF_DATASOURCE_URL` | `DATASOURCE_URL` |
 | `oidf.datasource.user` | `OIDF_DATASOURCE_USER` | `DATASOURCE_USER` |
 | `oidf.datasource.password` | `OIDF_DATASOURCE_PASSWORD` | `DATASOURCE_PASSWORD` |
@@ -1119,8 +1120,9 @@ Remember to publish your entity configuration after making changes to authority 
 2. The Entity Configuration is signed with the account's selected signing key and expires after
    `oidf.federation.statement.lifetime.seconds`. A `kmsKeyRef` or `kid` parameter, when supplied, must name that
    selected key; a request naming another key is refused. Publishing fails while no signing key is selected.
-3. Publish again before the statement expires, and after every change to keys, metadata, authority hints or Trust
-   Marks.
+3. Publish again after every change to keys, metadata, authority hints or Trust Marks. The admin server renews
+   published statements automatically before they expire; see
+   [Statement renewal](docs/CONFIGURATION.md#statement-renewal).
 4. Optionally, include a `dryRun` parameter in the request body to test the statement publication without making
    changes:
 

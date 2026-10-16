@@ -6,6 +6,11 @@ import com.sphereon.core.api.log.Log
 import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
 import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
+import com.sphereon.openid.fed.core.config.OidfConfigKeys
+import com.sphereon.openid.fed.core.config.StatementRenewalConfig
+import com.sphereon.openid.fed.server.admin.ktor.renewal.SessionStatementRenewalRunner
+import com.sphereon.openid.fed.server.admin.ktor.renewal.StatementRenewalScheduler
+import com.sphereon.openid.fed.server.admin.ktor.renewal.installStatementRenewal
 import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerBindings
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
@@ -234,4 +239,26 @@ fun Application.configureAdmin(appGraph: AdminServerBindings, config: AdminServe
     }
 
     logger.info("Universal HTTP adapters installed - Admin API ready")
+
+    configureStatementRenewal(appGraph)
+}
+
+/**
+ * Automatic renewal of stored Entity Configurations and Subordinate Statements before their `exp`. A configuration
+ * that cannot keep statements valid fails startup rather than letting public endpoints serve expired statements.
+ */
+private fun Application.configureStatementRenewal(appGraph: AdminServerBindings) {
+    val federation = appGraph.configBinder.getFederationConfig()
+    when (val schedule = federation.statementRenewal.resolve(federation.statementLifetimeSeconds)) {
+        is StatementRenewalConfig.Resolved.Active -> installStatementRenewal(
+            StatementRenewalScheduler(schedule, SessionStatementRenewalRunner(appGraph, appGraph.configBinder))
+        )
+        is StatementRenewalConfig.Resolved.Disabled -> logger.info("Statement renewal is off: ${schedule.reason}")
+        is StatementRenewalConfig.Resolved.Invalid -> throw IllegalStateException(
+            "Invalid statement renewal configuration: ${schedule.reason}. Adjust " +
+                "${OidfConfigKeys.Federation.STATEMENT_RENEWAL_BEFORE_SECONDS} / " +
+                "${OidfConfigKeys.Federation.STATEMENT_RENEWAL_INTERVAL_SECONDS} or " +
+                "${OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS}."
+        )
+    }
 }

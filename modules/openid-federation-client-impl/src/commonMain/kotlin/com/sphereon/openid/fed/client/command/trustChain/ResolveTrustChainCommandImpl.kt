@@ -43,6 +43,9 @@ import dev.zacsweers.metro.SingleIn
  * - Returns the preferred valid candidate (§10.3): effective Trust Anchor order, then shortest path. Leaf
  *   `trust_anchor_hints` refine the Trust Anchor order.
  * - Uses a Subordinate Statement's `source_endpoint` when known to skip re-discovering fetch URLs.
+ * - When no chain verifies and a statement's signing or subject key did not match, or a candidate chain was rejected,
+ *   resolves once more with every statement fetched fresh (bypassing and replacing cached copies) before failing:
+ *   after a key rollover a cached statement can predate the keys the other statements now use.
  */
 @Inject
 @SingleIn(SessionScope::class)
@@ -75,10 +78,23 @@ class ResolveTrustChainCommandImpl(
         applyDuring: (ResolveTrustChainArgs) -> ResolveTrustChainArgs
     ): IdkResult<TrustChainResolveResponse, FederationError> {
         val applied = applyDuring(args)
+        val first = Resolution(applied.maxDepth, bypassCache = false)
+        val result = resolveOnce(applied, first)
+        if (result.isOk || !first.staleStatementSuspected) return result
+        logger.info(TrustChainResolutionDiagnostic.message(
+            TrustChainDiagnosticStage.RESOLUTION,
+            TrustChainDiagnosticReason.RETRY_WITH_FRESH_STATEMENTS,
+        ))
+        return resolveOnce(applied, Resolution(applied.maxDepth, bypassCache = true))
+    }
+
+    private suspend fun resolveOnce(
+        applied: ResolveTrustChainArgs,
+        resolution: Resolution,
+    ): IdkResult<TrustChainResolveResponse, FederationError> {
         val entityIdentifier = applied.entityIdentifier
         val configuredTrustAnchors = applied.trustAnchors
         val startingAuthorityHints = applied.startingAuthorityHints
-        val resolution = Resolution(applied.maxDepth)
 
         return try {
             val leafJwt = resolution.selfConfiguration(entityIdentifier)
@@ -134,7 +150,7 @@ class ResolveTrustChainCommandImpl(
                 logDiagnostic(TrustChainDiagnosticStage.CHAIN_DISCOVERY, TrustChainDiagnosticReason.NO_CANDIDATE)
                 return IdkResult.err(NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = trustAnchors.toList()))
             }
-            selectValidChain(entityIdentifier, candidates, trustAnchors, applied.trustAnchorKeys)
+            selectValidChain(entityIdentifier, candidates, trustAnchors, applied.trustAnchorKeys, resolution)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Throwable) {
@@ -159,6 +175,7 @@ class ResolveTrustChainCommandImpl(
         candidates: List<List<String>>,
         trustAnchors: Array<String>,
         pinnedKeys: Map<String, List<Jwk>>,
+        resolution: Resolution,
     ): IdkResult<TrustChainResolveResponse, FederationError> {
         val now = getCurrentEpochTimeSeconds()
         val publishedKeys = mutableMapOf<String, IdkResult<List<Jwk>, FederationError>>()
@@ -198,6 +215,7 @@ class ResolveTrustChainCommandImpl(
                 TrustChainDiagnosticStage.CHAIN_DISCOVERY,
                 TrustChainDiagnosticReason.CHAIN_VALIDATION_REJECTED,
             ))
+            resolution.staleStatementSuspected = true
             if (firstFailure == null) {
                 firstFailure = if (verified.isErr) verified.error.message.defaultMessage else verified.value.errorMessage ?: "Trust Chain is invalid"
             }
@@ -211,15 +229,18 @@ class ResolveTrustChainCommandImpl(
     }
 
     /** State of one resolution: every Entity Configuration is fetched and verified at most once. */
-    private inner class Resolution(private val maxDepth: Int) {
+    private inner class Resolution(private val maxDepth: Int, val bypassCache: Boolean) {
         private val configurations = mutableMapOf<String, String?>()
+
+        /** A key mismatch or rejected chain that a cached statement predating a key rollover could explain. */
+        var staleStatementSuspected = false
 
         /** The Entity Configuration published at [entityIdentifier], verified as self-signed, or null. */
         suspend fun selfConfiguration(entityIdentifier: String): String? =
             if (configurations.containsKey(entityIdentifier)) {
                 configurations[entityIdentifier]
             } else {
-                fetchAndVerifySelfEntityConfiguration(entityIdentifier).also { configurations[entityIdentifier] = it }
+                fetchAndVerifySelfEntityConfiguration(entityIdentifier, this).also { configurations[entityIdentifier] = it }
             }
 
         /**
@@ -311,6 +332,7 @@ class ResolveTrustChainCommandImpl(
                     authorityConfigurationJwt = authorityConfigurationJwt,
                     subjectEntityId = subjectEntityId,
                     lastStatementKid = lastStatementKid,
+                    resolution = this@Resolution,
                 ) ?: return
                 val extended = chainPrefix + subordinateStatementJwt
                 if (trustAnchors.contains(authority)) {
@@ -337,10 +359,14 @@ class ResolveTrustChainCommandImpl(
         }
     }
 
-    private suspend fun fetchAndVerifySelfEntityConfiguration(entityIdentifier: String): String? {
+    private suspend fun fetchAndVerifySelfEntityConfiguration(entityIdentifier: String, resolution: Resolution): String? {
         val endpoint = getEntityConfigurationEndpoint(entityIdentifier)
         return try {
-            val jwt = context.jwtService.fetchTypedFederationJwt(endpoint, context.httpResolver, "application/entity-statement+jwt")
+            val jwt = if (resolution.bypassCache) {
+                context.httpResolver.getTypedJwt(endpoint, ENTITY_STATEMENT_CONTENT_TYPE, bypassCache = true)
+            } else {
+                context.jwtService.fetchTypedFederationJwt(endpoint, context.httpResolver, ENTITY_STATEMENT_CONTENT_TYPE)
+            }
             val decoded = decodeJWTComponents(jwt)
             if (!EntityStatementValidation.validateStructure(decoded, getCurrentEpochTimeSeconds(), 0,
                     context.understoodCriticalClaims).ok) {
@@ -360,10 +386,12 @@ class ResolveTrustChainCommandImpl(
             }
             val key = jwks.find { it.kid == decoded.header.kid } ?: run {
                 logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.SIGNING_KEY_NOT_ADVERTISED)
+                resolution.staleStatementSuspected = true
                 return null
             }
             if (!context.jwtService.verifyJwtSignature(jwt, key)) {
                 logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.SIGNATURE_INVALID)
+                resolution.staleStatementSuspected = true
                 return null
             }
             jwt
@@ -385,6 +413,7 @@ class ResolveTrustChainCommandImpl(
         authorityConfigurationJwt: String,
         subjectEntityId: String,
         lastStatementKid: String,
+        resolution: Resolution,
     ): Pair<String, SubordinateStatement>? {
         val decodedAuthorityConfiguration = decodeJWTComponents(authorityConfigurationJwt)
 
@@ -416,17 +445,19 @@ class ResolveTrustChainCommandImpl(
         for (base in fetchBases) {
             val endpoint = getSubordinateStatementEndpoint(base, subjectEntityId)
             try {
-                val subordinateStatementJwt = context.httpResolver.getJwt(endpoint)
+                val subordinateStatementJwt = context.httpResolver.getJwt(endpoint, bypassCache = resolution.bypassCache)
                 val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
 
                 val subordinateStatementKey = authorityJwks.find { it.kid == decodedSubordinateStatement.header.kid }
                 if (subordinateStatementKey == null) {
                     logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SIGNING_KEY_NOT_ADVERTISED)
+                    resolution.staleStatementSuspected = true
                     continue
                 }
 
                 if (!context.jwtService.verifyJwtSignature(subordinateStatementJwt, subordinateStatementKey)) {
                     logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SIGNATURE_INVALID)
+                    resolution.staleStatementSuspected = true
                     continue
                 }
 
@@ -446,6 +477,7 @@ class ResolveTrustChainCommandImpl(
                 }
                 if (!checkKidInJwks(keys, lastStatementKid)) {
                     logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SUBJECT_KEY_NOT_ADVERTISED)
+                    resolution.staleStatementSuspected = true
                     continue
                 }
 
@@ -488,6 +520,10 @@ class ResolveTrustChainCommandImpl(
             authorityEntityConfiguration.metadata?.get("federation_entity") as? JsonObject
                 ?: return null
         return federationEntityMetadata["federation_fetch_endpoint"]?.jsonPrimitive?.content
+    }
+
+    private companion object {
+        const val ENTITY_STATEMENT_CONTENT_TYPE = "application/entity-statement+jwt"
     }
 
     private fun sourceEndpointCacheKey(issuer: String, subject: String): String =

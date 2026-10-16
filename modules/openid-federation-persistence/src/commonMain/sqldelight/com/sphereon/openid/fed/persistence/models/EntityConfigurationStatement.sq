@@ -12,3 +12,17 @@ FROM EntityConfigurationStatement
 WHERE account_id = ?
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- Latest stored statement of every active account that expires at or before the given epoch second.
+findRenewalDue:
+SELECT EntityConfigurationStatement.account_id, EntityConfigurationStatement.expires_at
+FROM EntityConfigurationStatement
+INNER JOIN Account ON Account.id = EntityConfigurationStatement.account_id
+WHERE Account.deleted_at IS NULL
+  AND EntityConfigurationStatement.expires_at <= ?
+  AND NOT EXISTS (
+      SELECT 1 FROM EntityConfigurationStatement AS newer
+      WHERE newer.account_id = EntityConfigurationStatement.account_id
+        AND newer.created_at > EntityConfigurationStatement.created_at
+  )
+ORDER BY EntityConfigurationStatement.expires_at ASC;
