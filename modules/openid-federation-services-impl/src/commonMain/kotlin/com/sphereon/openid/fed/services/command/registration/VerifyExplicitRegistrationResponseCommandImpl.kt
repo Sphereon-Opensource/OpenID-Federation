@@ -23,6 +23,7 @@ import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -73,10 +74,22 @@ class VerifyExplicitRegistrationResponseCommandImpl(
         if (claims.text("iss") != provider) return rejected("The response is not issued by the provider")
         if (claims.text("sub") != client) return rejected("The response subject is not this client")
         if (!claims.hasSoleAudience(client)) return rejected("The response aud must be exactly this client")
-        if (claims.epochSeconds("iat") == null) return rejected("The response has no iat")
+        val issuedAt = claims.epochSeconds("iat") ?: return rejected("The response has no valid numeric iat")
+        if (issuedAt > now + 5L) return rejected("The response has a future iat")
+        // No response extension processors are installed here; unknown non-critical claims remain ignored.
+        if (claims.containsKey("crit")) return rejected("The response contains unsupported critical claims")
         val exp = EntityStatementValidation.conservativeExpiryEpochSeconds(claims["exp"])
             ?: return rejected("The response has an invalid exp")
         if (exp <= now) return rejected("The response has expired")
+        if (claims.containsKey("jwks")) {
+            val sentCompact = if (request.contentType.substringBefore(';').trim().lowercase() == FederationRegistration.TRUST_CHAIN_CONTENT_TYPE) {
+                try { kotlinx.serialization.json.Json.parseToJsonElement(request.body).stringList()?.firstOrNull() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { null }
+            } else request.body
+            val sentKeys = sentCompact?.let(::parseCompactJws)?.payload?.get("jwks")
+            if (sentKeys == null || claims["jwks"] != sentKeys) return rejected("The response jwks must be a verbatim copy of the request's client keys")
+        }
 
         val providerPayloads = try {
             request.providerTrustChain.map { decodeJWTComponents(it).payload }
@@ -108,6 +121,9 @@ class VerifyExplicitRegistrationResponseCommandImpl(
         if (clientChain.isErr) return federationErr(clientChain.error)
 
         val metadata = claims["metadata"] as? JsonObject ?: return rejected("The response has no metadata")
+        if (metadata.values.any { it !is JsonObject || it.values.any { value -> value == JsonNull } }) {
+            return federationErr(InvalidMetadataError(client, "The response metadata must contain Entity Type objects without null values"))
+        }
         if (metadata.keys != request.entityTypes.toSet()) {
             return federationErr(InvalidMetadataError(client, "The registered Entity Types differ from the request"))
         }

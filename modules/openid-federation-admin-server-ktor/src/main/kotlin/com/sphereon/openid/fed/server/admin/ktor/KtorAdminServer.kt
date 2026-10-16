@@ -2,12 +2,12 @@ package com.sphereon.openid.fed.server.admin.ktor
 
 import com.sphereon.ktor.server.inject.KotlinInjectPlugin
 import com.sphereon.ktor.server.inject.installUniversalHttpAdapters
-import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.core.api.log.Log
 import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorage
 import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport
+import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerBindings
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerAppGraph
 import com.sphereon.openid.fed.server.admin.ktor.di.AdminServerConfig
 import com.sphereon.openid.fed.server.admin.ktor.di.createAdminServerAppGraph
@@ -59,9 +59,6 @@ fun main() {
     )
     logger.info("AppGraph created and initialized")
 
-    // Debug: Print KMS provider config to verify it's being set correctly
-    debugLogKmsProviderConfig(appGraph)
-
     // Get configuration from the component (loaded via OidfConfigBinder)
     val config = appGraph.serverConfig
     logger.info("Configuration loaded: rootIdentifier=${config.rootIdentifier}, port=${config.port}")
@@ -75,7 +72,10 @@ fun main() {
 /**
  * Configure the Ktor application for admin server.
  */
-fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServerConfig) {
+fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServerConfig) =
+    configureAdmin(appGraph as AdminServerBindings, config)
+
+fun Application.configureAdmin(appGraph: AdminServerBindings, config: AdminServerConfig) {
     // ## Session identity (IDK order — no throwaway validation session)
     // 1) KotlinInject bootstrap User+Session (fixed/root; principal anonymous until JWT)
     // 2) JwtAuthentication validates Bearer with request SessionScope JwtValidationService
@@ -234,29 +234,4 @@ fun Application.configureAdmin(appGraph: AdminServerAppGraph, config: AdminServe
     }
 
     logger.info("Universal HTTP adapters installed - Admin API ready")
-}
-
-/**
- * Debug function to log the KMS provider configuration.
- * This helps verify that the config is being deserialized correctly.
- */
-private fun debugLogKmsProviderConfig(appGraph: AdminServerAppGraph) {
-    try {
-        logger.info("=== DEBUG: KMS Config ===")
-
-        // Get properties from DefaultAppMapPropertySource
-        val properties = DefaultAppMapPropertySource.getSource()
-        logger.info("Total properties in DefaultAppMapPropertySource: ${properties.size}")
-
-        // Filter for KMS-related properties
-        val kmsProperties = properties.filter { it.key.contains("kms", ignoreCase = true) }
-        logger.info("KMS-related properties:")
-        kmsProperties.forEach { (key, value) ->
-            logger.info("  $key = $value")
-        }
-
-        logger.info("=== END DEBUG ===")
-    } catch (e: Exception) {
-        logger.error("Debug logging failed", e)
-    }
 }

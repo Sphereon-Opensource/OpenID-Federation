@@ -1,5 +1,6 @@
 plugins {
     alias(sphereonplug.plugins.org.jetbrains.kotlin.multiplatform)
+    alias(libs.plugins.metro)
     id("maven-publish")
 }
 
@@ -148,6 +149,7 @@ val fileOnlyConfigTests by tasks.registering {
 tasks.named<Test>("jvmTest") {
     description = "Runs integration tests for the JVM target."
     group = "verification"
+    notCompatibleWithConfigurationCache("Explicit integration umbrella gating inspects the task graph")
 
     useJUnitPlatform()
 
@@ -160,7 +162,9 @@ tasks.named<Test>("jvmTest") {
     // Gate heavy integration suite behind explicit verification umbrella tasks.
     onlyIf {
         val graph = gradle.taskGraph
-        graph.hasTask(integrationTests.get()) ||
+        // Coordinated builds accept exact standard test tasks; keep the same explicit opt-in without a custom task.
+        providers.gradleProperty("oidfedIntegrationTests").orNull == "true" ||
+            graph.hasTask(integrationTests.get()) ||
             graph.hasTask(platformIntegrationTests.get()) ||
             graph.hasTask(platformAsSmokeTests.get()) ||
             graph.hasTask(fileOnlyConfigTests.get())

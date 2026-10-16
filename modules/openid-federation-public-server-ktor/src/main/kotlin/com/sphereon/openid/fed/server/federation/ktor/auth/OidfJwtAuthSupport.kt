@@ -4,15 +4,18 @@ import com.sphereon.core.api.log.Log
 import com.sphereon.core.defaults.context.JwtClaimsParser
 import com.sphereon.core.defaults.context.markValidated
 import com.sphereon.ktor.server.inject.ValidatedJwtClaimsAttribute
-import com.sphereon.ktor.server.jwt.JwtAuthentication
+import com.sphereon.ktor.server.jwt.JwtRouteAuthentication
 import com.sphereon.ktor.server.jwt.SessionContextAttributeKey
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.tenant.BearerTokenSupport
 import com.sphereon.openid.fed.core.tenant.IdentityMode
 import io.ktor.http.HttpHeaders
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.createApplicationPlugin
 import io.ktor.server.application.install
+import io.ktor.server.application.createRouteScopedPlugin
+import io.ktor.server.routing.routing
 import io.ktor.server.request.header
 
 private val logger = Log.app().withTag("OidfJwtAuthSupport")
@@ -54,26 +57,34 @@ object OidfJwtAuthSupport {
             "Installing IDK JwtAuthentication " +
                 "(issuer=${oauth.issuerUri}, requireAuth=$requireAuth)",
         )
-        install(JwtAuthentication) {
-            this.requireAuth = requireAuth
-            this.anonymousPaths = anonymousPaths
-            if (oauth.audience.isNotBlank()) {
-                this.expectedAudience = oauth.audience
+        routing {
+            install(JwtRouteAuthentication) {
+                this.requireAuth = requireAuth
+                this.anonymousPaths = anonymousPaths
+                if (oauth.audience.isNotBlank()) {
+                    this.expectedAudience = oauth.audience
+                }
             }
+            install(OidfStampValidatedJwtClaimsRoutePlugin)
         }
-        install(OidfStampValidatedJwtClaimsPlugin)
     }
 }
 
-val OidfStampValidatedJwtClaimsPlugin =
-    createApplicationPlugin(name = "OidfStampValidatedJwtClaims") {
-        onCall { call ->
-            if (call.attributes.contains(ValidatedJwtClaimsAttribute)) return@onCall
-            val session = call.attributes.getOrNull(SessionContextAttributeKey) ?: return@onCall
-            if (session.isAnonymous()) return@onCall
-            val auth = call.request.header(HttpHeaders.Authorization)
-            val token = BearerTokenSupport.extractAccessToken(auth) ?: return@onCall
-            val claimsInput = JwtClaimsParser.toJwtClaimsInput(token) ?: return@onCall
-            call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
-        }
-    }
+// Retain the public application plugin for consumers supplying application-level auth.
+val OidfStampValidatedJwtClaimsPlugin = createApplicationPlugin(name = "OidfStampValidatedJwtClaims") {
+    onCall { call -> stampValidatedClaims(call) }
+}
+
+private val OidfStampValidatedJwtClaimsRoutePlugin = createRouteScopedPlugin(name = "OidfStampValidatedJwtClaims") {
+    onCall { call -> stampValidatedClaims(call) }
+}
+
+private fun stampValidatedClaims(call: ApplicationCall) {
+    if (call.attributes.contains(ValidatedJwtClaimsAttribute)) return
+    val session = call.attributes.getOrNull(SessionContextAttributeKey) ?: return
+    if (session.isAnonymous()) return
+    val auth = call.request.header(HttpHeaders.Authorization)
+    val token = BearerTokenSupport.extractAccessToken(auth) ?: return
+    val claimsInput = JwtClaimsParser.toJwtClaimsInput(token) ?: return
+    call.attributes.put(ValidatedJwtClaimsAttribute, claimsInput.markValidated())
+}

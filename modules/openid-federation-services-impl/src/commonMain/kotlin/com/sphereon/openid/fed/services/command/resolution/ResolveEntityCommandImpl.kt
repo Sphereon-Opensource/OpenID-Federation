@@ -30,7 +30,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metro.SingleIn
-import kotlin.math.min
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Implementation of the ResolveEntityCommand (OIDFed 1.1 §8.3).
@@ -141,17 +141,19 @@ class ResolveEntityCommandImpl(
             val currentTime = System.currentTimeMillis() / 1000
             val chainExp = minTrustChainExp(decodedStatements)
                 ?: return federationErr(TrustChainValidationFailedError(entityId = sub, reason = "The Trust Chain has no exp"))
-            val exp = trustMarks.mapNotNull { trustMarkExpiry(it.trustMark) }.fold(chainExp) { earliest, markExp -> min(earliest, markExp) }
+            val exp = trustMarks.mapNotNull { trustMarkExpiry(it.trustMark) }.fold(chainExp) { earliest, markExp -> minOf(earliest, markExp) }
 
             buildResolveResponse(
                 currentTime = currentTime,
-                exp = exp,
+                exp = exp.conservativeDouble(),
                 tenantId = tenantId,
                 sub = sub,
                 metadata = resolvedMetadata,
                 trustMarks = trustMarks,
                 trustChain = trustChainArray
             )
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.error("Failed to resolve entity for subject: $sub", e)
             federationErr(ServerError(
@@ -164,7 +166,7 @@ class ResolveEntityCommandImpl(
 
     private suspend fun buildResolveResponse(
         currentTime: Long,
-        exp: Long,
+        exp: Double,
         tenantId: String,
         sub: String,
         metadata: JsonObject,
@@ -179,7 +181,7 @@ class ResolveEntityCommandImpl(
                 iss = iss,
                 sub = sub,
                 iat = currentTime.toDouble(),
-                exp = exp.toDouble(),
+                exp = exp,
                 metadata = metadata,
                 trustMarks = trustMarks.toList(),
                 trustChain = trustChain.toList()
@@ -188,20 +190,20 @@ class ResolveEntityCommandImpl(
     }
 
     /** The `exp` of a Trust Mark JWT, or null when it has none. */
-    private fun trustMarkExpiry(trustMark: String): Long? = try {
-        decodeJWTComponents(trustMark).payload["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
-    } catch (_: Exception) {
-        null
+    private fun trustMarkExpiry(trustMark: String): ExactResolveExpiry? {
+        val claims = decodeJWTComponents(trustMark).payload
+        if (!claims.containsKey("exp")) return null
+        return requireNotNull(ExactResolveExpiry.parse(claims["exp"])) { "An included Trust Mark has invalid NumericDate expiry" }
     }
 
     /**
      * Earliest `exp` among all statements in the chain (Trust Chain lifetime).
      */
-    private fun minTrustChainExp(decodedStatements: List<JsonObject>): Long? {
-        var minExp: Long? = null
+    private fun minTrustChainExp(decodedStatements: List<JsonObject>): ExactResolveExpiry? {
+        var minExp: ExactResolveExpiry? = null
         for (stmt in decodedStatements) {
-            val exp = stmt["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong() ?: continue
-            minExp = if (minExp == null) exp else min(minExp, exp)
+            val exp = ExactResolveExpiry.parse(stmt["exp"]) ?: return null
+            minExp = if (minExp == null) exp else minOf(minExp, exp)
         }
         return minExp
     }
@@ -288,12 +290,16 @@ class ResolveEntityCommandImpl(
                             )
                         }
                     }
-                } catch (e: Exception) {
+                } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (e: Exception) {
                     logger.warn("Failed to verify trust mark ${trustMark.trustMarkType}: ${e.message}")
                 }
             }
 
             return if (verifiedTrustMarks.isEmpty()) arrayOf() else verifiedTrustMarks.toTypedArray()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.error("Error verifying trust marks: ${e.message}")
             return arrayOf()

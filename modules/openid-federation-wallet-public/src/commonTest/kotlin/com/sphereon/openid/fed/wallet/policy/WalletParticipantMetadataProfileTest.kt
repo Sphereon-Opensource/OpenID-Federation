@@ -126,16 +126,25 @@ class WalletParticipantMetadataProfileTest {
     }
 
     @Test
-    fun malformedPresentIssuerJwksDuplicateKidsAndPrivateKeysAreRejected() {
+    fun malformedPresentIssuerJwksAndPrivateKeysAreRejected() {
         val baseline = issuerBaseline()
         assertValid(baseline, issuerId, WalletEntityTypes.OPENID_CREDENTIAL_ISSUER)
         val invalidJwks = listOf(
-            "null", "{}", "{\"keys\":[]}", "{\"keys\":[{\"kty\":\"EC\",\"kid\":\"incomplete\"}]}",
-            """{"keys":[$publicJwk,$publicJwk]}""",
+            "null", "{}", "{\"keys\":[{\"kty\":\"EC\",\"kid\":\"incomplete\"}]}",
             """{"keys":[${JsonObject(publicJwk + ("d" to json("\"870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE\"")))}]}""",
         )
         for (bad in invalidJwks) {
             assertInvalid(withIssuerField(baseline, "jwks", json(bad)), issuerId, WalletEntityTypes.OPENID_CREDENTIAL_ISSUER)
+        }
+    }
+
+    @Test
+    fun issuerProtocolJwksRetainsRfc7517OptionalKeyIdentifiersAndSetSemantics() {
+        val baseline = issuerBaseline()
+        for (valid in listOf("{\"keys\":[]}", """{"keys":[$publicJwk,$publicJwk]}""",
+            """{"keys":[${JsonObject(publicJwk - "kid") }]}""")) {
+            assertValid(withIssuerField(baseline, "jwks", json(valid)), issuerId,
+                WalletEntityTypes.OPENID_CREDENTIAL_ISSUER)
         }
     }
 
@@ -155,8 +164,18 @@ class WalletParticipantMetadataProfileTest {
         val verifier = baseline["openid_credential_verifier"]!!.jsonObject
         assertInvalid(withVerifier(baseline, JsonObject(verifier - "vp_formats_supported")), verifierId,
             WalletEntityTypes.OPENID_CREDENTIAL_VERIFIER)
-        for (bad in listOf("null", "[]", "{}", "{\"dc+sd-jwt\":{}}", "{\"dc+sd-jwt\":{\"sd-jwt_alg_values\":[]}}")) {
+        for (bad in listOf("null", "[]", "{}", "{\"dc+sd-jwt\":{\"sd-jwt_alg_values\":[]}}")) {
             assertInvalid(withVerifierField(baseline, "vp_formats_supported", json(bad)), verifierId,
+                WalletEntityTypes.OPENID_CREDENTIAL_VERIFIER)
+        }
+    }
+
+    @Test
+    fun verifierFormatDefinitionsMayOmitOptionalAlgorithmArrays() {
+        val baseline = verifierBaseline()
+        for (valid in listOf("{\"dc+sd-jwt\":{}}", "{\"mso_mdoc\":{}}",
+            "{\"dc+sd-jwt\":{\"sd-jwt_alg_values\":[\"ES256\"]}}")) {
+            assertValid(withVerifierField(baseline, "vp_formats_supported", json(valid)), verifierId,
                 WalletEntityTypes.OPENID_CREDENTIAL_VERIFIER)
         }
     }

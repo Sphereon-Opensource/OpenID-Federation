@@ -271,51 +271,23 @@ class GetSubordinateStatementCommandImpl internal constructor(
         val accountIdentifier = tenantContextResolver.resolveIdentifier(tenantId)
             ?: return federationErr(TenantNotFoundError(tenantId))
 
-        val lifetimeSeconds = configBinder.getFederationConfig().statementLifetimeSeconds
+        val lifetime = configBinder.getFederationConfig().statementLifetimeSeconds
             ?: return federationErr(ServerError("Subordinate statement lifetime is not configured"))
-        val currentTimeSeconds = (System.currentTimeMillis() / 1000).toDouble()
-        val expirationTime = currentTimeSeconds + lifetimeSeconds
-
         check(accountIdentifier.isNotEmpty()) { "Account identifier is empty" }
-
-        val statement = SubordinateStatementObjectBuilder()
-            .iss(accountIdentifier)
-            .sub(subordinate.identifier)
-            .iat(currentTimeSeconds)
-            .exp(expirationTime)
-            // The fetch endpoint this statement is issued from: the published federation_fetch_endpoint (§3.1.3, §5.1.1)
-            .sourceEndpoint(publishedFetchEndpoint(tenantId) ?: FederationEndpointUrls.fetch(accountIdentifier))
-
-        if (subordinateJwks.isEmpty()) {
-            return federationErr(InvalidRequestError("Subordinate ${subordinate.identifier} has no public keys to vouch for"))
-        }
-        subordinateJwks.forEach { statement.jwks(it) }
-        subordinateMetadataList.forEach {
-            val metadataJson = Json.parseToJsonElement(it.metadata).jsonObject
-            statement.metadata(Pair(it.key, metadataJson))
-        }
-
-        // Account-level metadata policies → Subordinate Statement metadata_policy (OIDFed 1.1 §3.1.3)
-        // Each stored policy key is an Entity Type Identifier; policy body is claim → operators.
-        metadataPolicyQueries.findByAccountId(tenantId)
-            .executeAsList()
-            .forEach { policyRow ->
-                val policyJson = Json.parseToJsonElement(policyRow.policy).jsonObject
-                val checked = MetadataPolicyOperators.mergePolicies(
-                    JsonObject(emptyMap()),
-                    JsonObject(mapOf(policyRow.key to policyJson)),
-                )
-                if (checked is MetadataPolicyOperators.PolicyMergeResult.Error) {
-                    return federationErr(ServerError("Stored metadata policy for ${policyRow.key} is invalid", checked.reason))
-                }
-                statement.metadataPolicy(Pair(policyRow.key, policyJson))
-            }
-
-        if (constraints != null) {
-            statement.constraints(constraints)
-        }
-
-        return IdkResult.ok(statement.build())
+        if (subordinateJwks.isEmpty()) return federationErr(InvalidRequestError("Subordinate ${subordinate.identifier} has no public keys to vouch for"))
+        val fetchEndpoint = publishedFetchEndpoint(tenantId) ?: FederationEndpointUrls.fetch(accountIdentifier)
+        return buildSubordinateStatementSnapshot(
+            issuer = accountIdentifier,
+            subject = subordinate.identifier,
+            keys = subordinateJwks,
+            metadata = subordinateMetadataList.map { it.key to Json.parseToJsonElement(it.metadata).jsonObject },
+            policies = metadataPolicyQueries.findByAccountId(tenantId).executeAsList()
+                .map { it.key to Json.parseToJsonElement(it.policy).jsonObject },
+            constraints = constraints,
+            sourceEndpoint = fetchEndpoint,
+            lifetimeSeconds = lifetime,
+            currentTimeSeconds = (System.currentTimeMillis() / 1000).toDouble(),
+        )
     }
 }
 

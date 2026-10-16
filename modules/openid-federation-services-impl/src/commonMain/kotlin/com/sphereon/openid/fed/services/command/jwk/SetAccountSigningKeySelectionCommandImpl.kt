@@ -14,6 +14,7 @@ import com.sphereon.openid.fed.core.error.KeyNotFoundError
 import com.sphereon.openid.fed.core.error.SelectedSigningKeyConflictError
 import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
+import com.sphereon.openid.fed.core.tenant.TenantServiceConfig
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
@@ -32,6 +33,7 @@ class SetAccountSigningKeySelectionCommandImpl internal constructor(
     private val accountQueries: AccountQueries,
     private val jwkQueries: JwkQueries,
     private val accountSigningKeyQueries: AccountSigningKeyQueries,
+    private val tenantServiceConfig: TenantServiceConfig = TenantServiceConfig(""),
 ) : TypedServiceCommandAdapter<
     SetAccountSigningKeySelectionArgs,
     AccountSigningKeySelection,
@@ -43,11 +45,12 @@ class SetAccountSigningKeySelectionCommandImpl internal constructor(
     outputTypeToken = typeToken<AccountSigningKeySelection>(),
 ), SetAccountSigningKeySelectionCommand {
     @Inject
-    constructor(execution: SessionExecution) : this(
+    constructor(execution: SessionExecution, tenantServiceConfig: TenantServiceConfig) : this(
         execution,
         Persistence.accountQueries,
         Persistence.jwkQueries,
         Persistence.accountSigningKeyQueries,
+        tenantServiceConfig,
     )
 
     @OptIn(ExperimentalUuidApi::class)
@@ -69,7 +72,9 @@ class SetAccountSigningKeySelectionCommandImpl internal constructor(
             val selection = accountQueries.transactionWithResult {
                 val account = accountQueries.findActiveForUpdate(accountId).executeAsOneOrNull()
                     ?: throw FederationErrorException(AccountNotFoundError(accountId))
-                val accountIdentifier = account.identifier
+                val accountIdentifier = effectiveSigningSelectionIdentifier(
+                    account.username, account.identifier, tenantServiceConfig.rootIdentifier,
+                )
                 if (accountIdentifier == null || accountIdentifier != applied.expectedEntityIdentifier) {
                     throw FederationErrorException(
                         InvalidRequestError("Account identifier does not match expectedEntityIdentifier")

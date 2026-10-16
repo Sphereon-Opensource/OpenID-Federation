@@ -10,6 +10,7 @@ import io.ktor.http.HttpStatusCode
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -57,6 +58,11 @@ class IdkOauth2AsFixtureTest {
         val token = asFixture.mintAccessToken(tenantId = "tenant-a", subject = "user-1")
         val parts = token.split(".")
         assertEquals(3, parts.size, "AS must mint a compact JWT (not opaque)")
+
+        assertTrue(asFixture.verifyAccessTokenSignature(token), "Minted token must verify against the AS public keys")
+        val signature = parts[2]
+        val changedSignature = (if (signature.first() == 'A') "B" else "A") + signature.drop(1)
+        assertFalse(asFixture.verifyAccessTokenSignature("${parts[0]}.${parts[1]}.$changedSignature"))
 
         val auth = "Bearer $token"
         assertEquals("tenant-a", BearerTokenSupport.platformTenantFromAuthorizationHeader(auth))

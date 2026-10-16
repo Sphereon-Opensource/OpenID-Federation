@@ -5,7 +5,7 @@ import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.context.FederationContext
-import com.sphereon.openid.fed.client.crypto.fetchAndVerifyJwt
+import com.sphereon.openid.fed.client.crypto.fetchTypedFederationJwt
 import com.sphereon.openid.fed.client.crypto.verifyJwtSignature
 import com.sphereon.openid.fed.client.helpers.TrustAnchorHints
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
@@ -109,6 +109,10 @@ class ResolveTrustChainCommandImpl(
                     "publishedHints=${publishedHints?.joinToString() ?: "(none)"})"
             )
             if (trustAnchors.isEmpty()) {
+                logger.info(TrustChainResolutionDiagnostic.message(
+                    TrustChainDiagnosticStage.CHAIN_DISCOVERY,
+                    TrustChainDiagnosticReason.TRUST_ANCHORS_EMPTY,
+                ))
                 return IdkResult.err(NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = emptyList()))
             }
 
@@ -127,14 +131,18 @@ class ResolveTrustChainCommandImpl(
                 startingAuthorityHints = startingAuthorityHints,
             )
             if (candidates.isEmpty()) {
-                logger.error("Could not establish trust chain for entity: $entityIdentifier")
+                logDiagnostic(TrustChainDiagnosticStage.CHAIN_DISCOVERY, TrustChainDiagnosticReason.NO_CANDIDATE)
                 return IdkResult.err(NoTrustChainFoundError(entityId = entityIdentifier, trustAnchors = trustAnchors.toList()))
             }
             selectValidChain(entityIdentifier, candidates, trustAnchors, applied.trustAnchorKeys)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Throwable) {
-            logger.error("Trust chain resolution failed for entity: $entityIdentifier", e)
+            logger.error(TrustChainResolutionDiagnostic.message(
+                TrustChainDiagnosticStage.RESOLUTION,
+                TrustChainDiagnosticReason.UNEXPECTED_FAILURE,
+                e,
+            ))
             IdkResult.err(
                 NoTrustChainFoundError(
                     entityId = entityIdentifier,
@@ -157,7 +165,14 @@ class ResolveTrustChainCommandImpl(
         var firstFailure: String? = null
         val ordered = TrustChainTopology.orderPreferredChains(candidates, trustAnchors) { chain -> trustAnchorOfChain(chain) }
         for (chain in ordered) {
-            val anchor = trustAnchorOfChain(chain) ?: continue
+            val anchor = trustAnchorOfChain(chain)
+            if (anchor == null) {
+                logger.info(TrustChainResolutionDiagnostic.message(
+                    TrustChainDiagnosticStage.CHAIN_DISCOVERY,
+                    TrustChainDiagnosticReason.TRUST_ANCHOR_UNIDENTIFIED,
+                ))
+                continue
+            }
             val keys = pinnedKeys[anchor] ?: run {
                 val resolved = publishedKeys.getOrPut(anchor) { trustAnchorKeys.publishedKeys(anchor, now) }
                 if (resolved.isErr) {
@@ -166,12 +181,23 @@ class ResolveTrustChainCommandImpl(
                 } else {
                     resolved.value
                 }
-            } ?: continue
+            }
+            if (keys == null) {
+                logger.info(TrustChainResolutionDiagnostic.message(
+                    TrustChainDiagnosticStage.CHAIN_DISCOVERY,
+                    TrustChainDiagnosticReason.TRUST_ANCHOR_KEYS_UNAVAILABLE,
+                ))
+                continue
+            }
             val verified = verifyTrustChain.verifyTrustChain(chain.toTypedArray(), anchor, now, keys)
             if (verified.isOk && verified.value.isValid) {
                 logger.info("Selected trust chain for $entityIdentifier (candidates=${candidates.size}, length=${chain.size}, ta=$anchor)")
                 return IdkResult.ok(TrustChainResolveResponse(chain))
             }
+            logger.info(TrustChainResolutionDiagnostic.message(
+                TrustChainDiagnosticStage.CHAIN_DISCOVERY,
+                TrustChainDiagnosticReason.CHAIN_VALIDATION_REJECTED,
+            ))
             if (firstFailure == null) {
                 firstFailure = if (verified.isErr) verified.error.message.defaultMessage else verified.value.errorMessage ?: "Trust Chain is invalid"
             }
@@ -210,12 +236,20 @@ class ResolveTrustChainCommandImpl(
             startingAuthorityHints: List<String>? = null,
         ) {
             if (depth >= maxDepth) {
-                logger.debug("Maximum depth reached ($maxDepth) at $entityIdentifier")
+                logDiagnostic(TrustChainDiagnosticStage.CHAIN_DISCOVERY, TrustChainDiagnosticReason.MAX_DEPTH_REACHED)
                 return
             }
-            val entityConfigurationJwt = selfConfiguration(entityIdentifier) ?: return
+            val entityConfigurationJwt = selfConfiguration(entityIdentifier)
+            if (entityConfigurationJwt == null) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.ENTITY_CONFIGURATION_UNAVAILABLE)
+                return
+            }
             val decodedEntityConfiguration = decodeJWTComponents(entityConfigurationJwt)
-            val entityStatement = mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class) ?: return
+            val entityStatement = mapEntityStatement(entityConfigurationJwt, EntityConfigurationStatement::class)
+            if (entityStatement == null) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.ENTITY_CONFIGURATION_MAPPING_FAILED)
+                return
+            }
             val chainSoFar = prefix.ifEmpty { listOf(entityConfigurationJwt) }
 
             // An intermediate that is also a Trust Anchor completes a chain here.
@@ -229,12 +263,12 @@ class ResolveTrustChainCommandImpl(
                 entityStatement.authorityHints
             }
             if (authorityHints.isNullOrEmpty()) {
-                logger.debug("No authority_hints for $entityIdentifier")
+                logDiagnostic(TrustChainDiagnosticStage.CHAIN_DISCOVERY, TrustChainDiagnosticReason.AUTHORITY_HINTS_EMPTY)
                 return
             }
             for (authority in authorityHints.sortedBy { hint -> if (trustAnchors.contains(hint)) 0 else 1 }) {
                 if (authority in path) {
-                    logger.debug("authority_hint $authority of $entityIdentifier loops back into the path; not used")
+                    logDiagnostic(TrustChainDiagnosticStage.CHAIN_DISCOVERY, TrustChainDiagnosticReason.AUTHORITY_HINT_LOOP)
                     continue
                 }
                 follow(authority, entityIdentifier, trustAnchors, chainSoFar, decodedEntityConfiguration.header.kid, path, depth + 1, out)
@@ -252,9 +286,25 @@ class ResolveTrustChainCommandImpl(
             out: MutableList<List<String>>,
         ) {
             try {
-                val authorityConfigurationJwt = selfConfiguration(authority) ?: return
-                val authorityEntityConfiguration =
-                    mapEntityStatement(authorityConfigurationJwt, EntityConfigurationStatement::class) ?: return
+                val authorityConfigurationJwt = selfConfiguration(authority)
+                if (authorityConfigurationJwt == null) {
+                    logDiagnostic(
+                        TrustChainDiagnosticStage.ENTITY_CONFIGURATION,
+                        TrustChainDiagnosticReason.AUTHORITY_ENTITY_CONFIGURATION_UNAVAILABLE,
+                    )
+                    return
+                }
+                val authorityEntityConfiguration = mapEntityStatement(
+                    authorityConfigurationJwt,
+                    EntityConfigurationStatement::class,
+                )
+                if (authorityEntityConfiguration == null) {
+                    logDiagnostic(
+                        TrustChainDiagnosticStage.ENTITY_CONFIGURATION,
+                        TrustChainDiagnosticReason.AUTHORITY_ENTITY_CONFIGURATION_MAPPING_FAILED,
+                    )
+                    return
+                }
                 val (subordinateStatementJwt, _) = fetchAndVerifySubordinateStatement(
                     authority = authority,
                     authorityEntityConfiguration = authorityEntityConfiguration,
@@ -268,14 +318,21 @@ class ResolveTrustChainCommandImpl(
                     return
                 }
                 if (authorityEntityConfiguration.authorityHints.isNullOrEmpty()) {
-                    logger.debug("Authority $authority has no authority_hints and is not a trust anchor")
+                    logDiagnostic(
+                        TrustChainDiagnosticStage.CHAIN_DISCOVERY,
+                        TrustChainDiagnosticReason.INTERMEDIATE_AUTHORITY_HINTS_MISSING,
+                    )
                     return
                 }
                 collect(authority, trustAnchors, extended, path + authority, depth, out)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (e: Exception) {
-                logger.error("Failed to process authority: $authority", e)
+                logDiagnostic(
+                    TrustChainDiagnosticStage.SUBORDINATE_STATEMENT,
+                    TrustChainDiagnosticReason.AUTHORITY_PROCESSING_FAILED,
+                    e,
+                )
             }
         }
     }
@@ -283,17 +340,37 @@ class ResolveTrustChainCommandImpl(
     private suspend fun fetchAndVerifySelfEntityConfiguration(entityIdentifier: String): String? {
         val endpoint = getEntityConfigurationEndpoint(entityIdentifier)
         return try {
-            val jwt = context.jwtService.fetchAndVerifyJwt(endpoint, context.httpResolver)
+            val jwt = context.jwtService.fetchTypedFederationJwt(endpoint, context.httpResolver, "application/entity-statement+jwt")
             val decoded = decodeJWTComponents(jwt)
-            val jwks: Array<Jwk> =
+            if (!EntityStatementValidation.validateStructure(decoded, getCurrentEpochTimeSeconds(), 0,
+                    context.understoodCriticalClaims).ok) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.INVALID_STATEMENT)
+                return null
+            }
+            if ((decoded.payload["iss"] as? kotlinx.serialization.json.JsonPrimitive)?.content != entityIdentifier ||
+                (decoded.payload["sub"] as? kotlinx.serialization.json.JsonPrimitive)?.content != entityIdentifier) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.IDENTITY_MISMATCH)
+                return null
+            }
+            val jwks: Array<Jwk> = try {
                 context.json.decodeFromString(decoded.payload["jwks"]?.jsonObject?.get("keys").toString())
-            val key = jwks.find { it.kid == decoded.header.kid } ?: return null
-            if (!context.jwtService.verifyJwtSignature(jwt, key)) return null
+            } catch (e: Exception) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.JWKS_INVALID, e)
+                return null
+            }
+            val key = jwks.find { it.kid == decoded.header.kid } ?: run {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.SIGNING_KEY_NOT_ADVERTISED)
+                return null
+            }
+            if (!context.jwtService.verifyJwtSignature(jwt, key)) {
+                logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.SIGNATURE_INVALID)
+                return null
+            }
             jwt
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
-            logger.debug("Failed to fetch EC for $entityIdentifier: ${e.message}")
+            logDiagnostic(TrustChainDiagnosticStage.ENTITY_CONFIGURATION, TrustChainDiagnosticReason.FETCH_OR_PARSE_FAILED, e)
             null
         }
     }
@@ -323,36 +400,54 @@ class ResolveTrustChainCommandImpl(
         }.distinct()
 
         if (fetchBases.isEmpty()) {
-            logger.debug("No fetch endpoint for authority $authority")
+            logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.FETCH_ENDPOINT_MISSING)
             return null
         }
 
-        val authorityJwks: Array<Jwk> =
+        val authorityJwks: Array<Jwk> = try {
             context.json.decodeFromString(
                 decodedAuthorityConfiguration.payload["jwks"]?.jsonObject?.get("keys").toString()
             )
+        } catch (e: Exception) {
+            logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.AUTHORITY_JWKS_INVALID, e)
+            return null
+        }
 
         for (base in fetchBases) {
             val endpoint = getSubordinateStatementEndpoint(base, subjectEntityId)
             try {
-                val subordinateStatementJwt = context.httpResolver.get(endpoint)
+                val subordinateStatementJwt = context.httpResolver.getJwt(endpoint)
                 val decodedSubordinateStatement = decodeJWTComponents(subordinateStatementJwt)
 
-                val subordinateStatementKey =
-                    authorityJwks.find { it.kid == decodedSubordinateStatement.header.kid }
-                        ?: continue
+                val subordinateStatementKey = authorityJwks.find { it.kid == decodedSubordinateStatement.header.kid }
+                if (subordinateStatementKey == null) {
+                    logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SIGNING_KEY_NOT_ADVERTISED)
+                    continue
+                }
 
                 if (!context.jwtService.verifyJwtSignature(subordinateStatementJwt, subordinateStatementKey)) {
+                    logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SIGNATURE_INVALID)
                     continue
                 }
 
                 val subordinateStatement = mapEntityStatement(
                     subordinateStatementJwt,
                     SubordinateStatement::class
-                ) ?: continue
+                )
+                if (subordinateStatement == null) {
+                    logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.INVALID_STATEMENT)
+                    continue
+                }
 
-                val keys = subordinateStatement.jwks.propertyKeys ?: continue
-                if (!checkKidInJwks(keys, lastStatementKid)) continue
+                val keys = subordinateStatement.jwks.propertyKeys
+                if (keys == null) {
+                    logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SUBJECT_JWKS_MISSING)
+                    continue
+                }
+                if (!checkKidInJwks(keys, lastStatementKid)) {
+                    logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.SUBJECT_KEY_NOT_ADVERTISED)
+                    continue
+                }
 
                 // Prefer claim source_endpoint; else remember the working fetch base for refresh
                 val sourceFromClaim = decodedSubordinateStatement.payload["source_endpoint"]
@@ -366,11 +461,24 @@ class ResolveTrustChainCommandImpl(
                 }
 
                 return Pair(subordinateStatementJwt, subordinateStatement)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (e: Exception) {
-                logger.debug("Fetch SS failed from $endpoint: ${e.message}")
+                logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.FETCH_OR_PARSE_FAILED, e)
             }
         }
+        logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.NO_ACCEPTABLE_STATEMENT)
         return null
+    }
+
+    private fun logDiagnostic(
+        stage: TrustChainDiagnosticStage,
+        reason: TrustChainDiagnosticReason,
+        failure: Throwable? = null,
+    ) {
+        // Packaged server configuration defaults to INFO; keep these bounded tokens observable without enabling
+        // request/HTTP DEBUG logging.
+        logger.info(TrustChainResolutionDiagnostic.message(stage, reason, failure))
     }
 
     private fun getAuthorityFetchEndpoint(

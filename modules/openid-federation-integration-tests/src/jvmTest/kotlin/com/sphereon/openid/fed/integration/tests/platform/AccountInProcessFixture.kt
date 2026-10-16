@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.integration.tests.platform
 
+import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorageImpl
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.common.config.getEnvironmentVariable
@@ -31,8 +32,10 @@ class AccountInProcessFixture(
 ) {
     val oauthAs: IdkOauth2AsFixture = IdkOauth2AsFixture(audience = audience)
 
-    val adminGraph: AdminServerAppGraph
-    val federationGraph: FederationServerAppGraph
+    private val sharedKmsBackingStorage = MemoryKeyStoreBackingStorageImpl()
+
+    val adminGraph: SharedKmsAdminTestGraph
+    val federationGraph: SharedKmsFederationTestGraph
     private val adminServer: EmbeddedServer<*, *>
     private val federationServer: EmbeddedServer<*, *>
 
@@ -69,10 +72,11 @@ class AccountInProcessFixture(
         )
 
         adminGraph =
-            createAdminServerAppGraph(
+            createSharedKmsAdminTestGraph(
                 application = this,
                 appId = ADMIN_APP_ID,
                 profile = PROFILE,
+                backingStorage = sharedKmsBackingStorage,
             )
 
         // Federation graph shares AppMap / DB; distinct appId namespace for server config.
@@ -83,10 +87,11 @@ class AccountInProcessFixture(
             seedSoftwareKms = true,
         )
         federationGraph =
-            createFederationServerAppGraph(
+            createSharedKmsFederationTestGraph(
                 application = this,
                 appId = FED_APP_ID,
                 profile = PROFILE,
+                backingStorage = sharedKmsBackingStorage,
             )
 
         val adminConfig = adminGraph.serverConfig
@@ -132,7 +137,15 @@ class AccountInProcessFixture(
             try {
                 federationServer.stop(gracePeriodMillis = 100, timeoutMillis = 1_000)
             } finally {
-                oauthAs.stop()
+                try {
+                    adminGraph.destroy()
+                } finally {
+                    try {
+                        federationGraph.destroy()
+                    } finally {
+                        oauthAs.stop()
+                    }
+                }
             }
         }
     }
@@ -182,7 +195,9 @@ class AccountInProcessFixture(
                     OidfConfigKeys.Datasource.URL to hostLocalDs,
                     OidfConfigKeys.Datasource.USER to dsUser,
                     OidfConfigKeys.Datasource.PASSWORD to dsPass,
-                    OidfConfigKeys.Federation.ROOT_IDENTIFIER to "http://localhost:8080",
+                    // Declared protocol identity is distinct from the fixture's loopback API transport.
+                    OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS to "3600",
+                    OidfConfigKeys.Federation.ROOT_IDENTIFIER to "https://federation-root.example",
                 )
             props.forEach { (k, v) ->
                 DefaultAppMapPropertySource.addProperty(k, v)

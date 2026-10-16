@@ -120,7 +120,8 @@ class VerifyTrustChainConstraintsTest {
             put("iat", now - 100)
             put("exp", now + 3600)
             put("jwks", buildJsonObject { put("keys", JsonArray(listOf(subjectKey.publicJson))) })
-            metadata?.let { put("metadata", it) }
+            (metadata ?: if (issuer == subject) buildJsonObject { put("federation_entity", JsonObject(emptyMap())) } else null)
+                ?.let { put("metadata", it) }
             authorityHint?.let { put("authority_hints", JsonArray(listOf(JsonPrimitive(it)))) }
             constraints?.let { put("constraints", it) }
         }
@@ -191,7 +192,8 @@ class VerifyTrustChainConstraintsTest {
             engine {
                 addHandler {
                     anchorEcFetches++
-                    respond(content = anchorEcJwt, status = HttpStatusCode.OK)
+                    respond(content = anchorEcJwt, status = HttpStatusCode.OK,
+                        headers = io.ktor.http.headersOf(io.ktor.http.HttpHeaders.ContentType, "application/entity-statement+jwt"))
                 }
             }
         }
@@ -212,6 +214,45 @@ class VerifyTrustChainConstraintsTest {
             trustAnchorPublicKeys = contextPins
         )
         return VerifyTrustChainCommandImpl(execution, context)
+    }
+
+    private suspend fun signedConsentTopology(authorityHint: String, duplicateLeaf: Boolean): SignedChain {
+        val leaf = key()
+        val anchor = key()
+        val leafEc = statement(leafId, leafId, leaf, leaf, metadata = mixedMetadata(), authorityHint = authorityHint)
+        val chain = mutableListOf(leafEc)
+        if (duplicateLeaf) chain += leafEc
+        chain += statement(anchorId, leafId, anchor, leaf)
+        chain += statement(anchorId, anchorId, anchor, anchor)
+        return SignedChain(chain.toTypedArray(), anchor.pin)
+    }
+
+    @Test
+    fun signedConsentTopologyValidDirectChainRemainsAccepted() = runTest {
+        val result = verify(signedConsentTopology(authorityHint = anchorId, duplicateLeaf = false))
+        assertTrue(result.isOk, "Real signed direct chain with the leaf's consent and pinned anchor must verify")
+        assertTrue(result.value.isValid)
+    }
+
+    @Test
+    fun signedConsentTopologyWrongLeafHintIsRejected() = runTest {
+        val result = verify(signedConsentTopology(authorityHint = "https://unrelated.example", duplicateLeaf = false))
+        assertTrue(result.isErr, "A real anchor signature does not replace the leaf's consent to that superior")
+        assertTrue(result.error is TrustChainValidationFailedError)
+    }
+
+    @Test
+    fun signedConsentTopologyDuplicateLeafCannotBypassWrongHint() = runTest {
+        val result = verify(signedConsentTopology(authorityHint = "https://unrelated.example", duplicateLeaf = true))
+        assertTrue(result.isErr, "Repeating the valid leaf EC must not bypass the immediate superior consent check")
+        assertTrue(result.error is TrustChainValidationFailedError)
+    }
+
+    @Test
+    fun signedConsentTopologyDuplicateLeafIsInvalidEvenWithCorrectHint() = runTest {
+        val result = verify(signedConsentTopology(authorityHint = anchorId, duplicateLeaf = true))
+        assertTrue(result.isErr, "Interior Entity Configurations are not Subordinate Statements even when consent is present")
+        assertTrue(result.error is TrustChainValidationFailedError)
     }
 
     private fun constraint(value: String): JsonElement = Json.parseToJsonElement(value)

@@ -15,9 +15,7 @@ import kotlinx.serialization.json.*
 object MetadataPolicyOperators {
 
     /** Standard operator names from OpenID Federation 1.1 §6.1.3.1. */
-    val STANDARD_OPERATORS: Set<String> = setOf(
-        "value", "add", "default", "one_of", "subset_of", "superset_of", "essential"
-    )
+    val STANDARD_OPERATORS: Set<String> = EntityStatementValidation.STANDARD_POLICY_OPERATORS
     private val ARRAY_OPERATORS = setOf("add", "one_of", "subset_of", "superset_of")
     private val SCOPE_ENTITY_TYPES = setOf("openid_relying_party", "oauth_client")
 

@@ -76,6 +76,7 @@ kotlin {
                 implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
                 implementation(idklib.sphereon.idk.lib.core.api.default)
                 implementation(sphereonlib.app.cash.sqldelight.jdbc.driver)
+                implementation(sphereonlib.com.zaxxer.hikaricp)
                 implementation(sphereonlib.org.postgresql.postgresql)
                 implementation(sphereonlib.org.testcontainers.testcontainers)
                 implementation(sphereonlib.org.testcontainers.postgresql)

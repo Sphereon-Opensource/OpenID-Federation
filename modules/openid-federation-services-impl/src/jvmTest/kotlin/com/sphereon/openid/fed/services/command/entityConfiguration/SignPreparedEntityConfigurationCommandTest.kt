@@ -76,6 +76,8 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.postgresql.ds.PGSimpleDataSource
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import java.sql.DriverManager
@@ -124,7 +126,7 @@ class SignPreparedEntityConfigurationCommandTest {
 
     private val identifier = "https://entity.example/case/%2F"
     private lateinit var driver: SqlDriver
-    private lateinit var source: PGSimpleDataSource
+    private lateinit var source: HikariDataSource
     private lateinit var schemaJdbcUrl: String
     private lateinit var dbUsername: String
     private lateinit var dbPassword: String
@@ -160,11 +162,14 @@ class SignPreparedEntityConfigurationCommandTest {
         schemaJdbcUrl = container.jdbcUrl + separator + "currentSchema=" + schema
         dbUsername = container.username
         dbPassword = container.password
-        source = PGSimpleDataSource().apply {
-            setUrl(schemaJdbcUrl)
-            user = container.username
+        source = HikariDataSource(HikariConfig().apply {
+            jdbcUrl = schemaJdbcUrl
+            username = container.username
             password = container.password
-        }
+            maximumPoolSize = 6
+            minimumIdle = 1
+            poolName = "prepared-$schema"
+        })
         driver = source.asJdbcDriver()
         Database.Schema.migrate(driver, 0L, Database.Schema.version)
         accountQueries = AccountQueries(driver, Account.Adapter(JavaUuidStringAdapter))
@@ -201,19 +206,17 @@ class SignPreparedEntityConfigurationCommandTest {
 
     @After
     fun tearDown() {
-        val actorFailure = actorSessions.mapNotNull { runCatching { it.destroy() }.exceptionOrNull() }.firstOrNull()
-        val sessionFailure = runCatching { if (::ownedSession.isInitialized) ownedSession.destroy() }.exceptionOrNull()
-        val driverFailure = runCatching { if (::driver.isInitialized) driver.close() }.exceptionOrNull()
-        if (actorFailure != null) {
-            sessionFailure?.let { actorFailure.addSuppressed(it) }
-            driverFailure?.let { actorFailure.addSuppressed(it) }
-            throw actorFailure
+        val failures = buildList {
+            actorSessions.forEach { actor -> runCatching { actor.destroy() }.exceptionOrNull()?.let(::add) }
+            runCatching { if (::ownedSession.isInitialized) ownedSession.destroy() }.exceptionOrNull()?.let(::add)
+            runCatching { if (::app.isInitialized) app.destroy() }.exceptionOrNull()?.let(::add)
+            runCatching { if (::driver.isInitialized) driver.close() }.exceptionOrNull()?.let(::add)
+            runCatching { if (::source.isInitialized) source.close() }.exceptionOrNull()?.let(::add)
         }
-        if (sessionFailure != null) {
-            driverFailure?.let { sessionFailure.addSuppressed(it) }
-            throw sessionFailure
+        failures.firstOrNull()?.let { first ->
+            failures.drop(1).forEach(first::addSuppressed)
+            throw first
         }
-        driverFailure?.let { throw it }
     }
 
     private fun account(entityIdentifier: String = identifier): String =

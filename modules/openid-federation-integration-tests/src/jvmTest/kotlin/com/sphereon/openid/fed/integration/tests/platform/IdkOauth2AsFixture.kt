@@ -1,5 +1,14 @@
 package com.sphereon.openid.fed.integration.tests.platform
 
+import com.sphereon.core.api.context.asCoreApiContextGraph
+import com.sphereon.core.api.session.CommandInvokerGraph
+import com.sphereon.crypto.jose.jws.JwsCompact
+import com.sphereon.crypto.jose.jws.JwtServiceImpl
+import com.sphereon.crypto.jose.jws.command.VerifyJwsArgs
+import com.sphereon.crypto.resolution.extern.ExternalIdentifierJwkOpts
+import com.sphereon.oauth2.server.authorization.command.GetJwksArgs
+import com.sphereon.oauth2.server.authorization.command.GetJwksCommand
+import java.util.UUID
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.core.api.conf.DefaultPrincipalMapPropertySource
 import com.sphereon.core.defaults.context.DefaultPrincipalInputString
@@ -7,9 +16,7 @@ import com.sphereon.core.defaults.context.DefaultTenantInputString
 import com.sphereon.oauth2.server.authorization.command.CreateAccessTokenArgs
 import com.sphereon.oauth2.server.authorization.command.CreateAccessTokenCommand
 import com.sphereon.oauth2.server.authorization.impl.bootstrap.ensureActiveSigningKeyBlocking
-import com.sphereon.oauth2.server.authorization.ktor.OAuth2AsAppGraph
 import com.sphereon.oauth2.server.authorization.ktor.configureOAuth2As
-import com.sphereon.oauth2.server.authorization.ktor.createOAuth2AsAppGraph
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
 import kotlinx.coroutines.runBlocking
@@ -19,7 +26,7 @@ import kotlinx.coroutines.runBlocking
  *
  * Mirrors [com.sphereon.oauth2.oidf.op.OidfOpServerFixture] / `OAuth2AsKtorServer.main`:
  * 1. Seed software KMS on IDK property maps (same `kms.providers.software.*` as OIDF OP harness)
- * 2. [createOAuth2AsAppGraph]
+ * 2. [createIdkOauth2AsTestGraph]
  * 3. [ensureActiveSigningKeyBlocking] so mints are real JWTs (not opaque fallbacks)
  * 4. Ktor [configureOAuth2As] on an ephemeral port (discovery, JWKS, /token, …)
  *
@@ -36,7 +43,7 @@ class IdkOauth2AsFixture(
     appId: String = "oidf-platform-e2e-as",
     profile: String = "test",
 ) {
-    val graph: OAuth2AsAppGraph
+    val graph: IdkOauth2AsTestGraph
     private val server: io.ktor.server.engine.EmbeddedServer<*, *>
 
     init {
@@ -44,11 +51,10 @@ class IdkOauth2AsFixture(
         seedSoftwareKms(appId = appId, profile = profile)
 
         graph =
-            createOAuth2AsAppGraph(
+            createIdkOauth2AsTestGraph(
                 application = this,
                 appId = appId,
                 profile = profile,
-                version = "test",
             )
 
         val keyResult =
@@ -103,46 +109,92 @@ class IdkOauth2AsFixture(
         extraClaims: Map<String, Any> = emptyMap(),
     ): String =
         runBlocking {
-            // Same dispatch path as ensureActiveSigningKey / token endpoint internals:
-            // AppCommandInvoker opens a session and runs CreateAccessTokenCommand.
-            val createAccessToken =
-                graph.appCommandInvoker.resolve(CreateAccessTokenCommand.COMMAND_ID)
-                    as? CreateAccessTokenCommand
-                    ?: error(
-                        "CreateAccessTokenCommand not registered on AS graph " +
-                            "(need com.sphereon.idk:services-oauth2-as-rest + authorization-impl)",
-                    )
+            // Select the configured AS in the same fresh session that resolves and executes the command.
+            val context = graph.userContextManager.createOrGetFromInputs(
+                DefaultTenantInputString(DEFAULT_TENANT_ID), DefaultPrincipalInputString(DEFAULT_PRINCIPAL_ID),
+            )
+            val manager = context.asCoreApiContextGraph().sessionContextManager
+            val sessionId = UUID.randomUUID().toString()
+            val session = manager.createOrGetFromId(
+                sessionId = sessionId, correlationId = sessionId, makeActive = false,
+                principalType = context.context.principalType,
+            )
+            val selector = (session.graph as IdkOauth2AsTestSessionGraph).asInstanceIdProvider
+            val executor = (session.graph as CommandInvokerGraph).commandInvoker
+            try {
+                selector.setCurrentAsInstanceId("default")
+                val createAccessToken =
+                    executor.resolve(CreateAccessTokenCommand.COMMAND_ID)
+                        as? CreateAccessTokenCommand
+                        ?: error(
+                            "CreateAccessTokenCommand not registered on AS graph " +
+                                "(need com.sphereon.idk:services-oauth2-as-rest + authorization-impl)",
+                        )
 
-            val claims = buildMap {
-                putAll(extraClaims)
-                if (tenantId != null) {
-                    put("tenant_id", tenantId)
+                val claims = buildMap {
+                    putAll(extraClaims)
+                    if (tenantId != null) {
+                        put("tenant_id", tenantId)
+                    }
                 }
+                val result =
+                    executor.execute(
+                        command = createAccessToken,
+                        input =
+                            CreateAccessTokenArgs(
+                                subject = subject,
+                                clientId = clientId,
+                                scope = scope,
+                                audience = listOf(audience),
+                                expiresInSeconds = expiresInSeconds,
+                                additionalClaims = claims,
+                                baseUrlOverride = baseUrl,
+                            ),
+                    )
+                check(result.isOk) {
+                    "CreateAccessTokenCommand failed: ${if (result.isErr) result.error.message.defaultMessage else "<unknown>"}"
+                }
+                result.value.value
+            } finally {
+                selector.clearCurrentAsInstanceId()
+                manager.destroyById(sessionId)
             }
-            val result =
-                graph.appCommandInvoker.execute(
-                    tenantInput = DefaultTenantInputString(DEFAULT_TENANT_ID),
-                    principalInput = DefaultPrincipalInputString(DEFAULT_PRINCIPAL_ID),
-                    command = createAccessToken,
-                    input =
-                        CreateAccessTokenArgs(
-                            subject = subject,
-                            clientId = clientId,
-                            scope = scope,
-                            audience = listOf(audience),
-                            expiresInSeconds = expiresInSeconds,
-                            additionalClaims = claims,
-                            baseUrlOverride = baseUrl,
-                        ),
-                )
-            check(result.isOk) {
-                "CreateAccessTokenCommand failed: ${if (result.isErr) result.error.message.defaultMessage else "<unknown>"}"
-            }
-            result.value.value
         }
 
+    /** Verify against the real AS publication command and IDK JWS verifier in an isolated tenant session. */
+    fun verifyAccessTokenSignature(token: String): Boolean = runBlocking {
+        val context = graph.userContextManager.createOrGetFromInputs(
+            DefaultTenantInputString(DEFAULT_TENANT_ID), DefaultPrincipalInputString(DEFAULT_PRINCIPAL_ID),
+        )
+        val manager = context.asCoreApiContextGraph().sessionContextManager
+        val sessionId = UUID.randomUUID().toString()
+        val session = manager.createOrGetFromId(
+            sessionId = sessionId, correlationId = sessionId, makeActive = false,
+            principalType = context.context.principalType,
+        )
+        try {
+            val executor = (session.graph as CommandInvokerGraph).commandInvoker
+            val command = executor.resolve(GetJwksCommand.COMMAND_ID) as GetJwksCommand
+            val keys = executor.execute(command, GetJwksArgs())
+            check(keys.isOk) { "AS public-key publication failed" }
+            val verifier = (session.graph as JwtServiceImpl.Graph).jwtService
+            keys.value.keys.any { key ->
+                val result = verifier.verifyJws(VerifyJwsArgs(
+                    jws = JwsCompact(token), identifier = ExternalIdentifierJwkOpts(identifier = key),
+                ))
+                result.isOk && result.value.isValid
+            }
+        } finally {
+            manager.destroyById(sessionId)
+        }
+    }
+
     fun stop() {
-        server.stop(gracePeriodMillis = 100, timeoutMillis = 1_000)
+        try {
+            server.stop(gracePeriodMillis = 100, timeoutMillis = 1_000)
+        } finally {
+            graph.destroy()
+        }
     }
 
     companion object {
@@ -181,7 +233,6 @@ class IdkOauth2AsFixture(
                     "oauth2.servers.default.mode" to "HOSTED",
                     "oauth2.servers.default.oidc" to "SUPPORTED",
                     "oauth2.servers.default.token-format" to "JWT",
-                    "oauth2.servers.default.signing-key-alias" to "oauth2-server-signing",
                 )
             val missing =
                 props.filterKeys { key ->

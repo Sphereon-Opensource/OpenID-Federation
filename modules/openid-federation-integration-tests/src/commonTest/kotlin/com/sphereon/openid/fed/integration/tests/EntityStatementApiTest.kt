@@ -14,6 +14,7 @@ import com.sphereon.openid.fed.openapi.models.PublishStatementRequest
 import com.sphereon.openid.fed.openapi.models.ReceivedTrustMark
 import com.sphereon.openid.fed.openapi.models.TrustMarkType
 import io.ktor.client.*
+import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -62,13 +63,11 @@ class EntityStatementApiTest {
 
         // Generate unique test identifiers with timestamps
         testUsername = "entity-test-${System.currentTimeMillis()}"
-        testMetadataType = "openid_provider-${System.currentTimeMillis()}"
-        testMetadataPolicyType = "openid_relying_party-${System.currentTimeMillis()}"
-        testTrustMarkType = "test-trust-mark-type-${System.currentTimeMillis()}"
-        testTrustMarkIssuer = "test-trust-mark-issuer-${System.currentTimeMillis()}"
-        testReceivedTrustMarkId = "https://example.com/received-trust-mark-${System.currentTimeMillis()}"
-        testReceivedTrustMarkJwt =
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        testMetadataType = "openid_provider"
+        testMetadataPolicyType = "openid_relying_party"
+        testTrustMarkType = "https://marks.example/types/${System.currentTimeMillis()}"
+        testTrustMarkIssuer = "https://marks.example/issuers/${System.currentTimeMillis()}"
+        testReceivedTrustMarkId = testTrustMarkType
         testTrustAnchorHint = "https://trust-anchor.example.org/${System.currentTimeMillis()}"
     }
 
@@ -125,7 +124,7 @@ class EntityStatementApiTest {
             createTrustMarkIssuer(trustMarkType.id, "https://example-issuer.com")
 
             // Step 7: Add received trust marks
-            val receivedTrustMark = createReceivedTrustMark()
+            val receivedTrustMark = createReceivedTrustMark(trustMarkType.id)
             assertNotNull(receivedTrustMark, "Received trust mark creation failed")
 
             // Step 7b: Add trust anchor hints
@@ -239,7 +238,9 @@ class EntityStatementApiTest {
         val responseBody = response.bodyAsText()
         println("Created key: $responseBody")
 
-        return json.decodeFromString<TenantJwk>(responseBody)
+        val key = json.decodeFromString<TenantJwk>(responseBody)
+        selectAccountSigningKey(client, baseUrl, testUsername!!, key)
+        return key
     }
 
     /**
@@ -251,13 +252,8 @@ class EntityStatementApiTest {
     private suspend fun createMetadata(): String {
         // Create a JSON object with standard OpenID Federation metadata fields
         val metadataJson = buildJsonObject {
-            put("openid_provider", buildJsonObject {
-                put("issuer", JsonPrimitive("https://ntnu.no"))
-                put("organization_name", JsonPrimitive("NTNU"))
-            })
-            put("oauth_client", buildJsonObject {
-                put("organization_name", JsonPrimitive("NTNU"))
-            })
+            put("issuer", JsonPrimitive("https://test-identifier.com/$testUsername"))
+            put("organization_name", JsonPrimitive("Entity API fixture"))
         }
 
         val response = client.post("$baseUrl/metadata") {
@@ -301,7 +297,7 @@ class EntityStatementApiTest {
         assertEquals(
             HttpStatusCode.OK,
             response.status,
-            "Entity statement retrieval failed with status: ${response.status}"
+            "Entity statement retrieval failed with status: ${response.status}: ${response.bodyAsText()}"
         )
         return response.bodyAsText()
     }
@@ -346,26 +342,7 @@ class EntityStatementApiTest {
 
         // Create a policy that requires specific response types and issuer pattern
         val policyJson = buildJsonObject {
-            put("openid_provider", buildJsonObject {
-                put("id_token_signing_alg_values_supported", buildJsonObject {
-                    put("subset_of", buildJsonArray {
-                        add(JsonPrimitive("RS256"))
-                        add(JsonPrimitive("RS384"))
-                        add(JsonPrimitive("RS512"))
-                    })
-                })
-                put("op_policy_uri", buildJsonObject {
-                    put("regexp", JsonPrimitive("^https://[\\w-]+\\.example\\.com/[\\w-]+\\.html"))
-                })
-            })
-            put("oauth_client", buildJsonObject {
-                put("grant_types", buildJsonObject {
-                    put("one_of", buildJsonArray {
-                        add(JsonPrimitive("authorization_code"))
-                        add(JsonPrimitive("client_credentials"))
-                    })
-                })
-            })
+            put("scope", buildJsonObject { put("value", JsonPrimitive("openid profile")) })
         }
 
         val response = client.post("$baseUrl/metadata-policies") {
@@ -481,7 +458,18 @@ class EntityStatementApiTest {
         )
     }
 
-    private suspend fun createReceivedTrustMark(): ReceivedTrustMark {
+    private suspend fun createReceivedTrustMark(trustMarkTypeId: String): ReceivedTrustMark {
+        val issued = client.post("$baseUrl/trust-marks") {
+            contentType(ContentType.Application.Json)
+            header("X-Account-Username", testUsername!!)
+            setBody(com.sphereon.openid.fed.openapi.models.CreateTrustMarkRequest(
+                trustMarkType = trustMarkTypeId,
+                sub = "https://test-identifier.com/$testUsername",
+            ))
+        }
+        assertEquals(HttpStatusCode.Created, issued.status, issued.bodyAsText())
+        testReceivedTrustMarkJwt = issued.body<com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult>().trustMarkValue
+
         val response = client.post("$baseUrl/received-trust-marks") {
             contentType(ContentType.Application.Json)
             headers {

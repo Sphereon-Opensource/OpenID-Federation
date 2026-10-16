@@ -10,6 +10,8 @@ import com.sphereon.openid.fed.persistence.config.SchemaManagement
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.database.PlatformSqlDriver
 import com.sphereon.openid.fed.persistence.models.Account
+import com.sphereon.openid.fed.persistence.models.AccountMetadataPolicyRevision
+import com.sphereon.openid.fed.persistence.models.AccountMetadataPolicyRevisionQueries
 import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.AccountSigningKey
 import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
@@ -56,6 +58,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
  */
 actual object Persistence {
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
+    actual val accountMetadataPolicyRevisionQueries: AccountMetadataPolicyRevisionQueries
     actual val accountQueries: AccountQueries
     actual val accountSigningKeyQueries: AccountSigningKeyQueries
     actual val jwkQueries: JwkQueries
@@ -101,6 +104,7 @@ actual object Persistence {
         21L to ("21.sqm" to "Create account-selected signing key binding with revision tracking"),
         22L to ("22.sqm" to "Create TrustMarkOwner table and the issuer's Trust Mark delegation per type"),
         23L to ("23.sqm" to "Separate historical key expiry, revocation reason tokens and operator descriptions"),
+        24L to ("24.sqm" to "Persist account-role metadata-policy revision and operation fences"),
     )
 
     private val driver: SqlDriver
@@ -117,6 +121,7 @@ actual object Persistence {
         database = Database(
             driver,
             AccountAdapter = Account.Adapter(JavaUuidStringAdapter),
+            AccountMetadataPolicyRevisionAdapter = AccountMetadataPolicyRevision.Adapter(JavaUuidStringAdapter),
             AccountSigningKeyAdapter = AccountSigningKey.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             AuthorityHintAdapter = AuthorityHint.Adapter(
                 JavaUuidStringAdapter,
@@ -162,6 +167,7 @@ actual object Persistence {
         )
 
         accountQueries = database.accountQueries
+        accountMetadataPolicyRevisionQueries = database.accountMetadataPolicyRevisionQueries
         accountSigningKeyQueries = database.accountSigningKeyQueries
         entityConfigurationStatementQueries = database.entityConfigurationStatementQueries
         jwkQueries = database.jwkQueries

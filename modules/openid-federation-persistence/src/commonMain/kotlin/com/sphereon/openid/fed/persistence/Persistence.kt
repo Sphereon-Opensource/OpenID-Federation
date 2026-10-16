@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.persistence
 
+import com.sphereon.openid.fed.persistence.models.AccountMetadataPolicyRevisionQueries
 import com.sphereon.openid.fed.persistence.models.AccountQueries
 import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
 import com.sphereon.openid.fed.persistence.models.AuthorityHintQueries
@@ -34,6 +35,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
  */
 expect object Persistence {
     val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
+    val accountMetadataPolicyRevisionQueries: AccountMetadataPolicyRevisionQueries
     val accountQueries: AccountQueries
     val accountSigningKeyQueries: AccountSigningKeyQueries
     val jwkQueries: JwkQueries

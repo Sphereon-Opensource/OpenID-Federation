@@ -9,5 +9,21 @@ VALUES (?, ?, ?)
 ON CONFLICT (account_id) DO UPDATE SET
     jwk_id = excluded.jwk_id,
     revision = excluded.revision,
-    updated_at = CURRENT_TIMESTAMP
+    updated_at = CURRENT_TIMESTAMP,
+    last_operation_token = NULL,
+    last_request_snapshot = NULL
+RETURNING *;
+
+
+-- The account lock, revision and operation validation are held by the owning canonical command.
+upsertAtomic:
+INSERT INTO AccountSigningKey (account_id, jwk_id, revision, last_operation_generation, last_operation_token, last_request_snapshot)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT (account_id) DO UPDATE SET
+    jwk_id = excluded.jwk_id,
+    revision = excluded.revision,
+    updated_at = CURRENT_TIMESTAMP,
+    last_operation_generation = excluded.last_operation_generation,
+    last_operation_token = excluded.last_operation_token,
+    last_request_snapshot = excluded.last_request_snapshot
 RETURNING *;

@@ -94,6 +94,16 @@ class VerifyTrustChainCommandImpl(
                     ))
                 }
 
+                // Multi-statement chains contain at least one Subordinate Statement.
+                // Only the final entry may be an optional Trust Anchor Entity Configuration.
+                val requiresSubordinateStatement = j > 0 && (j < statements.lastIndex || statements.size == 2)
+                if (requiresSubordinateStatement && !EntityStatementValidation.isSubordinateStatement(statement.payload)) {
+                    return IdkResult.err(TrustChainValidationFailedError(
+                        entityId = entityId,
+                        reason = "Expected a Subordinate Statement at trust chain position $j"
+                    ))
+                }
+
                 if (j == 0) {
                     val iss = statement.payload["iss"]?.jsonPrimitive?.content
                     val sub = statement.payload["sub"]?.jsonPrimitive?.content

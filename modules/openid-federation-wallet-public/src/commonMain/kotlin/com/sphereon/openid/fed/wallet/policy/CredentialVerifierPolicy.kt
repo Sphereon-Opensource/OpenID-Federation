@@ -51,6 +51,10 @@ object CredentialVerifierPolicy {
             )
         }
 
+        if (federatedVerifierMetadata != null) {
+            return JwksResolution(jwks = null, fromFederation = true,
+                detail = "Federated verifier metadata is available; client_metadata keys must be ignored")
+        }
         val clientJwks = clientMetadata?.get("jwks")?.asJwksObject()
             ?: clientMetadata // client_metadata itself may be a jwks in some profiles
         if (clientJwks != null && clientJwks.hasKeys()) {
@@ -83,7 +87,11 @@ object CredentialVerifierPolicy {
         federatedVerifierMetadata: JsonObject?
     ): DcqlValidation {
         val registered = federatedVerifierMetadata?.get("dcql_queries") as? JsonArray
-        if (registered == null || registered.isEmpty()) {
+        if (federatedVerifierMetadata?.containsKey("dcql_queries") == true &&
+            (registered == null || registered.isEmpty() || registered.any { it !is JsonObject })) {
+            return DcqlValidation(valid = false, reason = "Federated dcql_queries must be a nonempty array of query objects")
+        }
+        if (registered == null) {
             return DcqlValidation(valid = true, reason = "No federation dcql_queries constraint")
         }
 

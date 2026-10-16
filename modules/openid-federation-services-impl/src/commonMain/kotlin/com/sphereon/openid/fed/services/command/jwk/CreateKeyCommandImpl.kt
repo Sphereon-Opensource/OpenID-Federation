@@ -7,10 +7,13 @@ import com.sphereon.core.api.asErrorResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.conf.TenantConfigService
 import com.sphereon.core.api.context.SessionExecution
-import com.sphereon.core.api.error.IdkError
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.core.kms.KeyManagerService
+import com.sphereon.crypto.core.CoseJoseKeyMappingService
+import com.sphereon.crypto.core.KeyVisibility
+import com.sphereon.crypto.core.generic.KeyOperations
+import com.sphereon.crypto.core.sign.keyCompatibilityFailure
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.error.ServerError
@@ -21,6 +24,7 @@ import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.config.resolveEffectiveKmsProviderId
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
@@ -82,22 +86,46 @@ class CreateKeyCommandImpl(
                 return@withContext federationErr(ServerError("Key with alias $alias already exists for account ID: ${tenantId}"))
             }
 
-            val generatedJwk = keyManagerService.generateKey(providerId, alias, use, keyOperations, alg)
-            requireNotNull(generatedJwk.alias) { "Generated key alias cannot be null" }
-            requireNotNull(generatedJwk.kid) { "Generated key ID cannot be null" }
-            logger.debug("Generated key pair with KID: ${generatedJwk.kid} providerId: ${generatedJwk.providerId} and alias: ${generatedJwk.alias} for account ID: ${tenantId}")
+            // A routed generation returns an authoritative reference; its in-process key pair is
+            // deliberately transient. Never regenerate or switch providers when a receipt is invalid.
+            val generated = keyManagerService.generateKeyResult(providerId, alias, use, keyOperations, alg, KeyVisibility.PUBLIC)
+            if (generated.isErr) return@withContext federationErr(ServerError("Failed to create key", generated.error.message.defaultMessage))
+            val reference = requireNotNull(generated.value.keyReference) { "Generated managed key reference is missing" }
+            require(reference.alias.isNotBlank() && reference.providerId.isNotBlank()) { "Generated managed key coordinates are blank" }
+            require(reference.kid == null || reference.kid!!.isNotBlank()) { "Generated key ID is blank" }
+            require(alias == null || reference.alias == alias) { "Generated managed key alias differs from the requested alias" }
+            require(reference.providerId == providerId) { "Generated managed key provider differs from the selected provider" }
+            require(reference.signatureAlgorithm == null || reference.signatureAlgorithm == alg) { "Generated managed key algorithm differs from the requested algorithm" }
+
+            val resolved = keyManagerService.getKeyResult(reference.copy(keyVisibility = KeyVisibility.PUBLIC))
+            if (resolved.isErr) return@withContext federationErr(ServerError("Failed to resolve generated public key", resolved.error.message.defaultMessage))
+            val keyInfo = requireNotNull(resolved.value.key) { "Generated public key is missing" }
+            require(keyInfo.alias == reference.alias && keyInfo.providerId == reference.providerId) { "Resolved public key coordinates differ from the generated reference" }
+            val publicInfo = CoseJoseKeyMappingService.toResolvedJwkKeyInfo(keyInfo)
+            val publicJwk = publicInfo.key
+            require(publicJwk.d == null && publicJwk.p == null && publicJwk.q == null && publicJwk.dP == null &&
+                publicJwk.dQ == null && publicJwk.qInv == null && publicJwk.k == null) { "Generated key lookup returned private or symmetric material" }
+            require(publicInfo.keyCompatibilityFailure(alg, KeyOperations.VERIFY) == null) { "Generated public key is incompatible with the requested signing algorithm" }
+            val kids = listOfNotNull(reference.kid, keyInfo.kid, publicJwk.kid)
+            require(kids.all { it.isNotBlank() } && kids.distinct().size <= 1) { "Resolved public key ID differs from the generated reference" }
+            val kid = kids.firstOrNull() ?: requireNotNull(publicJwk.getKeyId(true)) { "Generated public key has no key ID" }
+            val algorithm = requireNotNull(alg.jose?.value) { "Generated key has no JOSE signing algorithm" }
+            val persistedPublicJwk = publicJwk.copy(kid = kid)
+            logger.debug("Generated public key with KID: $kid providerId: ${reference.providerId} and alias: ${reference.alias} for account ID: $tenantId")
 
             val createdKey = jwkQueries.create(
                 account_id = tenantId,
-                kid = generatedJwk.kid,
-                kms_key_ref = generatedJwk.alias,
-                kms = generatedJwk.providerId,
-                alg = generatedJwk.jose.publicJwk.alg?.value,
-                key = generatedJwk.jose.publicJwk.toJsonString()
+                kid = kid,
+                kms_key_ref = reference.alias,
+                kms = reference.providerId,
+                alg = algorithm,
+                key = persistedPublicJwk.toJsonString()
             ).executeAsOne()
 
-            logger.info("Successfully created key with KID: ${generatedJwk.kid} for account ID: ${tenantId}")
+            logger.info("Successfully created key with KID: $kid for account ID: $tenantId")
             IdkResult.ok(createdKey.toDTO())
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (e: Exception) {
             logger.error("Failed to create key for account: ${tenantId} due to: ${e.message}", e)
             federationErr(ServerError("Failed to create key", e.message, e))

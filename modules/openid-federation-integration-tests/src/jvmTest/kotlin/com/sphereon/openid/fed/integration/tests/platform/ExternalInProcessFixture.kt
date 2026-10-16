@@ -83,7 +83,11 @@ class ExternalInProcessFixture(
         try {
             adminServer.stop(gracePeriodMillis = 100, timeoutMillis = 1_000)
         } finally {
-            oauthAs.stop()
+            try {
+                adminGraph.destroy()
+            } finally {
+                oauthAs.stop()
+            }
         }
     }
 
@@ -129,7 +133,8 @@ class ExternalInProcessFixture(
                     OidfConfigKeys.Datasource.URL to hostLocalDs,
                     OidfConfigKeys.Datasource.USER to dsUser,
                     OidfConfigKeys.Datasource.PASSWORD to dsPass,
-                    OidfConfigKeys.Federation.ROOT_IDENTIFIER to "http://localhost:8080",
+                    // Declared protocol identity is distinct from the fixture's loopback API transport.
+                    OidfConfigKeys.Federation.ROOT_IDENTIFIER to "https://federation-root.example",
                 )
             // Force overwrite so a prior LEGACY process env/map cannot win
             props.forEach { (k, v) ->

@@ -66,6 +66,13 @@ object OidfConfigKeys {
     object Client {
         const val PREFIX = "$OIDF_PREFIX.client"
 
+        object CounterpartyEgress {
+            const val PREFIX = "${Client.PREFIX}.counterparty.egress"
+
+            /** Exact operator-approved private authorities: `host:port=ipv4|ipv4;...`; absent means deny all private targets. */
+            const val PRIVATE_IPV4_TARGETS = "$PREFIX.private.ipv4.targets"
+        }
+
         object OfflineTrustChain {
             const val PREFIX = "${Client.PREFIX}.offline.trust.chain"
 
