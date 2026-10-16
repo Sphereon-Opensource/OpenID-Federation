@@ -1,0 +1,106 @@
+{
+  "candidate": "ofcli-probe-candidate-v4",
+  "candidateStatus": "private source-only candidate; no build or live request",
+  "predecessor": {
+    "candidate": "ofcli-probe-candidate-v3",
+    "manifestSha256": "71f4d0de6d457f43a65f7aec749d3e3b998d1902830a340cc9b3043017ac1ef3"
+  },
+  "changes": {
+    "README.md": {
+      "preimageSha256": "ad0718d24379c544af003eba26eff7c480ef95574dea60fafa9e993d547ed351",
+      "candidateSha256": "e27973094ce1882a40d77a6d85b2277d43b5a5f6ee9bd04db36e83f3a3e7c88c"
+    },
+    "candidate-proof.txt": {
+      "preimageSha256": "deca09b35d1493a28c7fbf9e2d9403233020551b369df8123901214d0f164bcc",
+      "candidateSha256": "aaebf2b8384d239e548df0491369a8e19061c19c62a9d76729350875e3d4b8e6"
+    },
+    "ofcli_structural_probe.py": {
+      "preimageSha256": "9724c91c1b97583e44d1d07ced179298f33257c49733a1c4cb34d9d7ef72c52a",
+      "candidateSha256": "3bd8aabb5d46c85edc70f3e9325878e5cc89fe7206b642619fe6b48368dd0028"
+    }
+  },
+  "files": [
+    {
+      "path": "candidate-proof.txt",
+      "size": 354,
+      "sha256": "aaebf2b8384d239e548df0491369a8e19061c19c62a9d76729350875e3d4b8e6"
+    },
+    {
+      "path": "Dockerfile",
+      "size": 1262,
+      "sha256": "1b0b12ba3db2c4688661b369818e9edac958aaad24bc3accd4a3cc37d25ecfc7"
+    },
+    {
+      "path": "ofcli_structural_probe.py",
+      "size": 10576,
+      "sha256": "3bd8aabb5d46c85edc70f3e9325878e5cc89fe7206b642619fe6b48368dd0028"
+    },
+    {
+      "path": "pyproject.toml",
+      "size": 335,
+      "sha256": "c6d632fd7060ed8024e7a67d0b4549181435c7070df44dcb9ecafe4f0140add5"
+    },
+    {
+      "path": "README.md",
+      "size": 934,
+      "sha256": "e27973094ce1882a40d77a6d85b2277d43b5a5f6ee9bd04db36e83f3a3e7c88c"
+    },
+    {
+      "path": "runtime-requirements.txt",
+      "size": 34416,
+      "sha256": "24a3bcca40d746fa46b7ebc2329f10ea15a127277691a62571c605f6f623abae"
+    },
+    {
+      "path": "source-lock.json",
+      "size": 2079,
+      "sha256": "6a5db1e67b1a012de746a1cf3e3200f43d4e756976890b26902efdb44b69a390"
+    },
+    {
+      "path": "sources.sha256",
+      "size": 120,
+      "sha256": "e61cbd2724e6cfe0775c1ce3718f11a591027428542e293a8c9a137efd6cb3a1"
+    },
+    {
+      "path": "sources/ofcli-289e97f45d1fd225f16ff77976a7ede1ea6390f0.tar.gz",
+      "size": 121718,
+      "sha256": "32173ee18f059fe351adf3de677fbf2efc9b53dc48e12458288bde86fa5fdb13"
+    },
+    {
+      "path": "uv.lock",
+      "size": 134792,
+      "sha256": "4e32cc8a37482f66fb44aa58eed85f7ce526ba0230636a63570ffbc557a5a62d"
+    }
+  ],
+  "treeHash": {
+    "algorithm": "SHA-256 over ordinal-sorted UTF-8 relative path + NUL + lowercase payload SHA-256 hex + LF; candidate-manifest.json excluded",
+    "sha256": "b5281d1794c93742ebbab8a072c43687284dbe8a4e86258d873b763453e01a48"
+  },
+  "source": {
+    "archive": "sources/ofcli-289e97f45d1fd225f16ff77976a7ede1ea6390f0.tar.gz",
+    "archiveSha256": "32173ee18f059fe351adf3de677fbf2efc9b53dc48e12458288bde86fa5fdb13",
+    "commit": "289e97f45d1fd225f16ff77976a7ede1ea6390f0",
+    "commitDate": "2025-04-28",
+    "license": "MIT",
+    "repository": "https://github.com/dianagudu/ofcli",
+    "sourceMode": "unmodified archive extracted to /opt/ofcli-source; PYTHONPATH points to its src directory",
+    "version": "0.7.2"
+  },
+  "runtime": {
+    "baseImage": "python:3.12.15-slim-bookworm@sha256:edd0b3ec946cc68bd20e39480bd03929016d0fb6254cbf870cd3bc55ea25116d",
+    "binaryOnly": true,
+    "hashRequired": true,
+    "index": "https://pypi.org/simple",
+    "lock": "uv.lock",
+    "lockedDistributions": 47,
+    "platform": "linux/amd64",
+    "python": "3.12 only",
+    "resolvedOrInstalled": false
+  },
+  "qualification": {
+    "probe": "positive exact structural chain then live starting-entity requested-anchor no-chain control",
+    "rawJwtsPersistedOrDisplayed": false,
+    "runtimeExecuted": false,
+    "verificationClaim": "structural only; pinned TrustTree.verify_signatures is a TODO returning true",
+    "transportBoundary": "Wrapper configures SSL_CERT_FILE with the supplied scoped CA and accepts only HTTPS input identifiers. It does not constrain metadata-directed federation_fetch_endpoint schemes or redirects; no claim that all native retrievals are HTTPS or TLS-validated."
+  }
+}

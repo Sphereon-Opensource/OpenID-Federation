@@ -1,0 +1,93 @@
+{
+  "candidate": "fedservice-rh-new-config-producer-recipe-v4",
+  "status": "private immutable recipe capsule; source-only, no image/runtime qualification",
+  "manifest": {
+    "path": "recipe-manifest.json",
+    "bytes": 12366,
+    "sha256": "8928bca01549bb0b4a94c8f479f2daba08ff9f048bdec332124dab0a8166cbaa"
+  },
+  "fileCount": 16,
+  "files": [
+    {
+      "path": "build-closure/requirements.txt",
+      "bytes": 1118,
+      "sha256": "91e5996d322ae6a15a05016b09da2d3ccda33066ea836c5d27772c109cdfa922"
+    },
+    {
+      "path": "closure-manifest.json",
+      "bytes": 1838,
+      "sha256": "a15927c1e9c5b59c8c2cbc665550af0401ee0fc7a46bdb9b44972987011cdc41"
+    },
+    {
+      "path": "Dockerfile",
+      "bytes": 3622,
+      "sha256": "c4d6196168751f21ed41f8818ef865b12782f20a482991d40b90eebd6a2385bd"
+    },
+    {
+      "path": "fedservice-entrypoint.py",
+      "bytes": 5463,
+      "sha256": "a4523809ec45fec8a0f4a8101c659634735154a5cd76590763716c0cc434d506"
+    },
+    {
+      "path": "native-entrypoint-alternative.md",
+      "bytes": 4051,
+      "sha256": "d43264eb5c66799dc87a90c8a454d30ac98b3f7a4fc0a8d7ab076f3a5aeca274"
+    },
+    {
+      "path": "provision-subordinate.sh",
+      "bytes": 1834,
+      "sha256": "0a6f346a58689cedc8a78633dfefc30b5da317257659005e5da983ef2083791c"
+    },
+    {
+      "path": "pypi-closure/requirements.txt",
+      "bytes": 13680,
+      "sha256": "746a75bc8f4a0b44f198843c89328496de43a29c23a35dd02152f9380f1b4ee5"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3828,
+      "sha256": "eab096342c591d07516a52cb8f809d61ac7f16e7cdde9298fe8b221f45b360a5"
+    },
+    {
+      "path": "recipe-manifest.json",
+      "bytes": 12366,
+      "sha256": "8928bca01549bb0b4a94c8f479f2daba08ff9f048bdec332124dab0a8166cbaa"
+    },
+    {
+      "path": "source-lock.json",
+      "bytes": 7012,
+      "sha256": "0f82883300be130e09fa9089ea7958430fa865cddf4860d3d0cbedf24a4680d2"
+    },
+    {
+      "path": "sources/fedservice-0304f72453214c4f85bed7f792a6b5ad39f357d3.tar.gz",
+      "bytes": 381068,
+      "sha256": "2086908175a6e1bcf72fe756daad43bec7075b06419479e1378c19d95589ac1a"
+    },
+    {
+      "path": "sources/idpy-oidc-1a66289b5f788d5b54024de94e9cfd860fb36a8c.tar.gz",
+      "bytes": 785774,
+      "sha256": "61a00ee6337a698b38c005d80328718c27a2131d1abf3fa7f68a667bc27df7d7"
+    },
+    {
+      "path": "sources/idpy-sdjwt-de1715ef89c7f3db5daf3cdc53fec26d6ade03d9.tar.gz",
+      "bytes": 16409,
+      "sha256": "74cd8b018963e51738c3fd3d62c21b8e6a21954eda6d2bb944643569d7e88287"
+    },
+    {
+      "path": "sources/openid4v-dfcea1c10a038f67766d453433840c64a9aa2b10.tar.gz",
+      "bytes": 221679,
+      "sha256": "25b1e6dbcdb220cbd2cad901a6e2047cbae6b93ef1f8253318856492dfd87c0c"
+    },
+    {
+      "path": "sources.sha256",
+      "bytes": 528,
+      "sha256": "ebc9083a2ed69715c39814721642d1f217f3dd273854b6f9e3c51ffcf970d3c9"
+    },
+    {
+      "path": "trust-anchor-config.rs256.json",
+      "bytes": 1664,
+      "sha256": "c9ec872ed649d9afdcab863e61cca4af30d97494cd55d4aafb8cbf33fe555dee"
+    }
+  ],
+  "orderedPayloadSha256": "4f156a8d7149095d12a7bcf0ae4b89b70a1d21a6c73685a0e701cb35fa70ad31"
+}
