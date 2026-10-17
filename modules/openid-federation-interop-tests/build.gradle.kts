@@ -87,13 +87,15 @@ fun Test.configureCoreRuntime(
 }
 
 fun Test.configurePythonEvidence() {
+    val moduleDirectory = project.projectDir.toPath()
+    val configuredBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
     val evidenceDirectory = project.layout.buildDirectory.dir("interop/python").get().asFile.toPath().toAbsolutePath().normalize()
     systemProperty("interop.evidence.directory", evidenceDirectory.toString())
     systemProperty("interop.evidence.runId", UUID.randomUUID().toString())
     doFirst("Remove only stale Python interop evidence before the selected run") {
-        val moduleRoot = project.projectDir.toPath().toRealPath()
+        val moduleRoot = moduleDirectory.toRealPath()
         val expectedBuild = moduleRoot.resolve("build")
-        val configuredBuild = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
+        val configuredBuild = configuredBuildDirectory
         require(configuredBuild == expectedBuild) { "Python evidence cleanup requires the canonical module build directory" }
         fun ensureSafeDirectory(path: Path) {
             require(!Files.isSymbolicLink(path)) { "Symlink in Python evidence path" }
@@ -121,13 +123,15 @@ fun Test.configurePythonEvidence() {
 }
 
 fun Test.configureOfcliEvidence() {
+    val moduleDirectory = project.projectDir.toPath()
+    val configuredBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
     val evidenceDirectory = project.layout.buildDirectory.dir("interop/ofcli").get().asFile.toPath().toAbsolutePath().normalize()
     systemProperty("interop.evidence.directory", evidenceDirectory.toString())
     systemProperty("interop.evidence.runId", UUID.randomUUID().toString())
     doFirst("Remove only stale allowlisted OFCLI evidence before the selected run") {
-        val moduleRoot = project.projectDir.toPath().toRealPath()
+        val moduleRoot = moduleDirectory.toRealPath()
         val expectedBuild = moduleRoot.resolve("build")
-        val configuredBuild = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
+        val configuredBuild = configuredBuildDirectory
         require(configuredBuild == expectedBuild) { "OFCLI evidence cleanup requires the canonical module build directory" }
         fun ensureSafeDirectory(path: Path) {
             require(!Files.isSymbolicLink(path)) { "Symlink in OFCLI evidence path" }
@@ -158,6 +162,8 @@ fun Test.configureOfcliEvidence() {
 
 
 fun Test.configureOidcRuntime(host: org.gradle.api.Project, adminServer: org.gradle.api.Project, browserServer: org.gradle.api.Project) {
+    val moduleDirectory = project.projectDir.toPath()
+    val configuredBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
     dependsOn(
         ":modules:openid-federation-interop-oidc-host:installDist",
         ":modules:openid-federation-admin-server-ktor:installDist",
@@ -172,9 +178,9 @@ fun Test.configureOidcRuntime(host: org.gradle.api.Project, adminServer: org.gra
     systemProperty("interop.evidence.directory", evidenceDirectory.toString())
     outputs.dir(evidenceDirectoryProvider)
     doFirst("Remove stale OIDC result evidence immediately before the selected lane runs") {
-        val moduleRoot = project.projectDir.toPath().toRealPath()
+        val moduleRoot = moduleDirectory.toRealPath()
         val expectedBuild = moduleRoot.resolve("build")
-        val configuredBuild = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
+        val configuredBuild = configuredBuildDirectory
         require(configuredBuild == expectedBuild) { "OIDC evidence cleanup requires the canonical module build directory" }
         fun ensureSafeDirectory(path: Path) {
             require(!Files.isSymbolicLink(path)) { "Symlink in OIDC evidence path" }

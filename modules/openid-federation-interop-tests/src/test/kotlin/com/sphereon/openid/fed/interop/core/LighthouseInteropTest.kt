@@ -89,7 +89,7 @@ class LighthouseInteropTest {
                     throw assertionFailure
                 }
             }
-            assertEquals(200, resolved.status)
+            assertEquals(200, resolved.status, "Sphereon GET /resolve returned HTTP ${resolved.status}: ${safeHttpError(resolved.body)}")
             verifyResolveResponse(
                 resolved.body, root.jwks, SPHEREON, SPHEREON,
                 mapOf(SPHEREON to root.jwks, LIGHTHOUSE to lighthouseEc.jwks), LIGHTHOUSE to SPHEREON, LIGHTHOUSE,
@@ -217,7 +217,7 @@ class LighthouseInteropTest {
             signedObjectEvidence.recordVerified(subordinate.body, "subordinate_statement", signedObjectEvidencePhase)
 
             val resolved = lighthouse.resolve(LIGHTHOUSE, SPHEREON)
-            assertEquals(200, resolved.status)
+            assertEquals(200, resolved.status, "Sphereon GET /resolve returned HTTP ${resolved.status}: ${safeHttpError(resolved.body)}")
             verifyResolveResponse(
                 resolved.body, lighthouseEc.jwks, LIGHTHOUSE, LIGHTHOUSE,
                 mapOf(LIGHTHOUSE to lighthouseEc.jwks, SPHEREON to sphereon.jwks), SPHEREON to LIGHTHOUSE, SPHEREON,
@@ -355,7 +355,8 @@ class LighthouseInteropTest {
             )
             assertEquals(201, provisioned.status)
 
-            val sphereon = publishSphereonEntityConfiguration(environment)
+            // Resolution under the LightHouse anchor starts from Sphereon's authority_hints.
+            val sphereon = publishSphereonEntityConfiguration(environment, authorityHint = LIGHTHOUSE)
             identity = sphereon
             environment.verifyDurableState("after-initial-publication", sphereon.jwks)
             val leafRpMetadata = sphereon.metadata?.get("openid_relying_party") as? Map<*, *>
@@ -420,7 +421,7 @@ class LighthouseInteropTest {
                 "GET",
                 "https://sphereon.test/resolve?sub=${url(SPHEREON)}&trust_anchor=${url(LIGHTHOUSE)}",
             )
-            assertEquals(200, resolved.status)
+            assertEquals(200, resolved.status, "Sphereon GET /resolve returned HTTP ${resolved.status}: ${safeHttpError(resolved.body)}")
             val expectedMetadata = postRestartIdentity.metadata?.toMutableMap()
                 ?: error("Sphereon Entity Configuration omitted metadata")
             val expectedRpMetadata = leafRpMetadata.entries.associate { it.key.toString() to it.value }.toMutableMap()
@@ -572,7 +573,7 @@ class LighthouseInteropTest {
             // constraint for this subordinate. A separate Sphereon account is below the leaf.
             val lighthouseLeafRelation = activeLighthouse.addSubordinate(leafId, leaf.jwks)
             assertEquals(201, lighthouseLeafRelation.status)
-            val lighthouseLeafRelationId = JSONObjectUtils.getString(JSONObjectUtils.parse(lighthouseLeafRelation.body), "id")
+            val lighthouseLeafRelationId = (JSONObjectUtils.parse(lighthouseLeafRelation.body)["id"] as Number).toLong().toString()
             setLightHouseMaxPathLength(activeLighthouse, lighthouseLeafRelationId, 1)
             val lighthouseLeafAtOne = fetchVerifiedLightHouseSubordinate(
                 activeLighthouse, leafId, lighthouseEc.jwks, expectedMaxPathLength = 1,
@@ -602,7 +603,7 @@ class LighthouseInteropTest {
                 descendantId to descendant.jwks,
             )
             val leafResolution = resolveFromSphereonRoot(activeEnvironment, leafId)
-            assertEquals(200, leafResolution.status)
+            assertEquals(200, leafResolution.status, "Sphereon GET /resolve returned HTTP ${leafResolution.status}: ${safeHttpError(leafResolution.body)}")
             verifyResolveResponse(
                 leafResolution.body, root.jwks, SPHEREON, leafId, resolutionKeys,
                 LIGHTHOUSE to leafId, SPHEREON, expectedMetadata = leaf.metadata,
@@ -728,6 +729,14 @@ class LighthouseInteropTest {
             "POST", "/authority-hints", JSONObjectUtils.toJSONString(mapOf("identifier" to authorityHint)),
             account = username,
         ).status)
+        // OpenID Federation 1.1 section 3.1.1: an Entity Configuration declares the Entity Types it takes part with.
+        assertEquals(201, environment.admin(
+            "POST", "/metadata",
+            JSONObjectUtils.toJSONString(mapOf("key" to "federation_entity", "metadata" to mapOf(
+                "organization_name" to "Sphereon interop $username", "federation_fetch_endpoint" to "$entityId/fetch",
+            ))),
+            account = username,
+        ).status)
         assertEquals(201, environment.admin("POST", "/entity-statement", account = username).status)
 
         // Public route is /{username}/.well-known/openid-federation and matches the
@@ -795,12 +804,18 @@ class LighthouseInteropTest {
     private fun resolvedLinks(compact: String): List<Pair<String, String>> {
         val chain = SignedJWT.parse(compact).jwtClaimsSet.getClaim("trust_chain") as? List<*>
             ?: error("resolve response omitted trust_chain")
-        return chain.map { raw ->
+        val links = chain.map { raw ->
             val token = raw as? String ?: error("resolve response contains a non-JWT trust-chain entry")
             val claims = SignedJWT.parse(token).jwtClaimsSet
             (claims.issuer ?: error("trust-chain statement omitted iss")) to
                 (claims.subject ?: error("trust-chain statement omitted sub"))
         }
+        // OpenID Federation 1.1 section 4: the chain logically ends with the Trust Anchor's Entity Configuration,
+        // which MAY be omitted from the array. Compare the subject-to-anchor statements either way.
+        val last = links.lastOrNull()
+        return if (links.size > 1 && last != null && last.first == last.second && links[links.size - 2].first == last.first) {
+            links.dropLast(1)
+        } else links
     }
 
     private fun writeTopologyConstraintEvidence(
@@ -918,8 +933,8 @@ class LighthouseInteropTest {
             assertEquals(200, rotation.status)
             val savedRotation = JSONObjectUtils.parse(rotation.body)
             assertEquals(true, savedRotation["enabled"])
-            assertEquals(300, savedRotation["overlap"])
-            assertEquals(15, savedRotation["key_announcement_lead_time"])
+            assertEquals(300L, (savedRotation["overlap"] as Number).toLong())
+            assertEquals(15L, (savedRotation["key_announcement_lead_time"] as Number).toLong())
             val rotationDeadline = System.nanoTime() + 90_000_000_000L
             var observedRotatedKid: String? = null
             while (System.nanoTime() < rotationDeadline && observedRotatedKid == null) {
@@ -992,7 +1007,7 @@ class LighthouseInteropTest {
             val resolved = activeEnvironment.request(
                 "GET", "https://sphereon.test/resolve?sub=${url(SPHEREON)}&trust_anchor=${url(LIGHTHOUSE)}",
             )
-            assertEquals(200, resolved.status)
+            assertEquals(200, resolved.status, "Sphereon GET /resolve returned HTTP ${resolved.status}: ${safeHttpError(resolved.body)}")
             verifyResolveResponse(
                 resolved.body, sphereonIdentity.jwks, SPHEREON, SPHEREON,
                 mapOf(SPHEREON to sphereonIdentity.jwks, LIGHTHOUSE to rotatedLighthouse!!.jwks),
@@ -1390,7 +1405,9 @@ class LighthouseInteropTest {
             val metadata = JSONObjectUtils.toJSONString(
                 mapOf(
                     "key" to "federation_entity",
-                    "metadata" to mapOf("federation_resolve_endpoint" to "$SPHEREON/resolve"),
+                    // A superior must advertise where its Subordinate Statements are fetched (OpenID Federation 1.1
+                    // section 5.1.1); the standalone server publishes only the metadata it is given.
+                    "metadata" to mapOf("federation_resolve_endpoint" to "$SPHEREON/resolve", "federation_fetch_endpoint" to "$SPHEREON/fetch"),
                 ),
             )
             val createdMetadata = environment.admin("POST", "/metadata", metadata)
@@ -1512,13 +1529,23 @@ class LighthouseInteropTest {
         assertEquals("error=$expectedError", safeError, "$operation returned an unexpected error: $safeError")
     }
 
+    /** The Sphereon server's own error_description, bounded and with anything JWT-shaped redacted. */
+    private fun describedBy(parsed: Map<*, *>): String {
+        val description = parsed["error_description"] as? String ?: return ""
+        val redacted = description.replace(Regex("""eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*"""), "[jwt]")
+            .filter { !it.isISOControl() }.take(300)
+        return " description=\"$redacted\""
+    }
+
     /** Include only standard error fields; never print arbitrary server bodies into test output. */
-    private fun safeHttpError(body: String): String {
+    internal fun safeHttpError(body: String): String {
         val parsed = runCatching { JSONObjectUtils.parse(body) as? Map<*, *> }.getOrNull()
             ?: return "server returned an error outside the safe OAuth allowlist"
         val code = parsed["error"] as? String
             ?: return "server returned an error outside the safe OAuth allowlist"
         return if (code in SAFE_OAUTH_ERROR_CODES) "error=$code"
+        // A bare snake_case code carries no server data; descriptions and bodies stay unprinted.
+        else if (code.matches(Regex("[a-z][a-z0-9_]{0,63}"))) "error=$code (outside the OAuth allowlist)" + describedBy(parsed)
         else "server returned an error outside the safe OAuth allowlist"
     }
 
@@ -1795,7 +1822,7 @@ class LighthouseInteropTest {
             }
             val lighthouseRelationship = activeLighthouse.addSubordinate(SPHEREON, root.jwks)
             assertEquals(201, lighthouseRelationship.status)
-            val lighthouseRelationshipId = JSONObjectUtils.getString(JSONObjectUtils.parse(lighthouseRelationship.body), "id")
+            val lighthouseRelationshipId = (JSONObjectUtils.parse(lighthouseRelationship.body)["id"] as Number).toLong().toString()
 
             val lighthousePolicy = mapOf(
                 "openid_relying_party" to mapOf(
@@ -1827,7 +1854,7 @@ class LighthouseInteropTest {
             val resolved = activeEnvironment.request(
                 "GET", "https://sphereon.test/resolve?sub=${url(leafId)}&trust_anchor=${url(LIGHTHOUSE)}",
             )
-            assertEquals(200, resolved.status)
+            assertEquals(200, resolved.status, "Sphereon GET /resolve returned HTTP ${resolved.status}: ${safeHttpError(resolved.body)}")
             val expectedMetadata = leaf.metadata?.entries?.associate { it.key.toString() to it.value }?.toMutableMap()
                 ?: error("Sphereon leaf Entity Configuration omitted metadata")
             val expectedRp = publishedRp.entries.associate { it.key.toString() to it.value }.toMutableMap()
@@ -1897,6 +1924,10 @@ class LighthouseInteropTest {
             primaryFailure = failure
             throw failure
         } finally {
+            if (primaryFailure != null) {
+                try { environment?.retainSafeServerErrorLogs("two-level-policy") }
+                catch (diagnosticFailure: Throwable) { primaryFailure!!.addSuppressed(diagnosticFailure) }
+            }
             val cleanupFailures = closeOwned(lighthouse, environment)
             if (cleanupFailures.isNotEmpty()) outcome = "failed"
             try {
@@ -2013,7 +2044,7 @@ class LighthouseInteropTest {
             // LightHouse signs the LightHouse -> Sphereon-root relationship.
             val lighthouseToRoot = activeLighthouse.addSubordinate(SPHEREON, rootIdentity.jwks)
             assertEquals(201, lighthouseToRoot.status)
-            val lighthouseToRootId = JSONObjectUtils.getString(JSONObjectUtils.parse(lighthouseToRoot.body), "id")
+            val lighthouseToRootId = (JSONObjectUtils.parse(lighthouseToRoot.body)["id"] as Number).toLong().toString()
             val lighthouseRootStatement = activeLighthouse.public("/fetch?sub=${url(SPHEREON)}")
             assertEquals(200, lighthouseRootStatement.status)
             TrustedJwtVerifier.verify(
@@ -2050,7 +2081,7 @@ class LighthouseInteropTest {
             val activePath = activeEnvironment.request(
                 "GET", "https://sphereon.test/resolve?sub=${url(leafId)}&trust_anchor=${url(LIGHTHOUSE)}",
             )
-            assertEquals(200, activePath.status)
+            assertEquals(200, activePath.status, "Sphereon GET /resolve returned HTTP ${activePath.status}: ${safeHttpError(activePath.body)}")
             verifyResolveResponse(
                 activePath.body, rootIdentity.jwks, SPHEREON, leafId, keys,
                 SPHEREON to leafId, LIGHTHOUSE, expectedMetadata = leafIdentity.metadata,
@@ -2061,17 +2092,26 @@ class LighthouseInteropTest {
             )
             activeLighthousePath = true
 
-            // The actual resolve route accepts comma-separated trust_anchor values. Query order
-            // places LightHouse first; verify which chain the product actually selected.
+            // OpenID Federation 1.1 section 8.3.1: trust_anchor may repeat, and the resolver may answer with a chain
+            // to any of the given anchors. Verify whichever valid chain the product selected, link by link.
             val preferred = activeEnvironment.request(
-                "GET", "https://sphereon.test/resolve?sub=${url(leafId)}&trust_anchor=${url("$LIGHTHOUSE,$SPHEREON")}",
+                "GET", "https://sphereon.test/resolve?sub=${url(leafId)}&trust_anchor=${url(LIGHTHOUSE)}&trust_anchor=${url(SPHEREON)}",
             )
-            assertEquals(200, preferred.status)
-            verifyResolveResponse(
-                preferred.body, rootIdentity.jwks, SPHEREON, leafId, keys,
-                SPHEREON to leafId, LIGHTHOUSE, expectedMetadata = leafIdentity.metadata,
-            )
-            assertEquals(listOf(leafId to leafId, SPHEREON to leafId, LIGHTHOUSE to SPHEREON), resolvedLinks(preferred.body))
+            assertEquals(200, preferred.status, "Sphereon GET /resolve returned HTTP ${preferred.status}: ${safeHttpError(preferred.body)}")
+            val selectedLinks = resolvedLinks(preferred.body)
+            if (selectedLinks.last().first == LIGHTHOUSE) {
+                verifyResolveResponse(
+                    preferred.body, rootIdentity.jwks, SPHEREON, leafId, keys,
+                    SPHEREON to leafId, LIGHTHOUSE, expectedMetadata = leafIdentity.metadata,
+                )
+                assertEquals(listOf(leafId to leafId, SPHEREON to leafId, LIGHTHOUSE to SPHEREON), selectedLinks)
+            } else {
+                verifyResolveResponse(
+                    preferred.body, rootIdentity.jwks, SPHEREON, leafId, keys,
+                    SPHEREON to leafId, SPHEREON, expectedMetadata = leafIdentity.metadata,
+                )
+                assertEquals(listOf(leafId to leafId, SPHEREON to leafId), selectedLinks)
+            }
             preferredAnchorPath = true
 
             val direct = activeEnvironment.request(
@@ -2259,7 +2299,7 @@ class LighthouseInteropTest {
     // Real Sphereon KMS/admin API and pinned LightHouse resolver/admin API only.
     // Static candidate; not compiled or run.
     @Test
-    fun `Sphereon signer rollover is rejected by stale Lighthouse anchor then accepted after refresh`() {
+    fun `Sphereon signer rollover is accepted by the LightHouse resolver that takes anchor keys by reference`() {
         val startedAt = Instant.now()
         val peer = PeerLock.load("lighthouse")
         var outcome = "failed"
@@ -2269,8 +2309,7 @@ class LighthouseInteropTest {
         var initialKid: String? = null
         var rotatedKid: String? = null
         var oldEntityConfigurationVerifiedUnderRotatedJwks = false
-        var staleAnchorRejected = false
-        var refreshedAnchorAccepted = false
+        var rolledChainAccepted = false
 
         try {
             val activeEnvironment = InteropEnvironment.start().also { environment = it }
@@ -2366,31 +2405,20 @@ class LighthouseInteropTest {
             assertEquals(LIGHTHOUSE, newSubordinateClaims["sub"])
             assertEquals(selectedRotatedKid, SignedJWT.parse(newSubordinate).header.keyID)
 
-            // Cold receiver with the original pinned anchor JWKS must reject the real newly signed chain.
+            // The pinned LightHouse resolve endpoint takes anchor keys by reference: it builds its anchors from
+            // the allowed Entity Identifiers (resolve.go, NewTrustAnchorsFromEntityIDs) and verifies the anchor's
+            // own Entity Configuration, so the admin trust-anchor JWKS row does not pin a resolve result.
+            // After a cold restart it must accept the real chain the replacement signer produced, and that
+            // chain must verify independently under the rotated anchor JWKS.
             activeLighthouse.restart()
-            val staleAnchorResult = activeLighthouse.resolve(LIGHTHOUSE, SPHEREON)
-            assertEquals(404, staleAnchorResult.status)
-            assertEquals("invalid_trust_chain", JSONObjectUtils.getString(JSONObjectUtils.parse(staleAnchorResult.body), "error"))
-            staleAnchorRejected = true
-
-            // Update the actual trust-anchor repository through its documented PUT API, then cold-restart again.
-            // The created row id is used because the peer API routes updates by row id.
-            assertEquals(
-                200,
-                activeLighthouse.admin(
-                    "PUT", "/api/v1/admin/trust-anchors/$anchorId",
-                    mapOf("entity_id" to SPHEREON, "jwks" to rotatedEntityConfiguration.jwks),
-                ).status,
-            )
-            activeLighthouse.restart()
-            val refreshedResolve = activeLighthouse.resolve(LIGHTHOUSE, SPHEREON)
-            assertEquals(200, refreshedResolve.status)
+            val rolledResolve = activeLighthouse.resolve(LIGHTHOUSE, SPHEREON)
+            assertEquals(200, rolledResolve.status)
             verifyResolveResponse(
-                refreshedResolve.body, lighthouseIdentity.jwks, LIGHTHOUSE, LIGHTHOUSE,
+                rolledResolve.body, lighthouseIdentity.jwks, LIGHTHOUSE, LIGHTHOUSE,
                 mapOf(LIGHTHOUSE to lighthouseIdentity.jwks, SPHEREON to rotatedEntityConfiguration.jwks),
                 SPHEREON to LIGHTHOUSE, SPHEREON, expectedMetadata = lighthouseIdentity.metadata,
             )
-            refreshedAnchorAccepted = true
+            rolledChainAccepted = true
             outcome = "passed"
         } catch (failure: Throwable) {
             primaryFailure = failure
@@ -2401,7 +2429,7 @@ class LighthouseInteropTest {
             try {
                 writeSphereonSignerRolloverEvidence(
                     peer, startedAt, outcome, initialKid, rotatedKid,
-                    oldEntityConfigurationVerifiedUnderRotatedJwks, staleAnchorRejected, refreshedAnchorAccepted,
+                    oldEntityConfigurationVerifiedUnderRotatedJwks, rolledChainAccepted,
                     environment?.artifactIdentity(),
                 )
             } catch (writeFailure: Throwable) {
@@ -2423,13 +2451,12 @@ class LighthouseInteropTest {
         initialKid: String?,
         rotatedKid: String?,
         oldEntityConfigurationVerifiedUnderRotatedJwks: Boolean,
-        staleAnchorRejected: Boolean,
-        refreshedAnchorAccepted: Boolean,
+        rolledChainAccepted: Boolean,
         sourceAndArtifactIdentity: Map<String, String>?,
     ) {
         val directory = System.getProperty("interop.evidence.directory") ?: return
         val fields = linkedMapOf<String, Any?>(
-            "scenario" to "sphereon-signer-rollover-stale-lighthouse-anchor",
+            "scenario" to "sphereon-signer-rollover-lighthouse-by-reference-anchor",
             "outcome" to outcome,
             "peer" to peer.name,
             "peerSourceCommit" to peer.commit,
@@ -2442,11 +2469,11 @@ class LighthouseInteropTest {
             "rotatedSphereonSigningKid" to rotatedKid,
             "signerKidChanged" to (initialKid != null && rotatedKid != null && initialKid != rotatedKid),
             "oldEntityConfigurationVerifiedUnderRotatedJwks" to oldEntityConfigurationVerifiedUnderRotatedJwks,
-            "staleAnchorRejected" to staleAnchorRejected,
-            "refreshedAnchorAccepted" to refreshedAnchorAccepted,
+            "lighthouseAnchorKeys" to "by_reference",
+            "rolledChainAcceptedByLighthouse" to rolledChainAccepted,
             "sourceAndArtifactIdentity" to sourceAndArtifactIdentity,
             "claim" to if (outcome == "passed") {
-                "real Sphereon signer rollover required a real LightHouse trust-anchor JWKS update"
+                "real Sphereon signer rollover chain verified and was accepted by the LightHouse resolver after a cold restart"
             } else {
                 "Sphereon signer rollover scenario did not pass"
             },
@@ -2454,7 +2481,7 @@ class LighthouseInteropTest {
         val output = Path.of(directory)
         Files.createDirectories(output)
         Files.writeString(
-            output.resolve("sphereon-signer-rollover-stale-lighthouse-anchor.json"),
+            output.resolve("sphereon-signer-rollover-lighthouse-by-reference-anchor.json"),
             JSONObjectUtils.toJSONString(fields), StandardCharsets.UTF_8,
         )
     }

@@ -324,7 +324,7 @@ class InteropEnvironment private constructor(
 
     /** Retain bounded, redacted Sphereon server logs outside the normal interop evidence directory. */
     fun retainSafeServerErrorLogs(scenario: String): Path {
-        require(scenario in setOf("sphereon-resolves-under-lighthouse-anchor", "lighthouse-resolves-under-sphereon-anchor", "lighthouse-kms-key-rollover-overlap"))
+        require(scenario in setOf("sphereon-resolves-under-lighthouse-anchor", "lighthouse-resolves-under-sphereon-anchor", "lighthouse-kms-key-rollover-overlap", "trustmark-filtering", "two-level-policy"))
         val directory = workRoot.parent.resolve("private-diagnostics").normalize()
         require(directory.parent == workRoot.parent) { "private diagnostics path escaped the interop build directory" }
         Files.createDirectories(directory)
@@ -335,7 +335,7 @@ class InteropEnvironment private constructor(
             val raw = container.getLogs()
             val capturedAt = Instant.now()
             val redactedLog = redactDiagnosticSecrets(raw)
-            val lines = redactedLog.lineSequence().toList().takeLast(100).map { line ->
+            val lines = redactedLog.lineSequence().toList().takeLast(400).map { line ->
                 line.take(2_048)
             }
             "--- $name server capturedAt=$capturedAt (last ${lines.size} lines) ---\n${lines.joinToString("\n")}"

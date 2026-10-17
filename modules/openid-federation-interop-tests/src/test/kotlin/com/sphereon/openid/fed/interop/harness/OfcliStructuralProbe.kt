@@ -52,7 +52,12 @@ internal class OfcliStructuralProbe private constructor(
         check(execution.stderr.toByteArray(StandardCharsets.UTF_8).size <= MAX_WRAPPER_OUTPUT_BYTES) {
             "OFCLI wrapper stderr exceeded its output bound"
         }
-        check(execution.exitCode == 0) { "Pinned OFCLI structural probe failed (exit=${execution.exitCode})" }
+        check(execution.exitCode == 0) {
+            // The wrapper prints only its own classified reason (never URLs or response material).
+            val reason = execution.stderr.lineSequence().firstOrNull { it.startsWith("ofcli structural probe failed") }
+                ?.filter { !it.isISOControl() }?.take(200)
+            "Pinned OFCLI structural probe failed (exit=${execution.exitCode})" + (reason?.let { ": $it" } ?: "")
+        }
 
         val resultFile = container.execInContainer("head", "-c", (MAX_RESULT_BYTES + 1).toString(), RESULT_PATH)
         check(resultFile.exitCode == 0) { "OFCLI structural result was not produced" }
