@@ -39,7 +39,8 @@ internal class LighthousePeer private constructor(
 
     /** Replaces a trust-mark issuer allow-list using LightHouse's JSON-array API body. */
     fun replaceTrustMarkIssuers(typeId: String, issuerIds: List<String>): PeerHttpResponse {
-        require(typeId.matches(Regex("[0-9a-fA-F-]{36}"))) { "invalid LightHouse trust-mark type ID" }
+        // LightHouse 0.23.0 returns numeric row IDs; older builds used UUIDs.
+        require(typeId.matches(Regex("[0-9]{1,18}|[0-9a-fA-F-]{36}"))) { "invalid LightHouse trust-mark type ID" }
         require(issuerIds.isNotEmpty() && issuerIds.size <= 8) { "issuer allow-list is outside its bounded range" }
         require(issuerIds.all { it.startsWith("https://") && it.length <= 2048 && it.none(Char::isISOControl) }) {
             "issuer allow-list contains an invalid bounded HTTPS identifier"

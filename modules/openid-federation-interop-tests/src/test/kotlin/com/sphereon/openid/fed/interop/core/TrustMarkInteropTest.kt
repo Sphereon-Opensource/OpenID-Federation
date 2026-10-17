@@ -117,7 +117,7 @@ class TrustMarkInteropTest {
             assertEquals(201, activeEnvironment.admin("POST", "/entity-statement").status)
 
             val first = resolveSphereon(activeEnvironment)
-            assertEquals(200, first.status)
+            assertEquals(200, first.status, "Sphereon GET /resolve returned HTTP ${first.status}: ${LighthouseInteropTest().safeHttpError(first.body)}")
             val firstClaims = TrustedJwtVerifier.verify(first.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks)
             val firstMarks = firstClaims["trust_marks"] as? List<*> ?: error("resolve response omitted trust_marks")
             assertTrue(firstMarks.any { (it as? Map<*, *>)?.get("trust_mark") == mark })
@@ -135,7 +135,7 @@ class TrustMarkInteropTest {
             activeEnvironment.restartSphereon()
             assertEquals(201, activeEnvironment.admin("POST", "/entity-statement").status)
             val second = resolveSphereon(activeEnvironment)
-            assertEquals(200, second.status)
+            assertEquals(200, second.status, "Sphereon GET /resolve returned HTTP ${second.status}: ${LighthouseInteropTest().safeHttpError(second.body)}")
             val secondClaims = TrustedJwtVerifier.verify(second.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks)
             val secondMarks = secondClaims["trust_marks"] as? List<*> ?: error("resolve response omitted trust_marks")
             assertFalse(secondMarks.any { (it as? Map<*, *>)?.get("trust_mark") == mark },
@@ -250,12 +250,16 @@ class TrustMarkInteropTest {
         val keyId = JSONObjectUtils.getString(JSONObjectUtils.parse(created.body), "id")
         environment.rememberSelectedKeyId(keyId)
         val current = environment.admin("GET", "/keys/signing-selection")
-        assertEquals(200, current.status)
+        assertEquals(200, current.status, "Sphereon GET /resolve returned HTTP ${current.status}: ${LighthouseInteropTest().safeHttpError(current.body)}")
         val revision = (JSONObjectUtils.parse(current.body)["revision"] as Number).toLong()
         assertEquals(200, environment.admin(
             "PUT", "/keys/signing-selection", """{"expectedRevision":$revision,"selectedKeyId":"$keyId"}""",
         ).status)
         assertEquals(201, environment.admin("POST", "/authority-hints", """{"identifier":"$LIGHTHOUSE"}""").status)
+        // OpenID Federation 1.1 section 3.1.1: an Entity Configuration declares the Entity Types it takes part with.
+        assertEquals(201, environment.admin(
+            "POST", "/metadata", """{"key":"federation_entity","metadata":{"organization_name":"Sphereon interop trust mark holder"}}""",
+        ).status)
         assertEquals(201, environment.admin("POST", "/entity-statement").status)
         val config = environment.request("GET", "https://sphereon.test/.well-known/openid-federation")
         assertEquals(200, config.status)
@@ -329,7 +333,7 @@ class TrustMarkInteropTest {
             // OpenID Federation does not make trust marks mandatory. A fresh real resolve
             // without any leaf mark must succeed and carry no trust_marks entries.
             val withoutMark = resolveSphereon(activeEnvironment)
-            assertEquals(200, withoutMark.status)
+            assertEquals(200, withoutMark.status, "Sphereon GET /resolve returned HTTP ${withoutMark.status}: ${LighthouseInteropTest().safeHttpError(withoutMark.body)}")
             val withoutMarkClaims = TrustedJwtVerifier.verify(
                 withoutMark.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
@@ -349,9 +353,13 @@ class TrustMarkInteropTest {
                 JSONObjectUtils.toJSONString(mapOf("trust_mark_type" to type, "jwt" to actualMark)),
             ).status)
             assertEquals(201, activeEnvironment.admin("POST", "/entity-statement").status)
+            // Admin and public servers are separate processes; a republish invalidates only co-located resolver
+            // caches, so the earlier resolve's copy of this Entity Configuration lives until its exp. Restart the
+            // real servers (same PostgreSQL/PKCS12 state) so the resolve reads the republished configuration.
+            activeEnvironment.restartSphereon()
 
             val accepted = resolveSphereon(activeEnvironment)
-            assertEquals(200, accepted.status)
+            assertEquals(200, accepted.status, "Sphereon GET /resolve returned HTTP ${accepted.status}: ${LighthouseInteropTest().safeHttpError(accepted.body)}")
             val acceptedClaims = TrustedJwtVerifier.verify(
                 accepted.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
@@ -381,7 +389,7 @@ class TrustMarkInteropTest {
 
             activeEnvironment.restartSphereon()
             val filtered = resolveSphereon(activeEnvironment)
-            assertEquals(200, filtered.status)
+            assertEquals(200, filtered.status, "Sphereon GET /resolve returned HTTP ${filtered.status}: ${LighthouseInteropTest().safeHttpError(filtered.body)}")
             val filteredClaims = TrustedJwtVerifier.verify(
                 filtered.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
@@ -393,6 +401,10 @@ class TrustMarkInteropTest {
             primaryFailure = failure
             throw failure
         } finally {
+            if (primaryFailure != null) {
+                try { environment?.retainSafeServerErrorLogs("trustmark-filtering") }
+                catch (diagnosticFailure: Throwable) { primaryFailure!!.addSuppressed(diagnosticFailure) }
+            }
             val cleanupFailures = mutableListOf<Throwable>()
             try { lighthouse?.close() } catch (failure: Throwable) { cleanupFailures += failure }
             try { environment?.close() } catch (failure: Throwable) { cleanupFailures += failure }
@@ -477,7 +489,7 @@ class TrustMarkInteropTest {
             verifiedObjects += safeObject(lighthouseJwt, "entity_configuration", "mark_issuer_configuration")
 
             val withoutMark = resolveSphereon(activeEnvironment)
-            assertEquals(200, withoutMark.status)
+            assertEquals(200, withoutMark.status, "Sphereon GET /resolve returned HTTP ${withoutMark.status}: ${LighthouseInteropTest().safeHttpError(withoutMark.body)}")
             val withoutMarkClaims = TrustedJwtVerifier.verify(
                 withoutMark.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
@@ -513,8 +525,12 @@ class TrustMarkInteropTest {
                 account = "root",
             ).status)
             assertEquals(201, activeEnvironment.admin("POST", "/entity-statement", account = "root").status)
+            // Admin and public servers are separate processes; a republish invalidates only co-located resolver
+            // caches, so the earlier resolve's copy of this Entity Configuration lives until its exp. Restart the
+            // real servers (same PostgreSQL/PKCS12 state) so the resolve reads the republished configuration.
+            activeEnvironment.restartSphereon()
             val current = resolveSphereon(activeEnvironment)
-            assertEquals(200, current.status)
+            assertEquals(200, current.status, "Sphereon GET /resolve returned HTTP ${current.status}: ${LighthouseInteropTest().safeHttpError(current.body)}")
             val currentClaims = TrustedJwtVerifier.verify(
                 current.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
@@ -537,7 +553,7 @@ class TrustMarkInteropTest {
             expiredAfter = Instant.now().epochSecond
             activeEnvironment.restartSphereon()
             val expired = resolveSphereon(activeEnvironment)
-            assertEquals(200, expired.status)
+            assertEquals(200, expired.status, "Sphereon GET /resolve returned HTTP ${expired.status}: ${LighthouseInteropTest().safeHttpError(expired.body)}")
             val expiredClaims = TrustedJwtVerifier.verify(
                 expired.body, "resolve-response+jwt", SPHEREON, SPHEREON, sphereon.jwks,
             )
