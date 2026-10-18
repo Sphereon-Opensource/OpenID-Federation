@@ -169,4 +169,53 @@ class PublishStatementValidationTest {
         // Section 3.1: each key in jwks MUST have a unique kid.
         assertRefused(publishSs("", jwks = """{"keys":[$key,$key]}"""), "duplicate key IDs")
     }
+
+    @Test
+    fun federationEndpointsInSubordinateStatementMetadataAreNotSigned() = runTest {
+        // Sections 8.1, 8.2 and 8.4: these endpoints MUST be published in the Entity Configuration, not in Subordinate Statements.
+        for (endpoint in listOf("federation_fetch_endpoint", "federation_list_endpoint", "federation_trust_mark_status_endpoint")) {
+            io.mockk.clearMocks(jwtService, answers = false, recordedCalls = true)
+            assertRefused(publishSs(""","metadata":{"federation_entity":{"$endpoint":"https://subordinate.example/x"}}"""),
+                "$endpoint in Subordinate Statement metadata")
+        }
+    }
+
+    @Test
+    fun subordinateStatementWithOrganizationMetadataReachesSigning() = runTest {
+        assertSigningReached(publishSs(""","metadata":{"federation_entity":{"organization_name":"Subordinate"}}"""),
+            "organization metadata in a Subordinate Statement")
+    }
+
+    @Test
+    fun federationEndpointsMustBeHttpsWithoutFragment() = runTest {
+        // Section 5.1.1: each federation endpoint URL MUST use https and MUST NOT contain a fragment.
+        for (url in listOf("http://superior.example/resolve", "https://superior.example/resolve#x", "not a url")) {
+            io.mockk.clearMocks(jwtService, answers = false, recordedCalls = true)
+            assertRefused(publishEc(""","metadata":{"federation_entity":{"federation_resolve_endpoint":"$url"}}"""),
+                "federation_resolve_endpoint $url")
+        }
+    }
+
+    @Test
+    fun federationEndpointWithQueryReachesSigning() = runTest {
+        // Section 5.1.1: port, path and query components are allowed.
+        assertSigningReached(publishEc(""","metadata":{"federation_entity":{"federation_resolve_endpoint":"https://superior.example:8443/fed?op=resolve"}}"""),
+            "an https endpoint with port and query")
+    }
+
+    @Test
+    fun protocolKeysWithDuplicateKidsAreNotSigned() = runTest {
+        // Wallet Architectures section 6 and RFC 7517: each key in an Entity Type's jwks needs a unique kid.
+        val other = """{"kty":"EC","crv":"P-256","kid":"k1","x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU","y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}"""
+        assertRefused(publishEc(""","metadata":{"federation_entity":{},"openid_credential_verifier":{"jwks":{"keys":[$key,$other]}}}"""),
+            "duplicate kids in openid_credential_verifier jwks")
+    }
+
+    @Test
+    fun theSameRulesApplyToEveryCallerOfTheSigningValidation() {
+        // The administration and prepared-signing paths call StatementSigningValidation too.
+        val header = com.sphereon.openid.fed.openapi.models.JwtHeader(typ = "entity-statement+jwt", kid = "k1", alg = "ES256")
+        val statement = claims(""","iss":"$issuer","sub":"$issuer","metadata":{"federation_entity":{}},"trust_anchor_hints":["https://anchor.example"]""")
+        assertTrue(com.sphereon.openid.fed.services.command.StatementSigningValidation.refusal(statement, header) != null)
+    }
 }

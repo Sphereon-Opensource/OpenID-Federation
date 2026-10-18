@@ -29,6 +29,7 @@ import com.sphereon.openid.fed.services.command.jwk.*
 import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustArgs
 import com.sphereon.openid.fed.services.command.trust.VerifyEntityTrustCommand
 import com.sphereon.openid.fed.services.command.registration.RegistrationTrustAnchor
+import com.sphereon.openid.fed.services.command.StatementSigningValidation
 import com.sphereon.openid.fed.services.signPayload
 import dev.zacsweers.metro.*
 import kotlinx.serialization.json.*
@@ -182,6 +183,7 @@ class StandaloneAdminProtocolPort internal constructor(
             val validation = EntityStatementValidation.validateStructure(Jwt(
                 JwtHeader(typ = "entity-statement+jwt", kid = "administration-validation", alg = "ES256"), validationClaims, ""), current, if (key.collection == "configuration") 0 else 1)
             if (!validation.ok) invalid(validation.reason ?: "Invalid Federation claims")
+            StatementSigningValidation.producerRefusal(validationClaims, isEntityConfiguration = key.collection == "configuration")?.let { invalid(it) }
             val marks = (document["trust_marks"] as? JsonArray).orEmpty()
             for (entry in marks) {
                 val compact = (entry as? JsonObject)?.string("trust_mark") ?: invalid("Held Trust Mark must contain a compact JWT", "/trust_marks")

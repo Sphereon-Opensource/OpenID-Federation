@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command
 
+import com.sphereon.core.api.http.util.validateHttpsUrlSyntax
 import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.openapi.models.Jwt
@@ -34,8 +35,11 @@ object StatementSigningValidation {
         return producerRefusal(payload, isEntityConfiguration = position == 0)
     }
 
-    /** Producer-side MUST NOTs that a received-statement check cannot see or deliberately tolerates. */
-    private fun producerRefusal(payload: JsonObject, isEntityConfiguration: Boolean): String? {
+    /**
+     * Producer-side MUST NOTs that a received-statement check cannot see or deliberately tolerates. Every path that
+     * signs an Entity Statement applies them after the structure checks.
+     */
+    fun producerRefusal(payload: JsonObject, isEntityConfiguration: Boolean): String? {
         // Section 3.1.2: trust_anchor_hints MUST NOT be present in the Entity Configuration of a Trust Anchor with no
         // Superiors. An entity that names no Immediate Superior in authority_hints has none.
         if (isEntityConfiguration && "trust_anchor_hints" in payload && "authority_hints" !in payload) {
@@ -47,8 +51,52 @@ object StatementSigningValidation {
         if (algorithms != null && algorithms.any { (it as? JsonPrimitive)?.content == "none" }) {
             return "endpoint_auth_signing_alg_values_supported must not contain none"
         }
+        if (federationEntity != null) {
+            // Sections 8.1, 8.2 and 8.4: these endpoints MUST be published in the Entity Configuration only.
+            if (!isEntityConfiguration) {
+                ENTITY_CONFIGURATION_ONLY_ENDPOINTS.firstOrNull { it in federationEntity }?.let {
+                    return "$it must be published in the Entity Configuration, not in a Subordinate Statement"
+                }
+            }
+            // Section 5.1.1: each federation endpoint MUST use https and MUST NOT contain a fragment.
+            for (name in FEDERATION_ENDPOINTS) {
+                val value = federationEntity[name] ?: continue
+                val url = (value as? JsonPrimitive)?.takeIf { it.isString }?.content
+                if (url == null || '#' in url || validateHttpsUrlSyntax(url, allowQuery = true).isErr) {
+                    return "$name must be an https URL without a fragment"
+                }
+            }
+        }
+        // Keys in an Entity Type's jwks are told apart by kid; a verifier's keys MUST each have a unique one
+        // (Wallet Architectures section 6.3).
+        val metadata = payload["metadata"] as? JsonObject
+        for ((entityType, typeMetadata) in metadata.orEmpty()) {
+            val keys = ((typeMetadata as? JsonObject)?.get("jwks") as? JsonObject)?.get("keys") as? JsonArray ?: continue
+            val kids = keys.map { ((it as? JsonObject)?.get("kid") as? JsonPrimitive)?.takeIf { kid -> kid.isString }?.content }
+            if (entityType == "openid_credential_verifier" && kids.any { it.isNullOrEmpty() }) {
+                return "every key in openid_credential_verifier jwks must have a kid"
+            }
+            val present = kids.filterNotNull()
+            if (present.distinct().size != present.size) return "$entityType jwks must not contain duplicate kid values"
+        }
         return null
     }
+
+    private val ENTITY_CONFIGURATION_ONLY_ENDPOINTS = listOf(
+        "federation_fetch_endpoint",
+        "federation_list_endpoint",
+        "federation_trust_mark_status_endpoint",
+    )
+
+    private val FEDERATION_ENDPOINTS = listOf(
+        "federation_fetch_endpoint",
+        "federation_list_endpoint",
+        "federation_resolve_endpoint",
+        "federation_trust_mark_status_endpoint",
+        "federation_trust_mark_list_endpoint",
+        "federation_trust_mark_endpoint",
+        "federation_historical_keys_endpoint",
+    )
 
     /** Serializes [statement] the way [com.sphereon.openid.fed.services.signPayload] does, then checks it. */
     inline fun <reified T> refusalFor(statement: T, header: JwtHeader): String? =
