@@ -565,6 +565,36 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
       operationId: getHistoricalKeys
+    post:
+      tags:
+        - federation
+      summary: Get Historical Keys (POST)
+      description: Same response as GET. Used when the endpoint requires client authentication, which is passed in the form body (OpenID Federation 1.1 sections 8.7.1 and 8.8).
+      requestBody:
+        required: false
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                client_assertion:
+                  type: string
+                client_assertion_type:
+                  type: string
+      responses:
+        '200':
+          description: Successful retrieval of historical keys
+          content:
+            application/jwk-set+jwt:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      operationId: getHistoricalKeysPost
 components:
   responses:
     BadRequestError:

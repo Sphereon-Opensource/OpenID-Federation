@@ -60,9 +60,11 @@ class FederationHttpAdapterDescriptorProvider : HttpAdapterDescriptorProvider {
             PostGetTrustMarkRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostGetTrustMarkRootEndpointCommand.COMMAND_ID),
             GetTrustMarkAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkAccountEndpointCommand.COMMAND_ID),
             PostGetTrustMarkAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostGetTrustMarkAccountEndpointCommand.COMMAND_ID),
-            // Historical keys endpoints
+            // Historical keys endpoints (GET + POST)
             HistoricalKeysRootEndpointCommand.ENDPOINT.copy(handlerCommandId = HistoricalKeysRootEndpointCommand.COMMAND_ID),
+            PostHistoricalKeysRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostHistoricalKeysRootEndpointCommand.COMMAND_ID),
             HistoricalKeysAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = HistoricalKeysAccountEndpointCommand.COMMAND_ID),
+            PostHistoricalKeysAccountEndpointCommand.ENDPOINT.copy(handlerCommandId = PostHistoricalKeysAccountEndpointCommand.COMMAND_ID),
             // Resolve endpoints (GET + POST)
             ResolveRootEndpointCommand.ENDPOINT.copy(handlerCommandId = ResolveRootEndpointCommand.COMMAND_ID),
             PostResolveRootEndpointCommand.ENDPOINT.copy(handlerCommandId = PostResolveRootEndpointCommand.COMMAND_ID),
