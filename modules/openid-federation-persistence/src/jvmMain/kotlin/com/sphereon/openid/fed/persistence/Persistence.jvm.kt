@@ -57,6 +57,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
  * Handles database connections, migrations, and provides query interfaces for all entities.
  */
 actual object Persistence {
+    actual val adminDocumentQueries: com.sphereon.openid.fed.persistence.models.AdminDocumentQueries
     actual val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     actual val accountMetadataPolicyRevisionQueries: AccountMetadataPolicyRevisionQueries
     actual val accountQueries: AccountQueries
@@ -105,6 +106,8 @@ actual object Persistence {
         22L to ("22.sqm" to "Create TrustMarkOwner table and the issuer's Trust Mark delegation per type"),
         23L to ("23.sqm" to "Separate historical key expiry, revocation reason tokens and operator descriptions"),
         24L to ("24.sqm" to "Persist account-role metadata-policy revision and operation fences"),
+        25L to ("25.sqm" to "Persist signing-key operation generation and request receipt fences"),
+        26L to ("26.sqm" to "Administration document revisions, atomic publication artifacts and scheduled-key queue"),
     )
 
     private val driver: SqlDriver
@@ -166,6 +169,7 @@ actual object Persistence {
             ),
         )
 
+        adminDocumentQueries = database.adminDocumentQueries
         accountQueries = database.accountQueries
         accountMetadataPolicyRevisionQueries = database.accountMetadataPolicyRevisionQueries
         accountSigningKeyQueries = database.accountSigningKeyQueries

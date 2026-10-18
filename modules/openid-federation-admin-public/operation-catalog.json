@@ -1,0 +1,170 @@
+[
+  {
+    "command": "ReadAdminNodeCommand",
+    "commandId": "fed.admin-node.read",
+    "method": "GET",
+    "relativePath": ""
+  },
+  {
+    "command": "ListAdminKeysCommand",
+    "commandId": "fed.admin-keys.list",
+    "method": "GET",
+    "relativePath": "/keys"
+  },
+  {
+    "command": "CreateAdminKeyCommand",
+    "commandId": "fed.admin-keys.create",
+    "method": "POST",
+    "relativePath": "/keys"
+  },
+  {
+    "command": "ReadAdminKeyCommand",
+    "commandId": "fed.admin-keys.read",
+    "method": "GET",
+    "relativePath": "/keys/{kid}"
+  },
+  {
+    "command": "DeleteAdminKeyCommand",
+    "commandId": "fed.admin-keys.delete",
+    "method": "DELETE",
+    "relativePath": "/keys/{kid}"
+  },
+  {
+    "command": "RotateAdminKeyCommand",
+    "commandId": "fed.admin-keys.rotate",
+    "method": "POST",
+    "relativePath": "/keys/{kid}/rotate"
+  },
+  {
+    "command": "ReadAdminConfigurationCommand",
+    "commandId": "fed.admin-configuration.read",
+    "method": "GET",
+    "relativePath": "/configuration"
+  },
+  {
+    "command": "ReplaceAdminConfigurationCommand",
+    "commandId": "fed.admin-configuration.replace",
+    "method": "PUT",
+    "relativePath": "/configuration"
+  },
+  {
+    "command": "PatchAdminConfigurationCommand",
+    "commandId": "fed.admin-configuration.patch",
+    "method": "PATCH",
+    "relativePath": "/configuration"
+  },
+  {
+    "command": "ReadAdminConfigurationStatementCommand",
+    "commandId": "fed.admin-configuration.statement",
+    "method": "GET",
+    "relativePath": "/configuration/statement"
+  },
+  {
+    "command": "ListAdminSubordinatesCommand",
+    "commandId": "fed.admin-subordinates.list",
+    "method": "GET",
+    "relativePath": "/subordinates"
+  },
+  {
+    "command": "CreateAdminSubordinateCommand",
+    "commandId": "fed.admin-subordinates.create",
+    "method": "POST",
+    "relativePath": "/subordinates"
+  },
+  {
+    "command": "ReadAdminSubordinateCommand",
+    "commandId": "fed.admin-subordinates.read",
+    "method": "GET",
+    "relativePath": "/subordinates/{entity_id}"
+  },
+  {
+    "command": "ReplaceAdminSubordinateCommand",
+    "commandId": "fed.admin-subordinates.replace",
+    "method": "PUT",
+    "relativePath": "/subordinates/{entity_id}"
+  },
+  {
+    "command": "PatchAdminSubordinateCommand",
+    "commandId": "fed.admin-subordinates.patch",
+    "method": "PATCH",
+    "relativePath": "/subordinates/{entity_id}"
+  },
+  {
+    "command": "DeleteAdminSubordinateCommand",
+    "commandId": "fed.admin-subordinates.delete",
+    "method": "DELETE",
+    "relativePath": "/subordinates/{entity_id}"
+  },
+  {
+    "command": "SetAdminSubordinateStatusCommand",
+    "commandId": "fed.admin-subordinates.status",
+    "method": "PUT",
+    "relativePath": "/subordinates/{entity_id}/status"
+  },
+  {
+    "command": "ReadAdminSubordinateStatementCommand",
+    "commandId": "fed.admin-subordinates.statement",
+    "method": "GET",
+    "relativePath": "/subordinates/{entity_id}/statement"
+  },
+  {
+    "command": "ListAdminTrustMarkTypesCommand",
+    "commandId": "fed.admin-trust-marks.list",
+    "method": "GET",
+    "relativePath": "/trust-marks"
+  },
+  {
+    "command": "CreateAdminTrustMarkTypeCommand",
+    "commandId": "fed.admin-trust-marks.create",
+    "method": "POST",
+    "relativePath": "/trust-marks"
+  },
+  {
+    "command": "ReadAdminTrustMarkTypeCommand",
+    "commandId": "fed.admin-trust-marks.read",
+    "method": "GET",
+    "relativePath": "/trust-marks/{type}"
+  },
+  {
+    "command": "ReplaceAdminTrustMarkTypeCommand",
+    "commandId": "fed.admin-trust-marks.replace",
+    "method": "PUT",
+    "relativePath": "/trust-marks/{type}"
+  },
+  {
+    "command": "DeleteAdminTrustMarkTypeCommand",
+    "commandId": "fed.admin-trust-marks.delete",
+    "method": "DELETE",
+    "relativePath": "/trust-marks/{type}"
+  },
+  {
+    "command": "ListAdminTrustMarkGrantsCommand",
+    "commandId": "fed.admin-trust-mark-subjects.list",
+    "method": "GET",
+    "relativePath": "/trust-marks/{type}/subjects"
+  },
+  {
+    "command": "ReplaceAdminTrustMarkGrantCommand",
+    "commandId": "fed.admin-trust-mark-subjects.replace",
+    "method": "PUT",
+    "relativePath": "/trust-marks/{type}/subjects/{entity_id}"
+  },
+  {
+    "command": "DeleteAdminTrustMarkGrantCommand",
+    "commandId": "fed.admin-trust-mark-subjects.delete",
+    "method": "DELETE",
+    "relativePath": "/trust-marks/{type}/subjects/{entity_id}"
+  },
+  {
+    "command": "SetAdminTrustMarkGrantStatusCommand",
+    "commandId": "fed.admin-trust-mark-subjects.status",
+    "method": "PUT",
+    "relativePath": "/trust-marks/{type}/subjects/{entity_id}/status"
+  },
+  {
+    "command": "ReadAdminTrustMarkTokenCommand",
+    "commandId": "fed.admin-trust-mark-subjects.token",
+    "method": "GET",
+    "relativePath": "/trust-marks/{type}/subjects/{entity_id}/token"
+  }
+]

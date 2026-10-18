@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.server.federation.api.http.command
 
+import com.sphereon.openid.fed.services.command.subordinate.ListPublishedSubordinatesCommand
 import com.sphereon.core.api.http.command.HttpEndpointCommand
 import com.sphereon.core.api.http.describe.HttpEndpointDescriptor
 import com.sphereon.core.api.http.describe.HttpMethod
@@ -15,6 +16,7 @@ interface ListSubordinatesRootEndpointCommand : HttpEndpointCommand {
             method = HttpMethod.GET,
             pathPattern = "/list",
             produces = setOf(MediaType.ApplicationJson),
+            commandId = ListPublishedSubordinatesCommand.COMMAND_ID,
             operationId = "listSubordinates",
             tags = setOf("federation"),
             summary = "List subordinate entities"
@@ -33,6 +35,7 @@ interface PostListSubordinatesRootEndpointCommand : HttpEndpointCommand {
             pathPattern = "/list",
             consumes = setOf(MediaType.ApplicationFormUrlEncoded),
             produces = setOf(MediaType.ApplicationJson),
+            commandId = ListPublishedSubordinatesCommand.COMMAND_ID,
             operationId = "listSubordinatesPost",
             tags = setOf("federation"),
             summary = "List subordinate entities (POST)"
@@ -50,6 +53,7 @@ interface ListSubordinatesAccountEndpointCommand : HttpEndpointCommand {
             method = HttpMethod.GET,
             pathPattern = "/{username}/list",
             produces = setOf(MediaType.ApplicationJson),
+            commandId = ListPublishedSubordinatesCommand.COMMAND_ID,
             operationId = "listAccountSubordinates",
             tags = setOf("federation"),
             summary = "List subordinate entities for a specific account"
@@ -68,6 +72,7 @@ interface PostListSubordinatesAccountEndpointCommand : HttpEndpointCommand {
             pathPattern = "/{username}/list",
             consumes = setOf(MediaType.ApplicationFormUrlEncoded),
             produces = setOf(MediaType.ApplicationJson),
+            commandId = ListPublishedSubordinatesCommand.COMMAND_ID,
             operationId = "listAccountSubordinatesPost",
             tags = setOf("federation"),
             summary = "List subordinate entities for a specific account (POST)"

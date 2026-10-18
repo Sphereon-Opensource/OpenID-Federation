@@ -34,6 +34,13 @@ class FindLatestStoredEntityConfigurationJwtCommandImpl(
     ): IdkResult<StoredEntityConfigurationJwt, FederationError> {
         val (accountId) = applyDuring(args)
         return try {
+            val managed = Persistence.adminDocumentQueries.find(accountId, "configuration", "", "").executeAsOneOrNull()
+            if (managed != null) {
+                val artifact = managed.artifact?.takeIf { compact ->
+                    runCatching { (com.sphereon.openid.fed.client.mapper.decodeJWTComponents(compact).payload["exp"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.let { it > System.currentTimeMillis() / 1000 } == true }.getOrDefault(false)
+                }
+                return IdkResult.ok(StoredEntityConfigurationJwt(artifact))
+            }
             val statement = Persistence.entityConfigurationStatementQueries
                 .findLatestByAccountId(accountId)
                 .executeAsOneOrNull()

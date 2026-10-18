@@ -576,7 +576,7 @@ class AtomicSetAccountSigningKeySelectionCommandTest {
         val old = isolatedSource("selection_upgrade_"); val oldDriver = old.asJdbcDriver()
         val fresh = isolatedSource("selection_fresh_"); val freshDriver = fresh.asJdbcDriver()
         try {
-            assertEquals(26L, Database.Schema.version, "Migration25 must be the real next schema version")
+            assertEquals(27L, Database.Schema.version, "Migration26 must follow the retained signing-selection migration25")
             Database.Schema.migrate(oldDriver, 0L, 25L)
             val id = UUID.randomUUID()
             old.connection.use { connection ->

@@ -71,3 +71,7 @@ SELECT *
 FROM Jwk
 WHERE account_id = ?
 AND kms_key_ref = ?;
+
+createPrepared:
+INSERT INTO Jwk(id, account_id, alg, kid, kms, kms_key_ref, key)
+VALUES (?, ?, ?, ?, ?, ?, ?);

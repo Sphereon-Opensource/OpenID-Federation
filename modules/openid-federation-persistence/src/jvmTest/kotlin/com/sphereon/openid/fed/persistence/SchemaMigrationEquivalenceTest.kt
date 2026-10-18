@@ -42,8 +42,9 @@ class SchemaMigrationEquivalenceTest {
      */
     private val baselineVersion: Long = 17L
 
-    private val greenfieldSchema = "oidf_mig_greenfield"
-    private val upgradeSchema = "oidf_mig_upgrade"
+    private val schemaRunId = java.util.UUID.randomUUID().toString().replace("-", "")
+    private val greenfieldSchema = "oidf_mig_greenfield_$schemaRunId"
+    private val upgradeSchema = "oidf_mig_upgrade_$schemaRunId"
 
     private lateinit var adminUrl: String
     private lateinit var user: String
@@ -94,7 +95,7 @@ class SchemaMigrationEquivalenceTest {
 
         // --- Greenfield: empty → latest ---
         withSchema(greenfieldSchema) { driver, conn ->
-            Database.Schema.migrate(driver, 0L, latest)
+            Database.Schema.create(driver)
             recordSchemaVersion(conn, latest, 0L)
         }
 
@@ -179,7 +180,7 @@ class SchemaMigrationEquivalenceTest {
     fun greenfield_and_upgrade_both_reach_schema_version() {
         val latest = Database.Schema.version
         withSchema(greenfieldSchema) { driver, conn ->
-            Database.Schema.migrate(driver, 0L, latest)
+            Database.Schema.create(driver)
             recordSchemaVersion(conn, latest, 0L)
             assertEquals(latest, readSchemaVersion(conn))
         }
@@ -220,6 +221,33 @@ class SchemaMigrationEquivalenceTest {
         // Ensure new connections use the right schema for unqualified DDL from SQLDelight
         config.connectionInitSql = "SET search_path TO $schema, public"
         return HikariDataSource(config)
+    }
+
+    @Test
+    fun adminDocumentUpgradeRetainsPublishedBytesAndKeyRoutes() {
+        withSchema(upgradeSchema) { driver, conn ->
+            Database.Schema.migrate(driver, 0L, 26L)
+            conn.createStatement().use { st ->
+                st.execute("INSERT INTO Account(id, username, identifier) VALUES ('10000000-0000-0000-0000-000000000001', 'admin-upgrade', 'https://ta.example')")
+                st.execute("INSERT INTO Jwk(id, account_id, alg, kid, kms, kms_key_ref, key) VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','ES256','original-kid','azure','original-key-reference','{\"kty\":\"EC\"}')")
+                st.execute("INSERT INTO EntityConfigurationStatement(account_id, statement, expires_at) VALUES ('10000000-0000-0000-0000-000000000001','exact.original.jwt.bytes',9999999999)")
+                st.execute("INSERT INTO Subordinate(id, account_id, identifier) VALUES ('30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','https://op.example')")
+                st.execute("INSERT INTO SubordinateStatement(subordinate_id, iss, sub, statement, expires_at) VALUES ('30000000-0000-0000-0000-000000000001','https://ta.example','https://op.example','exact.subordinate.jwt.bytes',9999999999)")
+            }
+            Database.Schema.migrate(driver, 26L, Database.Schema.version)
+            conn.createStatement().use { st ->
+                st.executeQuery("SELECT statement FROM EntityConfigurationStatement WHERE account_id='10000000-0000-0000-0000-000000000001'").use { rs ->
+                    assertTrue(rs.next()); assertEquals("exact.original.jwt.bytes", rs.getString(1))
+                }
+                st.executeQuery("SELECT statement FROM SubordinateStatement WHERE subordinate_id='30000000-0000-0000-0000-000000000001'").use { rs ->
+                    assertTrue(rs.next()); assertEquals("exact.subordinate.jwt.bytes", rs.getString(1))
+                }
+                st.executeQuery("SELECT kid, kms, kms_key_ref FROM Jwk WHERE id='20000000-0000-0000-0000-000000000001'").use { rs ->
+                    assertTrue(rs.next()); assertEquals("original-kid", rs.getString(1)); assertEquals("azure", rs.getString(2)); assertEquals("original-key-reference", rs.getString(3))
+                }
+                st.executeQuery("SELECT COUNT(*) FROM AdminDocument").use { rs -> assertTrue(rs.next()); assertEquals(0L, rs.getLong(1)) }
+            }
+        }
     }
 
     private fun fingerprint(schema: String): String =

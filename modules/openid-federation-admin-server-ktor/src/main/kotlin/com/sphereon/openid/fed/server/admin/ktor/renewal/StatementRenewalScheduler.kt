@@ -118,22 +118,30 @@ class StatementRenewalScheduler(
 class SessionStatementRenewalRunner(
     private val appGraph: AdminServerBindings,
     private val configBinder: OidfConfigBinder,
+    private val keysOnly: Boolean = false,
 ) : StatementRenewalRunner {
     override suspend fun runCycle(renewBeforeSeconds: Long): List<StatementRenewalReport> {
         val listing = withSession(
             appGraph.userContextManager.getAnonymous().sessionContextManager
                 .createOrGetFromId(sessionId(), makeActive = false, principalType = PrincipalType.ANONYMOUS)
-        ) { it.execute(RenewDueStatementsArgs(renewBeforeSeconds, listOnly = true)) }
+        ) { it.execute(RenewDueStatementsArgs(renewBeforeSeconds, listOnly = true, keysOnly = keysOnly)) }
         val accounts = listing.outcomes.map { it.accountId }.distinct()
         val identity = configBinder.getIdentityConfig()
-        return accounts.map { accountId ->
+        return accounts.mapNotNull { accountId ->
+            try {
             val tenant = if (identity.isSessionAccountAligned) accountId else identity.sessionFixedTenantId.ifBlank { "default" }
             val user = appGraph.userContextManager.createOrGetFromInputs(
                 DefaultTenantInputString(tenant), DefaultPrincipalInputString(RENEWAL_PRINCIPAL), makeActive = false,
             )
             withSession(
                 user.sessionContextManager.createOrGetFromId(sessionId(), makeActive = false, principalType = PrincipalType.USER)
-            ) { it.execute(RenewDueStatementsArgs(renewBeforeSeconds, accountId = accountId)) }
+            ) { it.execute(RenewDueStatementsArgs(renewBeforeSeconds, accountId = accountId, keysOnly = keysOnly)) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) {
+                if (!keysOnly) throw failure
+                logger.error("Scheduled key maintenance failed for account $accountId; continuing other accounts", failure)
+                null
+            }
         }
     }
 
@@ -163,5 +171,22 @@ class SessionStatementRenewalRunner(
 fun Application.installStatementRenewal(scheduler: StatementRenewalScheduler) {
     val job = AtomicReference<Job?>(null)
     monitor.subscribe(ApplicationStarted) { application -> job.set(scheduler.start(application)) }
+    monitor.subscribe(ApplicationStopping) { job.getAndSet(null)?.cancel() }
+}
+
+/** Key schedules run independently of statement renewal, including when no global lifetime is configured. */
+fun Application.installAdminKeyMaintenance(runner: StatementRenewalRunner, intervalSeconds: Long = 60) {
+    require(intervalSeconds > 0)
+    val job = AtomicReference<Job?>(null)
+    monitor.subscribe(ApplicationStarted) { application ->
+        job.set(application.launch {
+            while (isActive) {
+                try { runner.runCycle(1) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (failure: Exception) { logger.error("Scheduled federation key maintenance failed", failure) }
+                delay(intervalSeconds.seconds)
+            }
+        })
+    }
     monitor.subscribe(ApplicationStopping) { job.getAndSet(null)?.cancel() }
 }

@@ -1,0 +1,4290 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OpenID Federation Node Administration API",
+    "version": "draft-kodden-oidfed-admin-00",
+    "description": "Standard relative resource paths; deployments may prepend a commercial or deployment prefix."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/admin/v1": {
+      "get": {
+        "operationId": "readAdminNode",
+        "x-command-id": "fed.admin-node.read",
+        "tags": [
+          "node"
+        ],
+        "summary": "Read Node",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/keys": {
+      "get": {
+        "operationId": "listAdminKeys",
+        "x-command-id": "fed.admin-keys.list",
+        "tags": [
+          "keys"
+        ],
+        "summary": "List Keys",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/KeyDocument"
+                      }
+                    },
+                    "next": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createAdminKey",
+        "x-command-id": "fed.admin-keys.create",
+        "tags": [
+          "keys"
+        ],
+        "summary": "Create Key",
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyCreateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/keys/{kid}": {
+      "get": {
+        "operationId": "readAdminKey",
+        "x-command-id": "fed.admin-keys.read",
+        "tags": [
+          "keys"
+        ],
+        "summary": "Read Key",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deleteAdminKey",
+        "x-command-id": "fed.admin-keys.delete",
+        "tags": [
+          "keys"
+        ],
+        "summary": "Delete Key",
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ]
+      }
+    },
+    "/admin/v1/keys/{kid}/rotate": {
+      "post": {
+        "operationId": "rotateAdminKey",
+        "x-command-id": "fed.admin-keys.rotate",
+        "tags": [
+          "keys"
+        ],
+        "summary": "Rotate Key",
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "kid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyCreateRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/configuration": {
+      "get": {
+        "operationId": "readAdminConfiguration",
+        "x-command-id": "fed.admin-configuration.read",
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Read Configuration",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "replaceAdminConfiguration",
+        "x-command-id": "fed.admin-configuration.replace",
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Replace Configuration",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurationDocument"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchAdminConfiguration",
+        "x-command-id": "fed.admin-configuration.patch",
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Patch Configuration",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/configuration/statement": {
+      "get": {
+        "operationId": "readAdminConfigurationStatement",
+        "x-command-id": "fed.admin-configuration.statement",
+        "tags": [
+          "configuration"
+        ],
+        "summary": "Read ConfigurationStatement",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/entity-statement+jwt": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/subordinates": {
+      "get": {
+        "operationId": "listAdminSubordinates",
+        "x-command-id": "fed.admin-subordinates.list",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "List Subordinates",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SubordinateDocument"
+                      }
+                    },
+                    "next": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createAdminSubordinate",
+        "x-command-id": "fed.admin-subordinates.create",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Create Subordinate",
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubordinateDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubordinateDocument"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/subordinates/{entity_id}": {
+      "get": {
+        "operationId": "readAdminSubordinate",
+        "x-command-id": "fed.admin-subordinates.read",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Read Subordinate",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubordinateDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ]
+      },
+      "put": {
+        "operationId": "replaceAdminSubordinate",
+        "x-command-id": "fed.admin-subordinates.replace",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Replace Subordinate",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubordinateDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          },
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubordinateDocument"
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchAdminSubordinate",
+        "x-command-id": "fed.admin-subordinates.patch",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Patch Subordinate",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubordinateDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          },
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminSubordinate",
+        "x-command-id": "fed.admin-subordinates.delete",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Delete Subordinate",
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ]
+      }
+    },
+    "/admin/v1/subordinates/{entity_id}/status": {
+      "put": {
+        "operationId": "setAdminSubordinateStatus",
+        "x-command-id": "fed.admin-subordinates.status",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Set SubordinateStatus",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubordinateDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          },
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/subordinates/{entity_id}/statement": {
+      "get": {
+        "operationId": "readAdminSubordinateStatement",
+        "x-command-id": "fed.admin-subordinates.statement",
+        "tags": [
+          "subordinates"
+        ],
+        "summary": "Read SubordinateStatement",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/entity-statement+jwt": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ]
+      }
+    },
+    "/admin/v1/trust-marks": {
+      "get": {
+        "operationId": "listAdminTrustMarkTypes",
+        "x-command-id": "fed.admin-trust-marks.list",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "List TrustMarkTypes",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/IssuanceDocument"
+                      }
+                    },
+                    "next": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createAdminTrustMarkType",
+        "x-command-id": "fed.admin-trust-marks.create",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Create TrustMarkType",
+        "responses": {
+          "201": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuanceDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuanceDocument"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/trust-marks/{type}": {
+      "get": {
+        "operationId": "readAdminTrustMarkType",
+        "x-command-id": "fed.admin-trust-marks.read",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Read TrustMarkType",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuanceDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ]
+      },
+      "put": {
+        "operationId": "replaceAdminTrustMarkType",
+        "x-command-id": "fed.admin-trust-marks.replace",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Replace TrustMarkType",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuanceDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssuanceDocument"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminTrustMarkType",
+        "x-command-id": "fed.admin-trust-marks.delete",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Delete TrustMarkType",
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ]
+      }
+    },
+    "/admin/v1/trust-marks/{type}/subjects": {
+      "get": {
+        "operationId": "listAdminTrustMarkGrants",
+        "x-command-id": "fed.admin-trust-mark-subjects.list",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "List TrustMarkGrants",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SubjectGrantDocument"
+                      }
+                    },
+                    "next": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/admin/v1/trust-marks/{type}/subjects/{entity_id}": {
+      "put": {
+        "operationId": "replaceAdminTrustMarkGrant",
+        "x-command-id": "fed.admin-trust-mark-subjects.replace",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Replace TrustMarkGrant",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectGrantDocument"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectGrantDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          },
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectGrantDocument"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminTrustMarkGrant",
+        "x-command-id": "fed.admin-trust-mark-subjects.delete",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Delete TrustMarkGrant",
+        "responses": {
+          "204": {
+            "description": "Successful operation"
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          }
+        ]
+      }
+    },
+    "/admin/v1/trust-marks/{type}/subjects/{entity_id}/status": {
+      "put": {
+        "operationId": "setAdminTrustMarkGrantStatus",
+        "x-command-id": "fed.admin-trust-mark-subjects.status",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Set TrustMarkGrantStatus",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectGrantDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Opaque ETag returned by a prior document operation."
+          },
+          {
+            "name": "verify",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/v1/trust-marks/{type}/subjects/{entity_id}/token": {
+      "get": {
+        "operationId": "readAdminTrustMarkToken",
+        "x-command-id": "fed.admin-trust-mark-subjects.token",
+        "tags": [
+          "trust-marks"
+        ],
+        "summary": "Read TrustMarkToken",
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/trust-mark+jwt": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          },
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Percent-encode the entire identifier as one path segment."
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "AdminDocument": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uri"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "suspended",
+              "revoked"
+            ]
+          },
+          "lifetime": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "etag": {
+            "type": "string",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "integer",
+            "readOnly": true
+          }
+        }
+      },
+      "ConfigurationDocument": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminDocument"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "authority_hints": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              },
+              "trust_marks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "trust_mark_issuers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                }
+              },
+              "trust_mark_owners": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "SubordinateDocument": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminDocument"
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity_id"
+            ],
+            "properties": {
+              "jwks": {
+                "$ref": "#/components/schemas/PublicJwks"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              },
+              "metadata_policy": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "constraints": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        ]
+      },
+      "IssuanceDocument": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminDocument"
+          },
+          {
+            "type": "object",
+            "required": [
+              "trust_mark_type"
+            ],
+            "properties": {
+              "trust_mark_type": {
+                "type": "string",
+                "format": "uri"
+              },
+              "logo_uri": {
+                "type": "string",
+                "format": "uri"
+              },
+              "ref": {
+                "type": "string",
+                "format": "uri"
+              },
+              "delegation": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "SubjectGrantDocument": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AdminDocument"
+          },
+          {
+            "type": "object",
+            "required": [
+              "entity_id",
+              "trust_mark_type"
+            ],
+            "properties": {
+              "trust_mark_type": {
+                "type": "string",
+                "format": "uri"
+              },
+              "iat": {
+                "type": "integer",
+                "readOnly": true
+              },
+              "exp": {
+                "type": "integer",
+                "readOnly": true
+              }
+            }
+          }
+        ]
+      },
+      "PublicJwk": {
+        "type": "object",
+        "required": [
+          "kty"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "kty": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "alg": {
+            "type": "string"
+          },
+          "crv": {
+            "type": "string"
+          },
+          "x": {
+            "type": "string"
+          },
+          "y": {
+            "type": "string"
+          },
+          "n": {
+            "type": "string"
+          },
+          "e": {
+            "type": "string"
+          }
+        }
+      },
+      "PublicJwks": {
+        "type": "object",
+        "required": [
+          "keys"
+        ],
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicJwk"
+            }
+          }
+        }
+      },
+      "KeyDocument": {
+        "type": "object",
+        "required": [
+          "kid",
+          "status",
+          "signing",
+          "public_jwk"
+        ],
+        "properties": {
+          "kid": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "retiring",
+              "revoked"
+            ]
+          },
+          "signing": {
+            "type": "boolean"
+          },
+          "alg": {
+            "type": "string"
+          },
+          "kty": {
+            "type": "string"
+          },
+          "public_jwk": {
+            "$ref": "#/components/schemas/PublicJwk"
+          },
+          "created_at": {
+            "type": "integer"
+          },
+          "not_after": {
+            "type": "integer"
+          }
+        }
+      },
+      "KeyCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "generate": {
+            "type": "object",
+            "properties": {
+              "kty": {
+                "type": "string"
+              },
+              "crv": {
+                "type": "string"
+              },
+              "alg": {
+                "type": "string"
+              }
+            }
+          },
+          "import": {
+            "$ref": "#/components/schemas/PublicJwk"
+          },
+          "switch_after": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "generate"
+            ]
+          },
+          {
+            "required": [
+              "import"
+            ]
+          }
+        ]
+      },
+      "StatusRequest": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "suspended",
+              "revoked"
+            ]
+          },
+          "verify": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AdminProblem": {
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "pointer": {
+            "type": "string"
+          }
+        }
+      },
+      "NodeDocument": {
+        "type": "object",
+        "required": [
+          "roles",
+          "base",
+          "spec",
+          "capabilities"
+        ],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uri"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "trust_anchor",
+                "intermediate",
+                "leaf",
+                "trust_mark_issuer",
+                "resolver"
+              ]
+            }
+          },
+          "base": {
+            "type": "string"
+          },
+          "spec": {
+            "type": "string",
+            "enum": [
+              "draft-kodden-oidfed-admin-00"
+            ]
+          },
+          "signing_kid": {
+            "type": "string"
+          },
+          "implementation": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -8,6 +8,10 @@ import dev.zacsweers.metro.ContributesTo
 
 @ContributesTo(SessionScope::class)
 interface SubordinateCommandDescriptors {
+    @Provides @IntoSet
+    fun listPublishedSubordinates(cmd: Lazy<ListPublishedSubordinatesCommand>): RegistrableServiceCommandDescriptor =
+        RegistrableServiceCommandDescriptor.of(ListPublishedSubordinatesCommand.COMMAND_ID) { cmd.value }
+
 
     @Provides @IntoSet
     fun findSubordinatesByAccount(cmd: Lazy<FindSubordinatesByAccountCommand>): RegistrableServiceCommandDescriptor =

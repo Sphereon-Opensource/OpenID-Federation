@@ -1,0 +1,57 @@
+find:
+SELECT * FROM AdminDocument
+WHERE account_id = ? AND collection = ? AND resource_id = ? AND subject_id = ?;
+
+findForUpdate:
+SELECT * FROM AdminDocument
+WHERE account_id = ? AND collection = ? AND resource_id = ? AND subject_id = ?
+FOR UPDATE;
+
+list:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = ?
+ORDER BY resource_id, subject_id;
+
+listByResource:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = ? AND resource_id = ?
+ORDER BY subject_id;
+
+upsert:
+INSERT INTO AdminDocument(account_id, collection, resource_id, subject_id, document, etag, updated_at, artifact)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT (account_id, collection, resource_id, subject_id)
+DO UPDATE SET document = EXCLUDED.document, etag = EXCLUDED.etag, updated_at = EXCLUDED.updated_at, artifact = EXCLUDED.artifact;
+
+listManaged:
+SELECT * FROM AdminDocument WHERE collection = 'configuration' ORDER BY account_id;
+
+pageCollection:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = ?
+ORDER BY resource_id, subject_id LIMIT ? OFFSET ?;
+
+pageResource:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = ? AND resource_id = ?
+ORDER BY subject_id LIMIT ? OFFSET ?;
+
+pendingStages:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = 'publication-candidate'
+ORDER BY updated_at, resource_id LIMIT 1000;
+
+deleteHidden:
+DELETE FROM AdminDocument WHERE account_id = ? AND collection = ? AND resource_id = ? AND subject_id = '';
+
+trimReceipts:
+DELETE FROM AdminDocument WHERE account_id = ? AND collection = 'publication-receipt'
+AND resource_id IN (
+    SELECT resource_id FROM AdminDocument WHERE account_id = ? AND collection = 'publication-receipt'
+    ORDER BY updated_at DESC, resource_id DESC LIMIT 100000 OFFSET 1000
+);
+
+keyMaintenanceNodes:
+SELECT * FROM AdminDocument WHERE collection = 'configuration' AND account_id IN (
+    SELECT account_id FROM AdminDocument WHERE collection = 'key-state' AND document LIKE '%"switched":false%'
+    ORDER BY updated_at, account_id, resource_id LIMIT ?
+);
+
+touchPendingKeySchedule:
+UPDATE AdminDocument SET updated_at = ? WHERE account_id = ? AND collection = 'key-state'
+AND document LIKE '%"switched":false%';

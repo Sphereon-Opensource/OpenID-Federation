@@ -65,6 +65,8 @@ kotlin {
                 // Full admin + federation Ktor graphs for in-process fixtures (AS + servers same JVM)
                 implementation(projects.modules.openidFederationAdminServerKtor)
                 implementation(projects.modules.openidFederationPublicServerKtor)
+                // Metro generates these consumer graphs from their compile classpath.
+                implementation(projects.modules.openidFederationAdminImpl)
                 // Metro graph supertypes for AdminServerAppGraph (JWT auth extension)
                 implementation("com.sphereon.idk:ktor-server-jwt-auth:0.26.0-SNAPSHOT")
                 implementation(sphereonlib.io.ktor.client.cio)
@@ -162,6 +164,22 @@ tasks.named<Test>("jvmTest") {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
 
+    // Gate heavy integration suite behind explicit verification umbrella tasks.
+    onlyIf {
+        val graph = gradle.taskGraph
+        // Coordinated builds accept exact standard test tasks; keep the same explicit opt-in without a custom task.
+        providers.gradleProperty("oidfedIntegrationTests").orNull == "true" ||
+            graph.hasTask(integrationTests.get()) ||
+            graph.hasTask(platformIntegrationTests.get()) ||
+            graph.hasTask(platformAsSmokeTests.get()) ||
+            graph.hasTask(fileOnlyConfigTests.get())
+    }
+}
+
+// Apply the same opt-in to the aggregate report: an intentionally skipped JVM suite must
+// never replay stale binary results left by a previous integration run in this checkout.
+tasks.matching { it.name == "allTests" }.configureEach {
+    notCompatibleWithConfigurationCache("Explicit integration umbrella gating inspects the task graph")
     // Gate heavy integration suite behind explicit verification umbrella tasks.
     onlyIf {
         val graph = gradle.taskGraph

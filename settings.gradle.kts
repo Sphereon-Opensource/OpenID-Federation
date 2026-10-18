@@ -4,6 +4,13 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 pluginManagement {
     repositories {
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
+        providers.environmentVariable("WORKTREE_MAVEN_REPO").orNull?.takeIf { it.isNotBlank() }?.let { overlay ->
+            maven {
+                name = "ownedWorkspaceArtifacts"
+                url = uri(overlay)
+                content { includeGroupAndSubgroups("com.sphereon") }
+            }
+        }
         mavenLocal {
             content {
                 includeGroupAndSubgroups("com.sphereon")
@@ -66,6 +73,13 @@ dependencyResolutionManagement {
     }
     repositories {
         // Prefer local Sphereon/IDK publishes over remote SNAPSHOTs (metadata must match Metro).
+        providers.environmentVariable("WORKTREE_MAVEN_REPO").orNull?.takeIf { it.isNotBlank() }?.let { overlay ->
+            maven {
+                name = "ownedWorkspaceArtifacts"
+                url = uri(overlay)
+                content { includeGroupAndSubgroups("com.sphereon") }
+            }
+        }
         mavenLocal {
             content {
                 includeGroupAndSubgroups("com.sphereon")
@@ -216,6 +230,9 @@ includeFederationModule(":modules:openid-federation-public-server-api")
 includeFederationModule(":modules:openid-federation-public-server-ktor")
 includeFederationModule(":modules:openid-federation-server")  // Backwards compat shim
 
+
+includeFederationModule(":modules:openid-federation-admin-public")
+includeFederationModule(":modules:openid-federation-admin-impl")
 
 if (selectedFederationModules != null) {
     require(includedFederationModules == selectedFederationModules) {
