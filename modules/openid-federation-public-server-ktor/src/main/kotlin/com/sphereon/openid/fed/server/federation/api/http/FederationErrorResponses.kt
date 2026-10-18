@@ -75,7 +75,7 @@ object FederationErrorResponses {
      */
     fun fromFederationError(error: FederationError): GenericHttpResponse {
         val description = error.message.defaultMessage
-        val mapped = mapFederationErrorCode(error.errorCode)
+        val mapped = mapFederationErrorCode(error.errorCode) ?: byStatus(error.httpStatusValue)
         return of(mapped.error, description, mapped.status)
     }
 
@@ -83,14 +83,8 @@ object FederationErrorResponses {
         val metaCode = error.meta["errorCode"] as? String ?: error.code
         val status = (error.meta["httpStatus"] as? Number)?.toInt() ?: 500
         val description = error.message.defaultMessage
-        val mapped = mapFederationErrorCode(metaCode)
-        val code = if (mapped.error != metaCode || metaCode in SPEC_ERROR_CODES) {
-            mapped.error
-        } else {
-            mapStatusToDefaultError(status)
-        }
-        val http = if (mapped.error != metaCode || metaCode in SPEC_ERROR_CODES) mapped.status else status
-        return of(code, description, http)
+        val mapped = mapFederationErrorCode(metaCode) ?: byStatus(status)
+        return of(mapped.error, description, mapped.status)
     }
 
     /** Accept [FederationError] or [IdkError] from service command results. */
@@ -103,7 +97,8 @@ object FederationErrorResponses {
 
     private data class MappedError(val error: String, val status: Int)
 
-    private fun mapFederationErrorCode(code: String): MappedError =
+    /** A §8.9 error code for a Library error code, or null when the code has no federation equivalent. */
+    private fun mapFederationErrorCode(code: String): MappedError? =
         when (code) {
             "invalid_request", "missing_parameter" -> MappedError("invalid_request", 400)
             "unsupported_parameter" -> MappedError("unsupported_parameter", 400)
@@ -124,24 +119,20 @@ object FederationErrorResponses {
                 MappedError("temporarily_unavailable", 503)
             "server_error", "jwt_creation_failed", "key_resolution_failed" ->
                 MappedError("server_error", 500)
-            else -> MappedError(code, 400)
+            else -> null
         }
 
-    private fun mapStatusToDefaultError(status: Int): String =
+    /**
+     * Library error codes without a §8.9 equivalent are not sent as the error code. The error's own HTTP status
+     * decides: a server-side failure is a server_error with a 5xx status (§8.9), a client-side one the closest
+     * client error.
+     */
+    private fun byStatus(status: Int): MappedError =
         when (status) {
-            400 -> "invalid_request"
-            401 -> "invalid_client"
-            404 -> "not_found"
-            503 -> "temporarily_unavailable"
-            in 500..599 -> "server_error"
-            else -> "invalid_request"
+            401 -> MappedError("invalid_client", 401)
+            404 -> MappedError("not_found", 404)
+            503 -> MappedError("temporarily_unavailable", 503)
+            in 500..599 -> MappedError("server_error", status)
+            else -> MappedError("invalid_request", 400)
         }
-
-    private val SPEC_ERROR_CODES = setOf(
-        "invalid_request", "invalid_client", "invalid_issuer", "invalid_subject",
-        "invalid_trust_anchor", "invalid_trust_chain", "invalid_metadata",
-        "not_found", "server_error", "temporarily_unavailable", "unsupported_parameter",
-        "missing_parameter", "subordinate_not_found", "entity_not_found",
-        "no_trust_chain", "trust_chain_validation_failed", "account_not_found",
-    )
 }
