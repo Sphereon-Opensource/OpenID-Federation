@@ -19,7 +19,9 @@ data class ValidateCredentialVerifierRequestArgs(
     /** Authorization Request / client_metadata.jwks (ignored when federation jwks present). */
     val clientMetadata: JsonObject? = null,
     /** Authorization Request `dcql_query` value. */
-    val requestDcqlQuery: JsonElement? = null
+    val requestDcqlQuery: JsonElement? = null,
+    /** The combined `metadata_policy` of the verifier's Trust Chain; its `dcql_queries` policy applies to the request query. */
+    val metadataPolicy: JsonObject? = null,
 )
 
 @Serializable
