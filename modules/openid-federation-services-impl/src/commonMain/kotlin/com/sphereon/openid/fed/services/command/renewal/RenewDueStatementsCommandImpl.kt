@@ -22,6 +22,7 @@ import com.sphereon.openid.fed.services.command.entityConfiguration.PublishEntit
 import com.sphereon.openid.fed.services.command.subordinate.PublishSubordinateStatementArgs
 import com.sphereon.openid.fed.services.command.subordinate.PublishSubordinateStatementCommand
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.ExposeImplBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
@@ -36,6 +37,7 @@ import kotlin.math.floor
  */
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<RenewDueStatementsCommand>())
+@ExposeImplBinding
 class RenewDueStatementsCommandImpl internal constructor(
     execution: SessionExecution,
     private val publishEntityConfiguration: PublishEntityConfigurationCommand,
@@ -83,6 +85,7 @@ class RenewDueStatementsCommandImpl internal constructor(
             return federationErr(InvalidRequestError("renewBeforeSeconds must be positive"))
         }
         val now = applied.nowEpochSeconds ?: clock()
+        if (applied.keysOnly) return IdkResult.ok(StatementRenewalReport(now, emptyList()))
         val threshold = now + applied.renewBeforeSeconds
         val outcomes = mutableListOf<StatementRenewalOutcome>()
 

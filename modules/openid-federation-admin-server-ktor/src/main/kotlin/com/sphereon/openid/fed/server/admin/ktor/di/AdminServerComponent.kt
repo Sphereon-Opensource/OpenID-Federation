@@ -38,8 +38,8 @@ data class AdminServerConfig(
     val port: Int = 8081,
     val host: String = "0.0.0.0",
     val devMode: Boolean = false,
-    val corsAllowedOrigins: List<String> = listOf("*"),
-    val corsAllowedMethods: List<String> = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS"),
+    val corsAllowedOrigins: List<String> = emptyList(),
+    val corsAllowedMethods: List<String> = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"),
     val corsAllowedHeaders: List<String> = listOf("*"),
     val corsMaxAge: Long = 3600
 )
@@ -69,7 +69,7 @@ abstract class AdminServerBindings : AbstractAppGraph(), CoreApiAppExtensionGrap
             port = server.port,
             host = server.host,
             devMode = federation.devMode,
-            corsAllowedOrigins = cors.allowedOrigins,
+            corsAllowedOrigins = cors.allowedOrigins.filter { it != "*" },
             corsAllowedMethods = cors.allowedMethods,
             corsAllowedHeaders = cors.allowedHeaders,
             corsMaxAge = cors.maxAge

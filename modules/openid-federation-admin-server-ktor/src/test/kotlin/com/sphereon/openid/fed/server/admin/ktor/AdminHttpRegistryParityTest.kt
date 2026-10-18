@@ -15,7 +15,6 @@ import com.sphereon.openid.fed.server.admin.api.http.AdminHttpAdapter
 import com.sphereon.openid.fed.server.admin.api.http.command.*
 import com.sphereon.openid.fed.server.admin.api.http.describe.AdminHttpAdapterDescriptorProvider
 import com.sphereon.openid.fed.server.admin.ktor.di.createAdminServerAppGraph
-import com.sphereon.openid.fed.services.command.trustMark.DeleteTrustMarkCommand
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -25,23 +24,12 @@ import kotlin.test.assertTrue
 
 class AdminHttpRegistryParityTest {
     @Test
-    fun selectedTrustMarkDeleteRouteMatchesItsEndpointHandlerPattern() {
-        val app = createAdminServerAppGraph(Any())
-        try {
-            val selectedRoute = AdminHttpAdapterDescriptorProvider(
-                app.configBinder,
-                emptySet(),
-            ).describe().endpoints.single {
-                it.handlerCommandId == DeleteTrustMarkEndpointCommand.COMMAND_ID
-            }
-            val handler = DeleteTrustMarkEndpointCommand.ENDPOINT
-
-            assertEquals(DeleteTrustMarkCommand.COMMAND_ID, selectedRoute.commandId)
-            assertEquals(handler.method, selectedRoute.method)
-            assertEquals(handler.pathPatterns, selectedRoute.pathPatterns)
-        } finally {
-            app.destroy()
-        }
+    fun selectedTrustMarkDeleteRouteMatchesTheStandardRelativePath() {
+        val operation = com.sphereon.openid.fed.admin.AdminOperation.DeleteAdminTrustMarkGrant
+        val descriptor = standardAdminEndpoint(operation)
+        assertEquals(operation.commandId, descriptor.commandId)
+        assertEquals("/admin/v1/trust-marks/{type}/subjects/{entity_id}", descriptor.pathPattern)
+        assertEquals(com.sphereon.core.api.http.describe.HttpMethod.DELETE, descriptor.method)
     }
 
     @Test
@@ -55,61 +43,10 @@ class AdminHttpRegistryParityTest {
             val endpoints = assertNotNull(catalog.descriptionById(AdminHttpAdapter.ID)).endpoints
             val handlerIds = endpoints.map { assertNotNull(it.handlerCommandId) }.toSet()
 
-            val expected = listOf(
-                ListKeysEndpointCommand.COMMAND_ID to ListKeysEndpointCommand.ENDPOINT,
-                CreateKeyEndpointCommand.COMMAND_ID to CreateKeyEndpointCommand.ENDPOINT,
-                RevokeKeyEndpointCommand.COMMAND_ID to RevokeKeyEndpointCommand.ENDPOINT,
-                UpdateKeyRevocationEndpointCommand.COMMAND_ID to UpdateKeyRevocationEndpointCommand.ENDPOINT,
-                RetireKeyEndpointCommand.COMMAND_ID to RetireKeyEndpointCommand.ENDPOINT,
-                ListHistoricalKeysEndpointCommand.COMMAND_ID to ListHistoricalKeysEndpointCommand.ENDPOINT,
-                GetSigningKeySelectionEndpointCommand.COMMAND_ID to GetSigningKeySelectionEndpointCommand.ENDPOINT,
-                SetSigningKeySelectionEndpointCommand.COMMAND_ID to SetSigningKeySelectionEndpointCommand.ENDPOINT,
-                ListSubordinatesEndpointCommand.COMMAND_ID to ListSubordinatesEndpointCommand.ENDPOINT,
-                CreateSubordinateEndpointCommand.COMMAND_ID to CreateSubordinateEndpointCommand.ENDPOINT,
-                DeleteSubordinateEndpointCommand.COMMAND_ID to DeleteSubordinateEndpointCommand.ENDPOINT,
-                ListSubordinateKeysEndpointCommand.COMMAND_ID to ListSubordinateKeysEndpointCommand.ENDPOINT,
-                CreateSubordinateKeyEndpointCommand.COMMAND_ID to CreateSubordinateKeyEndpointCommand.ENDPOINT,
-                DeleteSubordinateKeyEndpointCommand.COMMAND_ID to DeleteSubordinateKeyEndpointCommand.ENDPOINT,
-                GetSubordinateStatementEndpointCommand.COMMAND_ID to GetSubordinateStatementEndpointCommand.ENDPOINT,
-                PublishSubordinateStatementEndpointCommand.COMMAND_ID to PublishSubordinateStatementEndpointCommand.ENDPOINT,
-                ListSubordinateMetadataEndpointCommand.COMMAND_ID to ListSubordinateMetadataEndpointCommand.ENDPOINT,
-                CreateSubordinateMetadataEndpointCommand.COMMAND_ID to CreateSubordinateMetadataEndpointCommand.ENDPOINT,
-                DeleteSubordinateMetadataEndpointCommand.COMMAND_ID to DeleteSubordinateMetadataEndpointCommand.ENDPOINT,
-                ListTrustMarksEndpointCommand.COMMAND_ID to ListTrustMarksEndpointCommand.ENDPOINT,
-                CreateTrustMarkEndpointCommand.COMMAND_ID to CreateTrustMarkEndpointCommand.ENDPOINT,
-                DeleteTrustMarkEndpointCommand.COMMAND_ID to DeleteTrustMarkEndpointCommand.ENDPOINT,
-                ListTrustMarkTypesEndpointCommand.COMMAND_ID to ListTrustMarkTypesEndpointCommand.ENDPOINT,
-                CreateTrustMarkTypeEndpointCommand.COMMAND_ID to CreateTrustMarkTypeEndpointCommand.ENDPOINT,
-                GetTrustMarkTypeEndpointCommand.COMMAND_ID to GetTrustMarkTypeEndpointCommand.ENDPOINT,
-                DeleteTrustMarkTypeEndpointCommand.COMMAND_ID to DeleteTrustMarkTypeEndpointCommand.ENDPOINT,
-                UpdateTrustMarkTypeDefinitionEndpointCommand.COMMAND_ID to UpdateTrustMarkTypeDefinitionEndpointCommand.ENDPOINT,
-                ListTrustMarkTypeRevisionsEndpointCommand.COMMAND_ID to ListTrustMarkTypeRevisionsEndpointCommand.ENDPOINT,
-                GetTrustMarkTypeIssuersEndpointCommand.COMMAND_ID to GetTrustMarkTypeIssuersEndpointCommand.ENDPOINT,
-                AddTrustMarkTypeIssuerEndpointCommand.COMMAND_ID to AddTrustMarkTypeIssuerEndpointCommand.ENDPOINT,
-                RemoveTrustMarkTypeIssuerEndpointCommand.COMMAND_ID to RemoveTrustMarkTypeIssuerEndpointCommand.ENDPOINT,
-                GetEntityStatementEndpointCommand.COMMAND_ID to GetEntityStatementEndpointCommand.ENDPOINT,
-                PublishEntityStatementEndpointCommand.COMMAND_ID to PublishEntityStatementEndpointCommand.ENDPOINT,
-                ListMetadataEndpointCommand.COMMAND_ID to ListMetadataEndpointCommand.ENDPOINT,
-                CreateMetadataEndpointCommand.COMMAND_ID to CreateMetadataEndpointCommand.ENDPOINT,
-                DeleteMetadataEndpointCommand.COMMAND_ID to DeleteMetadataEndpointCommand.ENDPOINT,
-                ListAuthorityHintsEndpointCommand.COMMAND_ID to ListAuthorityHintsEndpointCommand.ENDPOINT,
-                CreateAuthorityHintEndpointCommand.COMMAND_ID to CreateAuthorityHintEndpointCommand.ENDPOINT,
-                DeleteAuthorityHintEndpointCommand.COMMAND_ID to DeleteAuthorityHintEndpointCommand.ENDPOINT,
-                ListTrustAnchorHintsEndpointCommand.COMMAND_ID to ListTrustAnchorHintsEndpointCommand.ENDPOINT,
-                CreateTrustAnchorHintEndpointCommand.COMMAND_ID to CreateTrustAnchorHintEndpointCommand.ENDPOINT,
-                DeleteTrustAnchorHintEndpointCommand.COMMAND_ID to DeleteTrustAnchorHintEndpointCommand.ENDPOINT,
-                ListCriticalClaimsEndpointCommand.COMMAND_ID to ListCriticalClaimsEndpointCommand.ENDPOINT,
-                CreateCriticalClaimEndpointCommand.COMMAND_ID to CreateCriticalClaimEndpointCommand.ENDPOINT,
-                DeleteCriticalClaimEndpointCommand.COMMAND_ID to DeleteCriticalClaimEndpointCommand.ENDPOINT,
-                ListMetadataPoliciesEndpointCommand.COMMAND_ID to ListMetadataPoliciesEndpointCommand.ENDPOINT,
-                CreateMetadataPolicyEndpointCommand.COMMAND_ID to CreateMetadataPolicyEndpointCommand.ENDPOINT,
-                DeleteMetadataPolicyEndpointCommand.COMMAND_ID to DeleteMetadataPolicyEndpointCommand.ENDPOINT,
-                ListReceivedTrustMarksEndpointCommand.COMMAND_ID to ListReceivedTrustMarksEndpointCommand.ENDPOINT,
-                CreateReceivedTrustMarkEndpointCommand.COMMAND_ID to CreateReceivedTrustMarkEndpointCommand.ENDPOINT,
-                DeleteReceivedTrustMarkEndpointCommand.COMMAND_ID to DeleteReceivedTrustMarkEndpointCommand.ENDPOINT,
-                GetSubordinateConstraintsEndpointCommand.COMMAND_ID to GetSubordinateConstraintsEndpointCommand.ENDPOINT,
-                SetSubordinateConstraintsEndpointCommand.COMMAND_ID to SetSubordinateConstraintsEndpointCommand.ENDPOINT,
-                DeleteSubordinateConstraintsEndpointCommand.COMMAND_ID to DeleteSubordinateConstraintsEndpointCommand.ENDPOINT,
+            val expected = com.sphereon.openid.fed.admin.AdminOperation.entries.map { operation ->
+                val descriptor = standardAdminEndpoint(operation)
+                assertNotNull(descriptor.handlerCommandId) to descriptor
+            } + listOf(
                 ListLogsEndpointCommand.COMMAND_ID to ListLogsEndpointCommand.ENDPOINT,
                 GetCacheStatsEndpointCommand.COMMAND_ID to GetCacheStatsEndpointCommand.ENDPOINT,
                 ClearCacheEndpointCommand.COMMAND_ID to ClearCacheEndpointCommand.ENDPOINT,
@@ -117,9 +54,7 @@ class AdminHttpRegistryParityTest {
                 realAccountContribution()?.endpointDescriptors.orEmpty().map { descriptor ->
                     assertNotNull(descriptor.handlerCommandId) to descriptor
                 }
-            } else {
-                emptyList()
-            }
+            } else emptyList()
             val routesByHandlerId = endpoints.associateBy { assertNotNull(it.handlerCommandId) }
 
             assertEquals(endpoints.size, routesByHandlerId.size)

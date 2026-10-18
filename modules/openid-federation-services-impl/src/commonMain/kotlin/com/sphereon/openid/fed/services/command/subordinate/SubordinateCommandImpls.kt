@@ -99,6 +99,13 @@ class FindSubordinatesByAccountAsArrayCommandImpl(
 
     override suspend fun doExecute(args: FindSubordinatesByAccountAsArrayArgs, applyDuring: (FindSubordinatesByAccountAsArrayArgs) -> FindSubordinatesByAccountAsArrayArgs): IdkResult<Array<String>, FederationError> {
         val (tenantId) = applyDuring(args)
+        if (Persistence.adminDocumentQueries.find(tenantId, "configuration", "", "").executeAsOneOrNull() != null) {
+            val managed = Persistence.adminDocumentQueries.list(tenantId, "subordinate").executeAsList().filter {
+                val doc = Json.parseToJsonElement(it.document) as? JsonObject
+                (doc?.get("status") as? JsonPrimitive)?.content == "active" && it.artifact != null
+            }.map { it.resource_id }.toTypedArray()
+            return IdkResult.ok(managed)
+        }
         val result = findSubordinatesByAccountCommand.execute(FindSubordinatesByAccountArgs(tenantId))
         return result.map { subordinates -> subordinates.map { it.identifier }.toTypedArray() }
     }
@@ -389,6 +396,14 @@ class FetchSubordinateStatementCommandImpl(
 
     override suspend fun doExecute(args: FetchSubordinateStatementArgs, applyDuring: (FetchSubordinateStatementArgs) -> FetchSubordinateStatementArgs): IdkResult<String, FederationError> {
         val (iss, sub) = applyDuring(args)
+        val account = Persistence.accountQueries.findByIdentifier(iss).executeAsOneOrNull()
+        if (account != null && Persistence.adminDocumentQueries.find(account.id, "configuration", "", "").executeAsOneOrNull() != null) {
+            val managed = Persistence.adminDocumentQueries.find(account.id, "subordinate", sub, "").executeAsOneOrNull()
+            val active = managed?.let { (Json.parseToJsonElement(it.document).jsonObject["status"] as? JsonPrimitive)?.content == "active" } == true
+            val artifact = managed?.artifact?.takeIf { compact -> runCatching { (com.sphereon.openid.fed.client.mapper.decodeJWTComponents(compact).payload["exp"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.let { it > System.currentTimeMillis() / 1000 } == true }.getOrDefault(false) }
+            return if (active && artifact != null) IdkResult.ok(artifact)
+                else federationErr(InvalidRequestError(Constants.SUBORDINATE_STATEMENT_NOT_FOUND))
+        }
         val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
             ?: return federationErr(InvalidRequestError(Constants.SUBORDINATE_STATEMENT_NOT_FOUND))
         return IdkResult.ok(statement.statement)

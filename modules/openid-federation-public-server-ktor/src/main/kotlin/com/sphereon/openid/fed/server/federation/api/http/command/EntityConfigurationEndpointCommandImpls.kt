@@ -12,7 +12,8 @@ import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
-import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.services.command.entityConfiguration.FindLatestStoredEntityConfigurationJwtCommand
+import com.sphereon.openid.fed.services.command.entityConfiguration.FindLatestStoredEntityConfigurationJwtArgs
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.ContributesIntoMap
@@ -27,14 +28,14 @@ import dev.zacsweers.metro.SingleIn
 @StringKey(GetEntityConfigurationEndpointCommand.COMMAND_ID)
 class GetEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
-    private val tenantContextResolver: TenantContextResolver
+    private val tenantContextResolver: TenantContextResolver,
+    private val findStored: FindLatestStoredEntityConfigurationJwtCommand,
 ) : HttpEndpointCommandAdapter(
     id = GetEntityConfigurationEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = GetEntityConfigurationEndpointCommand.ENDPOINT
 ), GetEntityConfigurationEndpointCommand {
 
-    private val entityConfigStatementQueries = Persistence.entityConfigurationStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -45,15 +46,14 @@ class GetEntityConfigurationEndpointCommandImpl(
         val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
             ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val statement = entityConfigStatementQueries
-            .findLatestByAccountId(tenantId)
-            .executeAsOneOrNull()
-            ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
+        val found = findStored.execute(FindLatestStoredEntityConfigurationJwtArgs(tenantId))
+        if (found.isErr) return Ok(errorResponse(found.error.httpStatusValue, found.error.message.defaultMessage))
+        val statement = found.value.compact ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
 
         return Ok(GenericHttpResponse(
             statusCode = 200,
             headers = mapOf("Content-Type" to "application/entity-statement+jwt"),
-            body = statement.statement
+            body = statement
         ))
     }
 }
@@ -65,14 +65,14 @@ class GetEntityConfigurationEndpointCommandImpl(
 @StringKey(GetAccountEntityConfigurationEndpointCommand.COMMAND_ID)
 class GetAccountEntityConfigurationEndpointCommandImpl(
     execution: SessionExecution,
-    private val tenantContextResolver: TenantContextResolver
+    private val tenantContextResolver: TenantContextResolver,
+    private val findStored: FindLatestStoredEntityConfigurationJwtCommand,
 ) : HttpEndpointCommandAdapter(
     id = GetAccountEntityConfigurationEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = GetAccountEntityConfigurationEndpointCommand.ENDPOINT
 ), GetAccountEntityConfigurationEndpointCommand {
 
-    private val entityConfigStatementQueries = Persistence.entityConfigurationStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -86,15 +86,14 @@ class GetAccountEntityConfigurationEndpointCommandImpl(
         val tenantId = tenantContextResolver.resolveTenantIdByName(username)
             ?: return Ok(errorResponse(404, "Tenant not found"))
 
-        val statement = entityConfigStatementQueries
-            .findLatestByAccountId(tenantId)
-            .executeAsOneOrNull()
-            ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
+        val found = findStored.execute(FindLatestStoredEntityConfigurationJwtArgs(tenantId))
+        if (found.isErr) return Ok(errorResponse(found.error.httpStatusValue, found.error.message.defaultMessage))
+        val statement = found.value.compact ?: return Ok(errorResponse(404, "Entity Configuration Statement not found"))
 
         return Ok(GenericHttpResponse(
             statusCode = 200,
             headers = mapOf("Content-Type" to "application/entity-statement+jwt"),
-            body = statement.statement
+            body = statement
         ))
     }
 }

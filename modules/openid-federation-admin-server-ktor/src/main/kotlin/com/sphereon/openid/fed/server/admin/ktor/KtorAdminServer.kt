@@ -9,6 +9,7 @@ import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.core.config.StatementRenewalConfig
 import com.sphereon.openid.fed.server.admin.ktor.renewal.SessionStatementRenewalRunner
+import com.sphereon.openid.fed.server.admin.ktor.renewal.installAdminKeyMaintenance
 import com.sphereon.openid.fed.server.admin.ktor.renewal.StatementRenewalScheduler
 import com.sphereon.openid.fed.server.admin.ktor.renewal.installStatementRenewal
 import com.sphereon.openid.fed.server.admin.ktor.auth.OidfJwtAuthSupport
@@ -133,20 +134,19 @@ fun Application.configureAdmin(appGraph: AdminServerBindings, config: AdminServe
     // CORS configuration
     install(CORS) {
         config.corsAllowedOrigins.forEach { origin ->
-            if (origin == "*") {
-                anyHost()
-            } else {
-                allowHost(origin)
-            }
+            if (origin != "*") allowHost(origin)
         }
         config.corsAllowedMethods.forEach { method ->
             allowMethod(HttpMethod.parse(method))
         }
+        exposeHeader(HttpHeaders.ETag)
+        exposeHeader(HttpHeaders.Location)
         config.corsAllowedHeaders.forEach { header ->
             if (header == "*") {
                 allowHeader(HttpHeaders.ContentType)
                 allowHeader(HttpHeaders.Authorization)
                 allowHeader(HttpHeaders.Accept)
+                allowHeader(HttpHeaders.IfMatch)
             } else {
                 allowHeader(header)
             }
@@ -248,6 +248,7 @@ fun Application.configureAdmin(appGraph: AdminServerBindings, config: AdminServe
  * that cannot keep statements valid fails startup rather than letting public endpoints serve expired statements.
  */
 private fun Application.configureStatementRenewal(appGraph: AdminServerBindings) {
+    installAdminKeyMaintenance(SessionStatementRenewalRunner(appGraph, appGraph.configBinder, keysOnly = true))
     val federation = appGraph.configBinder.getFederationConfig()
     when (val schedule = federation.statementRenewal.resolve(federation.statementLifetimeSeconds)) {
         is StatementRenewalConfig.Resolved.Active -> installStatementRenewal(

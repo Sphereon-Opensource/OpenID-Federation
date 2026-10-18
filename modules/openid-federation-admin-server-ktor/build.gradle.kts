@@ -20,10 +20,14 @@ val omitAccountHttp =
 // account-http is on the classpath so all-in-one still ships the full contract docs.
 val copyOpenAPI = tasks.register<Sync>("copyOpenAPI") {
     from("../openid-federation-openapi/src/commonMain/kotlin/com/sphereon/openid/fed/openapi") {
-        include("admin-server.yaml")
+        exclude("admin-server.yaml")
         if (!omitAccountHttp) {
             include("admin-accounts.yaml")
         }
+    }
+    from("../openid-federation-openapi/src/commonMain/openapi") {
+        include("admin-node.yaml")
+        rename("admin-node.yaml", "admin-server.yaml")
     }
     into(layout.buildDirectory.dir("generated/openapi"))
 }
@@ -41,6 +45,7 @@ tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") 
 }
 
 dependencies {
+    implementation(projects.modules.openidFederationAdminImpl)
     // API layer
     api(projects.modules.openidFederationAdminServerApi)
 
@@ -114,6 +119,7 @@ dependencies {
     runtimeOnly(sphereonlib.org.postgresql.postgresql)
 
     // Testing
+    testImplementation(sphereonlib.io.mockk.mockk)
     testImplementation(sphereonlib.org.jetbrains.kotlin.test)
     testImplementation(sphereonlib.io.ktor.server.test.host)
     testImplementation(sphereonlib.org.jetbrains.kotlinx.coroutines.test)

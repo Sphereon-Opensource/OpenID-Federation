@@ -26,7 +26,6 @@ import com.sphereon.di.context.PrincipalType
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Database
-import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.models.Account
 import com.sphereon.openid.fed.persistence.models.AccountQueries
@@ -38,8 +37,6 @@ import com.sphereon.openid.fed.services.signPayload
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.unmockkObject
 import java.sql.DriverManager
 import java.util.Base64
 import java.util.UUID
@@ -198,8 +195,6 @@ class CreateKeyRoutedReceiptTest {
             val accounts = AccountQueries(driver, Account.Adapter(JavaUuidStringAdapter))
             accountId = accounts.create("receipt-" + UUID.randomUUID(), "https://receipt.example/" + UUID.randomUUID()).executeAsOne().id
             queries = JwkQueries(driver, Jwk.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
-            mockkObject(Persistence)
-            every { Persistence.jwkQueries } returns queries
             runBlocking {
                 val provider = (app as SoftwareKmsProviderFactoryImpl.Graph).softwareKmsProvider.create(SoftwareKmsProviderConfig(id = providerId), execution)
                 actualManager.registerProvider(provider, makeDefaultKms = true)
@@ -281,7 +276,7 @@ class CreateKeyRoutedReceiptTest {
         fun command(kms: KeyManagerService = manager): CreateKeyCommandImpl {
             val getKeys = mockk<GetKeysCommand>()
             coEvery { getKeys.execute(any()) } answers { Ok(emptyArray()) }
-            return CreateKeyCommandImpl(execution, kms, getKeys, mockk<OidfConfigBinder>(), mockk<TenantConfigService>())
+            return CreateKeyCommandImpl(execution, kms, getKeys, mockk<OidfConfigBinder>(), mockk<TenantConfigService>(), queries)
         }
         fun exactlyOneGenerationAndResolution() {
             assertEquals(1, generationCalls)
@@ -290,7 +285,6 @@ class CreateKeyRoutedReceiptTest {
             assertEquals(1, resolutionCalls)
         }
         fun close() {
-            unmockkObject(Persistence)
             session.destroy()
             driver.close()
             DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->

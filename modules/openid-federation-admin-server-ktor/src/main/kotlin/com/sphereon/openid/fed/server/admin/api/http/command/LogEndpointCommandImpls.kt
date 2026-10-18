@@ -11,7 +11,8 @@ import com.sphereon.core.api.http.command.HttpEndpointCommandAdapter
 import com.sphereon.core.api.http.response.errorResponse
 import com.sphereon.core.api.http.response.jsonResponse
 import com.sphereon.di.session.SessionScope
-import com.sphereon.openid.fed.services.LogService
+import com.sphereon.openid.fed.services.command.log.GetRecentLogsCommand
+import com.sphereon.openid.fed.services.command.log.GetRecentLogsArgs
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import dev.zacsweers.metro.Inject
@@ -30,7 +31,7 @@ import dev.zacsweers.metro.SingleIn
 @StringKey(ListLogsEndpointCommand.COMMAND_ID)
 class ListLogsEndpointCommandImpl(
     execution: SessionExecution,
-    private val logService: LogService,
+    private val recentLogs: GetRecentLogsCommand,
     private val json: Json
 ) : HttpEndpointCommandAdapter(
     id = ListLogsEndpointCommand.COMMAND_ID,
@@ -46,7 +47,7 @@ class ListLogsEndpointCommandImpl(
 
         val limit = request.queryParameters["limit"]?.toLongOrNull() ?: 100L
 
-        val result = logService.getRecentLogs(limit)
+        val result = recentLogs.execute(GetRecentLogsArgs(limit))
 
         return if (result.isOk) {
             Ok(jsonResponse(200, json.encodeToString(result.value)))

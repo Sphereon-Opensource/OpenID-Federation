@@ -186,7 +186,7 @@ data class CorsConfig(
     /** List of allowed origins (use "*" for any) */
     val allowedOrigins: List<String> = listOf("*"),
     /** List of allowed HTTP methods */
-    val allowedMethods: List<String> = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS"),
+    val allowedMethods: List<String> = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"),
     /** List of allowed headers (use "*" for any) */
     val allowedHeaders: List<String> = listOf("*"),
     /** Max age in seconds for preflight cache */

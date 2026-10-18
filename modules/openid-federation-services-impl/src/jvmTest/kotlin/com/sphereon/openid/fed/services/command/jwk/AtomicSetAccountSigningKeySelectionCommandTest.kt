@@ -576,7 +576,7 @@ class AtomicSetAccountSigningKeySelectionCommandTest {
         val old = isolatedSource("selection_upgrade_"); val oldDriver = old.asJdbcDriver()
         val fresh = isolatedSource("selection_fresh_"); val freshDriver = fresh.asJdbcDriver()
         try {
-            assertTrue(Database.Schema.version > 25L, "Migration25 must be part of the schema")
+            assertEquals(28L, Database.Schema.version, "Administration migration27 follows the retained Trust Mark definition migration26")
             Database.Schema.migrate(oldDriver, 0L, 25L)
             val id = UUID.randomUUID()
             old.connection.use { connection ->

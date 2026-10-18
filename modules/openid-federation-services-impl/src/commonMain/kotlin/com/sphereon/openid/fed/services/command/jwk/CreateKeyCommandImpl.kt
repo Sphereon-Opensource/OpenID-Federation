@@ -20,12 +20,14 @@ import com.sphereon.openid.fed.core.error.ServerError
 import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.persistence.models.JwkQueries
 import com.sphereon.openid.fed.services.CreateKeyArgs
 import com.sphereon.openid.fed.services.config.resolveEffectiveKmsProviderId
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
+import dev.zacsweers.metro.ExposeImplBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.binding
@@ -39,15 +41,16 @@ import dev.zacsweers.metro.SingleIn
  * [OidfConfigBinder.getEffectiveKmsConfig] for the tenant (session tenant config →
  * `oidf.tenant.<id>.kms.provider` → APP default).
  */
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateKeyCommand>())
-class CreateKeyCommandImpl(
+@ExposeImplBinding
+class CreateKeyCommandImpl internal constructor(
     execution: SessionExecution,
     private val keyManagerService: KeyManagerService,
     private val getKeysCommand: GetKeysCommand,
     private val configBinder: OidfConfigBinder,
     private val tenantConfigService: TenantConfigService,
+    private val suppliedJwkQueries: JwkQueries?,
 ) : TypedServiceCommandAdapter<CreateKeyCommandArgs, TenantJwk, FederationError>(
     commandId = CreateKeyCommand.COMMAND_ID,
     execution = execution,
@@ -55,14 +58,30 @@ class CreateKeyCommandImpl(
     outputTypeToken = typeToken<TenantJwk>()
 ), CreateKeyCommand {
 
-    private val logger = execution.federationLogger("CreateKeyCommand")
-    private val jwkQueries = Persistence.jwkQueries
+    @Inject constructor(
+        execution: SessionExecution,
+        keyManagerService: KeyManagerService,
+        getKeysCommand: GetKeysCommand,
+        configBinder: OidfConfigBinder,
+        tenantConfigService: TenantConfigService,
+    ) : this(execution, keyManagerService, getKeysCommand, configBinder, tenantConfigService, null)
 
-    override suspend fun doExecute(
-        args: CreateKeyCommandArgs,
-        applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs
-    ): IdkResult<TenantJwk, FederationError> = withContext(Dispatchers.IO) {
-        val (tenantId, opts) = applyDuring(args)
+    private val logger = execution.federationLogger("CreateKeyCommand")
+    private val jwkQueries get() = suppliedJwkQueries ?: Persistence.jwkQueries
+
+    override suspend fun doExecute(args: CreateKeyCommandArgs, applyDuring: (CreateKeyCommandArgs) -> CreateKeyCommandArgs): IdkResult<TenantJwk, FederationError> {
+        val prepared = prepareKey(applyDuring(args))
+        if (prepared.isErr) return prepared.error.asErrorResult()
+        val key = prepared.value
+        return try {
+            val created = jwkQueries.create(key.accountId, key.algorithm, key.kid, key.kms, key.kmsKeyRef, key.publicJwk).executeAsOne()
+            IdkResult.ok(created.toDTO())
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) { federationErr(ServerError("Failed to persist generated key", failure.message, failure)) }
+    }
+
+    suspend fun prepareKey(args: CreateKeyCommandArgs): IdkResult<PreparedFederationKey, FederationError> = withContext(Dispatchers.IO) {
+        val (tenantId, opts) = args
 
         try {
             logger.info("Creating new key for account: ${tenantId}, with options: $opts")
@@ -113,17 +132,7 @@ class CreateKeyCommandImpl(
             val persistedPublicJwk = publicJwk.copy(kid = kid)
             logger.debug("Generated public key with KID: $kid providerId: ${reference.providerId} and alias: ${reference.alias} for account ID: $tenantId")
 
-            val createdKey = jwkQueries.create(
-                account_id = tenantId,
-                kid = kid,
-                kms_key_ref = reference.alias,
-                kms = reference.providerId,
-                alg = algorithm,
-                key = persistedPublicJwk.toJsonString()
-            ).executeAsOne()
-
-            logger.info("Successfully created key with KID: $kid for account ID: $tenantId")
-            IdkResult.ok(createdKey.toDTO())
+            IdkResult.ok(PreparedFederationKey(tenantId, persistedPublicJwk.toJsonString(), kid, algorithm, reference.providerId, reference.alias))
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (e: Exception) {
@@ -132,3 +141,6 @@ class CreateKeyCommandImpl(
         }
     }
 }
+
+/** Transient KMS generation receipt; no database row or public publication exists yet. */
+data class PreparedFederationKey(val accountId: String, val publicJwk: String, val kid: String, val algorithm: String, val kms: String, val kmsKeyRef: String)

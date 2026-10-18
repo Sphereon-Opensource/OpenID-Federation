@@ -54,3 +54,20 @@ findRevisionsByTypeId:
 SELECT * FROM TrustMarkTypeRevision
 WHERE trust_mark_type_id = :trust_mark_type_id
 ORDER BY version ASC;
+
+-- Administration projects the owning record, including the last revoked incarnation.
+findLatestByAccountAndIdentifier:
+SELECT * FROM TrustMarkType
+WHERE account_id = :account_id AND identifier = :identifier
+ORDER BY CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END, created_at DESC, id DESC
+LIMIT 1;
+
+findLatestByAccountAndIdentifierForUpdate:
+SELECT * FROM TrustMarkType
+WHERE account_id = :account_id AND identifier = :identifier
+ORDER BY CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END, created_at DESC, id DESC
+LIMIT 1 FOR UPDATE;
+
+findAllByAccountIdIncludingDeleted:
+SELECT * FROM TrustMarkType WHERE account_id = :account_id
+ORDER BY CASE WHEN deleted_at IS NULL THEN 0 ELSE 1 END, created_at DESC, id DESC;

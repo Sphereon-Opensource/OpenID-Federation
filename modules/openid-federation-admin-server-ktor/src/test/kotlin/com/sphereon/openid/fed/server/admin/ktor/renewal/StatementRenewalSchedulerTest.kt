@@ -26,6 +26,26 @@ class StatementRenewalSchedulerTest {
     })
 
     @Test
+    fun keyMaintenanceRunsWhenStatementRenewalIsDisabledOrOnlyDocumentLifetimeExists() {
+        listOf(StatementRenewalConfig(enabled = false) to 3600L, StatementRenewalConfig() to null).forEach { (renewal, lifetime) ->
+            assertTrue(renewal.resolve(lifetime) is StatementRenewalConfig.Resolved.Disabled)
+            val calls = AtomicInteger()
+            val ran = CompletableDeferred<Unit>()
+            testApplication {
+                application {
+                    // This is installed independently of the optional statement renewal schedule.
+                    installAdminKeyMaintenance(StatementRenewalRunner {
+                        calls.incrementAndGet(); ran.complete(Unit); emptyList()
+                    })
+                }
+                startApplication()
+                withTimeout(10_000) { ran.await() }
+            }
+            assertEquals(1, calls.get(), "Immediate startup maintenance does not enable statement renewal")
+        }
+    }
+
+    @Test
     fun checksImmediatelyAndThenEveryIntervalWithTheConfiguredMargin() = runTest {
         val margins = mutableListOf<Long>()
         val scheduler = StatementRenewalScheduler(schedule, StatementRenewalRunner { margin ->

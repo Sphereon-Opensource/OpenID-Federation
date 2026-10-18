@@ -46,3 +46,7 @@ ON CONFLICT (id) DO NOTHING;
 
 findTenantById:
 SELECT id FROM Account WHERE id = ? AND deleted_at IS NULL;
+
+initializeIdentifier:
+UPDATE Account SET identifier = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ? AND identifier IS NULL AND deleted_at IS NULL;

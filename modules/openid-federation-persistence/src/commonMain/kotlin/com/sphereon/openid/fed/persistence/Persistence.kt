@@ -34,6 +34,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
  * implementations can be provided.
  */
 expect object Persistence {
+    val adminDocumentQueries: com.sphereon.openid.fed.persistence.models.AdminDocumentQueries
     val entityConfigurationStatementQueries: EntityConfigurationStatementQueries
     val accountMetadataPolicyRevisionQueries: AccountMetadataPolicyRevisionQueries
     val accountQueries: AccountQueries

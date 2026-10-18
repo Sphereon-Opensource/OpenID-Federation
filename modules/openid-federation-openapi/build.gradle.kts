@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
 import com.sphereon.gradle.plugin.configureJsTargetIfEnabled
 import com.sphereon.gradle.plugin.configureWasmJsTargetIfEnabled
 import org.gradle.api.DefaultTask
@@ -55,13 +57,17 @@ abstract class MergeAdminOpenApiSpecs : DefaultTask() {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val accountsSpec: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val standardSpec: RegularFileProperty
+
     @get:OutputFile
     abstract val mergedSpec: RegularFileProperty
 
     @TaskAction
     fun merge() {
-        val core = coreSpec.get().asFile.readText()
-        val accounts = accountsSpec.get().asFile.readText()
+        val core = coreSpec.get().asFile.readText().replace("\r\n", "\n")
+        val accounts = accountsSpec.get().asFile.readText().replace("\r\n", "\n")
 
         fun extractBlock(text: String, startMarker: String, endMarker: String?): String {
             val start = text.indexOf(startMarker)
@@ -134,6 +140,27 @@ abstract class MergeAdminOpenApiSpecs : DefaultTask() {
         merged = stripSchemaAlias(merged, "AccountJwksResponse", "TenantJwksResponse")
         merged = stripSchemaAlias(merged, "AccountJwk", "TenantJwk")
 
+        // Generate API methods only from the standard contract and retained operational routes.
+        // Legacy schemas remain model-only because protocol commands still consume these DTOs.
+        @Suppress("UNCHECKED_CAST")
+        val standard = JsonSlurper().parse(standardSpec.get().asFile) as Map<String, Any?>
+        @Suppress("UNCHECKED_CAST")
+        val standardPaths = standard.getValue("paths") as Map<String, Any?>
+        val priorPaths = extractBlock(merged, "paths:\n", "\ncomponents:")
+        val retainedPaths = Regex("(?m)^  /[^\\n]*:\n").findAll(priorPaths).toList().let { starts ->
+            starts.mapIndexedNotNull { index, match ->
+                val path = match.value.trim().removeSuffix(":")
+                if (path == "/accounts" || path.startsWith("/accounts/") || path == "/logs" || path.startsWith("/logs/") || path == "/cache" || path.startsWith("/cache/"))
+                    priorPaths.substring(match.range.first, starts.getOrNull(index + 1)?.range?.first ?: priorPaths.length).trimEnd() else null
+            }.joinToString("\n")
+        }
+        val standardPathYaml = standardPaths.entries.joinToString("\n") { (path, item) -> "  ${JsonOutput.toJson(path)}: ${JsonOutput.toJson(item)}" }
+        merged = merged.substringBefore("paths:\n") + "paths:\n" + standardPathYaml + "\n" + retainedPaths + "\ncomponents:" + merged.substringAfter("\ncomponents:")
+        @Suppress("UNCHECKED_CAST")
+        val standardSchemas = (standard.getValue("components") as Map<String, Any?>).getValue("schemas") as Map<String, Any?>
+        val schemaYaml = standardSchemas.entries.joinToString("\n") { (name, schema) -> "    $name: ${JsonOutput.toJson(schema)}" }
+        merged = merged.replaceFirst("  schemas:\n", "  schemas:\n$schemaYaml\n")
+
         val out = mergedSpec.get().asFile
         out.parentFile.mkdirs()
         out.writeText(merged)
@@ -147,6 +174,7 @@ tasks.register<MergeAdminOpenApiSpecs>("mergeAdminOpenApiSpecs") {
         "Merges admin-server.yaml + admin-accounts.yaml for codegen (core contract stays split)."
     coreSpec.set(file(coreOpenApiSpec))
     accountsSpec.set(file(accountsOpenApiSpec))
+    standardSpec.set(file("$projectDir/src/commonMain/openapi/admin-node.yaml"))
     mergedSpec.set(file(mergedOpenApiSpec))
 }
 
@@ -155,12 +183,18 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
     description =
         "Generates Kotlin Multiplatform code from core admin + optional accounts OpenAPI."
     dependsOn("mergeAdminOpenApiSpecs")
+    cleanupOutput.set(true)
     generatorName.set("kotlin")
     inputSpec.set(mergedOpenApiSpec)
     outputDir.set(kotlinOutputDir)
     packageName.set(basePackage)
     apiPackage.set(kotlinApiPackage)
     modelPackage.set(kotlinModelPackage)
+    // Open documents/oneOf bodies use the same lossless JSON representation as ServiceCommands.
+    // Kotlin generator's map-inheritance model template is invalid and would lose extensions.
+    schemaMappings.set(listOf("AdminDocument", "ConfigurationDocument", "SubordinateDocument", "IssuanceDocument",
+        "SubjectGrantDocument", "PublicJwk", "KeyCreateRequest").associateWith { "kotlinx.serialization.json.JsonObject" })
+
     library.set("multiplatform")
     // Wire names follow the specifications; Kotlin property names stay stable.
     nameMappings.set(mapOf("x5t#S256" to "x5tS256", "revoked_at" to "revokedAt"))
@@ -195,7 +229,7 @@ tasks.register<GenerateTask>("openApiGenerateKotlin") {
 // Java Spring generation removed - migrated to Ktor
 
 kotlin {
-    tasks.register<Copy>("fixOpenApiKotlinIssues") {
+    tasks.register<Sync>("fixOpenApiKotlinIssues") {
         dependsOn("openApiGenerateKotlin")
         from("$kotlinOutputDir/src/commonMain/kotlin/${basePackage.replace('.', '/')}")
         into("$projectDir/build/copy/src/commonMain/kotlin/${basePackage.replace('.', '/')}")

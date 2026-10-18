@@ -12,7 +12,8 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
-import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.services.command.subordinate.FetchSubordinateStatementCommand
+import com.sphereon.openid.fed.services.command.subordinate.FetchSubordinateStatementArgs
 import com.sphereon.openid.fed.server.federation.api.http.FederationErrorResponses
 import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
 import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
@@ -35,13 +36,13 @@ class FetchSubordinateRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val clientAuth: FederationEndpointClientAuthService,
+    private val fetchStatement: FetchSubordinateStatementCommand,
 ) : HttpEndpointCommandAdapter(
     id = FetchSubordinateRootEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = FetchSubordinateRootEndpointCommand.ENDPOINT
 ), FetchSubordinateRootEndpointCommand {
 
-    private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -59,7 +60,7 @@ class FetchSubordinateRootEndpointCommandImpl(
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
         val issParam = request.queryParameters["iss"]
 
-        return fetchSubordinateStatement(tenantContextResolver, subordinateStatementQueries, Constants.DEFAULT_ROOT_USERNAME, sub, issParam)
+        return fetchSubordinateStatement(tenantContextResolver, fetchStatement, Constants.DEFAULT_ROOT_USERNAME, sub, issParam)
     }
 }
 
@@ -74,13 +75,13 @@ class PostFetchSubordinateRootEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val clientAuth: FederationEndpointClientAuthService,
+    private val fetchStatement: FetchSubordinateStatementCommand,
 ) : HttpEndpointCommandAdapter(
     id = PostFetchSubordinateRootEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = PostFetchSubordinateRootEndpointCommand.ENDPOINT
 ), PostFetchSubordinateRootEndpointCommand {
 
-    private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -101,7 +102,7 @@ class PostFetchSubordinateRootEndpointCommandImpl(
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
         val issParam = params["iss"]
 
-        return fetchSubordinateStatement(tenantContextResolver, subordinateStatementQueries, Constants.DEFAULT_ROOT_USERNAME, sub, issParam)
+        return fetchSubordinateStatement(tenantContextResolver, fetchStatement, Constants.DEFAULT_ROOT_USERNAME, sub, issParam)
     }
 }
 
@@ -116,13 +117,13 @@ class FetchSubordinateAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val clientAuth: FederationEndpointClientAuthService,
+    private val fetchStatement: FetchSubordinateStatementCommand,
 ) : HttpEndpointCommandAdapter(
     id = FetchSubordinateAccountEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = FetchSubordinateAccountEndpointCommand.ENDPOINT
 ), FetchSubordinateAccountEndpointCommand {
 
-    private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -143,7 +144,7 @@ class FetchSubordinateAccountEndpointCommandImpl(
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
         val issParam = request.queryParameters["iss"]
 
-        return fetchSubordinateStatement(tenantContextResolver, subordinateStatementQueries, username, sub, issParam)
+        return fetchSubordinateStatement(tenantContextResolver, fetchStatement, username, sub, issParam)
     }
 }
 
@@ -158,13 +159,13 @@ class PostFetchSubordinateAccountEndpointCommandImpl(
     execution: SessionExecution,
     private val tenantContextResolver: TenantContextResolver,
     private val clientAuth: FederationEndpointClientAuthService,
+    private val fetchStatement: FetchSubordinateStatementCommand,
 ) : HttpEndpointCommandAdapter(
     id = PostFetchSubordinateAccountEndpointCommand.COMMAND_ID,
     execution = execution,
     endpoint = PostFetchSubordinateAccountEndpointCommand.ENDPOINT
 ), PostFetchSubordinateAccountEndpointCommand {
 
-    private val subordinateStatementQueries = Persistence.subordinateStatementQueries
 
     override suspend fun doExecute(
         args: GenericHttpRequest,
@@ -188,7 +189,7 @@ class PostFetchSubordinateAccountEndpointCommandImpl(
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
         val issParam = params["iss"]
 
-        return fetchSubordinateStatement(tenantContextResolver, subordinateStatementQueries, username, sub, issParam)
+        return fetchSubordinateStatement(tenantContextResolver, fetchStatement, username, sub, issParam)
     }
 }
 
@@ -201,7 +202,7 @@ class PostFetchSubordinateAccountEndpointCommandImpl(
  */
 private suspend fun fetchSubordinateStatement(
     tenantContextResolver: TenantContextResolver,
-    subordinateStatementQueries: com.sphereon.openid.fed.persistence.models.SubordinateStatementQueries,
+    fetchStatement: FetchSubordinateStatementCommand,
     username: String,
     sub: String,
     issOverride: String? = null
@@ -219,13 +220,14 @@ private suspend fun fetchSubordinateStatement(
         return Ok(FederationErrorResponses.invalidRequest("The subject must differ from the issuing entity"))
     }
 
-    val statement = subordinateStatementQueries.findByIssAndSub(iss, sub).executeAsOneOrNull()
-        ?: return Ok(FederationErrorResponses.notFound("Subordinate statement not found"))
+    val found = fetchStatement.execute(FetchSubordinateStatementArgs(iss, sub))
+    if (found.isErr) return Ok(FederationErrorResponses.notFound("Subordinate statement not found"))
+    val statement = found.value
 
     return Ok(GenericHttpResponse(
         statusCode = 200,
         headers = mapOf("Content-Type" to "application/entity-statement+jwt"),
-        body = statement.statement
+        body = statement
     ))
 }
 

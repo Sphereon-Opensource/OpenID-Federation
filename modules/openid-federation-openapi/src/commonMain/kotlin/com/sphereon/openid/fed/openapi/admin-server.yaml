@@ -2094,49 +2094,51 @@ components:
       content:
         application/json:
           schema:
-            type: object
-            required:
-              - sub
-              - trust_mark_type
-            properties:
-              sub:
-                type: string
-                description: 'The entity the Trust Mark applies to.'
-                example: http://localhost:8080/trust-mark-holder
-                minLength: 10
-                maxLength: 2048
-              trust_mark_type:
-                type: string
-                description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
-                example: http://localhost:8080/trust-mark-types/exampleType
-                minLength: 10
-                maxLength: 2048
-              logo_uri:
-                type: string
-                format: uri
-                description: Optional URL to a logo for the Trust Mark entity.
-                example: https://example.com/logo
-              exp:
-                type: number
-                description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
-              ref:
-                type: string
-                format: uri
-                description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
-              delegation:
-                type: string
-                description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark
-              dryRun:
-                type: boolean
-                description: 'If true, the request will be executed but not persisted.'
-                example: false
-              iat:
-                type: number
-                description: The time for the trust mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
-              trust_mark_lifetime:
-                type: integer
-                description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
+            $ref: '#/components/schemas/CreateTrustMarkRequest'
   schemas:
+    CreateTrustMarkRequest:
+      type: object
+      required:
+        - sub
+        - trust_mark_type
+      properties:
+        sub:
+          type: string
+          description: 'The entity the Trust Mark applies to.'
+          example: http://localhost:8080/trust-mark-holder
+          minLength: 10
+          maxLength: 2048
+        trust_mark_type:
+          type: string
+          description: 'Unique identifier of the Trust Mark Type. Should be collision-resistant across federations.'
+          example: http://localhost:8080/trust-mark-types/exampleType
+          minLength: 10
+          maxLength: 2048
+        logo_uri:
+          type: string
+          format: uri
+          description: Optional URL to a logo for the Trust Mark entity.
+          example: https://example.com/logo
+        exp:
+          type: number
+          description: Optional expiration time of the Trust Mark. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
+        ref:
+          type: string
+          format: uri
+          description: Optional URL referring to human-readable information about the issuance of the Trust Mark.
+        delegation:
+          type: string
+          description: Optional delegation claim as a JWT that delegates the right to issue this Trust Mark
+        dryRun:
+          type: boolean
+          description: 'If true, the request will be executed but not persisted.'
+          example: false
+        iat:
+          type: number
+          description: The time for the trust mark was issued. RFC 7519 NumericDate (seconds since epoch, may contain fractions).
+        trust_mark_lifetime:
+          type: integer
+          description: The lifetime of the Trust Mark in seconds. When present, it indicates how long the Trust Mark should be considered valid from the time of issuance (iat).
     # Account / AccountsResponse / CreateAccount live in optional admin-accounts.yaml
     # (LEGACY account REST). TenantJwk (keys API) lives here; AccountJwk is a schema alias.
     AuthorityHintsResponse:

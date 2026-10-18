@@ -25,6 +25,8 @@ data class RenewDueStatementsArgs(
     val accountId: String? = null,
     /** Report the due statements as [StatementRenewalStatus.DUE] without signing or storing anything. */
     val listOnly: Boolean = false,
+    /** Process persisted key schedules only; never renew statements or import unmanaged accounts. */
+    val keysOnly: Boolean = false,
 )
 
 @Serializable
