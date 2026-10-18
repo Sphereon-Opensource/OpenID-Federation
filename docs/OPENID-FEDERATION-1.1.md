@@ -9,7 +9,8 @@ apply metadata policies and constraints, issue and revoke Trust Marks, and answe
 a federation and registering a client with a provider step by step.
 
 Section numbers in this guide refer to OpenID Federation 1.1 Final unless they are marked as OpenID Federation for
-OpenID Connect 1.1 Final ("OIDC Federation" below).
+OpenID Connect 1.1 Final ("OIDC Federation" below). The [conformance matrix](OPENID-FEDERATION-CONFORMANCE.md) maps
+every normative statement of both specifications, and of Wallet Architectures 1.0 draft 05, to the code that handles it.
 
 ## Concepts
 
