@@ -5,6 +5,7 @@ import com.sphereon.openid.fed.client.command.trustChain.StatementSignatureCheck
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.openid.fed.client.helpers.getSubordinateStatementEndpoint
+import com.sphereon.openid.fed.client.helpers.isFederationEndpointUrl
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.httpResolver.FederationHttpFetchException
 import com.sphereon.openid.fed.openapi.models.Jwk
@@ -157,6 +158,12 @@ internal class DiagnosisPathResolver(
             if (endpoint.isNullOrBlank()) {
                 addPath(paths, DiagnosisPath(prefix, errors + configErrors + ResolutionDiagnosticError(
                     "NO_PATH_TO_TRUST_ANCHOR", "$authority publishes no federation_fetch_endpoint", prefix.size,
+                ), depth = depth + 1))
+                continue
+            }
+            if (!isFederationEndpointUrl(endpoint)) {
+                addPath(paths, DiagnosisPath(prefix, errors + configErrors + ResolutionDiagnosticError(
+                    "NO_PATH_TO_TRUST_ANCHOR", "$authority publishes a federation_fetch_endpoint that is not an https URL without a fragment", prefix.size,
                 ), depth = depth + 1))
                 continue
             }
