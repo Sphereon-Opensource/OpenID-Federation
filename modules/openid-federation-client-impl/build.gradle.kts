@@ -107,6 +107,7 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(sphereonlib.org.jetbrains.kotlin.test.junit)
+                implementation(sphereonlib.io.mockk.mockk)
                 implementation(idklib.sphereon.idk.lib.crypto.kms.provider.software)
                 // HTTP client factory implementation for DI in tests
                 implementation(idklib.sphereon.idk.lib.data.link.http.client.impl)
