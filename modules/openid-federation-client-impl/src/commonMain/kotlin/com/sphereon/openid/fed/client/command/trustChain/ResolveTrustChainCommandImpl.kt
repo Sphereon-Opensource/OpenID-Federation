@@ -12,6 +12,7 @@ import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.client.helpers.checkKidInJwks
 import com.sphereon.openid.fed.client.helpers.getEntityConfigurationEndpoint
 import com.sphereon.openid.fed.client.helpers.getSubordinateStatementEndpoint
+import com.sphereon.openid.fed.client.helpers.isFederationEndpointUrl
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.client.mapper.mapEntityStatement
 import com.sphereon.openid.fed.client.services.trustChainService.TrustChainServiceConst
@@ -419,12 +420,16 @@ class ResolveTrustChainCommandImpl(
 
         val fetchFromEc = getAuthorityFetchEndpoint(authorityEntityConfiguration)
         val cachedSourceBase = trustChainCache?.getApp(sourceEndpointCacheKey(authority, subjectEntityId))
-            ?.takeIf { it.isNotBlank() }
+            ?.takeIf { it.isNotBlank() && isFederationEndpointUrl(it) }
+        if (fetchFromEc != null && !isFederationEndpointUrl(fetchFromEc)) {
+            // §5.1.1: an http or fragment fetch endpoint is refused, not followed or repaired.
+            logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.FETCH_ENDPOINT_INVALID)
+        }
 
         // Prefer source_endpoint (refresh optimization), then federation_fetch_endpoint from EC
         val fetchBases = buildList {
             if (cachedSourceBase != null) add(cachedSourceBase)
-            if (!fetchFromEc.isNullOrBlank()) add(fetchFromEc)
+            if (!fetchFromEc.isNullOrBlank() && isFederationEndpointUrl(fetchFromEc)) add(fetchFromEc)
         }.distinct()
 
         if (fetchBases.isEmpty()) {
@@ -483,7 +488,7 @@ class ResolveTrustChainCommandImpl(
                 // Prefer claim source_endpoint; else remember the working fetch base for refresh
                 val sourceFromClaim = decodedSubordinateStatement.payload["source_endpoint"]
                     ?.jsonPrimitive?.contentOrNull
-                    ?.takeIf { it.isNotBlank() }
+                    ?.takeIf { it.isNotBlank() && isFederationEndpointUrl(it) }
                 val toCache = sourceFromClaim ?: base
                 trustChainCache?.putApp(sourceEndpointCacheKey(authority, subjectEntityId), toCache)
                 if (sourceFromClaim != null) {

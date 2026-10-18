@@ -1,5 +1,7 @@
 package com.sphereon.openid.fed.client.command.entityConfiguration
 
+import com.sphereon.openid.fed.client.helpers.isFederationEndpointUrl
+import kotlinx.serialization.json.contentOrNull
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.core.api.session.ExecutionScopedCommandAdapter
@@ -62,6 +64,14 @@ class GetFederationEndpointsCommandImpl(
                 logger.error("No federation_entity metadata found in entity configuration")
                 return IdkResult.err(InvalidEntityConfigurationError(entityId, "No federation_entity metadata found in entity configuration"))
             }
+
+        // OpenID Federation 1.1 section 5.1.1: federation endpoints are https URLs without a fragment.
+        federationMetadata.entries.firstOrNull { (name, value) ->
+            name.startsWith("federation_") && name.endsWith("_endpoint") &&
+                (value as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.let { !isFederationEndpointUrl(it) } ?: true
+        }?.let { (name, _) ->
+            return IdkResult.err(InvalidEntityConfigurationError(entityId, "$name must be an https URL without a fragment"))
+        }
 
         return try {
             logger.debug("Decoding federation metadata into FederationEntityMetadata")
