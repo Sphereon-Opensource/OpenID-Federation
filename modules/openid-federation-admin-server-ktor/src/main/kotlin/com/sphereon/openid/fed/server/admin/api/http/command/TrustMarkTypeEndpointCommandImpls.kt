@@ -17,6 +17,14 @@ import com.sphereon.openid.fed.openapi.models.CreateTrustMarkTypeIssuerRequest
 import com.sphereon.openid.fed.openapi.models.TrustMarkIssuer
 import com.sphereon.openid.fed.openapi.models.TrustMarkIssuersResponse
 import com.sphereon.openid.fed.openapi.models.TrustMarkTypesResponse
+import com.sphereon.openid.fed.openapi.models.TrustMarkType
+import com.sphereon.openid.fed.openapi.models.TrustMarkTypeRevision
+import com.sphereon.openid.fed.openapi.models.UpdateTrustMarkTypeDefinitionRequest
+import com.sphereon.openid.fed.services.command.trustMark.ListTrustMarkTypeRevisionsArgs
+import com.sphereon.openid.fed.services.command.trustMark.ListTrustMarkTypeRevisionsCommand
+import com.sphereon.openid.fed.services.command.trustMark.UpdateTrustMarkTypeDefinitionArgs
+import com.sphereon.openid.fed.services.command.trustMark.UpdateTrustMarkTypeDefinitionCommand
+import kotlinx.serialization.builtins.ListSerializer
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer as PersistenceTrustMarkIssuer
 import com.sphereon.openid.fed.services.TrustMarkService
 import kotlinx.serialization.encodeToString
@@ -367,6 +375,104 @@ class RemoveTrustMarkTypeIssuerEndpointCommandImpl(
         return if (result.isOk) {
             val apiModel = result.value.toApiModel()
             Ok(jsonResponse(200, json.encodeToString(TrustMarkIssuer.serializer(), apiModel)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}
+
+// ==================== Update Trust Mark Type Definition Endpoint Implementation ====================
+
+/**
+ * Replaces the definition of a trust mark type. The body carries the new `definition` and the `expectedVersion` the
+ * caller read, so a concurrent update is refused with 409 instead of overwritten.
+ */
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<UpdateTrustMarkTypeDefinitionEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(UpdateTrustMarkTypeDefinitionEndpointCommand.COMMAND_ID)
+class UpdateTrustMarkTypeDefinitionEndpointCommandImpl(
+    execution: SessionExecution,
+    private val adminMutationGuard: AdminMutationGuard,
+    private val updateDefinition: UpdateTrustMarkTypeDefinitionCommand,
+    private val tenantContextResolver: TenantContextResolver,
+    private val json: Json
+) : HttpEndpointCommandAdapter(
+    id = UpdateTrustMarkTypeDefinitionEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = UpdateTrustMarkTypeDefinitionEndpointCommand.ENDPOINT
+), UpdateTrustMarkTypeDefinitionEndpointCommand {
+
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        adminMutationGuard.denyIfUnauthorized()?.let { return it }
+
+        val request = applyDuring(args)
+
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
+
+        val req = request.withExtractedParams(UpdateTrustMarkTypeDefinitionEndpointCommand.ENDPOINT.pathPattern)
+        val typeId = req.pathParams["id"]
+            ?: return Ok(errorResponse(400, "Missing path parameter: id"))
+
+        val body = request.body ?: return Ok(errorResponse(400, "Request body is required"))
+        val update = try {
+            json.decodeFromString(UpdateTrustMarkTypeDefinitionRequest.serializer(), body)
+        } catch (e: Exception) {
+            return Ok(errorResponse(400, "Invalid request body: ${e.message}"))
+        }
+
+        val result = updateDefinition.execute(
+            UpdateTrustMarkTypeDefinitionArgs(tenantId, typeId, update.expectedVersion, update.definition)
+        )
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(TrustMarkType.serializer(), result.value)))
+        } else {
+            val error = result.error
+            Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))
+        }
+    }
+}
+
+// ==================== List Trust Mark Type Revisions Endpoint Implementation ====================
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<ListTrustMarkTypeRevisionsEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(ListTrustMarkTypeRevisionsEndpointCommand.COMMAND_ID)
+class ListTrustMarkTypeRevisionsEndpointCommandImpl(
+    execution: SessionExecution,
+    private val listRevisions: ListTrustMarkTypeRevisionsCommand,
+    private val tenantContextResolver: TenantContextResolver,
+    private val json: Json
+) : HttpEndpointCommandAdapter(
+    id = ListTrustMarkTypeRevisionsEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = ListTrustMarkTypeRevisionsEndpointCommand.ENDPOINT
+), ListTrustMarkTypeRevisionsEndpointCommand {
+
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        val request = applyDuring(args)
+
+        val tenantId = tenantContextResolver.resolveTenantId(request)
+            ?: return Ok(errorResponse(404, "Tenant not found"))
+
+        val req = request.withExtractedParams(ListTrustMarkTypeRevisionsEndpointCommand.ENDPOINT.pathPattern)
+        val typeId = req.pathParams["id"]
+            ?: return Ok(errorResponse(400, "Missing path parameter: id"))
+
+        val result = listRevisions.execute(ListTrustMarkTypeRevisionsArgs(tenantId, typeId))
+        return if (result.isOk) {
+            Ok(jsonResponse(200, json.encodeToString(ListSerializer(TrustMarkTypeRevision.serializer()), result.value)))
         } else {
             val error = result.error
             Ok(errorResponse(error.httpStatusValue, error.message.defaultMessage))

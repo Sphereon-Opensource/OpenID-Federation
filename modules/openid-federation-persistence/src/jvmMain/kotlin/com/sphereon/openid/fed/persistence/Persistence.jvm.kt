@@ -44,6 +44,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMarkIssuer
 import com.sphereon.openid.fed.persistence.models.TrustMarkIssuerQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkType
+import com.sphereon.openid.fed.persistence.models.TrustMarkTypeRevision
 import com.sphereon.openid.fed.persistence.models.TrustMarkOwner
 import com.sphereon.openid.fed.persistence.models.TrustMarkOwnerQueries
 import com.sphereon.openid.fed.persistence.models.TrustAnchorHint
@@ -105,6 +106,8 @@ actual object Persistence {
         22L to ("22.sqm" to "Create TrustMarkOwner table and the issuer's Trust Mark delegation per type"),
         23L to ("23.sqm" to "Separate historical key expiry, revocation reason tokens and operator descriptions"),
         24L to ("24.sqm" to "Persist account-role metadata-policy revision and operation fences"),
+        25L to ("25.sqm" to "Record the last signing-key operation generation, token and request snapshot per account"),
+        26L to ("26.sqm" to "Add versioned Trust Mark type definitions and their revision history"),
     )
 
     private val driver: SqlDriver
@@ -150,6 +153,7 @@ actual object Persistence {
             TrustMarkIssuerAdapter = TrustMarkIssuer.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkOwnerAdapter = TrustMarkOwner.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkTypeRevisionAdapter = TrustMarkTypeRevision.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             MetadataPolicyAdapter = MetadataPolicy.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustAnchorHintAdapter = TrustAnchorHint.Adapter(
                 JavaUuidStringAdapter,
