@@ -49,7 +49,9 @@ class FederationHttpRegistryParityTest {
                 GetTrustMarkAccountEndpointCommand.COMMAND_ID to GetTrustMarkAccountEndpointCommand.ENDPOINT,
                 PostGetTrustMarkAccountEndpointCommand.COMMAND_ID to PostGetTrustMarkAccountEndpointCommand.ENDPOINT,
                 HistoricalKeysRootEndpointCommand.COMMAND_ID to HistoricalKeysRootEndpointCommand.ENDPOINT,
+                PostHistoricalKeysRootEndpointCommand.COMMAND_ID to PostHistoricalKeysRootEndpointCommand.ENDPOINT,
                 HistoricalKeysAccountEndpointCommand.COMMAND_ID to HistoricalKeysAccountEndpointCommand.ENDPOINT,
+                PostHistoricalKeysAccountEndpointCommand.COMMAND_ID to PostHistoricalKeysAccountEndpointCommand.ENDPOINT,
                 ResolveRootEndpointCommand.COMMAND_ID to ResolveRootEndpointCommand.ENDPOINT,
                 PostResolveRootEndpointCommand.COMMAND_ID to PostResolveRootEndpointCommand.ENDPOINT,
                 ResolveAccountEndpointCommand.COMMAND_ID to ResolveAccountEndpointCommand.ENDPOINT,
@@ -74,6 +76,28 @@ class FederationHttpRegistryParityTest {
             }.get(dispatcher) as Map<*, *>
             val adapter = assertNotNull(adapterProviders[FederationHttpAdapter.ID] as? Lazy<*>).value as HttpAdapter
             assertEquals(FederationHttpAdapter.ID, adapter.id)
+        } finally {
+            app.destroy()
+        }
+    }
+
+    // OpenID Federation 1.1 sections 8.7.1 and 8.8: when client authentication is used, the request MUST be a POST
+    // with the authentication parameters in the body. The historical keys endpoint can be configured to require it,
+    // so it needs a POST route like the other federation endpoints.
+    @Test
+    fun theHistoricalKeysEndpointAcceptsPostForClientAuthentication() = runTest {
+        val app = createFederationServerAppGraph(Any())
+        try {
+            val session = app.userContextManager.getAnonymous().sessionContextManager
+                .createOrGetFromId("federation-http-historical-keys-post", principalType = PrincipalType.USER)
+            val catalog = (session.graph as HttpAdapterCatalog.Graph).httpAdapterCatalog
+            val endpoints = assertNotNull(catalog.descriptionById(FederationHttpAdapter.ID)).endpoints
+            for (path in listOf("/historical-keys", "/{username}/historical-keys")) {
+                assertTrue(
+                    endpoints.any { it.method == com.sphereon.core.api.http.describe.HttpMethod.POST && path in it.pathPatterns },
+                    "POST $path must be routed",
+                )
+            }
         } finally {
             app.destroy()
         }

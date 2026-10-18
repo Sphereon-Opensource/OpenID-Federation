@@ -17,6 +17,7 @@ import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.common.Constants
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.JwkService
+import io.ktor.http.decodeURLQueryComponent
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.ContributesIntoMap
@@ -116,5 +117,89 @@ class HistoricalKeysAccountEndpointCommandImpl(
             val error = result.error
             Ok(FederationErrorResponses.fromServiceError(error))
         }
+    }
+}
+
+/** The signed historical keys of [tenantId] as an `application/jwk-set+jwt` response. */
+private suspend fun historicalKeysResponse(jwkService: JwkService, tenantId: String): GenericHttpResponse {
+    val result = jwkService.getFederationHistoricalKeysJwt(tenantId)
+    return if (result.isOk) {
+        GenericHttpResponse(statusCode = 200, headers = mapOf("Content-Type" to "application/jwk-set+jwt"), body = result.value)
+    } else {
+        FederationErrorResponses.fromServiceError(result.error)
+    }
+}
+
+private fun formParams(body: String): Map<String, String> = body.split('&')
+    .filter { it.isNotEmpty() }
+    .associate { pair ->
+        val name = pair.substringBefore('=')
+        val value = pair.substringAfter('=', "")
+        name.decodeURLQueryComponent(plusIsSpace = true) to value.decodeURLQueryComponent(plusIsSpace = true)
+    }
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostHistoricalKeysRootEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostHistoricalKeysRootEndpointCommand.COMMAND_ID)
+class PostHistoricalKeysRootEndpointCommandImpl(
+    execution: SessionExecution,
+    private val tenantContextResolver: TenantContextResolver,
+    private val jwkService: JwkService,
+    private val clientAuth: FederationEndpointClientAuthService,
+) : HttpEndpointCommandAdapter(
+    id = PostHistoricalKeysRootEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = PostHistoricalKeysRootEndpointCommand.ENDPOINT
+), PostHistoricalKeysRootEndpointCommand {
+
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        val request = applyDuring(args)
+        val tenantId = tenantContextResolver.resolveTenantIdByName(Constants.DEFAULT_ROOT_USERNAME)
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
+            FederationEndpointKind.HISTORICAL_KEYS, methodIsPost = true,
+            params = formParams(request.body.orEmpty()),
+        )?.let { return Ok(it) }
+        return Ok(historicalKeysResponse(jwkService, tenantId))
+    }
+}
+
+@Inject
+@SingleIn(SessionScope::class)
+@ContributesBinding(SessionScope::class, binding = binding<PostHistoricalKeysAccountEndpointCommand>())
+@ContributesIntoMap(SessionScope::class, binding = binding<HttpEndpointCommand>())
+@StringKey(PostHistoricalKeysAccountEndpointCommand.COMMAND_ID)
+class PostHistoricalKeysAccountEndpointCommandImpl(
+    execution: SessionExecution,
+    private val tenantContextResolver: TenantContextResolver,
+    private val jwkService: JwkService,
+    private val clientAuth: FederationEndpointClientAuthService,
+) : HttpEndpointCommandAdapter(
+    id = PostHistoricalKeysAccountEndpointCommand.COMMAND_ID,
+    execution = execution,
+    endpoint = PostHistoricalKeysAccountEndpointCommand.ENDPOINT
+), PostHistoricalKeysAccountEndpointCommand {
+
+    override suspend fun doExecute(
+        args: GenericHttpRequest,
+        applyDuring: (GenericHttpRequest) -> GenericHttpRequest
+    ): IdkResult<GenericHttpResponse, IdkError> {
+        val request = applyDuring(args)
+        val username = request.withExtractedParams(endpoint.pathPattern).pathParams["username"]
+            ?: return Ok(FederationErrorResponses.invalidRequest("Username parameter required"))
+        val tenantId = tenantContextResolver.resolveTenantIdByName(username)
+            ?: return Ok(FederationErrorResponses.notFound("Tenant not found"))
+        enforceFederationClientAuth(
+            clientAuth, tenantContextResolver, username,
+            FederationEndpointKind.HISTORICAL_KEYS, methodIsPost = true,
+            params = formParams(request.body.orEmpty()),
+        )?.let { return Ok(it) }
+        return Ok(historicalKeysResponse(jwkService, tenantId))
     }
 }
