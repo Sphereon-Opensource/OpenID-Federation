@@ -32,6 +32,14 @@ class FederationEndpointClientAuthService(
     private val configBinder: OidfConfigBinder,
     private val verifyClientAuth: VerifyFederationClientAuthentication,
 ) {
+    /** The outcome of §8.8 client authentication at a federation endpoint. */
+    data class Outcome(
+        /** A §8.9 error response when the request is refused, otherwise null. */
+        val denial: GenericHttpResponse?,
+        /** The Entity Identifier of the requesting party when it authenticated, otherwise null. */
+        val authenticatedClient: String? = null,
+    )
+
     /**
      * @return `null` when authentication succeeds or is not required; otherwise a §8.9 error response.
      */
@@ -41,7 +49,16 @@ class FederationEndpointClientAuthService(
         formOrQueryParams: Map<String, String>,
         hostTenantId: String,
         audienceEntityId: String,
-    ): GenericHttpResponse? {
+    ): GenericHttpResponse? = authenticate(endpoint, methodIsPost, formOrQueryParams, hostTenantId, audienceEntityId).denial
+
+    /** Like [enforce], and also reports which client authenticated. */
+    suspend fun authenticate(
+        endpoint: FederationEndpointKind,
+        methodIsPost: Boolean,
+        formOrQueryParams: Map<String, String>,
+        hostTenantId: String,
+        audienceEntityId: String,
+    ): Outcome {
         val fed = configBinder.getFederationConfig()
         val methods = fed.endpointAuthMethods.forEndpoint(endpoint)
             .map { it.trim().lowercase() }
@@ -56,7 +73,7 @@ class FederationEndpointClientAuthService(
         val hasAssertion = !assertionJwt.isNullOrBlank()
 
         if (!hasAssertion) {
-            return if (allowsNone) {
+            return Outcome(if (allowsNone) {
                 null
             } else if (!methodIsPost) {
                 FederationErrorResponses.invalidRequest(
@@ -66,32 +83,32 @@ class FederationEndpointClientAuthService(
                 FederationErrorResponses.invalidClient(
                     "Missing client_assertion; endpoint requires private_key_jwt (OIDFed §8.8)"
                 )
-            }
+            })
         }
 
         if (!allowsPrivateKeyJwt) {
-            return FederationErrorResponses.invalidClient(
+            return Outcome(FederationErrorResponses.invalidClient(
                 "private_key_jwt is not accepted at this endpoint (configured methods: ${methods.joinToString()})"
-            )
+            ))
         }
 
         if (!methodIsPost) {
-            return FederationErrorResponses.invalidRequest(
+            return Outcome(FederationErrorResponses.invalidRequest(
                 "When client authentication is used, the request MUST use HTTP POST (OIDFed §8.8)"
-            )
+            ))
         }
 
         if (assertionType != JWT_BEARER_ASSERTION_TYPE) {
-            return FederationErrorResponses.invalidClient(
+            return Outcome(FederationErrorResponses.invalidClient(
                 "client_assertion_type must be $JWT_BEARER_ASSERTION_TYPE"
-            )
+            ))
         }
 
         val clientIdFromBody = formOrQueryParams["client_id"]
         val clientIdHint = clientIdFromBody ?: extractSubFromJwt(assertionJwt!!)
-            ?: return FederationErrorResponses.invalidClient(
+            ?: return Outcome(FederationErrorResponses.invalidClient(
                 "Unable to determine client identity from client_id or assertion sub"
-            )
+            ))
 
         // Build IDK PrivateKeyJwt envelope (same shape as OAuth AS token endpoint)
         val authConfig = ClientAuthenticationConfig.PrivateKeyJwt(
@@ -116,9 +133,9 @@ class FederationEndpointClientAuthService(
         )
 
         return if (result.isOk) {
-            null
+            Outcome(denial = null, authenticatedClient = authConfig.assertion.clientId)
         } else {
-            FederationErrorResponses.fromServiceError(result.error)
+            Outcome(FederationErrorResponses.fromServiceError(result.error))
         }
     }
 

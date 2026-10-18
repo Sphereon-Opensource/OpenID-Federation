@@ -40,6 +40,7 @@ interface ResolutionService {
         tenantId: String,
         sub: String,
         trustAnchors: Array<String>,
-        entityTypes: Array<String>?
+        entityTypes: Array<String>?,
+        audience: String? = null,
     ): FederationResult<String>
 }

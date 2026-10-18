@@ -61,7 +61,8 @@ class GetSignedResolveResponseJwtCommandImpl(
         args: GetSignedResolveResponseJwtArgs,
         applyDuring: (GetSignedResolveResponseJwtArgs) -> GetSignedResolveResponseJwtArgs
     ): IdkResult<String, FederationError> {
-        val (tenantId, sub, trustAnchors, entityTypes) = applyDuring(args)
+        val applied = applyDuring(args)
+        val (tenantId, sub, trustAnchors, entityTypes) = applied
 
         logger.info("Getting signed resolve response JWT for subject: $sub")
 
@@ -101,8 +102,10 @@ class GetSignedResolveResponseJwtCommandImpl(
                         if (!claims.containsKey("exp")) null else requireNotNull(ExactResolveExpiry.parse(claims["exp"]))
                     }
                     val expiry = requireNotNull(expiries.minOrNull())
+                    // §8.3.2: aud only for an authenticated requester, and then only its Entity Identifier.
+                    val audience = applied.audience?.let { mapOf("aud" to kotlinx.serialization.json.JsonPrimitive(it)) }.orEmpty()
                     val payload = JsonObject(Json.encodeToJsonElement(ResolveResponse.serializer(), response).jsonObject +
-                        ("exp" to JsonUnquotedLiteral(expiry.json.content)))
+                        ("exp" to JsonUnquotedLiteral(expiry.json.content)) + audience)
                     jwtService.signPayload(payload, header = jwtHeader, kid = key.kid, kmsKeyRef = key.kmsKeyRef, kmsProviderId = key.kms)
                 } catch (e: Exception) {
                     logger.error("Failed to sign resolve response JWT", e)

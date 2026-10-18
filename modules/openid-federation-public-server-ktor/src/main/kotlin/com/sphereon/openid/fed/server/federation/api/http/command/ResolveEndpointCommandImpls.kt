@@ -12,6 +12,7 @@ import com.sphereon.openid.fed.server.federation.api.http.FederationErrorRespons
 import com.sphereon.openid.fed.server.federation.api.http.MultiValueParams
 import com.sphereon.openid.fed.server.federation.api.http.auth.FederationEndpointClientAuthService
 import com.sphereon.openid.fed.server.federation.api.http.auth.asAuthParams
+import com.sphereon.openid.fed.server.federation.api.http.auth.authenticateFederationClient
 import com.sphereon.openid.fed.server.federation.api.http.auth.enforceFederationClientAuth
 import com.sphereon.openid.fed.core.config.FederationEndpointKind
 import com.sphereon.di.session.SessionScope
@@ -99,11 +100,12 @@ class PostResolveRootEndpointCommandImpl(
         val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val multi = MultiValueParams.parseFormMulti(body)
 
-        enforceFederationClientAuth(
+        val authentication = authenticateFederationClient(
             clientAuth, tenantContextResolver, Constants.DEFAULT_ROOT_USERNAME,
             FederationEndpointKind.RESOLVE, methodIsPost = true,
             params = multi.mapValues { it.value.lastOrNull().orEmpty() },
-        )?.let { return Ok(it) }
+        )
+        authentication.denial?.let { return Ok(it) }
 
         val sub = MultiValueParams.first(multi, "sub")
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
@@ -112,7 +114,7 @@ class PostResolveRootEndpointCommandImpl(
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes, authentication.authenticatedClient)
     }
 }
 
@@ -196,11 +198,12 @@ class PostResolveAccountEndpointCommandImpl(
         val body = request.body ?: return Ok(FederationErrorResponses.invalidRequest("Request body is required"))
         val multi = MultiValueParams.parseFormMulti(body)
 
-        enforceFederationClientAuth(
+        val authentication = authenticateFederationClient(
             clientAuth, tenantContextResolver, username,
             FederationEndpointKind.RESOLVE, methodIsPost = true,
             params = multi.mapValues { it.value.lastOrNull().orEmpty() },
-        )?.let { return Ok(it) }
+        )
+        authentication.denial?.let { return Ok(it) }
 
         val sub = MultiValueParams.first(multi, "sub")
             ?: return Ok(FederationErrorResponses.invalidRequest("Missing 'sub' parameter"))
@@ -209,7 +212,7 @@ class PostResolveAccountEndpointCommandImpl(
             .takeIf { it.isNotEmpty() }
             ?.toTypedArray()
 
-        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes)
+        return resolveChain(resolutionService, tenantId, sub, trustAnchors, entityTypes, authentication.authenticatedClient)
     }
 }
 
@@ -220,7 +223,8 @@ private suspend fun resolveChain(
     tenantId: String,
     sub: String,
     trustAnchors: List<String>,
-    entityTypes: Array<String>?
+    entityTypes: Array<String>?,
+    authenticatedClient: String? = null,
 ): IdkResult<GenericHttpResponse, IdkError> {
     if (trustAnchors.isEmpty()) {
         return Ok(
@@ -234,7 +238,8 @@ private suspend fun resolveChain(
         tenantId = tenantId,
         sub = sub,
         trustAnchors = trustAnchors.toTypedArray(),
-        entityTypes = entityTypes
+        entityTypes = entityTypes,
+        audience = authenticatedClient,
     )
 
     return if (result.isOk) {
