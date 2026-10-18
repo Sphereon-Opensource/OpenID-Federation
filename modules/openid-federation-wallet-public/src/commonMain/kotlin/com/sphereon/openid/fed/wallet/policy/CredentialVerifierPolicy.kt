@@ -30,6 +30,8 @@ object CredentialVerifierPolicy {
         /** How the request matched a registered query, when [valid] is true and constraints applied. */
         val matchKind: DcqlRefinement.MatchKind? = null,
         val registeredIndex: Int? = null,
+        /** The request query after a federation `dcql_queries` policy was applied to it, when one applied. */
+        val effectiveDcqlQueries: JsonArray? = null,
     )
 
     /**
@@ -77,14 +79,18 @@ object CredentialVerifierPolicy {
     /**
      * Validate a request DCQL query against federation-managed `dcql_queries`.
      *
-     * - If federation does not publish `dcql_queries`, any request query is accepted (no constraint).
+     * - If federation does not publish `dcql_queries` but [metadataPolicy] has a `dcql_queries` policy for
+     *   `openid_credential_verifier`, that policy is applied to the request's `dcql_query` (Wallet Architectures
+     *   section 7.1.1); a policy violation rejects the request.
+     * - Otherwise, without published `dcql_queries`, any request query is accepted (no constraint).
      * - If federation publishes a non-empty list, the request query MUST be **equal to** or a
      *   **constrained refinement of** one registered query ([DcqlRefinement]).
      * - Missing request query is invalid when constraints exist.
      */
     fun validateDcqlQuery(
         requestDcqlQuery: JsonElement?,
-        federatedVerifierMetadata: JsonObject?
+        federatedVerifierMetadata: JsonObject?,
+        metadataPolicy: JsonObject? = null,
     ): DcqlValidation {
         val registered = federatedVerifierMetadata?.get("dcql_queries") as? JsonArray
         if (federatedVerifierMetadata?.containsKey("dcql_queries") == true &&
@@ -92,7 +98,8 @@ object CredentialVerifierPolicy {
             return DcqlValidation(valid = false, reason = "Federated dcql_queries must be a nonempty array of query objects")
         }
         if (registered == null) {
-            return DcqlValidation(valid = true, reason = "No federation dcql_queries constraint")
+            return applyDcqlQueriesPolicy(requestDcqlQuery, metadataPolicy)
+                ?: DcqlValidation(valid = true, reason = "No federation dcql_queries constraint")
         }
 
         if (requestDcqlQuery == null) {
@@ -118,6 +125,42 @@ object CredentialVerifierPolicy {
                 matchKind = DcqlRefinement.MatchKind.NONE,
             )
         }
+    }
+
+    /**
+     * Applies the `openid_credential_verifier.dcql_queries` operators of [metadataPolicy] to the request's query, or
+     * returns null when the policy has none.
+     */
+    private fun applyDcqlQueriesPolicy(requestDcqlQuery: JsonElement?, metadataPolicy: JsonObject?): DcqlValidation? {
+        val typePolicy = metadataPolicy?.get(ENTITY_TYPE) as? JsonObject ?: return null
+        val queriesPolicy = typePolicy["dcql_queries"] ?: return null
+        val candidate = JsonObject(if (requestDcqlQuery == null) emptyMap() else mapOf("dcql_queries" to JsonArray(listOf(requestDcqlQuery))))
+        val applied = MetadataPolicyOperators.applyPolicy(
+            metadata = JsonObject(mapOf(ENTITY_TYPE to candidate)),
+            policy = JsonObject(mapOf(ENTITY_TYPE to JsonObject(mapOf("dcql_queries" to queriesPolicy)))),
+            entityType = ENTITY_TYPE,
+        )
+        if (!applied.isValid) {
+            return DcqlValidation(
+                valid = false,
+                reason = "Request dcql_query does not satisfy the federation dcql_queries policy: ${applied.errors.joinToString("; ")}",
+            )
+        }
+        val effective = applied.metadata["dcql_queries"] as? JsonArray
+        // subset_of and one_of remove what the federation does not permit, and value replaces it: the request is only
+        // honoured when the policy leaves the request's own query in place.
+        if (requestDcqlQuery != null && (effective == null || requestDcqlQuery !in effective)) {
+            return DcqlValidation(
+                valid = false,
+                reason = "Request dcql_query is not permitted by the federation dcql_queries policy",
+                effectiveDcqlQueries = effective,
+            )
+        }
+        return DcqlValidation(
+            valid = true,
+            reason = "Request dcql_query satisfies the federation dcql_queries policy",
+            effectiveDcqlQueries = effective,
+        )
     }
 
     private fun JsonElement.asJwksObject(): JsonObject? {

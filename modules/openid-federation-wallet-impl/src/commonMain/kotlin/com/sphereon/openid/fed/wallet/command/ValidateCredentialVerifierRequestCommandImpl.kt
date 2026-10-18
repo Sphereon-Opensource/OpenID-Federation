@@ -48,8 +48,8 @@ class ValidateCredentialVerifierRequestCommandImpl(
         args: ValidateCredentialVerifierRequestArgs,
         applyDuring: (ValidateCredentialVerifierRequestArgs) -> ValidateCredentialVerifierRequestArgs
     ): IdkResult<CredentialVerifierRequestValidationResult, FederationError> {
-        val (entityMetadata, requestUri, responseUri, redirectUri, clientMetadata, requestDcqlQuery) =
-            applyDuring(args)
+        val applied = applyDuring(args)
+        val (entityMetadata, requestUri, responseUri, redirectUri, clientMetadata, requestDcqlQuery) = applied
 
         val verifierMeta = CredentialVerifierPolicy.verifierMetadata(entityMetadata) ?: entityMetadata
 
@@ -80,7 +80,7 @@ class ValidateCredentialVerifierRequestCommandImpl(
         }
 
         // 3. DCQL constraints
-        val dcql = CredentialVerifierPolicy.validateDcqlQuery(requestDcqlQuery, verifierMeta)
+        val dcql = CredentialVerifierPolicy.validateDcqlQuery(requestDcqlQuery, verifierMeta, applied.metadataPolicy)
         if (!dcql.valid) {
             return IdkResult.err(
                 InvalidRequestError(dcql.reason ?: "dcql_query rejected by federation policy")
