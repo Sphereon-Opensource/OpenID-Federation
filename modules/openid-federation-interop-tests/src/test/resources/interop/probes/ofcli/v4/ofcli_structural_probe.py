@@ -125,21 +125,21 @@ def validate_chain(document: dict[str, Any], expected_path: list[str]) -> dict[s
     if not isinstance(chain_obj, dict) or not isinstance(chain_obj.get("chain"), list):
         raise ProbeError("ofcli chain details were malformed")
     links = chain_obj["chain"]
-    if len(links) != 2 * len(expected_path) - 1:
+    # A Trust Chain (OpenID Federation 1.1 section 4) is the leaf's Entity Configuration, one
+    # Subordinate Statement per authority hop, and the Trust Anchor's Entity Configuration.
+    # Intermediates' own Entity Configurations are not part of it.
+    expected_links = [(expected_path[0], expected_path[0])]
+    expected_links += [(expected_path[k], expected_path[k - 1]) for k in range(1, len(expected_path))]
+    expected_links.append((expected_path[-1], expected_path[-1]))
+    if len(links) != len(expected_links):
         raise ProbeError("chain statement count did not match the expected authority path")
     observed: list[dict[str, str]] = []
-    for index, item in enumerate(links):
+    for item, (expected_issuer, expected_subject) in zip(links, expected_links):
         if not isinstance(item, dict):
             raise ProbeError("chain link was malformed")
         issuer, subject = item.get("iss"), item.get("sub")
         if not isinstance(issuer, str) or not isinstance(subject, str):
             raise ProbeError("chain link omitted issuer or subject")
-        pair_index = index // 2
-        if index % 2 == 0:
-            expected_issuer = expected_subject = expected_path[pair_index]
-        else:
-            expected_issuer = expected_path[pair_index + 1]
-            expected_subject = expected_path[pair_index]
         if issuer != expected_issuer or subject != expected_subject:
             raise ProbeError("chain issuer/subject links differed from the declared path")
         observed.append({"iss": issuer, "sub": subject})
