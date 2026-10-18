@@ -34,7 +34,9 @@ import com.sphereon.openid.fed.services.command.trustMark.FindAllTrustMarkTypesB
 import com.sphereon.openid.fed.services.command.trustMark.FindTrustMarkTypeByIdCommand
 import com.sphereon.openid.fed.services.command.trustMark.GetIssuersForTrustMarkTypeCommand
 import com.sphereon.openid.fed.services.command.trustMark.GetTrustMarksForAccountCommand
+import com.sphereon.openid.fed.services.command.trustMark.ListTrustMarkTypeRevisionsCommand
 import com.sphereon.openid.fed.services.command.trustMark.RemoveIssuerFromTrustMarkTypeCommand
+import com.sphereon.openid.fed.services.command.trustMark.UpdateTrustMarkTypeDefinitionCommand
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
@@ -110,6 +112,8 @@ private fun buildAdminEndpoints(
         CreateTrustMarkTypeCommand.ENDPOINT.copy(handlerCommandId = CreateTrustMarkTypeEndpointCommand.COMMAND_ID),
         FindTrustMarkTypeByIdCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkTypeEndpointCommand.COMMAND_ID),
         DeleteTrustMarkTypeCommand.ENDPOINT.copy(handlerCommandId = DeleteTrustMarkTypeEndpointCommand.COMMAND_ID),
+        UpdateTrustMarkTypeDefinitionCommand.ENDPOINT.copy(handlerCommandId = UpdateTrustMarkTypeDefinitionEndpointCommand.COMMAND_ID),
+        ListTrustMarkTypeRevisionsCommand.ENDPOINT.copy(handlerCommandId = ListTrustMarkTypeRevisionsEndpointCommand.COMMAND_ID),
         GetIssuersForTrustMarkTypeCommand.ENDPOINT.copy(handlerCommandId = GetTrustMarkTypeIssuersEndpointCommand.COMMAND_ID),
         AddIssuerToTrustMarkTypeCommand.ENDPOINT.copy(handlerCommandId = AddTrustMarkTypeIssuerEndpointCommand.COMMAND_ID),
         RemoveIssuerFromTrustMarkTypeCommand.ENDPOINT.copy(handlerCommandId = RemoveTrustMarkTypeIssuerEndpointCommand.COMMAND_ID),

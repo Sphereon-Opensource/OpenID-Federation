@@ -25,6 +25,8 @@ import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.TrustMark
 import com.sphereon.openid.fed.persistence.Persistence
+import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
+import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.JwkService
@@ -62,21 +64,32 @@ class GetTrustMarksForAccountCommandImpl(
 }
 
 // CreateTrustMarkCommand Implementation
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkCommand>())
-class CreateTrustMarkCommandImpl(
+class CreateTrustMarkCommandImpl internal constructor(
     execution: SessionExecution,
     private val jwtService: JwtService,
     private val tenantContextResolver: TenantContextResolver,
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
+    private val trustMarkQueries: TrustMarkQueries,
+    private val trustMarkTypeQueries: TrustMarkTypeQueries,
 ) : TypedServiceCommandAdapter<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>(
     commandId = CreateTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<CreateTrustMarkArgs>(),
     outputTypeToken = typeToken<CreateTrustMarkResult>()
 ), CreateTrustMarkCommand {
     private val logger = execution.federationLogger("CreateTrustMarkCommand")
-    private val trustMarkQueries = Persistence.trustMarkQueries
+
+    @Inject
+    constructor(
+        execution: SessionExecution,
+        jwtService: JwtService,
+        tenantContextResolver: TenantContextResolver,
+        resolveSigningKey: ResolveAccountSigningKeyCommand,
+    ) : this(
+        execution, jwtService, tenantContextResolver, resolveSigningKey,
+        Persistence.trustMarkQueries, Persistence.trustMarkTypeQueries,
+    )
 
     override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
         val (tenantId, request, currentTimeMillis) = applyDuring(args)
@@ -87,8 +100,14 @@ class CreateTrustMarkCommandImpl(
         if (resolved.isErr) return resolved.error.asErrorResult()
         val key = resolved.value
         // A Trust Mark of a type the account issues under delegation carries that delegation (OIDFed 1.1 section 7.2).
-        val delegation = request.delegation
-            ?: Persistence.trustMarkTypeQueries.findByAccountIdAndIdentifier(tenantId, request.trustMarkType).executeAsOneOrNull()?.delegation
+        val type = trustMarkTypeQueries.findByAccountIdAndIdentifier(tenantId, request.trustMarkType).executeAsOneOrNull()
+        val delegation = request.delegation ?: type?.delegation
+        // The type's definition supplies the values a request leaves out; explicit request values win.
+        val definition = TrustMarkTypeDefinitions.decode(type?.definition)
+        val logoUri = request.logoUri ?: definition?.logoUri
+        val ref = request.ref ?: definition?.ref
+        val exp = request.exp
+            ?: if (request.trustMarkLifetime == null) definition?.lifetimeSeconds?.let { iat + it } else null
 
         return try {
 
@@ -97,11 +116,11 @@ class CreateTrustMarkCommandImpl(
                 .sub(request.sub)
                 .trustMarkType(request.trustMarkType)
                 .iat(iat)
-                .logoUri(request.logoUri)
-                .ref(request.ref)
+                .logoUri(logoUri)
+                .ref(ref)
                 .delegation(delegation)
                 .trustMarkLifetime(request.trustMarkLifetime)
-            if (request.exp != null) trustMark.exp(request.exp)
+            if (exp != null) trustMark.exp(exp)
 
             val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg)
             val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms)
@@ -112,7 +131,7 @@ class CreateTrustMarkCommandImpl(
                 return IdkResult.ok(CreateTrustMarkResult(trustMarkValue = jwt, trustMarkType = request.trustMarkType, sub = request.sub, accountId = tenantId, iat = iat))
             }
 
-            val entity = trustMarkQueries.create(tenantId, request.trustMarkType, request.sub, jwt, iat.toInt(), request.exp?.toInt()).executeAsOne()
+            val entity = trustMarkQueries.create(tenantId, request.trustMarkType, request.sub, jwt, iat.toInt(), exp?.toInt()).executeAsOne()
             IdkResult.ok(CreateTrustMarkResult(accountId = entity.account_id, trustMarkValue = entity.trust_mark_value, id = entity.id, iat = entity.iat.toDouble(), sub = entity.sub, trustMarkType = entity.trust_mark_id, exp = entity.exp?.toDouble()))
         } catch (e: Exception) {
             logger.error("Failed to create trust mark", e)

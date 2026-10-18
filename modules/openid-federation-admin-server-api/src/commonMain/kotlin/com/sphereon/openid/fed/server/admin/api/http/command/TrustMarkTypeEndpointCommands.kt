@@ -125,3 +125,38 @@ interface RemoveTrustMarkTypeIssuerEndpointCommand : HttpEndpointCommand {
         )
     }
 }
+
+// ==================== Update Trust Mark Type Definition Endpoint ====================
+
+interface UpdateTrustMarkTypeDefinitionEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.update-trust-mark-type-definition"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.PUT,
+            pathPattern = "/trust-mark-types/{id}",
+            consumes = setOf(MediaType.ApplicationJson),
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "updateTrustMarkTypeDefinition",
+            tags = setOf("trust-marks"),
+            summary = "Update the definition of a trust mark type"
+        )
+    }
+}
+
+// ==================== List Trust Mark Type Revisions Endpoint ====================
+
+interface ListTrustMarkTypeRevisionsEndpointCommand : HttpEndpointCommand {
+    companion object {
+        const val COMMAND_ID = "fed.admin.list-trust-mark-type-revisions"
+
+        val ENDPOINT = HttpEndpointDescriptor(
+            method = HttpMethod.GET,
+            pathPattern = "/trust-mark-types/{id}/revisions",
+            produces = setOf(MediaType.ApplicationJson),
+            operationId = "listTrustMarkTypeRevisions",
+            tags = setOf("trust-marks"),
+            summary = "List the definition revisions of a trust mark type"
+        )
+    }
+}

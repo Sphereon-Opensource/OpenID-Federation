@@ -82,6 +82,8 @@ class AdminHttpRegistryParityTest {
                 CreateTrustMarkTypeEndpointCommand.COMMAND_ID to CreateTrustMarkTypeEndpointCommand.ENDPOINT,
                 GetTrustMarkTypeEndpointCommand.COMMAND_ID to GetTrustMarkTypeEndpointCommand.ENDPOINT,
                 DeleteTrustMarkTypeEndpointCommand.COMMAND_ID to DeleteTrustMarkTypeEndpointCommand.ENDPOINT,
+                UpdateTrustMarkTypeDefinitionEndpointCommand.COMMAND_ID to UpdateTrustMarkTypeDefinitionEndpointCommand.ENDPOINT,
+                ListTrustMarkTypeRevisionsEndpointCommand.COMMAND_ID to ListTrustMarkTypeRevisionsEndpointCommand.ENDPOINT,
                 GetTrustMarkTypeIssuersEndpointCommand.COMMAND_ID to GetTrustMarkTypeIssuersEndpointCommand.ENDPOINT,
                 AddTrustMarkTypeIssuerEndpointCommand.COMMAND_ID to AddTrustMarkTypeIssuerEndpointCommand.ENDPOINT,
                 RemoveTrustMarkTypeIssuerEndpointCommand.COMMAND_ID to RemoveTrustMarkTypeIssuerEndpointCommand.ENDPOINT,

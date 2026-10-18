@@ -1,0 +1,16 @@
+ALTER TABLE TrustMarkType ADD COLUMN definition TEXT;
+ALTER TABLE TrustMarkType ADD COLUMN version BIGINT NOT NULL DEFAULT 1;
+ALTER TABLE TrustMarkType ADD CONSTRAINT trust_mark_type_version_positive CHECK (version >= 1);
+
+CREATE TABLE TrustMarkTypeRevision (
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    trust_mark_type_id UUID AS kotlin.String NOT NULL,
+    version BIGINT NOT NULL,
+    definition TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_TrustMarkTypeRevisionType FOREIGN KEY (trust_mark_type_id) REFERENCES TrustMarkType (id) ON DELETE CASCADE,
+    CONSTRAINT unique_trust_mark_type_revision_version UNIQUE (trust_mark_type_id, version)
+);
+
+INSERT INTO TrustMarkTypeRevision (trust_mark_type_id, version, definition)
+SELECT id, 1, NULL FROM TrustMarkType;
