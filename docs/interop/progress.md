@@ -73,3 +73,7 @@ Owner: codex:01a140fa-fbfa-7850-a386-6299cde97b7b
 - The original core result `B7ef59cdec3524eb7` remains a separate older baseline (43 full-client tests plus the two original real core directions). It is not added to or represented as part of the 21-test unit result.
 - The optional AS-host and browser projects remain private and absent. The expanded 15-scenario core lane includes the two scenarios with earlier B7 baseline evidence, but has not executed from this checkpoint. Profile, OFCLI, Python and OIDC lanes remain unrun and unqualified. The OIDC test source compiled; actual OIDC execution still requires the genuine host assembly. Source composition or static review does not establish expanded-lane execution.
 - No CI, Foundation conformance, external operator acceptance, complete OIDC login, Python producer qualification or expanded-suite result is claimed by this unit run.
+
+## Python fedservice lane removed
+
+- The experimental SUNET fedservice (Python) lane, its test class, peer helper, recipe and vendored source closure have been removed because fedservice is no longer maintained. Earlier entries that mention the Python lane or fedservice producer are historical. The remaining lanes are unit, peer, core, OIDC, profile and OFCLI.

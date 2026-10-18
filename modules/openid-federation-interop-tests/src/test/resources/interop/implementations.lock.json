@@ -25,14 +25,6 @@
       "protocolRevision": "not-qualified",
       "limitations": ["Upstream describes a proof of concept", "Login-link unit tests do not demonstrate complete OIDC login", "Requires an actual OP host and Playwright lane"]
     },
-    "fedservice": {
-      "repository": "https://github.com/SUNET/fedservice",
-      "commit": "d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f",
-      "license": "Apache-2.0",
-      "qualification": "candidate-source-inspected-no-locked-runnable-image",
-      "protocolRevision": "not-qualified",
-      "limitations": ["Upstream dependency ranges and Git dependencies need a transitive lock", "Most upstream federation tests mock HTTP", "Upstream live scripts disable TLS verification; that setting must not be reused"]
-    },
     "ofcli": {
       "repository": "https://github.com/dianagudu/ofcli",
       "commit": "289e97f45d1fd225f16ff77976a7ede1ea6390f0",
