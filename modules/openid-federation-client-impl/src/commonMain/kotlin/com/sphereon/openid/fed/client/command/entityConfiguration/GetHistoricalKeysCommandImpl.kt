@@ -113,6 +113,12 @@ class GetHistoricalKeysCommandImpl(
         val decodedJwt = decodeJWTComponents(jwt)
         logger.debug("Successfully decoded historical keys JWT")
 
+        // OpenID Federation 1.1 section 8.7.2: reject a historical keys JWT without this exact typ.
+        if (decodedJwt.header.typ != HISTORICAL_KEYS_JWT_TYPE) {
+            return IdkResult.err(InvalidEntityConfigurationError(entityConfiguration.sub ?: "unknown",
+                "Historical keys JWT typ must be '$HISTORICAL_KEYS_JWT_TYPE', got '${decodedJwt.header.typ ?: "(missing)"}'"))
+        }
+
         val keyId = decodedJwt.header.kid ?: "unknown"
         val signingKey = entityConfiguration.jwks.propertyKeys?.find { it.kid == decodedJwt.header.kid }
             ?: run {
@@ -141,3 +147,5 @@ class GetHistoricalKeysCommandImpl(
         }
     }
 }
+
+private const val HISTORICAL_KEYS_JWT_TYPE = "jwk-set+jwt"
