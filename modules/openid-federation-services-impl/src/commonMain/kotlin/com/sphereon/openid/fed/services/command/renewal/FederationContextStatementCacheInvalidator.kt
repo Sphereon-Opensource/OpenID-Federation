@@ -45,7 +45,7 @@ class FederationContextStatementCacheInvalidator(
             val sub = (payload["sub"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: return emptyList()
             if (iss == sub) return listOf(getEntityConfigurationEndpoint(iss))
             val declared = (payload["source_endpoint"] as? JsonPrimitive)?.takeIf { it.isString }?.content
-                ?.substringBefore('?')?.takeIf { it.isNotBlank() }
+                ?.takeIf { it.isNotBlank() }
             val fallback = FederationEndpointUrls.fetch(iss)
             return listOfNotNull(declared, fallback).distinct().map { getSubordinateStatementEndpoint(it, sub) }
         }

@@ -5,13 +5,25 @@ import com.sphereon.openid.fed.openapi.models.*
 import com.sphereon.openid.fed.persistence.models.ReceivedTrustMark
 import com.sphereon.openid.fed.persistence.models.TrustMark as TrustMarkEntity
 import com.sphereon.openid.fed.persistence.models.TrustMarkType as TrustMarkTypeEntity
+import com.sphereon.openid.fed.persistence.models.TrustMarkTypeRevision as TrustMarkTypeRevisionEntity
+import com.sphereon.openid.fed.services.command.trustMark.TrustMarkTypeDefinitions
 
 fun TrustMarkTypeEntity.toDTO(): TrustMarkType {
     return TrustMarkType(
         id = this.id,
         identifier = this.identifier,
         createdAt = this.created_at.toString(),
-        updatedAt = this.updated_at?.toString()
+        updatedAt = this.updated_at?.toString(),
+        definition = TrustMarkTypeDefinitions.decode(this.definition),
+        version = this.version,
+    )
+}
+
+fun TrustMarkTypeRevisionEntity.toDTO(): TrustMarkTypeRevision {
+    return TrustMarkTypeRevision(
+        version = this.version,
+        definition = TrustMarkTypeDefinitions.decode(this.definition),
+        createdAt = this.created_at.toString(),
     )
 }
 

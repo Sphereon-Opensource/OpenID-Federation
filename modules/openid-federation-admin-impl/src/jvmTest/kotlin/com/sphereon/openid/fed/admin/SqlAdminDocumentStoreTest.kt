@@ -90,6 +90,7 @@ class SqlAdminDocumentStoreTest {
             TrustMarkIssuerAdapter = TrustMarkIssuer.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkOwnerAdapter = TrustMarkOwner.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustMarkTypeAdapter = TrustMarkType.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
+            TrustMarkTypeRevisionAdapter = TrustMarkTypeRevision.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             MetadataPolicyAdapter = MetadataPolicy.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter),
             TrustAnchorHintAdapter = TrustAnchorHint.Adapter(
                 JavaUuidStringAdapter,
@@ -121,6 +122,53 @@ class SqlAdminDocumentStoreTest {
     private fun jwt(subject: String, tag: String): String = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImZpeHR1cmUiLCJ0eXAiOiJlbnRpdHktc3RhdGVtZW50K2p3dCJ9." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
         """{"iss":"https://ta.example","sub":"$subject","iat":1,"exp":9999999999,"tag":"$tag"}""".toByteArray()) + ".signature"
     private suspend fun configuration(): AdminStoredDocument = store.read(scope, AdminDocumentKey("configuration"))!!
+
+    @Test fun trustMarkDefaultsAndCoreDefinitionShareOwningVersionAndIncarnation(): Unit = runBlocking {
+        val identifier = "https://ta.example/marks/research"
+        val core = database.trustMarkTypeQueries
+        val original = core.createWithDefinition(identifier, scope.accountId,
+            """{"name":"Research","ref":"https://ta.example/old","lifetimeSeconds":600,"extensions":{"core-owned":true}}""").executeAsOne()
+        core.insertRevision(original.id, original.version, original.definition).executeAsOne()
+        val protocol = mockk<AdminProtocolPort>()
+        coEvery { protocol.node(any()) } returns doc("""{"roles":["trust_mark_issuer"]}""")
+        coEvery { protocol.validate(any(), any(), any()) } just Runs
+        val workflow = DefaultAdminWorkflow(store, protocol)
+        val key = AdminDocumentKey("trust-mark-type", identifier)
+        val initial = store.read(scope, key)!!
+        assertEquals(JsonPrimitive(600), initial.document["lifetime"])
+        assertEquals(JsonPrimitive("https://ta.example/old"), initial.document["ref"])
+        val replacement = doc("""{"trust_mark_type":"$identifier","lifetime":900,"ref":"https://ta.example/standard","logo_uri":"https://ta.example/logo.png","custom":{"kept":true}}""")
+        val written = workflow.execute(AdminOperation.ReplaceAdminTrustMarkType,
+            AdminCommandArgs(scope, resourceId = identifier, document = replacement, ifMatch = initial.etag))
+        assertTrue(written.isOk)
+        val changed = core.findByAccountIdAndIdentifier(scope.accountId, identifier).executeAsOne()
+        val definition = doc(changed.definition!!)
+        assertEquals(JsonPrimitive(900), definition["lifetimeSeconds"])
+        assertEquals(replacement["logo_uri"], definition["logoUri"])
+        assertEquals(doc("""{"core-owned":true}"""), definition["extensions"])
+        assertEquals(2L, changed.version)
+        assertEquals(2, core.findRevisionsByTypeId(changed.id).executeAsList().size)
+        val storage = doc(database.adminDocumentQueries.find(scope.accountId, key.collection, identifier, "").executeAsOne().document)
+        assertFalse("lifetime" in storage || "ref" in storage || "logo_uri" in storage)
+        val etag = store.read(scope, key)!!.etag
+        val updated = core.updateDefinition("""{"name":"Research","ref":"https://ta.example/core","lifetimeSeconds":1200,"extensions":{"core-owned":true}}""",
+            scope.accountId, changed.id, changed.version).executeAsOne()
+        core.insertRevision(updated.id, updated.version, updated.definition).executeAsOne()
+        val projected = store.read(scope, key)!!
+        assertEquals(JsonPrimitive(1200), projected.document["lifetime"])
+        assertEquals(JsonPrimitive("https://ta.example/core"), projected.document["ref"])
+        assertEquals(replacement["custom"], projected.document["custom"])
+        assertNotEquals(etag, projected.etag)
+        assertNull(store.commit(scope, listOf(AdminMutation(key, etag, replacement))))
+        core.delete(changed.id).executeAsOne()
+        assertEquals(JsonPrimitive("revoked"), store.read(scope, key)!!.document["status"])
+        val recreated = core.createWithDefinition(identifier, scope.accountId, """{"name":"Recreated","lifetimeSeconds":1800}""").executeAsOne()
+        core.insertRevision(recreated.id, recreated.version, recreated.definition).executeAsOne()
+        val incarnation = store.read(scope, key)!!
+        assertNotEquals(projected.etag, incarnation.etag)
+        assertFalse("custom" in incarnation.document)
+        assertNull(store.commit(scope, listOf(AdminMutation(key, projected.etag, replacement))))
+    }
 
     @Test fun existingPublishedBytesAreImportedWithoutSigningAndCommittedReadDoesNotTakeOver(): Unit = runBlocking {
         val artifact = jwt("https://ta.example", "legacy")
@@ -258,7 +306,7 @@ class SqlAdminDocumentStoreTest {
         var protocol = port()
         val first = protocol.keys(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"ES256"}}""")))
         val firstKid = first.document!!.getValue("kid").jsonPrimitive.content
-        val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list"}},"extension_claim":{"preserved":true}}""")
+        val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list","federation_trust_mark_endpoint":"https://ta.example/trust-mark"}},"extension_claim":{"preserved":true}}""")
         var workflow = DefaultAdminWorkflow(store, protocol)
         val published = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config))
         assertTrue(published.isOk)
@@ -267,6 +315,15 @@ class SqlAdminDocumentStoreTest {
         assertEquals(committed.artifact, artifact.value.artifact)
         assertEquals(firstKid, decodeJWTComponents(committed.artifact!!).header.kid)
         assertEquals(config["extension_claim"], decodeJWTComponents(committed.artifact!!).payload["extension_claim"])
+        val issuance = workflow.execute(AdminOperation.CreateAdminTrustMarkType, AdminCommandArgs(scope,
+            document = doc("""{"trust_mark_type":"https://ta.example/marks/signed","lifetime":900,"ref":"https://ta.example/policy","logo_uri":"https://ta.example/logo.png"}""")))
+        assertTrue(issuance.isOk)
+        val issued = protocol.prepare(scope, AdminDocumentKey("trust-mark-grant", "https://ta.example/marks/signed", "https://op.example"),
+            doc("""{"entity_id":"https://op.example","trust_mark_type":"https://ta.example/marks/signed","status":"active"}"""))
+        val issuedClaims = decodeJWTComponents(issued.artifact).payload
+        assertEquals(JsonPrimitive("https://ta.example/policy"), issuedClaims["ref"])
+        assertEquals(JsonPrimitive("https://ta.example/logo.png"), issuedClaims["logo_uri"])
+        assertEquals(900L, issuedClaims.getValue("exp").jsonPrimitive.long - issuedClaims.getValue("iat").jsonPrimitive.long)
         val invalidPolicy = JsonObject(config + ("metadata_policy" to doc("""{"openid_provider":{"foo":{"essential":"yes"}}}""")))
         assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = invalidPolicy)).isErr)
         assertEquals(committed.etag, store.readCommitted(scope, committed.key)?.etag)

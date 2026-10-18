@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.services.command.renewal
 import com.sphereon.core.api.cache.CacheRequirements
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.openid.fed.client.context.FederationContext
+import com.sphereon.openid.fed.client.helpers.getSubordinateStatementEndpoint
 import com.sphereon.openid.fed.core.cache.OidfCache
 import com.sphereon.openid.fed.httpResolver.HttpMetadataCacheSerializers
 import com.sphereon.openid.fed.httpResolver.HttpResolver
@@ -12,6 +13,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.encodeURLParameter
 import io.ktor.http.headersOf
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -28,8 +30,9 @@ class FederationContextStatementCacheInvalidatorTest {
     private val issuer = "https://superior.example"
     private val subject = "https://subordinate.example"
     private val ecUrl = "$issuer/.well-known/openid-federation"
-    private val ssUrl = "$issuer/federation/fetch?sub=$subject"
-    private val defaultSsUrl = "$issuer/fetch?sub=$subject"
+    // The resolver caches fetch requests under the URL getSubordinateStatementEndpoint builds.
+    private val ssUrl = getSubordinateStatementEndpoint("$issuer/federation/fetch", subject)
+    private val defaultSsUrl = getSubordinateStatementEndpoint("$issuer/fetch", subject)
     private val served = mutableMapOf<String, String>()
     private var requests = 0
     private lateinit var client: HttpClient
@@ -43,7 +46,7 @@ class FederationContextStatementCacheInvalidatorTest {
                     requests++
                     val url = request.url
                     val key = "${url.protocol.name}://${url.host}${url.encodedPath}" +
-                        (url.parameters["sub"]?.let { "?sub=$it" } ?: "")
+                        (url.parameters["sub"]?.let { "?sub=${it.encodeURLParameter()}" } ?: "")
                     respond(served.getValue(key), HttpStatusCode.OK,
                         headersOf(HttpHeaders.ContentType, "application/entity-statement+jwt"))
                 }
@@ -93,9 +96,10 @@ class FederationContextStatementCacheInvalidatorTest {
 
         assertNull(resolver.getCachedApp(ssUrl))
         assertNull(resolver.getCachedApp(defaultSsUrl))
+        // A fetch endpoint MAY carry a query component (OIDFed 1.1 section 5.1.1); it is part of the request URL.
         assertEquals(
-            listOf(ssUrl, defaultSsUrl),
-            FederationContextStatementCacheInvalidator.cachedUrls(jwt(issuer, subject, "x", "$issuer/federation/fetch?ignored=1")),
+            listOf(getSubordinateStatementEndpoint("$issuer/federation/fetch?tenant=1", subject), defaultSsUrl),
+            FederationContextStatementCacheInvalidator.cachedUrls(jwt(issuer, subject, "x", "$issuer/federation/fetch?tenant=1")),
         )
     }
 

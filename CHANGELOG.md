@@ -14,6 +14,10 @@
 - `fed.trust-mark.get-signed-status-jwt` returns the signed Trust Mark Status Response (§8.4.2) and
   `fed.trust-mark.list-issued` lists the Trust Marks an account issued, with the ids used for revocation.
 - `fed.metadata-policy.create` refuses policies with malformed operators (§6.1).
+- Trust Mark types can carry a versioned definition (name, description, `ref`, `logoUri`, default lifetime,
+  applicable Entity Types and host extensions) that supplies issuance defaults. `fed.trust-mark.update-type-definition`
+  updates it with a version check and `fed.trust-mark.list-type-revisions` lists its history. Migration 26 adds the
+  columns and the revision table.
 - Client registration commands for OpenID Federation for OpenID Connect 1.1 §12 (Automatic and Explicit
   Registration) reference Trust Anchors by Entity Identifier.
 

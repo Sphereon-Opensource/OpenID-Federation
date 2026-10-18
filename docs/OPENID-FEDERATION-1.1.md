@@ -204,9 +204,22 @@ entities allowed to issue each type with `fed.trust-mark.add-issuer-to-type` (`f
 `fed.trust-mark.remove-issuer-from-type`). The next Entity Configuration lists them in `trust_mark_issuers`, which is
 what verifiers check a Trust Mark issuer against (§7.3).
 
+A Trust Mark type can carry a definition: a `name`, an optional `description`, the `ref` and `logoUri` published in
+its Trust Marks (absolute https URLs), a default `lifetimeSeconds` (60 to 63072000), the `applicableEntityTypes` a
+subject must hold (empty means any) and host-defined `extensions`, which are stored and returned unchanged. Pass it
+as `definition` to `fed.trust-mark.create-type`; types created without one keep working as before. Every type has a
+`version` that starts at 1. `fed.trust-mark.update-type-definition` replaces the definition only when the caller's
+`expectedVersion` is the current version, increments the version and records a revision; a stale version fails with
+`trust_mark_type_version_conflict` (HTTP 409). It does not change the identifier, owner or delegation.
+`fed.trust-mark.list-type-revisions` lists the revisions oldest first, and they stay available after the type is
+deleted. Over HTTP these are `PUT /trust-mark-types/{id}` with `{ "definition": ..., "expectedVersion": n }` and
+`GET /trust-mark-types/{id}/revisions`.
+
 An issuer issues a Trust Mark with `fed.trust-mark.create`: the subject Entity Identifier, the Trust Mark type, and
 optionally `exp`, `logo_uri`, `ref` and `delegation`. The mark is signed with the selected key (header `typ`
-`trust-mark+jwt`) and stored, unless `dryRun` is set. `fed.trust-mark.list-issued` lists the marks the account issued
+`trust-mark+jwt`) and stored, unless `dryRun` is set. When the account's type has a definition, a request without
+`logo_uri` or `ref` gets the definition's value, and a request without `exp` (and without `trust_mark_lifetime`) gets
+`iat` plus `lifetimeSeconds`. Values in the request always win. `fed.trust-mark.list-issued` lists the marks the account issued
 and has not revoked, each with the id used for revocation, its type, subject, JWT, `iat` and `exp`.
 `fed.trust-mark.delete` revokes a mark; it stays known to the status evaluation as revoked.
 

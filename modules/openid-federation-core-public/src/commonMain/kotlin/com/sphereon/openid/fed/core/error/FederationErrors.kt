@@ -295,6 +295,33 @@ data class TrustMarkTypeNotFoundError(
 }
 
 /**
+ * A Trust Mark type definition update named a version that is no longer the current one.
+ */
+data class TrustMarkTypeVersionConflictError(
+    val trustMarkTypeId: String,
+    val expectedVersion: Long,
+    val currentVersion: Long,
+    override val exception: Throwable? = null
+) : FederationError {
+    override val code: String = ERROR_CODE
+    override val errorCode: String = ERROR_CODE
+    override val httpStatus: HttpStatusCode = HttpStatusCode.Conflict
+    override val message: IdkError.Message = IdkError.Message(
+        i18nKey = "com.sphereon.openid.fed.error.trust-mark-type-version-conflict",
+        i18nParams = mapOf(
+            "trustMarkTypeId" to trustMarkTypeId,
+            "expectedVersion" to expectedVersion.toString(),
+            "currentVersion" to currentVersion.toString(),
+        ),
+        defaultMessage = "Trust mark type $trustMarkTypeId is at version $currentVersion, not the expected version $expectedVersion"
+    )
+
+    companion object {
+        const val ERROR_CODE = "trust_mark_type_version_conflict"
+    }
+}
+
+/**
  * Trust mark issuer is not authorized
  */
 data class TrustMarkIssuerNotAuthorizedError(

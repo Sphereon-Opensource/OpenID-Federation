@@ -226,15 +226,17 @@ class SchemaMigrationEquivalenceTest {
     @Test
     fun adminDocumentUpgradeRetainsPublishedBytesAndKeyRoutes() {
         withSchema(upgradeSchema) { driver, conn ->
-            Database.Schema.migrate(driver, 0L, 26L)
+            Database.Schema.migrate(driver, 0L, 27L)
             conn.createStatement().use { st ->
                 st.execute("INSERT INTO Account(id, username, identifier) VALUES ('10000000-0000-0000-0000-000000000001', 'admin-upgrade', 'https://ta.example')")
                 st.execute("INSERT INTO Jwk(id, account_id, alg, kid, kms, kms_key_ref, key) VALUES ('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','ES256','original-kid','azure','original-key-reference','{\"kty\":\"EC\"}')")
                 st.execute("INSERT INTO EntityConfigurationStatement(account_id, statement, expires_at) VALUES ('10000000-0000-0000-0000-000000000001','exact.original.jwt.bytes',9999999999)")
+                st.execute("INSERT INTO TrustMarkType(id, account_id, identifier, definition, version) VALUES ('40000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','https://ta.example/marks/retained','{\"name\":\"Retained\",\"lifetimeSeconds\":900}',2)")
+                st.execute("INSERT INTO TrustMarkTypeRevision(trust_mark_type_id, version, definition) VALUES ('40000000-0000-0000-0000-000000000001',1,NULL),('40000000-0000-0000-0000-000000000001',2,'{\"name\":\"Retained\",\"lifetimeSeconds\":900}')")
                 st.execute("INSERT INTO Subordinate(id, account_id, identifier) VALUES ('30000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','https://op.example')")
                 st.execute("INSERT INTO SubordinateStatement(subordinate_id, iss, sub, statement, expires_at) VALUES ('30000000-0000-0000-0000-000000000001','https://ta.example','https://op.example','exact.subordinate.jwt.bytes',9999999999)")
             }
-            Database.Schema.migrate(driver, 26L, Database.Schema.version)
+            Database.Schema.migrate(driver, 27L, Database.Schema.version)
             conn.createStatement().use { st ->
                 st.executeQuery("SELECT statement FROM EntityConfigurationStatement WHERE account_id='10000000-0000-0000-0000-000000000001'").use { rs ->
                     assertTrue(rs.next()); assertEquals("exact.original.jwt.bytes", rs.getString(1))
@@ -244,6 +246,12 @@ class SchemaMigrationEquivalenceTest {
                 }
                 st.executeQuery("SELECT kid, kms, kms_key_ref FROM Jwk WHERE id='20000000-0000-0000-0000-000000000001'").use { rs ->
                     assertTrue(rs.next()); assertEquals("original-kid", rs.getString(1)); assertEquals("azure", rs.getString(2)); assertEquals("original-key-reference", rs.getString(3))
+                }
+                st.executeQuery("SELECT version, definition FROM TrustMarkType WHERE id='40000000-0000-0000-0000-000000000001'").use { rs ->
+                    assertTrue(rs.next()); assertEquals(2L, rs.getLong(1)); assertEquals("{\"name\":\"Retained\",\"lifetimeSeconds\":900}", rs.getString(2))
+                }
+                st.executeQuery("SELECT COUNT(*) FROM TrustMarkTypeRevision WHERE trust_mark_type_id='40000000-0000-0000-0000-000000000001'").use { rs ->
+                    assertTrue(rs.next()); assertEquals(2L, rs.getLong(1))
                 }
                 st.executeQuery("SELECT COUNT(*) FROM AdminDocument").use { rs -> assertTrue(rs.next()); assertEquals(0L, rs.getLong(1)) }
             }

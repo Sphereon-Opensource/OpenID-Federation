@@ -30,6 +30,7 @@ class SqlAdminDocumentStore internal constructor(
     private val subordinateStatementQueries get() = database?.subordinateStatementQueries ?: Persistence.subordinateStatementQueries
     private val trustMarkQueries get() = database?.trustMarkQueries ?: Persistence.trustMarkQueries
     private val trustMarkTypeQueries get() = database?.trustMarkTypeQueries ?: Persistence.trustMarkTypeQueries
+    private val typeStore get() = SqlAdminTrustMarkTypes(trustMarkTypeQueries, queries)
     private fun keyState(accountId: String) = adminKeyState(accountId, jwkQueries, accountSigningKeyQueries, queries)
     override suspend fun readCommitted(scope: AdminNodeScope, key: AdminDocumentKey): AdminStoredDocument? =
         queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.stored()
@@ -78,9 +79,10 @@ class SqlAdminDocumentStore internal constructor(
                 ?: adminFail("not_found", 404, "Node account was not found")
             if (scope.entityId != null && account.identifier != null && scope.entityId != account.identifier)
                 adminFail("invalid_request", 400, "Resolved node scope does not match account")
+            typeStore.lock(scope.accountId, mutations.flatMap { listOf(it.key) + it.expectedDependencies.keys })
             if (mutations.any { mutation ->
                 mutation.expectedKeyState?.let { it != keyState(scope.accountId) } == true ||
-                    mutation.expectedDependencies.any { (key, etag) -> queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.etag != etag }
+                    mutation.expectedDependencies.any { (key, etag) -> queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.stored()?.etag != etag }
             }) return@transactionWithResult null
             val revokedTypes = mutations.filter { it.key.collection == "trust-mark-type" && it.document.string("status") == "revoked" }.map { it.key.resourceId }.toSet()
             val writes = mutations.filterNot { it.key.collection == "trust-mark-grant" && it.key.resourceId in revokedTypes }.toMutableList()
@@ -92,7 +94,7 @@ class SqlAdminDocumentStore internal constructor(
             val current = writes.map { mutation ->
                 queries.findForUpdate(scope.accountId, mutation.key.collection, mutation.key.resourceId, mutation.key.subjectId).executeAsOneOrNull()
             }
-            if (writes.indices.any { current[it]?.etag != writes[it].expectedEtag }) return@transactionWithResult null
+            if (writes.indices.any { current[it]?.stored()?.etag != writes[it].expectedEtag }) return@transactionWithResult null
             scope.subordinateLimit?.let { limit ->
                 val existing = queries.list(scope.accountId, "subordinate").executeAsList().count { Json.parseToJsonElement(it.document).jsonObject.string("status") != "revoked" }
                 val delta = writes.indices.filter { writes[it].key.collection == "subordinate" }.sumOf { index ->
@@ -127,9 +129,10 @@ class SqlAdminDocumentStore internal constructor(
                         adminFail("invalid_request", 400, "entity_id is immutable")
                     if (account.identifier == null && desiredId != null) accountQueries.initializeIdentifier(desiredId, scope.accountId)
                 }
+                val storedDocument = if (key.collection == "trust-mark-type") typeStore.write(scope.accountId, mutation) else mutation.document
                 queries.upsert(scope.accountId, key.collection, key.resourceId, key.subjectId,
-                    mutation.document.toString(), etag, now, mutation.artifact)
-                AdminStoredDocument(key, mutation.document, etag, now, mutation.artifact)
+                    storedDocument.toString(), etag, now, mutation.artifact)
+                queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOne().stored()
             }
             committed to current.mapNotNull { it?.artifact }
         }
@@ -151,9 +154,10 @@ class SqlAdminDocumentStore internal constructor(
                 adminFail("precondition_failed", 412, "Captured subordinate intent was withdrawn")
             val fenced = mutation.copy(expectedDependencies = mutation.expectedDependencies + if (guardKey != null) mapOf(guardKey to null) else emptyMap())
             val document = stageDocument(fenced)
-            if (queries.find(scope.accountId, mutation.key.collection, mutation.key.resourceId, mutation.key.subjectId).executeAsOneOrNull()?.etag != mutation.expectedEtag ||
+            typeStore.lock(scope.accountId, listOf(mutation.key) + mutation.expectedDependencies.keys)
+            if (queries.find(scope.accountId, mutation.key.collection, mutation.key.resourceId, mutation.key.subjectId).executeAsOneOrNull()?.stored()?.etag != mutation.expectedEtag ||
                 mutation.expectedKeyState?.let { it != keyState(scope.accountId) } == true || mutation.expectedDependencies.any { (key, etag) ->
-                    queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.etag != etag
+                    queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.stored()?.etag != etag
                 }) adminFail("precondition_failed", 412, "Canonical state changed before staging")
             val existing = queries.find(scope.accountId, "publication-candidate", digest, "").executeAsOneOrNull()
                 ?: queries.find(scope.accountId, "publication-receipt", digest, "").executeAsOneOrNull()
@@ -186,7 +190,7 @@ class SqlAdminDocumentStore internal constructor(
                 document.string("expected_key_state")?.let { it != keyState(scope.accountId) } == true ||
                 (document["dependencies"] as? JsonArray).orEmpty().any { value ->
                     val dep = value.jsonObject
-                    queries.find(scope.accountId, dep.getValue("collection").jsonPrimitive.content, dep.getValue("resource_id").jsonPrimitive.content, dep.getValue("subject_id").jsonPrimitive.content).executeAsOneOrNull()?.etag != dep.string("etag")
+                    queries.find(scope.accountId, dep.getValue("collection").jsonPrimitive.content, dep.getValue("resource_id").jsonPrimitive.content, dep.getValue("subject_id").jsonPrimitive.content).executeAsOneOrNull()?.stored()?.etag != dep.string("etag")
                 }
             if (expired || (superseded && !alreadyApplied)) {
                 queries.deleteHidden(scope.accountId, "publication-candidate", candidate.resource_id)
@@ -253,6 +257,14 @@ class SqlAdminDocumentStore internal constructor(
      * Existing JWT bytes and publication eligibility are retained exactly.
      */
     private fun bootstrap(scope: AdminNodeScope) {
+        accountQueries.transaction {
+            accountQueries.findActiveForUpdate(scope.accountId).executeAsOneOrNull()
+                ?: adminFail("not_found", 404, "Node account was not found")
+            bootstrapDocuments(scope)
+            typeStore.synchronize(scope.accountId)
+        }
+    }
+    private fun bootstrapDocuments(scope: AdminNodeScope) {
         if (queries.find(scope.accountId, "configuration", "", "").executeAsOneOrNull() != null) return
         accountQueries.transaction {
             val account = accountQueries.findActiveForUpdate(scope.accountId).executeAsOneOrNull()
@@ -292,11 +304,6 @@ class SqlAdminDocumentStore internal constructor(
                 }
                 put(AdminDocumentKey("subordinate", subordinate.identifier), doc, statement?.statement)
             }
-            trustMarkTypeQueries.findByAccountId(scope.accountId).executeAsList().forEach { type ->
-                put(AdminDocumentKey("trust-mark-type", type.identifier), buildJsonObject {
-                    put("trust_mark_type", type.identifier); type.delegation?.let { put("delegation", it) }
-                }, null)
-            }
             trustMarkQueries.findByAccountId(scope.accountId).executeAsList().sortedBy { it.iat }.forEach { mark ->
                 val doc = buildJsonObject {
                     payload(mark.trust_mark_value).filterKeys { it !in setOf("iss", "sub") }.forEach { (k,v) -> put(k,v) }
@@ -306,7 +313,7 @@ class SqlAdminDocumentStore internal constructor(
             }
         }
     }
-    private fun AdminDocument.stored() = AdminStoredDocument(
+    private fun AdminDocument.stored() = if (collection == "trust-mark-type") typeStore.project(this) else AdminStoredDocument(
         AdminDocumentKey(collection, resource_id, subject_id), Json.parseToJsonElement(document).jsonObject, etag, updated_at, artifact)
 }
 

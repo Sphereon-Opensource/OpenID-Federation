@@ -21,6 +21,7 @@ import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.services.JwkService
+import com.sphereon.openid.fed.services.command.StatementSigningValidation
 import com.sphereon.openid.fed.services.command.renewal.PublishedStatementCacheInvalidator
 import com.sphereon.openid.fed.services.signPayload
 import dev.zacsweers.metro.Inject
@@ -53,7 +54,7 @@ class PublishEntityConfigurationCommandImpl(
 ), PublishEntityConfigurationCommand {
 
     private val logger = execution.federationLogger("PublishEntityConfigurationCommand")
-    private val queries = Persistence
+    private val queries by lazy { Persistence }
 
     override suspend fun doExecute(
         args: PublishEntityConfigurationArgs,
@@ -79,6 +80,14 @@ class PublishEntityConfigurationCommandImpl(
         val key = resolved.value
         if ((kid != null && kid != key.kid) || (kmsKeyRef != null && kmsKeyRef != key.kmsKeyRef)) {
             return federationErr(InvalidRequestError("Requested key differs from the account's selected signing key"))
+        }
+
+        // Never sign a statement a verifier, this Library's included, would reject (OIDFed 1.1 section 3).
+        StatementSigningValidation.refusalFor(
+            entityConfigurationStatement,
+            JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg),
+        )?.let { reason ->
+            return federationErr(InvalidRequestError("Entity Configuration cannot be published: $reason"))
         }
 
         // Create signed JWT

@@ -1,15 +1,16 @@
--- Administration revisions and exact public artifacts commit together. Existing federation rows remain intact.
-CREATE TABLE AdminDocument (
-    account_id TEXT NOT NULL,
-    collection TEXT NOT NULL,
-    resource_id TEXT NOT NULL,
-    subject_id TEXT NOT NULL DEFAULT '',
-    document TEXT NOT NULL,
-    etag TEXT NOT NULL,
-    updated_at BIGINT NOT NULL,
-    artifact TEXT,
-    PRIMARY KEY (account_id, collection, resource_id, subject_id)
+ALTER TABLE TrustMarkType ADD COLUMN definition TEXT;
+ALTER TABLE TrustMarkType ADD COLUMN version BIGINT NOT NULL DEFAULT 1;
+ALTER TABLE TrustMarkType ADD CONSTRAINT trust_mark_type_version_positive CHECK (version >= 1);
+
+CREATE TABLE TrustMarkTypeRevision (
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    trust_mark_type_id UUID AS kotlin.String NOT NULL,
+    version BIGINT NOT NULL,
+    definition TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT FK_TrustMarkTypeRevisionType FOREIGN KEY (trust_mark_type_id) REFERENCES TrustMarkType (id) ON DELETE CASCADE,
+    CONSTRAINT unique_trust_mark_type_revision_version UNIQUE (trust_mark_type_id, version)
 );
-CREATE INDEX admin_document_collection ON AdminDocument(account_id, collection, resource_id);
--- Global bounded scheduled-key polling must not scan every account publication/history row.
-CREATE INDEX admin_document_maintenance_queue ON AdminDocument(collection, updated_at, account_id, resource_id);
+
+INSERT INTO TrustMarkTypeRevision (trust_mark_type_id, version, definition)
+SELECT id, 1, NULL FROM TrustMarkType;

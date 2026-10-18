@@ -1454,6 +1454,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TrustMarkType'
+    put:
+      tags:
+        - trust-marks
+      summary: Update the definition of a Trust Mark Type
+      operationId: updateTrustMarkTypeDefinition
+      description: >-
+        Replaces the definition when expectedVersion equals the current version, increments the version and records a
+        revision. The identifier, owner and delegation stay unchanged.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTrustMarkTypeDefinitionRequest'
+      responses:
+        '200':
+          description: The updated Trust Mark Type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustMarkType'
+        '400':
+          description: Invalid request or definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '404':
+          description: Trust Mark Type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
+        '409':
+          description: The Trust Mark Type is not at expectedVersion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
     delete:
       tags:
         - trust-marks
@@ -1471,6 +1518,36 @@ paths:
       responses:
         '204':
           description: Trust mark definition deleted
+  /trust-mark-types/{id}/revisions:
+    get:
+      tags:
+        - trust-marks
+      summary: List the definition revisions of a Trust Mark Type
+      operationId: listTrustMarkTypeRevisions
+      description: Lists every recorded definition revision, oldest first. Revisions remain after the type is deleted.
+      parameters:
+        - $ref: '#/components/parameters/AccountUsername'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Revisions ordered by version
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrustMarkTypeRevision'
+        '404':
+          description: Trust Mark Type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminErrorResponse'
   /trust-mark-types/{id}/issuers:
     get:
       tags:
@@ -2427,8 +2504,94 @@ components:
           type: string
           description: The unique identifier for the Trust Mark Type.
           example: "https://www.example.com/oidf/trustmark/underageSafetyVerified"
+        definition:
+          $ref: '#/components/schemas/TrustMarkTypeDefinition'
       required:
         - identifier
+
+    TrustMarkTypeDefinition:
+      type: object
+      description: >-
+        Describes a Trust Mark type. Its ref, logoUri and lifetimeSeconds are the defaults for Trust Marks of the type
+        issued without those values.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Human-readable name of the Trust Mark type.
+          example: "Underage safety verified"
+        description:
+          type: string
+          maxLength: 4000
+          description: Human-readable description of the Trust Mark type.
+        ref:
+          type: string
+          format: uri
+          nullable: true
+          description: Absolute https URL published as the Trust Mark ref claim.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified/info"
+        logoUri:
+          type: string
+          format: uri
+          nullable: true
+          description: Absolute https URL published as the Trust Mark logo_uri claim.
+          example: "https://www.example.com/oidf/trustmark/underageSafetyVerified/logo.svg"
+        lifetimeSeconds:
+          type: integer
+          format: int64
+          minimum: 60
+          maximum: 63072000
+          nullable: true
+          description: Default Trust Mark lifetime in seconds; exp is set to iat plus this value.
+          example: 31536000
+        applicableEntityTypes:
+          type: array
+          description: Entity Type Identifiers a subject must hold. Empty means any Entity Type.
+          default: []
+          items:
+            type: string
+          example: ["openid_relying_party"]
+        extensions:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Host-defined data, stored and returned unchanged.
+      required:
+        - name
+
+    TrustMarkTypeRevision:
+      type: object
+      properties:
+        version:
+          type: integer
+          format: int64
+          description: The Trust Mark Type version this revision recorded.
+          example: 1
+        definition:
+          $ref: '#/components/schemas/TrustMarkTypeDefinition'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the revision was recorded.
+          example: "2024-12-01T12:00:00Z"
+      required:
+        - version
+        - createdAt
+
+    UpdateTrustMarkTypeDefinitionRequest:
+      type: object
+      properties:
+        definition:
+          $ref: '#/components/schemas/TrustMarkTypeDefinition'
+        expectedVersion:
+          type: integer
+          format: int64
+          description: The version the caller read; a different current version is refused with 409.
+          example: 1
+      required:
+        - definition
+        - expectedVersion
 
     CreateTrustMarkTypeIssuerRequest:
       type: object
@@ -3422,12 +3585,18 @@ components:
           description: The timestamp when the Trust Mark Type was last updated.
           example: "2024-12-15T15:30:00Z"
           nullable: true
+        definition:
+          $ref: '#/components/schemas/TrustMarkTypeDefinition'
+        version:
+          type: integer
+          format: int64
+          description: The definition version. It starts at 1 and grows by one with every definition update.
+          example: 1
       required:
         - id
         - identifier
-        - name
-        - issuerPolicy
         - createdAt
+        - version
     VerifyTrustChainResponse:
       type: object
       properties:
