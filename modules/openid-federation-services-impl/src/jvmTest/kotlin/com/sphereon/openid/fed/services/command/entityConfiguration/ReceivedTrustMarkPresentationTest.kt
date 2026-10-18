@@ -30,4 +30,12 @@ class ReceivedTrustMarkPresentationTest {
         assertFalse(isPresentableReceivedTrustMark(mark("""{"sub":"$entity"}"""), entity, now), "iat is required")
         assertFalse(isPresentableReceivedTrustMark("not-a-jwt", entity, now), "not a JWT")
     }
+
+    @Test
+    fun aMarkStoredUnderAnotherTypeIsLeftOut() {
+        // Section 3.1.2: the trust_mark_type next to a Trust Mark MUST match the trust_mark_type inside it.
+        val markOfTypeA = mark("""{"iss":"https://tmi.example","sub":"$entity","trust_mark_type":"https://tm.example/a","iat":${now - 10}}""")
+        assertTrue(isPresentableReceivedTrustMark(markOfTypeA, entity, now, storedType = "https://tm.example/a"))
+        assertFalse(isPresentableReceivedTrustMark(markOfTypeA, entity, now, storedType = "https://tm.example/b"), "stored under another type")
+    }
 }

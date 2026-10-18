@@ -273,7 +273,7 @@ class FindEntityConfigurationByAccountCommandImpl(
         queries.receivedTrustMarkQueries.findByAccountId(tenantId)
             .executeAsList()
             .filter { receivedTrustMark ->
-                isPresentableReceivedTrustMark(receivedTrustMark.jwt, identifier, currentTimeSeconds).also { presentable ->
+                isPresentableReceivedTrustMark(receivedTrustMark.jwt, identifier, currentTimeSeconds, receivedTrustMark.trust_mark_id).also { presentable ->
                     if (!presentable) logger.info("Leaving out received Trust Mark ${receivedTrustMark.id}: not currently valid for $identifier")
                 }
             }
@@ -285,9 +285,15 @@ class FindEntityConfigurationByAccountCommandImpl(
 
 /**
  * Whether a received Trust Mark can go into [identifier]'s Entity Configuration: a JWT whose `sub` is the entity, already
- * issued and not expired (OIDFed 1.1 §7.3 steps 4 to 6).
+ * issued and not expired (OIDFed 1.1 §7.3 steps 4 to 6), and, when [storedType] is given, whose `trust_mark_type` is the
+ * type it is published under (OIDFed 1.1 §3.1.2: the two MUST match).
  */
-internal fun isPresentableReceivedTrustMark(trustMark: String, identifier: String, currentTimeSeconds: Long): Boolean {
+internal fun isPresentableReceivedTrustMark(
+    trustMark: String,
+    identifier: String,
+    currentTimeSeconds: Long,
+    storedType: String? = null,
+): Boolean {
     val claims = try {
         decodeJWTComponents(trustMark).payload
     } catch (_: Exception) {
@@ -296,5 +302,7 @@ internal fun isPresentableReceivedTrustMark(trustMark: String, identifier: Strin
     val sub = claims["sub"]?.jsonPrimitive?.contentOrNull
     val iat = claims["iat"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
     val exp = claims["exp"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
+    val type = claims["trust_mark_type"]?.jsonPrimitive?.contentOrNull
+    if (storedType != null && type != storedType) return false
     return sub == identifier && iat != null && iat <= currentTimeSeconds && (exp == null || currentTimeSeconds < exp)
 }
