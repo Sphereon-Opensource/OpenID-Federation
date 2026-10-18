@@ -16,7 +16,7 @@
     },
     "ofcli_structural_probe.py": {
       "preimageSha256": "9724c91c1b97583e44d1d07ced179298f33257c49733a1c4cb34d9d7ef72c52a",
-      "candidateSha256": "3bd8aabb5d46c85edc70f3e9325878e5cc89fe7206b642619fe6b48368dd0028"
+      "candidateSha256": "16bc972f923eb4d03457360a55436d093885df7d7ffe9014313df57957c73f24"
     }
   },
   "files": [
@@ -32,8 +32,8 @@
     },
     {
       "path": "ofcli_structural_probe.py",
-      "size": 10576,
-      "sha256": "3bd8aabb5d46c85edc70f3e9325878e5cc89fe7206b642619fe6b48368dd0028"
+      "size": 10826,
+      "sha256": "16bc972f923eb4d03457360a55436d093885df7d7ffe9014313df57957c73f24"
     },
     {
       "path": "pyproject.toml",

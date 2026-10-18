@@ -84,13 +84,14 @@ internal class OfcliStructuralProbe private constructor(
             val subject = link["sub"] as? String ?: error("OFCLI link omitted subject")
             issuer to subject
         } ?: error("OFCLI result omitted structural issuer/subject links")
-        check(links.size == 5 && chain["chainLength"] == links.size) {
+        // OpenID Federation 1.1 section 4: leaf EC, one Subordinate Statement per hop, Trust Anchor EC.
+        // The intermediate's own Entity Configuration is not part of a Trust Chain.
+        check(links.size == 4 && (chain["chainLength"] as? Number)?.toInt() == links.size) {
             "OFCLI link count did not match the three-entity path"
         }
         val expectedLinks = listOf(
             expectedPath[0] to expectedPath[0],
             expectedPath[1] to expectedPath[0],
-            expectedPath[1] to expectedPath[1],
             expectedPath[2] to expectedPath[1],
             expectedPath[2] to expectedPath[2],
         )
