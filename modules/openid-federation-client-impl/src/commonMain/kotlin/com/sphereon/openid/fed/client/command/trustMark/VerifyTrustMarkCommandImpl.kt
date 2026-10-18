@@ -139,7 +139,7 @@ class VerifyTrustMarkCommandImpl(
             val issuerTrust = establishIssuerTrust(
                 trustMarkIssuer = trustMarkIssuer,
                 trustAnchorId = trustAnchorId,
-                trustAnchorKeys = trustAnchorConfig.jwks.propertyKeys.orEmpty(),
+                trustAnchorConfig = trustAnchorConfig,
                 recognition = recognition,
                 timeToUse = timeToUse
             )
@@ -247,31 +247,23 @@ class VerifyTrustMarkCommandImpl(
     }
 
     /**
-     * Trust in the Trust Mark Issuer comes before trust in the Trust Mark (OpenID Federation 1.1 §7.3): an issuer other
-     * than the Trust Anchor needs a valid Trust Chain to it (§10), whether the Trust Anchor names its issuers or lets
-     * anyone issue. The chain is verified with [trustAnchorKeys], the keys of the Trust Anchor Entity Configuration the
-     * caller trusts.
+     * Trust in the Trust Mark Issuer comes before trust in the Trust Mark (OpenID Federation 1.1 §7.3), and the
+     * issuer's keys used for its signature (step 7) and its status responses come from that trust. For the Trust
+     * Anchor itself that is the Trust Anchor Entity Configuration the caller trusts. Any other issuer needs a valid
+     * Trust Chain to the Trust Anchor (§10), verified with [trustAnchorKeys]; its keys are those of the issuer's Entity
+     * Configuration inside that verified chain, never of a separately fetched copy.
      */
     private suspend fun establishIssuerTrust(
         trustMarkIssuer: String,
         trustAnchorId: String,
-        trustAnchorKeys: List<Jwk>,
+        trustAnchorConfig: EntityConfigurationStatement,
         recognition: TrustMarkRecognition,
         timeToUse: Long
     ): IdkResult<EntityConfigurationStatement, FederationError> {
-        val issuerConfigResult = getEntityConfigurationCommand.getEntityConfiguration(trustMarkIssuer)
-        if (issuerConfigResult.isErr) {
-            return IdkResult.err(TrustMarkInvalidError(
-                trustMarkId = "unknown",
-                reason = "Failed to fetch Trust Mark issuer configuration: " +
-                    issuerConfigResult.error.message.defaultMessage
-            ))
-        }
-        val issuerConfig = issuerConfigResult.value
-
         if (trustMarkIssuer == trustAnchorId) {
-            return IdkResult.ok(issuerConfig)
+            return IdkResult.ok(trustAnchorConfig)
         }
+        val trustAnchorKeys = trustAnchorConfig.jwks.propertyKeys.orEmpty()
 
         when (recognition) {
             TrustMarkRecognition.ANYONE_MAY_ISSUE,
@@ -313,6 +305,17 @@ class VerifyTrustMarkCommandImpl(
                     return IdkResult.err(TrustMarkInvalidError(
                         trustMarkId = "unknown",
                         reason = "Trust Chain verification failed for Trust Mark issuer '$trustMarkIssuer'"
+                    ))
+                }
+                val issuerConfig = runCatching {
+                    context.json.decodeFromJsonElement(
+                        EntityConfigurationStatement.serializer(), decodeJWTComponents(chain.first()).payload
+                    )
+                }.getOrNull()
+                if (issuerConfig == null || issuerConfig.iss != trustMarkIssuer || issuerConfig.sub != trustMarkIssuer) {
+                    return IdkResult.err(TrustMarkInvalidError(
+                        trustMarkId = "unknown",
+                        reason = "The verified Trust Chain does not start with the Entity Configuration of '$trustMarkIssuer'"
                     ))
                 }
                 return IdkResult.ok(issuerConfig)
