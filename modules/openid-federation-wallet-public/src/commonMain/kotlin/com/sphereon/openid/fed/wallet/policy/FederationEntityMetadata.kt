@@ -94,7 +94,7 @@ object FederationEntityMetadata {
      */
     fun findCredentialIssuerKey(metadata: JsonObject, kid: String): JsonObject? {
         return extractCredentialIssuerKeys(metadata).firstOrNull { key ->
-            key["kid"]?.jsonPrimitive?.contentOrNull?.trim() == kid.trim()
+            key["kid"]?.jsonPrimitive?.contentOrNull == kid
         }
     }
 
@@ -113,7 +113,7 @@ object FederationEntityMetadata {
      */
     fun findVcIssuerKey(metadata: JsonObject, kid: String): JsonObject? {
         return extractVcIssuerKeys(metadata).firstOrNull { key ->
-            key["kid"]?.jsonPrimitive?.contentOrNull?.trim() == kid.trim()
+            key["kid"]?.jsonPrimitive?.contentOrNull == kid
         }
     }
 
