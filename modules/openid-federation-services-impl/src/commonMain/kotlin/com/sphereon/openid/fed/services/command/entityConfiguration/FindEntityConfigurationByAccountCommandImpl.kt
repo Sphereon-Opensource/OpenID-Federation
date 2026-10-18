@@ -126,8 +126,9 @@ class FindEntityConfigurationByAccountCommandImpl(
         builder: EntityConfigurationStatementObjectBuilder,
         identifier: String
     ) {
-        addFederationEntityMetadata(tenantId, builder, identifier)
-        addMetadata(tenantId, builder)
+        val stored = storedMetadata(tenantId)
+        stored.forEach { (key, value) -> if (key != FEDERATION_ENTITY) builder.metadata(Pair(key, value)) }
+        addFederationEntityMetadata(tenantId, builder, identifier, stored[FEDERATION_ENTITY])
         // metadata_policy belongs only on Subordinate Statements (OIDFed 1.1 §3.1.3)
         addAuthorityHints(tenantId, builder)
         addTrustAnchorHints(tenantId, builder)
@@ -150,7 +151,8 @@ class FindEntityConfigurationByAccountCommandImpl(
     private fun addFederationEntityMetadata(
         tenantId: String,
         builder: EntityConfigurationStatementObjectBuilder,
-        identifier: String
+        identifier: String,
+        stored: JsonObject?,
     ) {
         val hasSubordinates = queries.subordinateQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
         val hasAuthorityHints = queries.authorityHintQueries.findByAccountId(tenantId).executeAsList().isNotEmpty()
@@ -161,6 +163,7 @@ class FindEntityConfigurationByAccountCommandImpl(
 
         if (!isAuthority && !issuedTrustMarks) {
             // Pure leaf with no TM issuance: do not auto-inject federation_entity
+            stored?.let { builder.metadata(Pair(FEDERATION_ENTITY, it)) }
             return
         }
 
@@ -208,7 +211,7 @@ class FindEntityConfigurationByAccountCommandImpl(
         putAuthMethods(FederationEndpointKind.TRUST_MARK, authMethods.trustMark)
         putAuthMethods(FederationEndpointKind.HISTORICAL_KEYS, authMethods.historicalKeys)
 
-        builder.metadata(Pair("federation_entity", JsonObject(base)))
+        builder.metadata(Pair(FEDERATION_ENTITY, federationEntityMetadata(stored, JsonObject(base))))
     }
 
     private fun addAuthorityHints(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
@@ -225,13 +228,10 @@ class FindEntityConfigurationByAccountCommandImpl(
             .forEach { builder.trustAnchorHint(it) }
     }
 
-    private fun addMetadata(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
+    private fun storedMetadata(tenantId: String): Map<String, JsonObject> =
         queries.metadataQueries.findByAccountId(tenantId)
             .executeAsList()
-            .forEach {
-                builder.metadata(Pair(it.key, Json.parseToJsonElement(it.metadata).jsonObject))
-            }
-    }
+            .associate { it.key to Json.parseToJsonElement(it.metadata).jsonObject }
 
     private fun addCrits(tenantId: String, builder: EntityConfigurationStatementObjectBuilder) {
         queries.critQueries.findByAccountId(tenantId)
@@ -282,6 +282,17 @@ class FindEntityConfigurationByAccountCommandImpl(
             }
     }
 }
+
+private const val FEDERATION_ENTITY = "federation_entity"
+
+/**
+ * The `federation_entity` metadata of an Entity Configuration: the operator's [stored] row (organization details,
+ * contacts, logo) with the endpoint metadata this server [generated] for the entity on top. A stored row never removes
+ * or replaces an endpoint the server serves, so a Trust Anchor or Intermediate keeps its fetch and list endpoints
+ * (OIDFed 1.1 section 5.1.1).
+ */
+internal fun federationEntityMetadata(stored: JsonObject?, generated: JsonObject): JsonObject =
+    JsonObject(stored.orEmpty() + generated)
 
 /**
  * Whether a received Trust Mark can go into [identifier]'s Entity Configuration: a JWT whose `sub` is the entity, already
