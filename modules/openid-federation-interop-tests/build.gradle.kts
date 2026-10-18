@@ -28,7 +28,7 @@ tasks.withType<Test>().configureEach {
 }
 
 val interopLane = providers.gradleProperty("interop.lane").orElse("unit").get()
-val allowedInteropLanes = setOf("unit", "peer", "core", "oidc", "profile", "python", "ofcli")
+val allowedInteropLanes = setOf("unit", "peer", "core", "oidc", "profile", "ofcli")
 if (interopLane !in allowedInteropLanes) {
     throw GradleException("Invalid -Pinterop.lane='$interopLane'; expected one of: ${allowedInteropLanes.joinToString()}")
 }
@@ -39,25 +39,22 @@ val oidcOpHostProject = rootProject.findProject(":modules:openid-federation-inte
 val oidcBrowserServerProject = rootProject.findProject(":modules:openid-federation-interop-browser-server")
 val oidcInteropTestClass = "com.sphereon.openid.fed.interop.oidc.OffaOidcInteropTest"
 val profileInteropTestClass = "com.sphereon.openid.fed.interop.core.ResearchEducationProfileInteropTest"
-val pythonInteropTestClass = "com.sphereon.openid.fed.interop.core.PythonFedserviceInteropTest"
 val ofcliInteropTestClass = "com.sphereon.openid.fed.interop.ofcli.OfcliStructuralInteropTest"
 
 fun Test.selectInteropLane(lane: String) {
     useJUnitPlatform {
         when (lane) {
-            "unit" -> excludeTags("peer-qualification", "core", "oidc", "profile", "python", "ofcli")
+            "unit" -> excludeTags("peer-qualification", "core", "oidc", "profile", "ofcli")
             "peer" -> includeTags("peer-qualification")
             "core" -> includeTags("core")
             "oidc" -> includeTags("oidc")
             "profile" -> includeTags("profile")
-            "python" -> includeTags("python")
             "ofcli" -> includeTags("ofcli")
         }
     }
     filter {
         if (lane == "oidc") includeTestsMatching(oidcInteropTestClass)
         if (lane == "profile") includeTestsMatching(profileInteropTestClass)
-        if (lane == "python") includeTestsMatching(pythonInteropTestClass)
         if (lane == "ofcli") includeTestsMatching(ofcliInteropTestClass)
         isFailOnNoMatchingTests = true
     }
@@ -84,42 +81,6 @@ fun Test.configureCoreRuntime(
     systemProperty("interop.work.directory", project.layout.buildDirectory.dir("interop/work").get().asFile.absolutePath)
     systemProperty("interop.evidence.directory", evidenceDirectory.get().asFile.absolutePath)
     outputs.dir(evidenceDirectory)
-}
-
-fun Test.configurePythonEvidence() {
-    val moduleDirectory = project.projectDir.toPath()
-    val configuredBuildDirectory = project.layout.buildDirectory.get().asFile.toPath().toAbsolutePath().normalize()
-    val evidenceDirectory = project.layout.buildDirectory.dir("interop/python").get().asFile.toPath().toAbsolutePath().normalize()
-    systemProperty("interop.evidence.directory", evidenceDirectory.toString())
-    systemProperty("interop.evidence.runId", UUID.randomUUID().toString())
-    doFirst("Remove only stale Python interop evidence before the selected run") {
-        val moduleRoot = moduleDirectory.toRealPath()
-        val expectedBuild = moduleRoot.resolve("build")
-        val configuredBuild = configuredBuildDirectory
-        require(configuredBuild == expectedBuild) { "Python evidence cleanup requires the canonical module build directory" }
-        fun ensureSafeDirectory(path: Path) {
-            require(!Files.isSymbolicLink(path)) { "Symlink in Python evidence path" }
-            if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(path)
-            require(Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) { "Python evidence path is not a directory" }
-            require(path.toRealPath() == path.toAbsolutePath().normalize()) { "Python evidence path escapes the canonical module build directory" }
-        }
-        ensureSafeDirectory(expectedBuild)
-        val interopDirectory = expectedBuild.resolve("interop")
-        ensureSafeDirectory(interopDirectory)
-        val pythonDirectory = interopDirectory.resolve("python")
-        ensureSafeDirectory(pythonDirectory)
-        require(evidenceDirectory == pythonDirectory) { "Python evidence must stay under build/interop/python" }
-        val allowedName = Regex("(python_trust_anchor_to_sphereon_subordinate|python_leaf_under_sphereon_resolved_by_lighthouse)-[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\\.json")
-        Files.newDirectoryStream(pythonDirectory).use { children ->
-            for (child in children) {
-                require(!Files.isSymbolicLink(child)) { "Symlink in Python evidence directory" }
-                require(child.toRealPath() == child.toAbsolutePath().normalize()) { "Reparse or linked Python evidence entry" }
-                require(Files.isRegularFile(child, LinkOption.NOFOLLOW_LINKS)) { "Non-regular Python evidence entry" }
-                require(allowedName.matches(child.fileName.toString())) { "Unexpected Python evidence filename" }
-                Files.delete(child)
-            }
-        }
-    }
 }
 
 fun Test.configureOfcliEvidence() {
@@ -220,19 +181,17 @@ tasks.named<Test>("test") {
     if (interopLane == "peer") {
         configurePeerEvidence()
     }
-    if (interopLane == "core" || interopLane == "profile" || interopLane == "python" || interopLane == "ofcli") {
+    if (interopLane == "core" || interopLane == "profile" || interopLane == "ofcli") {
         val adminServer = adminServerProject
             ?: throw GradleException("The $interopLane interop lane requires :modules:openid-federation-admin-server-ktor in the settings graph; do not use -PopenidFederation.modules")
         val publicServer = publicServerProject
             ?: throw GradleException("The $interopLane interop lane requires :modules:openid-federation-public-server-ktor in the settings graph; do not use -PopenidFederation.modules")
         val evidenceLane = when (interopLane) {
             "profile" -> "profile"
-            "python" -> "python"
             "ofcli" -> "ofcli"
             else -> "core"
         }
         configureCoreRuntime(adminServer, publicServer, evidenceLane)
-        if (interopLane == "python") configurePythonEvidence()
         if (interopLane == "ofcli") configureOfcliEvidence()
     }
     if (interopLane == "oidc") {
@@ -291,23 +250,6 @@ if (adminServerProject != null && publicServerProject != null) {
     }
 }
 
-if (adminServerProject != null && publicServerProject != null) {
-    tasks.register<Test>("interopPythonTest") {
-        group = "verification"
-        description = "Runs strict-media-type-gated mixed interop with the source-pinned experimental Fedservice peer."
-        configureCoreRuntime(adminServerProject, publicServerProject, "python")
-        configurePythonEvidence()
-        testClassesDirs = sourceSets.test.get().output.classesDirs
-        classpath = sourceSets.test.get().runtimeClasspath
-        useJUnitPlatform { includeTags("python") }
-        outputs.upToDateWhen { false }
-        outputs.cacheIf { false }
-        filter {
-            includeTestsMatching(pythonInteropTestClass)
-            isFailOnNoMatchingTests = true
-        }
-    }
-}
 if (oidcOpHostProject != null && adminServerProject != null && oidcBrowserServerProject != null) {
     tasks.register<Test>("interopOidcTest") {
         group = "verification"
@@ -366,22 +308,20 @@ if (aggregateMissingProjects.isEmpty()) {
     val aggregateCore = tasks.named<Test>("interopCoreTest")
     val aggregateOidc = tasks.named<Test>("interopOidcTest")
     val aggregateProfile = tasks.named<Test>("interopProfileTest")
-    val aggregatePython = tasks.named<Test>("interopPythonTest")
     val aggregateOfcli = tasks.named<Test>("interopOfcliTest")
 
-    listOf(aggregateUnit, aggregateHostUnit, aggregatePeer, aggregateCore, aggregateOidc, aggregateProfile, aggregatePython, aggregateOfcli)
+    listOf(aggregateUnit, aggregateHostUnit, aggregatePeer, aggregateCore, aggregateOidc, aggregateProfile, aggregateOfcli)
         .forEach { provider -> provider.configure { maxParallelForks = 1 } }
     aggregateHostUnit.configure { mustRunAfter(aggregateUnit) }
     aggregatePeer.configure { mustRunAfter(aggregateHostUnit) }
     aggregateCore.configure { mustRunAfter(aggregatePeer) }
     aggregateOidc.configure { mustRunAfter(aggregateCore) }
     aggregateProfile.configure { mustRunAfter(aggregateOidc) }
-    aggregatePython.configure { mustRunAfter(aggregateProfile) }
-    aggregateOfcli.configure { mustRunAfter(aggregatePython) }
+    aggregateOfcli.configure { mustRunAfter(aggregateProfile) }
 
     tasks.register("interopTest") {
         group = "verification"
-        description = "Runs unit, host-unit, peer, full core, OIDC, profile, experimental Python, and OFCLI interop lanes serially."
-        dependsOn(aggregateUnit, aggregateHostUnit, aggregatePeer, aggregateCore, aggregateOidc, aggregateProfile, aggregatePython, aggregateOfcli)
+        description = "Runs unit, host-unit, peer, full core, OIDC, profile, and OFCLI interop lanes serially."
+        dependsOn(aggregateUnit, aggregateHostUnit, aggregatePeer, aggregateCore, aggregateOidc, aggregateProfile, aggregateOfcli)
     }
 }

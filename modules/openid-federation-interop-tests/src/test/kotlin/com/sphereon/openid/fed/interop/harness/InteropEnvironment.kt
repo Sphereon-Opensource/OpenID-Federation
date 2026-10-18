@@ -316,7 +316,6 @@ class InteropEnvironment private constructor(
         if (port !in 1..65535 || port.toString() != portText) return false
         return when (host) {
             "lighthouse.test" -> port == 443
-            "fedservice.test" -> port == 7003
             "offa.test" -> port == 443
             else -> false
         }
@@ -586,7 +585,7 @@ class InteropEnvironment private constructor(
             var env: InteropEnvironment? = null
             try {
                 val network = InteropNetwork.create().also { allocatedNetwork = it }
-                val material = PeerTlsCertificateFactory.create("sphereon.test", "admin.test", "auth.test", "lighthouse.test", "fedservice.test", "offa.test")
+                val material = PeerTlsCertificateFactory.create("sphereon.test", "admin.test", "auth.test", "lighthouse.test", "offa.test")
                 val tlsDirectory = Files.createDirectories(work.resolve("tls"))
                 val caPath = tlsDirectory.resolve("ca.pem")
                 val certPath = tlsDirectory.resolve("leaf.pem")

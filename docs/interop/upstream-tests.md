@@ -15,6 +15,8 @@ Commit pins identify the source reviewed; they do not themselves pin runtime ima
 
 ## SUNET fedservice
 
+fedservice is no longer maintained, and the suite has no fedservice lane. The review below is kept as prior art for test design only.
+
 The most reusable semantic scenarios are in [`test_41_federation_entity.py`](https://github.com/SUNET/fedservice/blob/d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f/tests/test_41_federation_entity.py), [`test_43_federationB.py`](https://github.com/SUNET/fedservice/blob/d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f/tests/test_43_federationB.py), [`test_55_trust_chain_constraints.py`](https://github.com/SUNET/fedservice/blob/d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f/tests/test_55_trust_chain_constraints.py) and [`test_70_trust_marks.py`](https://github.com/SUNET/fedservice/blob/d64d300c68540e0cc3e33aa9eedb9d1e7480bc2f/tests/test_70_trust_marks.py).
 
 - `test_41` creates a local multi-anchor topology. Its collector finds two candidate paths; the intermediate that trusts only one anchor verifies one path, while a leaf configured to trust both verifies two. This is a useful assertion pattern: count collected paths separately from verified paths. Fetches are supplied with Python `responses` HTTP fixtures, so this is not a live network exchange.
@@ -65,10 +67,6 @@ Python `responses` fixtures are semantic protocol fixtures. They are suitable fo
 The selected public source is the GÉANT [`edugain-openidfed` repository](https://github.com/GEANT/edugain-openidfed/tree/589f2aa18a695d2b9a64e04b9146d7f7f2630c8b), commit `589f2aa18a695d2b9a64e04b9146d7f7f2630c8b` (2025-03-03). It is a pilot/research draft, not an adopted normative profile. The source describes a prototype and marks the profile as draft; the linked work-plan and pilot materials leave production-profile decisions for subsequent work. The pinned mapping and scope notes are recorded in the external research artifact `edugain-profile-589f2aa-verified.md` (SHA-256 `C9DCCDA510E257E4D683E472D56940456E02E57B4ACF66BD261343C428B6C38D`). This bounded public-source review does not rule out unpublished decisions.
 
 The draft text maps common Entity Configuration claims (`iss`, `sub`, `iat`, `exp`, `jwks`, and an object-valued `metadata`) and describes optional authority hints, trust marks, constraints and trust-mark issuers. Do not turn optional fields or exploratory mappings into mandatory assertions. The private profile candidate reuses real signed objects and the three-entity policy path, but is source-only and has not been compiled or run. See [research-education.md](research-education.md) for the mapped scope and exclusions.
-
-### fedservice producer candidate
-
-A separate experimental producer candidate uses SUNET/fedservice commit `0304f72453214c4f85bed7f792a6b5ad39f357d3`, which is unmerged/untagged and must not be confused with the earlier `d64d300c...` master test-source pin. Its source-built image passed build/import checks, but the subsequent actual producer qualification failed the strict Entity Configuration media-type check. The exact response header was not preserved. Flask's default response behavior suggests a possible incompatible content type, but that is a source inference, not an observed wire value. The candidate does not qualify fedservice as a peer.
 
 ### ofcli structural probe candidate
 
