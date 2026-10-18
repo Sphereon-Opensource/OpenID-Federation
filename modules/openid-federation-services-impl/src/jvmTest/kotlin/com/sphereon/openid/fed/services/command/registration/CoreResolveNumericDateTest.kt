@@ -288,7 +288,7 @@ class CoreResolveNumericDateTest {
             return IdkResult.ok(AccountSigningKey(args.accountId, identifier, "key-${key.kid}", key.kid, "ES256", key.alias, key.provider, 1))
         }
     }
-    private suspend fun actualSignedResolve(): String {
+    private suspend fun actualSignedResolve(audience: String? = null): String {
         val discovery = resolver()
         val verification = verifier()
         val configurations = configurations()
@@ -297,7 +297,7 @@ class CoreResolveNumericDateTest {
             mockk(), mockk()) // Unused discovery/list endpoints; actual trust/mark paths are never mocked.
         val command = GetSignedResolveResponseJwtCommandImpl(execution,
             ResolveEntityCommandImpl(execution, tenants, actualClient), jwtService, tenants, SelectedKeys())
-        val result = command.execute(GetSignedResolveResponseJwtArgs("op-account", rp, arrayOf(ta), null))
+        val result = command.execute(GetSignedResolveResponseJwtArgs("op-account", rp, arrayOf(ta), null, audience))
         assertTrue(result.isOk, "Actual resolver/signing must succeed: ${if(result.isErr) result.error else ""}")
         assertTrue(jwtService.verifyJwtSignature(result.value, opFederationKey.jwk), "Actual managed software-KMS signature must verify")
         return result.value
@@ -312,6 +312,18 @@ class CoreResolveNumericDateTest {
     }
     private fun wireExpiry(compact: String): BigDecimal = BigDecimal(decodeJWTComponents(compact).payload.getValue("exp").jsonPrimitive.content)
 
+    // OpenID Federation 1.1 section 8.3.2: aud only when the requesting party authenticated, and then exactly its
+    // Entity Identifier.
+    @Test fun signedResolveCarriesTheAuthenticatedRequesterAsItsOnlyAudience() = runTest {
+        replaceLeafExpiry("${now + 120}")
+        val requester = "https://requester.example"
+        val claims = decodeJWTComponents(actualSignedResolve(audience = requester)).payload
+        assertEquals(requester, claims.getValue("aud").jsonPrimitive.content)
+    }
+    @Test fun signedResolveForAnUnauthenticatedRequestHasNoAudience() = runTest {
+        replaceLeafExpiry("${now + 120}")
+        assertTrue("aud" !in decodeJWTComponents(actualSignedResolve()).payload)
+    }
     @Test fun signedResolvePreservesTheActualQuarterSecondChainMinimum() = runTest {
         val expected = "${now + 120}.25"
         replaceLeafExpiry(expected)

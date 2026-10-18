@@ -40,5 +40,26 @@ suspend fun enforceFederationClientAuth(
     )
 }
 
+/** Like [enforceFederationClientAuth], and also reports which client authenticated. */
+suspend fun authenticateFederationClient(
+    clientAuth: FederationEndpointClientAuthService,
+    tenantContextResolver: TenantContextResolver,
+    username: String,
+    endpoint: FederationEndpointKind,
+    methodIsPost: Boolean,
+    params: Map<String, String>,
+): FederationEndpointClientAuthService.Outcome {
+    val host = resolveEndpointHost(tenantContextResolver, username)
+        ?: return FederationEndpointClientAuthService.Outcome(FederationErrorResponses.notFound("Tenant not found"))
+    val (hostTenantId, audienceEntityId) = host
+    return clientAuth.authenticate(
+        endpoint = endpoint,
+        methodIsPost = methodIsPost,
+        formOrQueryParams = params,
+        hostTenantId = hostTenantId,
+        audienceEntityId = audienceEntityId,
+    )
+}
+
 fun Map<String, String?>.asAuthParams(): Map<String, String> =
     mapValues { it.value.orEmpty() }

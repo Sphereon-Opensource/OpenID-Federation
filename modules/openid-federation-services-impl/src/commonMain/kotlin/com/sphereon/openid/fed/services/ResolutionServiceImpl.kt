@@ -45,9 +45,10 @@ class ResolutionServiceImpl(
         tenantId: String,
         sub: String,
         trustAnchors: Array<String>,
-        entityTypes: Array<String>?
+        entityTypes: Array<String>?,
+        audience: String?,
     ): FederationResult<String> =
         getSignedResolveResponseJwtCommand.execute(
-            GetSignedResolveResponseJwtArgs(tenantId, sub, trustAnchors, entityTypes)
+            GetSignedResolveResponseJwtArgs(tenantId, sub, trustAnchors, entityTypes, audience)
         ).toFederationResult()
 }

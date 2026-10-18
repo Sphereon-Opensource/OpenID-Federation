@@ -9,7 +9,12 @@ data class GetSignedResolveResponseJwtArgs(
     val tenantId: String,
     val sub: String,
     val trustAnchors: Array<String>,
-    val entityTypes: Array<String>?
+    val entityTypes: Array<String>?,
+    /**
+     * The Entity Identifier of the requesting party when it authenticated (OpenID Federation 1.1 section 8.8); it
+     * becomes the response's only `aud` (section 8.3.2). Null for an unauthenticated request, which gets no `aud`.
+     */
+    val audience: String? = null,
 ) {
     constructor(
         tenantId: String,
@@ -24,6 +29,7 @@ data class GetSignedResolveResponseJwtArgs(
         other as GetSignedResolveResponseJwtArgs
         if (tenantId != other.tenantId) return false
         if (sub != other.sub) return false
+        if (audience != other.audience) return false
         if (!trustAnchors.contentEquals(other.trustAnchors)) return false
         if (entityTypes != null) {
             if (other.entityTypes == null) return false
@@ -37,6 +43,7 @@ data class GetSignedResolveResponseJwtArgs(
         result = 31 * result + sub.hashCode()
         result = 31 * result + trustAnchors.contentHashCode()
         result = 31 * result + (entityTypes?.contentHashCode() ?: 0)
+        result = 31 * result + (audience?.hashCode() ?: 0)
         return result
     }
 }
