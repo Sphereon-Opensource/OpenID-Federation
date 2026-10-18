@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import com.sphereon.openid.fed.services.command.StatementSigningValidation
 import com.sphereon.openid.fed.services.command.renewal.PublishedStatementCacheInvalidator
 import kotlinx.serialization.json.JsonPrimitive
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
@@ -309,7 +310,7 @@ class PublishSubordinateStatementCommandImpl(
     outputTypeToken = typeToken<String>()
 ), PublishSubordinateStatementCommand {
     private val logger = execution.federationLogger("PublishSubordinateStatementCommand")
-    private val subordinateStatementQueries = Persistence.subordinateStatementQueries
+    private val subordinateStatementQueries by lazy { Persistence.subordinateStatementQueries }
 
     override suspend fun doExecute(args: PublishSubordinateStatementArgs, applyDuring: (PublishSubordinateStatementArgs) -> PublishSubordinateStatementArgs): IdkResult<String, FederationError> {
         val (tenantId, subordinateId, dryRun, kmsKeyRef, kid) = applyDuring(args)
@@ -332,8 +333,13 @@ class PublishSubordinateStatementCommandImpl(
             return federationErr(InvalidRequestError("Requested key differs from the superior's selected signing key"))
         }
 
+        val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg)
+        // Never sign a statement a verifier, this Library's included, would reject (OIDFed 1.1 section 3).
+        StatementSigningValidation.refusalFor(subordinateStatement, header)?.let { reason ->
+            return federationErr(InvalidRequestError("Subordinate Statement cannot be published: $reason"))
+        }
+
         return try {
-            val header = JwtHeader(typ = "entity-statement+jwt", kid = key.kid, alg = key.alg)
             val jwtResult = jwtService.signPayload(
                 payload = subordinateStatement,
                 header = header,
