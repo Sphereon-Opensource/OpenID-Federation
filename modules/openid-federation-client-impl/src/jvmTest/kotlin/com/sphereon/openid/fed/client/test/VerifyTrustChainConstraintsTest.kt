@@ -342,6 +342,53 @@ class VerifyTrustChainConstraintsTest {
     }
 
     @Test
+    fun anchorNamingConstraintsPermitIntermediateAndLeafInsideTheNamespace() = runTest {
+        for (permitted in listOf("""[".example"]""", """["intermediate.example","leaf.example"]""")) {
+            for (fullAnchorEc in listOf(false, true)) {
+                val chain = signedIntermediate(
+                    upperConstraints = constraint("""{"naming_constraints":{"permitted":$permitted}}"""),
+                    fullAnchorEc = fullAnchorEc
+                )
+                val result = verify(chain)
+                assertTrue(result.isOk, "intermediate and leaf inside $permitted must verify: ${if (result.isErr) result.error else ""}")
+                assertTrue(result.value.isValid)
+            }
+        }
+    }
+
+    @Test
+    fun anchorNamingConstraintsRejectIntermediateOutsideThePermittedNamespace() = runTest {
+        for (fullAnchorEc in listOf(false, true)) {
+            val chain = signedIntermediate(
+                upperConstraints = constraint("""{"naming_constraints":{"permitted":["leaf.example"]}}"""),
+                fullAnchorEc = fullAnchorEc
+            )
+            val result = verify(chain)
+            assertTrue(result.isErr, "the anchor's Subordinate intermediate.example is outside its permitted namespace")
+            assertTrue(result.error is TrustChainValidationFailedError)
+        }
+    }
+
+    @Test
+    fun anchorNamingConstraintsRejectExcludedIntermediate() = runTest {
+        val chain = signedIntermediate(
+            upperConstraints = constraint("""{"naming_constraints":{"excluded":["intermediate.example"]}}""")
+        )
+        val result = verify(chain)
+        assertTrue(result.isErr, "an excluded intermediate must not be accepted because the leaf is allowed")
+        assertTrue(result.error is TrustChainValidationFailedError)
+    }
+
+    @Test
+    fun directNamingConstraintsStillCheckTheLeaf() = runTest {
+        val inside = verify(signedDirect(constraint("""{"naming_constraints":{"permitted":["leaf.example"]}}""")))
+        assertTrue(inside.isOk, "leaf inside the namespace must verify: ${if (inside.isErr) inside.error else ""}")
+        val outside = verify(signedDirect(constraint("""{"naming_constraints":{"permitted":["other.example"]}}""")))
+        assertTrue(outside.isErr, "leaf outside the namespace must be rejected")
+        assertTrue(outside.error is TrustChainValidationFailedError)
+    }
+
+    @Test
     fun negativeMaxPathLengthIsInvalid() = runTest {
         val chain = signedDirect(constraint("""{"max_path_length":-1}"""), metadata = federationOnlyMetadata())
         assertTrue(verify(chain).isErr)

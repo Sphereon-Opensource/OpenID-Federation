@@ -123,7 +123,9 @@ object TrustChainValidation {
             }
             "naming_constraints" -> {
                 val naming = requireNotNull(constraints.namingConstraints)
-                for (k in 0 until position) {
+                // OIDFed 1.1 §6.2.2: every Subordinate of the issuer in the chain, including the statement's own
+                // subject. For an intermediate subject statements[position].sub is not repeated further down.
+                for (k in 0..position) {
                     val entitySub = stringClaim(statements[k], "sub") ?: continue
                     if (!NamingConstraintsMatcher.isAllowed(entitySub, naming.permitted, naming.excluded)) {
                         return failedConstraint(issuer, position, name, entitySub,
@@ -133,7 +135,7 @@ object TrustChainValidation {
                     }
                 }
                 return passedConstraint(issuer, position, name,
-                    "All entity identifiers below statement satisfy naming_constraints")
+                    "The statement subject and all entity identifiers below it satisfy naming_constraints")
             }
             "allowed_entity_types" -> {
                 val allowed = requireNotNull(constraints.allowedEntityTypes)
