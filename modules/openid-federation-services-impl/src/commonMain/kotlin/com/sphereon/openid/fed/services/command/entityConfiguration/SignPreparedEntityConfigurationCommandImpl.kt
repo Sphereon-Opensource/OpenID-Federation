@@ -16,6 +16,7 @@ import com.sphereon.crypto.core.sign.keyCompatibilityFailure
 import com.sphereon.di.session.SessionScope
 import com.sphereon.crypto.jose.jws.JwtService
 import com.sphereon.openid.fed.client.command.trustChain.EntityStatementValidation
+import com.sphereon.openid.fed.services.command.StatementSigningValidation
 import com.sphereon.openid.fed.client.helpers.getCurrentEpochTimeSeconds
 import com.sphereon.openid.fed.core.error.AccountNotFoundError
 import com.sphereon.openid.fed.core.error.FederationError
@@ -181,6 +182,7 @@ class SignPreparedEntityConfigurationCommandImpl internal constructor(
                 )
             }.getOrNull() ?: return invalid("Prepared Entity Configuration has invalid structure")
             if (!structural.ok) return invalid(structural.reason ?: "Invalid Entity Configuration")
+            StatementSigningValidation.producerRefusal(statement, isEntityConfiguration = true)?.let { return invalid(it) }
 
             // Read the authoritative selected UUID and revision after all existing ownership,
             // advertised-key, and structure checks, immediately before the KMS boundary.
