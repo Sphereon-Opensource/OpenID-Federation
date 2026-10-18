@@ -162,7 +162,7 @@ internal class DiagnosisPathResolver(
             }
             val key = authority to identifier
             val fetched = subordinateStatements[key] ?: fetch(
-                getSubordinateStatementEndpoint(endpoint.substringBefore('?'), identifier),
+                getSubordinateStatementEndpoint(endpoint, identifier),
                 authority, identifier, StatementKind.SUBORDINATE_STATEMENT,
             ).also { if (it.failure?.code != BUDGET_ERROR) subordinateStatements[key] = it }
             val signature = if (fetched.decoded != null) verifyDiagnosticSignature(context,

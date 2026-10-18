@@ -419,13 +419,12 @@ class ResolveTrustChainCommandImpl(
 
         val fetchFromEc = getAuthorityFetchEndpoint(authorityEntityConfiguration)
         val cachedSourceBase = trustChainCache?.getApp(sourceEndpointCacheKey(authority, subjectEntityId))
-            ?.substringBefore('?')
             ?.takeIf { it.isNotBlank() }
 
         // Prefer source_endpoint (refresh optimization), then federation_fetch_endpoint from EC
         val fetchBases = buildList {
             if (cachedSourceBase != null) add(cachedSourceBase)
-            if (!fetchFromEc.isNullOrBlank()) add(fetchFromEc.substringBefore('?'))
+            if (!fetchFromEc.isNullOrBlank()) add(fetchFromEc)
         }.distinct()
 
         if (fetchBases.isEmpty()) {
@@ -484,7 +483,6 @@ class ResolveTrustChainCommandImpl(
                 // Prefer claim source_endpoint; else remember the working fetch base for refresh
                 val sourceFromClaim = decodedSubordinateStatement.payload["source_endpoint"]
                     ?.jsonPrimitive?.contentOrNull
-                    ?.substringBefore('?')
                     ?.takeIf { it.isNotBlank() }
                 val toCache = sourceFromClaim ?: base
                 trustChainCache?.putApp(sourceEndpointCacheKey(authority, subjectEntityId), toCache)
