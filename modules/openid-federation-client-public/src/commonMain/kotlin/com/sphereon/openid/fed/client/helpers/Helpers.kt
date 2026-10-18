@@ -22,7 +22,8 @@ fun getSubordinateStatementEndpoint(fetchEndpoint: String, sub: String): String 
 }
 
 fun findKeyInJwks(keys: Array<Jwk>, kid: String): Jwk? {
-    val key = keys.firstOrNull { it.kid.trim() == kid.trim() }
+    // OpenID Federation 1.1 section 16: compare code point by code point, without trimming.
+    val key = keys.firstOrNull { it.kid == kid }
 
     return key
 }

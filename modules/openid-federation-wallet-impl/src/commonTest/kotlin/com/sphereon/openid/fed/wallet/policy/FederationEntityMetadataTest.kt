@@ -165,13 +165,15 @@ class FederationEntityMetadataTest {
     }
 
     @Test
-    fun testFindVcIssuerKeyTrimsWhitespace() {
+    fun testFindVcIssuerKeyComparesKidExactly() {
+        // OpenID Federation 1.1 section 16: strings are compared code point by code point, without trimming.
         val metadata = buildVcIssuerMetadata(listOf(
             buildJsonKey("key-1 ", "EC", "ES256")
         ))
 
-        val key = FederationEntityMetadata.findVcIssuerKey(metadata, " key-1")
-        assertEquals("key-1 ", key?.get("kid")?.jsonPrimitive?.content)
+        assertNull(FederationEntityMetadata.findVcIssuerKey(metadata, " key-1"))
+        assertNull(FederationEntityMetadata.findVcIssuerKey(metadata, "key-1"))
+        assertEquals("key-1 ", FederationEntityMetadata.findVcIssuerKey(metadata, "key-1 ")?.get("kid")?.jsonPrimitive?.content)
     }
 
     // =========================================================================
