@@ -15,6 +15,7 @@ import org.junit.Test
 import java.sql.Connection
 import java.sql.DriverManager
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -256,6 +257,55 @@ class SchemaMigrationEquivalenceTest {
                 st.executeQuery("SELECT COUNT(*) FROM AdminDocument").use { rs -> assertTrue(rs.next()); assertEquals(0L, rs.getLong(1)) }
             }
         }
+    }
+
+    @Test
+    fun logicalKeyRolloverUpgradePreservesPhysicalRoutesPublicationsAndSelection() {
+        val account = "10000000-0000-0000-0000-000000000001"
+        val original = "20000000-0000-0000-0000-000000000001"
+        val replacement = "20000000-0000-0000-0000-000000000002"
+        val publicKey = "{\"kty\":\"OKP\",\"crv\":\"Ed25519\",\"alg\":\"EdDSA\",\"kid\":\"original-kid\"}"
+        withSchema(upgradeSchema) { driver, conn ->
+            Database.Schema.migrate(driver, 0L, 28L)
+            conn.createStatement().use { st ->
+                st.execute("INSERT INTO Account(id, username, identifier) VALUES ('$account','logical-key-upgrade','https://ta.example')")
+                st.execute("INSERT INTO Jwk(id, account_id, alg, kid, kms, kms_key_ref, key) VALUES ('$original','$account','EdDSA','original-kid','krh-retained','retained-physical-reference','$publicKey')")
+                st.execute("INSERT INTO AccountSigningKey(account_id,jwk_id,revision) VALUES ('$account','$original',7)")
+                st.execute("INSERT INTO AdminDocument(account_id,collection,resource_id,document,etag,updated_at,artifact) VALUES ('$account','configuration','','{}','retained-revision',123,'exact.retained.jwt.bytes')")
+                st.execute("INSERT INTO AdminDocument(account_id,collection,resource_id,document,etag,updated_at) VALUES ('$account','key-preparation','$original','{\"status\":\"COMMITTED\",\"generated\":true}','retained-private-revision',123)")
+                val insertReplacement = "INSERT INTO Jwk(id, account_id, alg, kid, kms, kms_key_ref, key) VALUES ('$replacement','$account','EdDSA','replacement-kid','krh-retained','retained-physical-reference','$publicKey')"
+                val beforeUpgrade = assertFailsWith<java.sql.SQLException> { st.execute(insertReplacement) }
+                assertEquals("23505", beforeUpgrade.sqlState, "The populated old schema enforces physical-reference uniqueness")
+                Database.Schema.migrate(driver, 28L, Database.Schema.version)
+                st.execute(insertReplacement)
+                st.executeQuery("SELECT id,kms,kms_key_ref,key FROM Jwk WHERE account_id='$account' ORDER BY id").use { rows ->
+                    for (expectedId in listOf(original, replacement)) {
+                        assertTrue(rows.next()); assertEquals(expectedId, rows.getString(1))
+                        assertEquals("krh-retained", rows.getString(2)); assertEquals("retained-physical-reference", rows.getString(3))
+                        assertEquals(publicKey, rows.getString(4))
+                    }
+                    assertTrue(!rows.next())
+                }
+                st.executeQuery("SELECT jwk_id,revision FROM AccountSigningKey WHERE account_id='$account'").use { rows ->
+                    assertTrue(rows.next()); assertEquals(original, rows.getString(1)); assertEquals(7L, rows.getLong(2))
+                }
+                st.executeQuery("SELECT etag,artifact FROM AdminDocument WHERE account_id='$account' AND collection='configuration'").use { rows ->
+                    assertTrue(rows.next()); assertEquals("retained-revision", rows.getString(1)); assertEquals("exact.retained.jwt.bytes", rows.getString(2))
+                }
+                st.executeQuery("SELECT document,etag FROM AdminDocument WHERE account_id='$account' AND collection='key-preparation'").use { rows ->
+                    assertTrue(rows.next()); assertEquals("{\"status\":\"COMMITTED\",\"generated\":true}", rows.getString(1)); assertEquals("retained-private-revision", rows.getString(2))
+                }
+                val duplicateKid = assertFailsWith<java.sql.SQLException> {
+                    st.execute("INSERT INTO Jwk(account_id,kid,kms,kms_key_ref,key) VALUES ('$account','replacement-kid','other-provider','other-reference','{}')")
+                }
+                assertEquals("23505", duplicateKid.sqlState, "Logical kid uniqueness remains enforced")
+                st.executeQuery("SELECT indexdef FROM pg_indexes WHERE schemaname='$upgradeSchema' AND indexname='jwk_kms_key_ref_account_id_active'").use { rows ->
+                    assertTrue(rows.next()); assertTrue(!rows.getString(1).contains("UNIQUE")); assertTrue(!rows.next())
+                }
+            }
+        }
+        withSchema(greenfieldSchema) { driver, _ -> Database.Schema.migrate(driver, 0L, Database.Schema.version) }
+        assertEquals(fingerprint(greenfieldSchema), fingerprint(upgradeSchema), "Fresh and populated upgraded schema catalogs must agree")
     }
 
     private fun fingerprint(schema: String): String =

@@ -80,7 +80,14 @@ class CreateKeyCommandImpl internal constructor(
         catch (failure: Exception) { federationErr(ServerError("Failed to persist generated key", failure.message, failure)) }
     }
 
-    suspend fun prepareKey(args: CreateKeyCommandArgs): IdkResult<PreparedFederationKey, FederationError> = withContext(Dispatchers.IO) {
+    suspend fun prepareKey(args: CreateKeyCommandArgs, beforeGenerate: suspend (String, String?) -> Unit = { _, _ -> }): IdkResult<PreparedFederationKey, FederationError> =
+        prepareKeyWithContext(args, beforeGenerate) { _, _ -> kotlin.coroutines.EmptyCoroutineContext }
+
+    /** A trusted in-process provider capability; never accepted from command arguments. */
+    suspend fun prepareKeyWithContext(args: CreateKeyCommandArgs,
+        beforeGenerate: suspend (String, String?) -> Unit,
+        generationContext: suspend (String, String?) -> kotlin.coroutines.CoroutineContext,
+    ): IdkResult<PreparedFederationKey, FederationError> = withContext(Dispatchers.IO) {
         val (tenantId, opts) = args
 
         try {
@@ -107,7 +114,9 @@ class CreateKeyCommandImpl internal constructor(
 
             // A routed generation returns an authoritative reference; its in-process key pair is
             // deliberately transient. Never regenerate or switch providers when a receipt is invalid.
-            val generated = keyManagerService.generateKeyResult(providerId, alias, use, keyOperations, alg, KeyVisibility.PUBLIC)
+            beforeGenerate(providerId, alias)
+            val context = generationContext(providerId, alias)
+            val generated = withContext(context) { keyManagerService.generateKeyResult(providerId, alias, use, keyOperations, alg, KeyVisibility.PUBLIC) }
             if (generated.isErr) return@withContext federationErr(ServerError("Failed to create key", generated.error.message.defaultMessage))
             val reference = requireNotNull(generated.value.keyReference) { "Generated managed key reference is missing" }
             require(reference.alias.isNotBlank() && reference.providerId.isNotBlank()) { "Generated managed key coordinates are blank" }
@@ -116,7 +125,7 @@ class CreateKeyCommandImpl internal constructor(
             require(reference.providerId == providerId) { "Generated managed key provider differs from the selected provider" }
             require(reference.signatureAlgorithm == null || reference.signatureAlgorithm == alg) { "Generated managed key algorithm differs from the requested algorithm" }
 
-            val resolved = keyManagerService.getKeyResult(reference.copy(keyVisibility = KeyVisibility.PUBLIC))
+            val resolved = withContext(context) { keyManagerService.getKeyResult(reference.copy(keyVisibility = KeyVisibility.PUBLIC)) }
             if (resolved.isErr) return@withContext federationErr(ServerError("Failed to resolve generated public key", resolved.error.message.defaultMessage))
             val keyInfo = requireNotNull(resolved.value.key) { "Generated public key is missing" }
             require(keyInfo.alias == reference.alias && keyInfo.providerId == reference.providerId) { "Resolved public key coordinates differ from the generated reference" }
@@ -140,6 +149,29 @@ class CreateKeyCommandImpl internal constructor(
             federationErr(ServerError("Failed to create key", e.message, e))
         }
     }
+    /** Resolve exact public material before rollback; ambiguous provider errors never prove absence. */
+    suspend fun discardPreparedKeyWithProof(providerId: String, alias: String, kid: String?, algorithm: com.sphereon.crypto.core.generic.SignatureAlgorithm): IdkResult<Boolean, FederationError> {
+        val public = keyManagerService.getKeyResult(com.sphereon.crypto.core.KeyInfo<com.sphereon.crypto.core.KeyType>(
+            providerId = providerId, alias = alias, kid = kid, signatureAlgorithm = algorithm, keyVisibility = KeyVisibility.PUBLIC))
+        if (public.isErr) return federationErr(ServerError("Failed to resolve uncommitted key", public.error.message.defaultMessage))
+        val exact = public.value.key ?: return federationErr(ServerError("Uncommitted public key is unavailable"))
+        if (exact.providerId != providerId || exact.alias != alias || exact.kid.isNullOrBlank() ||
+            kid?.let { it != exact.kid } == true || exact.signatureAlgorithm?.let { it != algorithm } == true)
+            return federationErr(ServerError("Uncommitted key receipt changed"))
+        val result = keyManagerService.deleteKeyResult(com.sphereon.crypto.core.KeyInfo<com.sphereon.crypto.core.KeyType>(
+            providerId = providerId, alias = alias, kid = exact.kid, signatureAlgorithm = algorithm, keyVisibility = KeyVisibility.PRIVATE))
+        return if (result.isErr) federationErr(ServerError("Failed to discard uncommitted key", result.error.message.defaultMessage))
+        else IdkResult.ok(result.value.deleted)
+    }
+
+    /** Preparation rollback only: the owning workflow must fence publication before calling this. */
+    suspend fun discardPreparedKey(providerId: String, alias: String, kid: String?): IdkResult<Boolean, FederationError> {
+        val result = keyManagerService.deleteKeyResult(com.sphereon.crypto.core.KeyInfo<com.sphereon.crypto.core.KeyType>(
+            providerId = providerId, alias = alias, kid = kid, keyVisibility = KeyVisibility.PRIVATE))
+        return if (result.isErr) federationErr(ServerError("Failed to discard uncommitted key", result.error.message.defaultMessage))
+        else IdkResult.ok(result.value.deleted)
+    }
+
 }
 
 /** Transient KMS generation receipt; no database row or public publication exists yet. */

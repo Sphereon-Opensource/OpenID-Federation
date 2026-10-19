@@ -32,6 +32,18 @@ class SqlAdminDocumentStore internal constructor(
     private val trustMarkTypeQueries get() = database?.trustMarkTypeQueries ?: Persistence.trustMarkTypeQueries
     private val typeStore get() = SqlAdminTrustMarkTypes(trustMarkTypeQueries, queries)
     private fun keyState(accountId: String) = adminKeyState(accountId, jwkQueries, accountSigningKeyQueries, queries)
+    override suspend fun readKeyMaterial(scope: AdminNodeScope, keyId: String): AdminStoredKeyMaterial? {
+        val key = jwkQueries.findById(keyId).executeAsOneOrNull()?.takeIf { it.account_id == scope.accountId } ?: return null
+        val public = JsonObject(Json.parseToJsonElement(key.key).jsonObject.filterKeys { it !in setOf("d", "p", "q", "dp", "dq", "qi", "oth", "k", "dP", "dQ", "qInv") })
+        return AdminStoredKeyMaterial(AdminPreparedKey(key.id, public, key.kid ?: return null, key.alg ?: (public["alg"] as? JsonPrimitive)?.contentOrNull, key.kms, key.kms_key_ref),
+            key.revoked_at == null && key.kms.isNotBlank() && key.kms_key_ref.isNotBlank() &&
+                (key.expires_at == null || key.expires_at!!.toEpochSecond(java.time.ZoneOffset.UTC) > System.currentTimeMillis() / 1000))
+    }
+    override suspend fun recoverableKeyPreparations(scope: AdminNodeScope, limit: Int): List<AdminStoredDocument> =
+        queries.pendingKeyPreparations(scope.accountId, limit.coerceIn(1, 100).toLong()).executeAsList().map { it.stored() }
+    override suspend fun touchKeyPreparation(scope: AdminNodeScope, keyId: String) {
+        queries.touchKeyPreparation(System.currentTimeMillis(), scope.accountId, keyId)
+    }
     override suspend fun readCommitted(scope: AdminNodeScope, key: AdminDocumentKey): AdminStoredDocument? =
         queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.stored()
     override suspend fun listCommitted(scope: AdminNodeScope, collection: String, resourceId: String?): List<AdminStoredDocument> =
@@ -129,7 +141,13 @@ class SqlAdminDocumentStore internal constructor(
                         adminFail("invalid_request", 400, "entity_id is immutable")
                     if (account.identifier == null && desiredId != null) accountQueries.initializeIdentifier(desiredId, scope.accountId)
                 }
-                val storedDocument = if (key.collection == "trust-mark-type") typeStore.write(scope.accountId, mutation) else mutation.document
+                val storedDocument = when (key.collection) {
+                    "trust-mark-type" -> typeStore.write(scope.accountId, mutation)
+                    // Internal query indexes use this canonical prefix; hosts cannot accidentally
+                    // hide recovery work by changing JSON member insertion order.
+                    "key-preparation" -> JsonObject(linkedMapOf("status" to mutation.document.getValue("status")) + (mutation.document - "status"))
+                    else -> mutation.document
+                }
                 queries.upsert(scope.accountId, key.collection, key.resourceId, key.subjectId,
                     storedDocument.toString(), etag, now, mutation.artifact)
                 queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOne().stored()
