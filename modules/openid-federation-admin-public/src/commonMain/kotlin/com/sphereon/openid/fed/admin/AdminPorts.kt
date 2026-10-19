@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.admin
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 data class AdminDocumentKey(val collection: String, val resourceId: String = "", val subjectId: String = "")
@@ -33,6 +34,15 @@ data class AdminKeyChange(val newKey: AdminPreparedKey? = null, val selectedKeyI
 
 /** All compare-and-swap writes and artifact visibility changes commit in one owning-store transaction. */
 interface AdminDocumentStore {
+    /** Internal, read-only key authority; never exposed by a standard document operation. */
+    suspend fun readKeyMaterial(scope: AdminNodeScope, keyId: String): AdminStoredKeyMaterial? = null
+    suspend fun recoverableKeyPreparations(scope: AdminNodeScope, limit: Int): List<AdminStoredDocument> =
+        listCommitted(scope, "key-preparation").filter {
+            it.document["status"] in setOf(JsonPrimitive("PENDING"), JsonPrimitive("ABORTED")) && it.document["cleanup_complete"] != JsonPrimitive(true)
+        }.take(limit)
+    /** Scheduling fairness only; must not change the authority revision or document. */
+    suspend fun touchKeyPreparation(scope: AdminNodeScope, keyId: String) = Unit
+
     /** Trusted host upgrade import; succeeds only if no canonical configuration has been committed. */
     suspend fun adopt(scope: AdminNodeScope, documents: List<AdminStoredDocument>): Boolean
     suspend fun stage(scope: AdminNodeScope, mutation: AdminMutation): AdminStagedPublication = adminFail("internal", 500, "Store does not support staging")
@@ -52,6 +62,8 @@ interface AdminDocumentStore {
 
 /** Domain operations below the document workflow. Preparation never publishes or changes document state. */
 interface AdminProtocolPort {
+    suspend fun recoverKeyPreparations(scope: AdminNodeScope, abortPending: Boolean = false) = Unit
+
     suspend fun selectSigningKey(scope: AdminNodeScope, keyId: String?, expectedRevision: Long): AdminCommandResult = adminFail("internal", 500, "Signing selection is unavailable")
     suspend fun node(scope: AdminNodeScope): JsonObject
     suspend fun keys(operation: AdminOperation, args: AdminCommandArgs): AdminCommandResult

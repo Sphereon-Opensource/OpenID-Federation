@@ -110,6 +110,7 @@ actual object Persistence {
         25L to ("25.sqm" to "Record the last signing-key operation generation, token and request snapshot per account"),
         26L to ("26.sqm" to "Add versioned Trust Mark type definitions and their revision history"),
         27L to ("27.sqm" to "Administration document revisions, atomic publication artifacts and scheduled-key queue"),
+        28L to ("28.sqm" to "Allow distinct logical JOSE keys to share an authorized physical key during rollover"),
     )
 
     private val driver: SqlDriver

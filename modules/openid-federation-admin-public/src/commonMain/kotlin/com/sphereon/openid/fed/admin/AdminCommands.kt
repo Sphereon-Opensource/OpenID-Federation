@@ -49,6 +49,9 @@ data class AdminError(val token: String, val status: Int, val detail: String, va
 }
 
 interface AdminWorkflow {
+    /** Internal owner-scoped maintenance; never a standard Node read or publication operation. */
+    suspend fun recoverKeyPreparations(scope: AdminNodeScope, abortPending: Boolean = false): IdkResult<Unit, AdminError> = com.sphereon.core.api.Ok(Unit)
+
     suspend fun execute(operation: AdminOperation, args: AdminCommandArgs): IdkResult<AdminCommandResult, AdminError>
     suspend fun stage(operation: AdminOperation, args: AdminCommandArgs): IdkResult<AdminCommandResult, AdminError>
     suspend fun finalizeStage(scope: AdminNodeScope, digest: String, expectedStageEtag: String? = null): IdkResult<AdminCommandResult, AdminError>

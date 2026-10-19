@@ -1,0 +1,5 @@
+-- Logical JOSE keys may share one authorized physical key during import and rollover.
+-- Preserve every key row and the unique active kid/account constraint. Physical
+-- custody remains bound to its provider/reference; retirement is logical-key scoped.
+DROP INDEX unique_kms_key_ref_account_id_active;
+CREATE INDEX jwk_kms_key_ref_account_id_active ON Jwk (kms_key_ref, account_id) WHERE revoked_at IS NULL;

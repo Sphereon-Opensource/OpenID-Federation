@@ -281,6 +281,245 @@ class SqlAdminDocumentStoreTest {
         assertTrue(store.stagedPublication(scope, next.digest)!!.committed)
         assertNull(store.stagedPublication(scope, "missing"))
     }
+    @Test fun adoptedWorkflowUsesHostKeyAuthorityForGenerationSigningAndReload(): Unit = runBlocking {
+        configuration()
+        val pair = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
+        val encode = java.util.Base64.getUrlEncoder().withoutPadding()
+        val publicJwk = buildJsonObject {
+            put("kty", "OKP"); put("crv", "Ed25519"); put("alg", "EdDSA"); put("kid", "managed-kid")
+            put("x", encode.encodeToString(pair.public.encoded.takeLast(32).toByteArray()))
+        }
+        val app = createAdminProtocolTestGraph(this)
+        val session = app.userContextManager.getAnonymous().sessionContextManager.createOrGetFromId(
+            "host-authority-" + UUID.randomUUID(), principalType = PrincipalType.ANONYMOUS)
+        val realJwt = (session.graph as JwtServiceImpl.Graph).jwtService
+        var preparations = 0
+        var signatures = 0
+        var changeClaims = false
+        var failAfterPhysicalGeneration = false
+        var allowCleanup = false
+        val uncommittedPhysicalKeys = mutableSetOf<String>()
+        var cleanupAttempts = 0
+        var existingPreparations = 0
+        val material = object : AdminKeyMaterialPort {
+            override suspend fun prepare(scope: AdminNodeScope, keyId: String, algorithm: String): AdminPreparedKey {
+                assertEquals(this@SqlAdminDocumentStoreTest.scope.accountId, scope.accountId)
+                assertEquals("EdDSA", algorithm)
+                preparations++
+                if (failAfterPhysicalGeneration) {
+                    uncommittedPhysicalKeys += keyId
+                    error("Provider completed before its public receipt was persisted")
+                }
+                return AdminPreparedKey(keyId, publicJwk, "managed-kid", algorithm, "krh-managed", "key-resource-managed")
+            }
+            override suspend fun prepareExisting(scope: AdminNodeScope, key: AdminPreparedKey, sourceKeyId: String): AdminPreparedKey {
+                val pending = store.readCommitted(scope, adminKeyPreparationKey(key.id))!!
+                assertEquals(JsonPrimitive("PENDING"), pending.document["status"])
+                assertEquals(JsonPrimitive(false), pending.document["generated"])
+                assertEquals(JsonPrimitive(sourceKeyId), pending.document["source_key_id"])
+                assertNotNull(store.readKeyMaterial(scope, sourceKeyId))
+                assertNull(store.readKeyMaterial(scope, key.id), "New logical key is not persisted before publication commits")
+                existingPreparations++
+                return key
+            }
+            override suspend fun sign(scope: AdminNodeScope, key: AdminPreparedKey, header: JsonObject, claims: JsonObject): String {
+                assertEquals("krh-managed", key.kms)
+                assertEquals("key-resource-managed", key.kmsKeyRef)
+                signatures++
+                val actualClaims = if (changeClaims) JsonObject(claims + ("iss" to JsonPrimitive("https://foreign.example"))) else claims
+                val input = encode.encodeToString(header.toString().toByteArray()) + "." + encode.encodeToString(actualClaims.toString().toByteArray())
+                val signature = java.security.Signature.getInstance("Ed25519").run {
+                    initSign(pair.private); update(input.toByteArray()); sign()
+                }
+                return input + "." + encode.encodeToString(signature)
+            }
+            override suspend fun discard(scope: AdminNodeScope, keyId: String): Boolean {
+                val pending = store.readCommitted(scope, adminKeyPreparationKey(keyId))!!
+                assertEquals("ABORTED", pending.document.getValue("status").jsonPrimitive.content)
+                assertTrue(pending.document.getValue("generated").jsonPrimitive.boolean)
+                assertTrue(keyId in uncommittedPhysicalKeys, "Committed material must be retained")
+                cleanupAttempts++
+                if (!allowCleanup) return false
+                uncommittedPhysicalKeys.remove(keyId)
+                return true
+            }
+        }
+        val resolver = mockk<TenantContextResolver>()
+        coEvery { resolver.resolveIdentifier(scope.accountId) } returns scope.entityId
+        val binder = mockk<OidfConfigBinder>(relaxed = true)
+        val creation = mockk<CreateKeyCommandImpl>()
+        coEvery { creation.prepareKey(any(), any()) } throws IllegalStateException("Generic registry cannot resolve managed resource handles")
+        fun protocol() = StandaloneAdminProtocolPort(store, resolver, binder, creation, realJwt,
+            mockk(), mockk(), mockk(), mockk(), database, { System.currentTimeMillis() / 1000 }, material)
+        val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list"}}}""")
+        var workflow = DefaultAdminWorkflow(store, protocol())
+        val created = workflow.execute(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"EdDSA"}}""")))
+        assertTrue(created.isOk, "Adopted administration must use the host's managed key authority")
+        assertEquals(1, preparations)
+        val published = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config))
+        assertTrue(published.isOk)
+        val committed = store.readCommitted(scope, AdminDocumentKey("configuration"))!!
+        val parts = committed.artifact!!.split('.')
+        val decoded = decodeJWTComponents(committed.artifact!!)
+        assertEquals("EdDSA", decoded.header.alg)
+        assertEquals("managed-kid", decoded.header.kid)
+        assertEquals("entity-statement+jwt", decoded.header.typ)
+        assertEquals(config.getValue("metadata"), decoded.payload["metadata"])
+        assertEquals(scope.entityId, decoded.payload.getValue("iss").jsonPrimitive.content)
+        assertEquals(scope.entityId, decoded.payload.getValue("sub").jsonPrimitive.content)
+        assertEquals(publicJwk, decoded.payload.getValue("jwks").jsonObject.getValue("keys").jsonArray.single())
+        assertTrue(decoded.payload.keys.none { it.contains("preparation") || it == "node_incarnation" })
+        assertEquals("COMMITTED", store.listCommitted(scope, "key-preparation").single().document.getValue("status").jsonPrimitive.content)
+        assertTrue(java.security.Signature.getInstance("Ed25519").run {
+            initVerify(pair.public); update((parts[0] + "." + parts[1]).toByteArray())
+            verify(java.util.Base64.getUrlDecoder().decode(parts[2]))
+        })
+        workflow = DefaultAdminWorkflow(store, protocol())
+        val replaced = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config, ifMatch = committed.etag))
+        assertTrue(replaced.isOk)
+        assertEquals(1, preparations)
+        assertEquals(2, signatures)
+        assertEquals(store.readCommitted(scope, committed.key)!!.artifact,
+            workflow.execute(AdminOperation.ReadAdminConfigurationStatement, AdminCommandArgs(scope)).value.artifact)
+        val beforeTampering = store.readCommitted(scope, committed.key)!!
+        changeClaims = true
+        val tampered = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config, ifMatch = beforeTampering.etag))
+        assertTrue(tampered.isErr)
+        assertEquals(beforeTampering, store.readCommitted(scope, committed.key))
+        changeClaims = false
+        failAfterPhysicalGeneration = true
+        val failedGeneration = workflow.execute(AdminOperation.CreateAdminKey,
+            AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"EdDSA"}}""")))
+        assertTrue(failedGeneration.isErr)
+        assertEquals(beforeTampering, store.readCommitted(scope, committed.key), "A preparation must not alter configuration ETag or publication")
+        assertEquals(1, uncommittedPhysicalKeys.size)
+        assertEquals(1, cleanupAttempts)
+        val aborted = store.listCommitted(scope, "key-preparation").single { it.document["status"] == JsonPrimitive("ABORTED") }
+        assertNull(aborted.document["cleanup_complete"])
+        allowCleanup = true
+        protocol().node(scope) // a fresh port's independent maintenance repairs interrupted custody
+        assertTrue(uncommittedPhysicalKeys.isEmpty())
+        assertEquals(2, cleanupAttempts)
+        assertEquals(JsonPrimitive(true), store.readCommitted(scope, aborted.key)!!.document["cleanup_complete"])
+        assertEquals(beforeTampering, store.readCommitted(scope, committed.key))
+        assertEquals(1, database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().size)
+        coVerify(exactly = 0) { creation.prepareKey(any(), any()) }
+        // A legal new JOSE kid reuses the exact existing physical key, including pre-commit signing.
+        val originalKey = database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().single()
+        source.connection.use { connection -> connection.prepareStatement("UPDATE jwk SET alg = NULL WHERE id = ?").use {
+            it.setObject(1, java.util.UUID.fromString(originalKey.id)); assertEquals(1, it.executeUpdate())
+        } }
+        assertEquals("EdDSA", store.readKeyMaterial(scope, originalKey.id)!!.key.algorithm, "Persisted public alg preserves legacy signing routes")
+        val imported = JsonObject(publicJwk + ("kid" to JsonPrimitive("logical-reimport")))
+        val rotation = workflow.execute(AdminOperation.RotateAdminKey,
+            AdminCommandArgs(scope, resourceId = "managed-kid", document = buildJsonObject { put("import", imported) }))
+        assertTrue(rotation.isOk, "Known-key rollover failed: $rotation")
+        assertEquals(2, preparations, "Import must not generate physical key material")
+        val reimported = database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().single { it.kid == "logical-reimport" }
+        val reused = store.readCommitted(scope, adminKeyPreparationKey(reimported.id))!!
+        assertEquals(JsonPrimitive(false), reused.document["generated"])
+        assertEquals(JsonPrimitive(originalKey.id), reused.document["source_key_id"])
+        assertEquals(JsonPrimitive("COMMITTED"), reused.document["status"])
+        val reimportedArtifact = store.readCommitted(scope, committed.key)!!.artifact!!
+        assertEquals("logical-reimport", decodeJWTComponents(reimportedArtifact).header.kid)
+        val reusedParts = reimportedArtifact.split('.')
+        assertTrue(java.security.Signature.getInstance("Ed25519").run {
+            initVerify(pair.public); update((reusedParts[0] + "." + reusedParts[1]).toByteArray())
+            verify(java.util.Base64.getUrlDecoder().decode(reusedParts[2]))
+        })
+        val beforeFailedImport = store.readCommitted(scope, committed.key)!!
+        val discardsBeforeImport = cleanupAttempts
+        changeClaims = true
+        val failedImport = workflow.execute(AdminOperation.RotateAdminKey, AdminCommandArgs(scope, resourceId = "logical-reimport",
+            document = buildJsonObject { put("import", JsonObject(publicJwk + ("kid" to JsonPrimitive("failed-logical-import")))) }))
+        assertTrue(failedImport.isErr)
+        assertEquals(beforeFailedImport, store.readCommitted(scope, committed.key))
+        assertEquals(2, existingPreparations)
+        assertEquals(discardsBeforeImport, cleanupAttempts, "Aborted adoption must never invoke physical discard")
+        assertEquals(2, database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().size)
+        val abortedImport = store.listCommitted(scope, "key-preparation").single {
+            it.document["generated"] == JsonPrimitive(false) && it.document["status"] == JsonPrimitive("ABORTED")
+        }
+        assertEquals(JsonPrimitive(true), abortedImport.document["cleanup_complete"])
+    }
+
+    @Test fun standaloneProviderAttemptUsesTheSameDurableJournalForClaimAndRestartCleanup(): Unit = runBlocking {
+        val configuration = configuration()
+        val incarnation = adminNodeIncarnation(store, scope)
+        val keyId = UUID.randomUUID().toString()
+        val preparationKey = adminKeyPreparationKey(keyId)
+        store.commit(scope, listOf(AdminMutation(preparationKey, null, buildJsonObject {
+            put("status", "PENDING"); put("generated", true); put("account_id", scope.accountId)
+            put("entity_identifier", scope.entityId!!); put("key_id", keyId); put("preparation_id", "one-provider-attempt")
+            put("node_incarnation", incarnation); put("configuration_revision", configuration.etag)
+            put("algorithm", "EdDSA"); put("lease_expires_at", System.currentTimeMillis() / 1000 + 300)
+        })))
+        val provider = "configured-aws"
+        val alias = "oidfed-$keyId"
+        val creation = mockk<CreateKeyCommandImpl>()
+        coEvery { creation.prepareKeyWithContext(any(), any(), any()) } coAnswers {
+            secondArg<suspend (String, String?) -> Unit>()(provider, alias)
+            val context = thirdArg<suspend (String, String?) -> kotlin.coroutines.CoroutineContext>()(provider, alias)
+            withContext(context) {
+                val attempt = currentCoroutineContext()[com.sphereon.crypto.core.kms.ManagedKeyCreationAttempt]!!
+                assertEquals(provider, attempt.providerId); assertEquals(alias, attempt.backingAlias)
+                assertEquals(com.sphereon.crypto.core.kms.ManagedKeyCreationAttemptState.UNCLAIMED, attempt.state())
+                assertEquals(1, coroutineScope { listOf(async(Dispatchers.IO) { attempt.claimCreateOnce() }, async(Dispatchers.IO) { attempt.claimCreateOnce() }).awaitAll().count { it } })
+                assertEquals(com.sphereon.crypto.core.kms.ManagedKeyCreationAttemptState.CLAIMED, attempt.state())
+                assertFalse(attempt.claimCreateOnce())
+            }
+            IdkResult.ok(PreparedFederationKey(scope.accountId, """{"kty":"OKP","crv":"Ed25519","kid":"physical","alg":"EdDSA","x":"receipt"}""",
+                "physical", "EdDSA", provider, alias))
+        }
+        val support = DefaultAdminKeyMaterialSupport(store, creation, mockk())
+        support.prepare(scope, keyId, "EdDSA")
+        val claimed = store.readCommitted(scope, preparationKey)!!
+        assertEquals(JsonPrimitive("one-provider-attempt"), claimed.document["generation_attempt_token"])
+        assertEquals(configuration, store.readCommitted(scope, configuration.key), "Provider claims do not change config ETag or publication")
+        store.commit(scope, listOf(AdminMutation(preparationKey, claimed.etag, JsonObject(claimed.document + ("status" to JsonPrimitive("ABORTED"))))))
+        var providerCalls = 0
+        var conclusive = false
+        coEvery { creation.discardPreparedKeyWithProof(provider, alias, any(), any()) } coAnswers {
+            providerCalls++
+            val attempt = currentCoroutineContext()[com.sphereon.crypto.core.kms.ManagedKeyCreationAttempt]!!
+            assertEquals(com.sphereon.crypto.core.kms.ManagedKeyCreationAttemptIntent.RECOVER_FOR_REVOCATION, attempt.intent)
+            assertTrue(attempt.authorizeRecovery()); assertFalse(attempt.claimCreateOnce())
+            if (conclusive) attempt.reportRevoked()
+            IdkResult.ok(false)
+        }
+        assertFalse(support.discard(scope, keyId), "Unknown provider outcome stays recoverable")
+        conclusive = true
+        assertTrue(DefaultAdminKeyMaterialSupport(store, creation, mockk()).discard(scope, keyId))
+        assertEquals(2, providerCalls)
+        assertTrue(database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().isEmpty())
+    }
+
+    @Test fun privatePreparationAbortFencesDelayedPublicationWithoutChangingConfigurationRevision(): Unit = runBlocking {
+        val original = configuration()
+        val incarnation = adminNodeIncarnation(store, scope)
+        val key = adminKeyPreparationKey(UUID.randomUUID().toString())
+        // Deliberately put status last: durable recovery cannot depend on caller JSON member order.
+        val pending = store.commit(scope, listOf(AdminMutation(key, null, buildJsonObject {
+            put("node_incarnation", incarnation); put("generated", true); put("lease_expires_at", 1)
+            put("status", "PENDING")
+        })))!!.single()
+        assertEquals(original, configuration())
+        assertEquals(pending.key, store.recoverableKeyPreparations(scope, 1).single().key)
+        val aborted = store.commit(scope, listOf(AdminMutation(key, pending.etag,
+            JsonObject(pending.document + ("status" to JsonPrimitive("ABORTED"))))))!!.single()
+        val delayed = store.commit(scope, listOf(
+            AdminMutation(original.key, original.etag, JsonObject(original.document + ("extension" to JsonPrimitive("uncommitted")))),
+            AdminMutation(key, pending.etag, JsonObject(pending.document + ("status" to JsonPrimitive("COMMITTED")))),
+        ))
+        assertNull(delayed, "An aborted preparation must fence the entire delayed publication transaction")
+        assertEquals(original, configuration())
+        store.touchKeyPreparation(scope, key.resourceId)
+        assertEquals(aborted.etag, store.readCommitted(scope, key)!!.etag)
+        assertEquals(incarnation, adminNodeIncarnation(store, scope))
+        assertFalse(configuration().document.containsKey("key-preparation"))
+        assertEquals(aborted.key, store.recoverableKeyPreparations(scope, 1).single().key)
+    }
+
     @Test fun productionKeyPortSignsAndRollsOverAcrossNewPortInstance(): Unit = runBlocking {
         configuration()
         val app = createAdminProtocolTestGraph(this)
