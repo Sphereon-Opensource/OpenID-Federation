@@ -48,6 +48,13 @@ class OidfEnvBridgePropertySource(
     private val trackedNames = linkedSetOf<String>()
     private var effectiveValues: Map<String, String> = emptyMap()
 
+    // What the last scan was taken against. The process environment does not change while the JVM runs, and the
+    // config resolver asks for a refresh on every property lookup, so a full scan per call is pure overhead.
+    private var scannedOverrides: Map<String, String>? = null
+    private var scannedNameCount = -1
+    private var scannedAtNanos = 0L
+    private var dirty = false
+
     override val isPlatformSupported: Boolean = true
     override val configLevel: ConfigLevel = ConfigLevel.APP
     override val contentRevision: Long
@@ -55,6 +62,16 @@ class OidfEnvBridgePropertySource(
 
     override fun refreshIfNeeded() {
         synchronized(stateLock) {
+            val overrides = OidfEnvOverrides.map
+            val now = System.nanoTime()
+            // Rescan only when something can have changed: a test swapped the override environment, new names were
+            // observed, a read saw a value differ from the last scan (a system property set at runtime), or the
+            // safety interval passed.
+            if (initialized && !dirty && overrides === scannedOverrides && observedNames.size == scannedNameCount &&
+                now - scannedAtNanos < RESCAN_INTERVAL_NANOS
+            ) {
+                return
+            }
             val candidates = linkedSetOf<String>()
             candidates.addAll(knownIdkKeys())
             candidates.addAll(trackedNames)
@@ -71,6 +88,10 @@ class OidfEnvBridgePropertySource(
             effectiveValues = current
             trackedNames.addAll(candidates)
             initialized = true
+            scannedOverrides = overrides
+            scannedNameCount = observedNames.size
+            scannedAtNanos = now
+            dirty = false
         }
     }
 
@@ -123,6 +144,9 @@ class OidfEnvBridgePropertySource(
             // Capture its first observation without manufacturing a content change.
             trackedNames.add(name)
             if (value != null) effectiveValues = effectiveValues + (name to value)
+        } else if (effectiveValues[name] != value) {
+            // The live value differs from the last scan; the next refresh rescans and advances the revision.
+            dirty = true
         }
         value
     }
@@ -159,6 +183,9 @@ class OidfEnvBridgePropertySource(
 
     companion object {
         const val NAME = "oidf-env-bridge"
+
+        /** Rescan at least this often, for system properties changed at runtime that no read observed. */
+        private const val RESCAN_INTERVAL_NANOS = 30_000_000_000L
         const val PROVIDER_ID = "oidf-legacy-env"
 
         /** Shared instance for DI and manual registration. */

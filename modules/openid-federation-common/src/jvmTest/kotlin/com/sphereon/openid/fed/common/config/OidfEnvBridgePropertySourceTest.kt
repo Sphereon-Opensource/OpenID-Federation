@@ -80,6 +80,25 @@ class OidfEnvBridgePropertySourceTest {
     }
 
     @Test
+    fun repeated_refresh_does_not_rescan_an_unchanged_environment() {
+        var scans = 0
+        val env = object : Map<String, String> by mapOf("ROOT_IDENTIFIER" to "https://stable.example") {
+            override val keys: Set<String>
+                get() {
+                    scans++
+                    return mapOf("ROOT_IDENTIFIER" to "https://stable.example").keys
+                }
+        }
+        OidfEnvOverrides.withEnv(env) {
+            source.refreshIfNeeded()
+            val afterFirst = scans
+            repeat(50) { source.refreshIfNeeded() }
+            assertEquals(afterFirst, scans, "An unchanged environment must not be scanned on every refresh")
+            assertEquals("https://stable.example", source.getPropertyAsString(OidfConfigKeys.Federation.ROOT_IDENTIFIER))
+        }
+    }
+
+    @Test
     fun source_name_and_provider_id_are_stable() {
         assertEquals(OidfEnvBridgePropertySource.NAME, source.getName())
         assertEquals("oidf-legacy-env", OidfEnvBridgePropertySource.PROVIDER_ID)
