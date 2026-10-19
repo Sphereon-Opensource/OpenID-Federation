@@ -286,13 +286,14 @@ class FindEntityConfigurationByAccountCommandImpl(
 private const val FEDERATION_ENTITY = "federation_entity"
 
 /**
- * The `federation_entity` metadata of an Entity Configuration: the operator's [stored] row (organization details,
- * contacts, logo) with the endpoint metadata this server [generated] for the entity on top. A stored row never removes
- * or replaces an endpoint the server serves, so a Trust Anchor or Intermediate keeps its fetch and list endpoints
- * (OIDFed 1.1 section 5.1.1).
+ * The `federation_entity` metadata of an Entity Configuration: the endpoint metadata this server [generated] for the
+ * entity, with the [stored] row on top. A stored row that carries only organization details, contacts or a logo keeps
+ * every generated endpoint, so a Trust Anchor or Intermediate still publishes its fetch and list endpoints (OIDFed 1.1
+ * section 5.1.1). A stored value wins for a claim present in both: a host that routes the federation endpoints itself
+ * stores the URLs it actually serves, and the generated defaults must not replace them with paths it does not serve.
  */
 internal fun federationEntityMetadata(stored: JsonObject?, generated: JsonObject): JsonObject =
-    JsonObject(stored.orEmpty() + generated)
+    JsonObject(generated + stored.orEmpty())
 
 /**
  * Whether a received Trust Mark can go into [identifier]'s Entity Configuration: a JWT whose `sub` is the entity, already
