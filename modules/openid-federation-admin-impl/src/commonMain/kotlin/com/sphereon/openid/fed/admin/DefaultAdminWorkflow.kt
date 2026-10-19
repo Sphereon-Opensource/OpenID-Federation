@@ -12,6 +12,10 @@ import kotlinx.serialization.json.*
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<AdminWorkflow>())
 class DefaultAdminWorkflow(private val store: AdminDocumentStore, private val protocol: AdminProtocolPort) : AdminWorkflow {
+    override suspend fun recoverKeyPreparations(scope: AdminNodeScope, abortPending: Boolean): IdkResult<Unit, AdminError> = safely {
+        protocol.recoverKeyPreparations(scope, abortPending)
+    }
+
     override suspend fun execute(operation: AdminOperation, args: AdminCommandArgs): IdkResult<AdminCommandResult, AdminError> = safely {
         if (args.scope.accountId.isBlank()) adminFail("invalid_request", 400, "A resolved node scope is required")
         run(operation, args)

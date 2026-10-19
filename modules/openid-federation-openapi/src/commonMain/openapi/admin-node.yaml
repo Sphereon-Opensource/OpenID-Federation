@@ -392,6 +392,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -754,6 +764,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -1001,6 +1021,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -1126,6 +1156,16 @@
           },
           "412": {
             "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported request media type",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1555,6 +1595,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -1812,6 +1862,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -1954,6 +2014,16 @@
           },
           "412": {
             "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported request media type",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2220,6 +2290,16 @@
           },
           "412": {
             "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported request media type",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2676,6 +2756,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -2915,6 +3005,16 @@
           },
           "412": {
             "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported request media type",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3384,6 +3484,16 @@
               }
             }
           },
+          "415": {
+            "description": "Unsupported request media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Administration problem",
             "content": {
@@ -3659,6 +3769,16 @@
           },
           "412": {
             "description": "Administration problem",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported request media type",
             "content": {
               "application/problem+json": {
                 "schema": {

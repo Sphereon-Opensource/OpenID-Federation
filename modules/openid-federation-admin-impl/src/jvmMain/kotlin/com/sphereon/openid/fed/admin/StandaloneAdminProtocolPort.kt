@@ -35,6 +35,11 @@ import dev.zacsweers.metro.*
 import kotlinx.serialization.json.*
 import java.security.MessageDigest
 import java.util.Base64
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import com.sphereon.crypto.jose.jws.JwsCompact
+import com.sphereon.crypto.jose.jws.command.VerifyJwsArgs
 
 /** Standalone protocol adapter: existing KMS, federation verification and signing implementations are reused. */
 @SingleIn(SessionScope::class)
@@ -51,11 +56,13 @@ class StandaloneAdminProtocolPort internal constructor(
     private val verifyMark: VerifyTrustMarkCommand,
     private val database: com.sphereon.openid.fed.persistence.Database?,
     private val clock: () -> Long,
+    private val keyMaterial: AdminKeyMaterialPort? = null,
 ) : AdminProtocolPort {
     @Inject constructor(store: AdminDocumentStore, tenantResolver: TenantContextResolver, config: OidfConfigBinder,
         createKey: CreateKeyCommandImpl, jwt: JwtService, fetchConfiguration: GetEntityConfigurationCommand,
-        verifyTrust: VerifyEntityTrustCommand, verifyDelegation: VerifyTrustMarkDelegationCommand, verifyMark: VerifyTrustMarkCommand) :
-        this(store, tenantResolver, config, createKey, jwt, fetchConfiguration, verifyTrust, verifyDelegation, verifyMark, null, { System.currentTimeMillis() / 1000 })
+        verifyTrust: VerifyEntityTrustCommand, verifyDelegation: VerifyTrustMarkDelegationCommand, verifyMark: VerifyTrustMarkCommand, keyMaterial: AdminKeyMaterialPort) :
+        this(store, tenantResolver, config, createKey, jwt, fetchConfiguration, verifyTrust, verifyDelegation, verifyMark, null, { System.currentTimeMillis() / 1000 }, keyMaterial)
+    private val materials: AdminKeyMaterialPort = keyMaterial ?: DefaultAdminKeyMaterialSupport(store, createKey, jwt)
     private val keyQueries get() = database?.jwkQueries ?: Persistence.jwkQueries
     private val selectionQueries get() = database?.accountSigningKeyQueries ?: Persistence.accountSigningKeyQueries
     private val documentQueries get() = database?.adminDocumentQueries ?: Persistence.adminDocumentQueries
@@ -91,6 +98,7 @@ class StandaloneAdminProtocolPort internal constructor(
         }
     }
     override suspend fun node(scope: AdminNodeScope): JsonObject {
+        recoverKeyPreparations(scope)
         applyDueRollover(scope)
         val doc = store.read(scope, AdminDocumentKey("configuration"))?.document ?: JsonObject(emptyMap())
         val federation = ((doc["metadata"] as? JsonObject)?.get("federation_entity") as? JsonObject) ?: JsonObject(emptyMap())
@@ -259,9 +267,24 @@ class StandaloneAdminProtocolPort internal constructor(
         val signingKid = signer.kid ?: adminFail("not_initialized", 409, "Selected signing key has no kid")
         val signingAlgorithm = signer.alg ?: Json.parseToJsonElement(signer.key).jsonObject.string("alg")
             ?: adminFail("not_initialized", 409, "Selected signing key has no recorded algorithm")
-        val result = jwt.signPayload(payload, JwtHeader(typ = if (key.collection == "trust-mark-grant") "trust-mark+jwt" else "entity-statement+jwt", kid = signingKid, alg = signingAlgorithm), signingKid, signer.kms_key_ref, signer.kms)
+        val header = buildJsonObject {
+            put("typ", if (key.collection == "trust-mark-grant") "trust-mark+jwt" else "entity-statement+jwt")
+            put("kid", signingKid); put("alg", signingAlgorithm)
+        }
+        val descriptor = AdminPreparedKey(signer.id, JsonObject(Json.parseToJsonElement(signer.key).jsonObject.filterKeys { it !in PRIVATE_JWK_MEMBERS }),
+            signingKid, signingAlgorithm, signer.kms, signer.kms_key_ref)
+        val result = materials.sign(scope, descriptor, header, payload)
+        val parts = result.split('.')
+        if (parts.size != 3 || runCatching {
+            Json.parseToJsonElement(String(Base64.getUrlDecoder().decode(parts[0]))).jsonObject == header &&
+                Json.parseToJsonElement(String(Base64.getUrlDecoder().decode(parts[1]))).jsonObject == payload
+        }.getOrDefault(false) != true) adminFail("internal", 502, "Signer changed the validated federation statement")
+        val verified = jwt.verifyJws(VerifyJwsArgs(jws = JwsCompact(result), trustedJwks = buildJsonObject {
+            put("keys", JsonArray(listOf(descriptor.publicJwk)))
+        }))
+        if (verified.isErr || !verified.value.isValid) adminFail("internal", 502, "Federation signature does not match the authorized public key")
         if (keyState(scope.accountId) != fence) adminFail("precondition_failed", 412, "Signing state changed while preparing the artifact")
-        return AdminPreparedArtifact(result.requireValue(), fence)
+        return AdminPreparedArtifact(result, fence)
     }
 
     override suspend fun selectSigningKey(scope: AdminNodeScope, keyId: String?, expectedRevision: Long): AdminCommandResult {
@@ -311,6 +334,9 @@ class StandaloneAdminProtocolPort internal constructor(
         if (!adminIfMatch(args.ifMatch, row?.kid?.let(::etag))) adminFail("precondition_failed", 412, "Key revision does not match If-Match")
         if (operation == AdminOperation.DeleteAdminKey && row?.revoked_at != null) return AdminCommandResult(status = 204)
         val configuration = store.read(scope, AdminDocumentKey("configuration")) ?: adminFail("not_found", 404, "Configuration not found")
+        var preparationId: String? = null
+        var committed = false
+        try {
         var staged: AdminPreparedKey? = null
         var created: Jwk? = null
         var nextSigner = signer
@@ -335,18 +361,36 @@ class StandaloneAdminProtocolPort internal constructor(
                 val algorithmName = generate.string("alg") ?: "ES256"
                 val expected = when (algorithmName) { "ES256" -> "EC" to "P-256"; "ES384" -> "EC" to "P-384"; "ES512" -> "EC" to "P-521"; "EdDSA" -> "OKP" to "Ed25519"; else -> if (algorithmName.startsWith("RS") || algorithmName.startsWith("PS")) "RSA" to null else adminFail("invalid_request", 400, "Unsupported algorithm") }
                 if (generate.string("kty")?.let { it != expected.first } == true || generate.string("crv")?.let { it != expected.second } == true) adminFail("invalid_request", 400, "generate key type or curve conflicts with alg")
-                val algorithm = SignatureAlgorithm.fromJose(JwaAlgorithm.fromValue(algorithmName) ?: adminFail("invalid_request", 400, "Unsupported algorithm"))
-                val generated = createKey.prepareKey(CreateKeyCommandArgs(scope.accountId, CreateKeyArgs(alg = algorithm))).requireValue()
-                AdminPreparedKey(id, Json.parseToJsonElement(generated.publicJwk).jsonObject, generated.kid, generated.algorithm, generated.kms, generated.kmsKeyRef)
+                SignatureAlgorithm.fromJose(JwaAlgorithm.fromValue(algorithmName) ?: adminFail("invalid_request", 400, "Unsupported algorithm"))
+                preparationId = id
+                beginKeyPreparation(scope, configuration, id, algorithmName)
+                val generated = materials.prepare(scope, id, algorithmName)
+                if (generated.id != id || generated.algorithm != algorithmName || generated.kid.isBlank() ||
+                    generated.kms.isBlank() || generated.kmsKeyRef.isBlank() || generated.publicJwk.string("kid") != generated.kid ||
+                    generated.publicJwk.keys.any { it in PRIVATE_JWK_MEMBERS } || !hasWellFormedPublicJwkMaterial(generated.publicJwk) ||
+                    generated.publicJwk.string("kty") != expected.first || expected.second?.let { it != generated.publicJwk.string("crv") } == true)
+                    adminFail("internal", 502, "Key authority returned an incompatible public receipt")
+                bindKeyPreparation(scope, generated)
+                generated
             } else {
                 if (imported!!.keys.any { it in PRIVATE_JWK_MEMBERS } || !hasWellFormedPublicJwkMaterial(imported)) adminFail("invalid_request", 400, "Import requires a public asymmetric JWK")
                 val kid = imported.string("kid") ?: thumbprint(imported)
                 val known = all.firstOrNull { existing -> capable(existing) && thumbprint(Json.parseToJsonElement(existing.key).jsonObject) == thumbprint(imported) }
                 if (operation == AdminOperation.RotateAdminKey && known == null)
                     adminFail("conflict", 409, "Imported rollover key has no signing route authorized for this node")
-                if (known != null && imported.string("alg")?.let { it != known.alg } == true)
+                val knownAlgorithm = known?.alg ?: known?.let { Json.parseToJsonElement(it.key).jsonObject.string("alg") }
+                if (known != null && imported.string("alg")?.let { it != knownAlgorithm } == true)
                     adminFail("invalid_request", 400, "Imported key algorithm conflicts with its authorized signing route")
-                AdminPreparedKey(id, JsonObject(imported + ("kid" to JsonPrimitive(kid))), kid, imported.string("alg") ?: known?.alg, known?.kms ?: "", known?.kms_key_ref ?: "")
+                val derived = AdminPreparedKey(id, JsonObject(imported + ("kid" to JsonPrimitive(kid))), kid, imported.string("alg") ?: knownAlgorithm, known?.kms ?: "", known?.kms_key_ref ?: "")
+                if (known == null) derived else {
+                    val algorithm = derived.algorithm ?: adminFail("conflict", 409, "Existing signing route has no algorithm")
+                    preparationId = id
+                    beginKeyPreparation(scope, configuration, id, algorithm, generated = false, sourceKeyId = known.id)
+                    val prepared = materials.prepareExisting(scope, derived, known.id)
+                    if (prepared != derived) adminFail("internal", 502, "Existing key authority changed the derived signing descriptor")
+                    bindKeyPreparation(scope, prepared)
+                    prepared
+                }
             }
             if (all.any { it.kid == staged.kid }) adminFail("already_exists", 409, "Key identifier already exists")
             created = Jwk(staged.id, scope.accountId, staged.algorithm, staged.kid, staged.kms, staged.kmsKeyRef, staged.publicJwk.toString(), java.time.LocalDateTime.now(java.time.ZoneOffset.UTC), null, null, null, null)
@@ -364,10 +408,79 @@ class StandaloneAdminProtocolPort internal constructor(
             prepareWith(scope, configuration.key, configuration.document, nextSigner, public, initialFence).artifact else configuration.artifact
         val keyChange = AdminKeyChange(newKey = staged, selectedKeyId = nextSigner?.id, updateSelection = nextSigner?.id != signer?.id || selectionQueries.findByAccountId(scope.accountId).executeAsOneOrNull()?.jwk_id == null && nextSigner != null, revokeKeyId = revoke)
         val mutation = AdminMutation(configuration.key, configuration.etag, configuration.document, artifact, expectedKeyState = initialFence, keyChange = keyChange)
-        if (store.commit(scope, listOf(mutation) + additional) == null) adminFail("precondition_failed", 412, "Key or configuration changed during preparation")
+        val preparation = preparationId?.let { keyId ->
+            val pending = store.readCommitted(scope, adminKeyPreparationKey(keyId))
+                ?: adminFail("precondition_failed", 412, "Key preparation disappeared")
+            if (pending.document.string("status") != "PENDING" ||
+                pending.document.string("configuration_revision") != configuration.etag ||
+                pending.document.getValue("lease_expires_at").jsonPrimitive.long <= now())
+                adminFail("precondition_failed", 412, "Key preparation is no longer current")
+            val incarnation = store.readCommitted(scope, AdminDocumentKey("node-incarnation"))
+                ?: adminFail("precondition_failed", 412, "Node incarnation disappeared")
+            if (incarnation.document.string("id") != pending.document.string("node_incarnation"))
+                adminFail("precondition_failed", 412, "Node incarnation changed")
+            AdminMutation(pending.key, pending.etag, JsonObject(pending.document + ("status" to JsonPrimitive("COMMITTED"))),
+                expectedDependencies = mapOf(incarnation.key to incarnation.etag))
+        }
+        if (store.commit(scope, listOf(mutation) + additional + listOfNotNull(preparation)) == null) adminFail("precondition_failed", 412, "Key or configuration changed during preparation")
+        committed = true
         if (operation == AdminOperation.DeleteAdminKey) return AdminCommandResult(status = 204)
         val persisted = keys(scope).single { it.id == created!!.id }
         return AdminCommandResult(document = document(persisted), etag = adminKeyEtag(keyState(scope.accountId), persisted.kid!!), status = 201, location = "${scope.basePath}/keys/${encodeAdminSegment(persisted.kid!!)}")
+        } finally {
+            if (!committed && preparationId != null) withContext(NonCancellable) {
+                // The failed publication stays failed even if cleanup has to be retried after restart.
+                runCatching { abortKeyPreparation(scope, preparationId!!) }
+            }
+        }
+    }
+
+    private suspend fun beginKeyPreparation(scope: AdminNodeScope, configuration: AdminStoredDocument, keyId: String, algorithm: String, generated: Boolean = true, sourceKeyId: String? = null) {
+        val incarnation = adminNodeIncarnation(store, scope)
+        val document = buildJsonObject {
+            put("status", "PENDING"); put("generated", generated)
+            sourceKeyId?.let { put("source_key_id", it) }
+            put("account_id", scope.accountId); scope.entityId?.let { put("entity_identifier", it) }
+            put("key_id", keyId); put("preparation_id", java.util.UUID.randomUUID().toString())
+            put("node_incarnation", incarnation); put("configuration_revision", configuration.etag)
+            put("algorithm", algorithm); put("lease_expires_at", now() + 300)
+        }
+        if (store.commit(scope, listOf(AdminMutation(adminKeyPreparationKey(keyId), null, document))) == null)
+            adminFail("precondition_failed", 412, "Key preparation already exists")
+    }
+    private suspend fun bindKeyPreparation(scope: AdminNodeScope, key: AdminPreparedKey) {
+        val before = store.readCommitted(scope, adminKeyPreparationKey(key.id))
+            ?: adminFail("precondition_failed", 412, "Key preparation disappeared")
+        if (before.document.string("status") != "PENDING") adminFail("precondition_failed", 412, "Key preparation was aborted")
+        val document = buildJsonObject {
+            before.document.forEach { (name, value) -> put(name, value) }
+            put("kms", key.kms); put("kms_key_ref", key.kmsKeyRef); put("kid", key.kid); put("public_jwk", key.publicJwk)
+        }
+        if (store.commit(scope, listOf(AdminMutation(before.key, before.etag, document))) == null)
+            adminFail("precondition_failed", 412, "Key preparation changed")
+    }
+    private suspend fun abortKeyPreparation(scope: AdminNodeScope, keyId: String) {
+        val key = adminKeyPreparationKey(keyId)
+        var preparation = store.readCommitted(scope, key) ?: return
+        if (preparation.document.string("status") == "COMMITTED") return
+        if (preparation.document.string("status") == "PENDING") {
+            preparation = store.commit(scope, listOf(AdminMutation(key, preparation.etag,
+                JsonObject(preparation.document + ("status" to JsonPrimitive("ABORTED"))))))?.single() ?: return
+        }
+        if (preparation.document.string("status") != "ABORTED" || preparation.document["cleanup_complete"] == JsonPrimitive(true)) return
+        if (preparation.document["generated"] == JsonPrimitive(false) || materials.discard(scope, keyId)) store.commit(scope, listOf(AdminMutation(key, preparation.etag,
+            JsonObject(preparation.document + ("cleanup_complete" to JsonPrimitive(true))))))
+    }
+    override suspend fun recoverKeyPreparations(scope: AdminNodeScope, abortPending: Boolean) {
+        for (preparation in store.recoverableKeyPreparations(scope, 64)) {
+            try {
+                if (abortPending || preparation.document.string("status") == "ABORTED" ||
+                    (preparation.document["lease_expires_at"] as? JsonPrimitive)?.longOrNull?.let { it <= now() } == true)
+                    abortKeyPreparation(scope, preparation.key.resourceId)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Durable ABORTED/PENDING state is retried by independent maintenance. */ }
+            finally { store.touchKeyPreparation(scope, preparation.key.resourceId) }
+        }
     }
     private fun thumbprint(jwk: JsonObject): String {
         val names = when(jwk.string("kty")) { "EC" -> listOf("crv", "kty", "x", "y"); "RSA" -> listOf("e", "kty", "n"); "OKP" -> listOf("crv", "kty", "x"); else -> adminFail("invalid_request", 400, "Unsupported public key type") }

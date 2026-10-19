@@ -48,10 +48,21 @@ AND resource_id IN (
 
 keyMaintenanceNodes:
 SELECT * FROM AdminDocument WHERE collection = 'configuration' AND account_id IN (
-    SELECT account_id FROM AdminDocument WHERE collection = 'key-state' AND document LIKE '%"switched":false%'
+    SELECT account_id FROM AdminDocument WHERE (collection = 'key-state' AND document LIKE '%"switched":false%')
+       OR (collection = 'key-preparation' AND (document LIKE '{"status":"PENDING",%' OR document LIKE '{"status":"ABORTED",%')
+           AND document NOT LIKE '%"cleanup_complete":true%')
     ORDER BY updated_at, account_id, resource_id LIMIT ?
 );
 
 touchPendingKeySchedule:
 UPDATE AdminDocument SET updated_at = ? WHERE account_id = ? AND collection = 'key-state'
 AND document LIKE '%"switched":false%';
+
+pendingKeyPreparations:
+SELECT * FROM AdminDocument WHERE account_id = ? AND collection = 'key-preparation'
+AND (document LIKE '{"status":"PENDING",%' OR document LIKE '{"status":"ABORTED",%')
+AND document NOT LIKE '%"cleanup_complete":true%'
+ORDER BY updated_at, resource_id LIMIT ?;
+
+touchKeyPreparation:
+UPDATE AdminDocument SET updated_at = ? WHERE account_id = ? AND collection = 'key-preparation' AND resource_id = ?;
