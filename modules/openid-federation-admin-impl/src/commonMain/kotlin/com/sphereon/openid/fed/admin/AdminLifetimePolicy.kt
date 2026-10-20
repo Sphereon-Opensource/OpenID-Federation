@@ -43,7 +43,7 @@ internal fun applyAdminLifetimePolicy(key: AdminDocumentKey, old: AdminStoredDoc
         (document - "lifetime") + old.document.filterKeys { it == "lifetime" })
     if (!publishing && old != null && !recreate) return AdminLifetimeDecision(retained)
     val previous = acknowledgement.takeUnless { recreate }
-    if (previous == null && !recreate && old?.document?.containsKey("lifetime") == true)
+    if (previous == null && context.revision == 0L && !recreate && old?.document?.containsKey("lifetime") == true)
         return AdminLifetimeDecision(retained, true) // Adopt existing native state without manufacturing a policy edit.
     if (previous != null && previous.revision == context.revision) return AdminLifetimeDecision(retained)
     return AdminLifetimeDecision(JsonObject(document + ("lifetime" to JsonPrimitive(context.policyLifetimeSeconds))), true)

@@ -379,6 +379,16 @@ class AdminWorkflowTest {
         assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
     }
 
+    @Test fun firstObservedProfileChangeOverridesUnacknowledgedLegacyLifetime() = runTest {
+        val key = AdminDocumentKey("configuration")
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":42}"""))).isOk)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(1, 900))).isOk)
+        assertEquals(JsonPrimitive(900), store.rows.getValue(key).document["lifetime"])
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, key)?.revision)
+    }
+
     @Test fun acknowledgedNativeLifetimeRemovalIsNotReseededByPublication() = runTest {
         val key = AdminDocumentKey("configuration")
         workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
