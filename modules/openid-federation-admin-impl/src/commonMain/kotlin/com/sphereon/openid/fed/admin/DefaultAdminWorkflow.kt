@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.admin
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.Err
 import com.sphereon.di.session.SessionScope
+import com.sphereon.openid.fed.client.command.trustMark.TrustMarkValidation
 import dev.zacsweers.metro.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
@@ -95,8 +96,7 @@ class DefaultAdminWorkflow(private val store: AdminDocumentStore, private val pr
             val artifact = old?.artifact ?: adminFail("not_published", 404, "Resource is not currently published")
             if (collection in setOf("subordinate", "trust-mark-grant") && old.document.string("status") != "active")
                 adminFail("not_published", 404, "Resource is not currently published")
-            val expiry = runCatching { artifactClaims(artifact)["exp"]?.jsonPrimitive?.longOrNull }.getOrNull()
-            if (expiry == null || expiry <= kotlin.time.Clock.System.now().epochSeconds)
+            if (adminArtifactExpired(artifact))
                 adminFail("not_published", 404, "Published artifact has expired")
             return AdminCommandResult(artifact = artifact, mediaType = if (collection == "trust-mark-grant") "application/trust-mark+jwt" else "application/entity-statement+jwt")
         }
@@ -264,6 +264,13 @@ fun encodeAdminSegment(value: String): String = buildString {
 internal fun artifactClaims(artifact: String): JsonObject = Json.parseToJsonElement(kotlin.io.encoding.Base64.UrlSafe
     .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
     .decode(artifact.split('.')[1]).decodeToString()).jsonObject
+
+/** Preserve the signed NumericDate, including exponent notation and fractional seconds. */
+internal fun adminArtifactExpired(artifact: String, now: kotlin.time.Instant = kotlin.time.Clock.System.now()): Boolean {
+    val expiry = runCatching { TrustMarkValidation.numericDate(artifactClaims(artifact)["exp"]) }.getOrNull()
+        ?: return true
+    return expiry <= now.epochSeconds.toDouble() + now.nanosecondsOfSecond / 1_000_000_000.0
+}
 
 /** Extension claims remain signed; only administration and server-assigned fields are removed. */
 internal fun adminSignedClaims(document: JsonObject): JsonObject = JsonObject(document.filterKeys {

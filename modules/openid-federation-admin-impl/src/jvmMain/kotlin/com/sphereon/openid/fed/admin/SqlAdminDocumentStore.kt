@@ -203,7 +203,7 @@ class SqlAdminDocumentStore internal constructor(
             val key = AdminDocumentKey(target.getValue("collection").jsonPrimitive.content, target.getValue("resource_id").jsonPrimitive.content, target.getValue("subject_id").jsonPrimitive.content)
             val canonical = queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()
             val alreadyApplied = canonical?.artifact == candidate.artifact && canonical?.document == document.getValue("document").toString()
-            val expired = candidate.artifact?.let { (payload(it)["exp"] as? JsonPrimitive)?.longOrNull?.let { exp -> exp <= System.currentTimeMillis() / 1000 } } != false
+            val expired = candidate.artifact?.let { adminArtifactExpired(it) } != false
             val superseded = canonical?.etag != document.string("expected_etag") ||
                 document.string("expected_key_state")?.let { it != keyState(scope.accountId) } == true ||
                 (document["dependencies"] as? JsonArray).orEmpty().any { value ->
@@ -235,7 +235,7 @@ class SqlAdminDocumentStore internal constructor(
         if (stage.string("stage_status") == "committed") return@transactionWithResult AdminStoredDocument(key, document,
             stage.getValue("committed_etag").jsonPrimitive.content, stage.getValue("committed_at").jsonPrimitive.long, candidate.artifact)
         val artifact = candidate.artifact ?: adminFail("not_published", 404, "Staged artifact is unavailable")
-        if ((payload(artifact)["exp"] as? JsonPrimitive)?.longOrNull?.let { it <= System.currentTimeMillis() / 1000 } != false)
+        if (adminArtifactExpired(artifact))
             adminFail("conflict", 409, "Staged artifact has expired")
         val dependencies = (stage["dependencies"] as? JsonArray).orEmpty().associate { value ->
             val dep = value.jsonObject

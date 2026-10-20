@@ -5,6 +5,7 @@ import kotlinx.serialization.json.*
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyArgs
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommand
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.client.command.trustMark.TrustMarkValidation
 
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.asErrorResult
@@ -169,18 +170,19 @@ class DeleteTrustMarkCommandImpl(
 }
 
 // GetTrustMarkStatusCommand Implementation
-@Inject
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<GetTrustMarkStatusCommand>())
 class GetTrustMarkStatusCommandImpl(
-    execution: SessionExecution
+    execution: SessionExecution,
+    private val trustMarkQueries: TrustMarkQueries,
+    private val adminDocumentQueries: com.sphereon.openid.fed.persistence.models.AdminDocumentQueries,
 ) : TypedServiceCommandAdapter<GetTrustMarkStatusArgs, TrustMarkStatusDetail, FederationError>(
     commandId = GetTrustMarkStatusCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<GetTrustMarkStatusArgs>(),
     outputTypeToken = typeToken<TrustMarkStatusDetail>()
 ), GetTrustMarkStatusCommand {
+    @Inject constructor(execution: SessionExecution) : this(execution, Persistence.trustMarkQueries, Persistence.adminDocumentQueries)
     private val logger = execution.federationLogger("GetTrustMarkStatusCommand")
-    private val trustMarkQueries = Persistence.trustMarkQueries
 
     override suspend fun doExecute(
         args: GetTrustMarkStatusArgs,
@@ -225,9 +227,9 @@ class GetTrustMarkStatusCommandImpl(
         nowSeconds: Long,
     ): TrustMarkStatusDetail? {
         val echoJwt = submittedJwt.orEmpty()
-        val managedNode = Persistence.adminDocumentQueries.find(tenantId, "configuration", "", "").executeAsOneOrNull()
+        val managedNode = adminDocumentQueries.find(tenantId, "configuration", "", "").executeAsOneOrNull()
         if (managedNode != null) {
-            val grant = Persistence.adminDocumentQueries.find(tenantId, "trust-mark-grant", trustMarkType, sub).executeAsOneOrNull()
+            val grant = adminDocumentQueries.find(tenantId, "trust-mark-grant", trustMarkType, sub).executeAsOneOrNull()
                 ?: return null
             val document = Json.parseToJsonElement(grant.document).jsonObject
             val status = (document["status"] as? JsonPrimitive)?.content
@@ -244,11 +246,11 @@ class GetTrustMarkStatusCommandImpl(
             val valid = (payload["iss"] as? JsonPrimitive)?.content == (node["entity_id"] as? JsonPrimitive)?.content &&
                 (payload["sub"] as? JsonPrimitive)?.content == sub &&
                 (payload["trust_mark_type"] as? JsonPrimitive)?.content == trustMarkType
-            if (!valid || (iat != null && (payload["iat"] as? JsonPrimitive)?.doubleOrNull != iat))
+            if (!valid || (iat != null && TrustMarkValidation.numericDate(payload["iat"]) != iat))
                 return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, submittedJwt ?: storedJwt)
-            val exp = (payload["exp"] as? JsonPrimitive)?.longOrNull
+            val exp = TrustMarkValidation.numericDate(payload["exp"])
                 ?: return TrustMarkStatusDetail(TrustMarkStatusValue.INVALID, storedJwt)
-            return TrustMarkStatusDetail(if (exp <= nowSeconds) TrustMarkStatusValue.EXPIRED else TrustMarkStatusValue.ACTIVE, storedJwt)
+            return TrustMarkStatusDetail(if (exp <= nowSeconds.toDouble()) TrustMarkStatusValue.EXPIRED else TrustMarkStatusValue.ACTIVE, storedJwt)
         }
 
         if (submittedJwt != null) {
