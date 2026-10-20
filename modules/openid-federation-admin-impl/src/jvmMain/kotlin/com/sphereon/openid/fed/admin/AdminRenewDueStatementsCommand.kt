@@ -1,5 +1,8 @@
 package com.sphereon.openid.fed.admin
 
+import com.sphereon.openid.fed.client.command.trustMark.TrustMarkValidation
+import kotlin.math.floor
+
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.binary.typeToken
 import com.sphereon.core.api.context.SessionExecution
@@ -78,8 +81,9 @@ class AdminRenewDueStatementsCommand internal constructor(
             var dueCount = 0
             for (row in rows) {
                 val oldJwt = row.artifact ?: continue
-                val expires = (payload(oldJwt)["exp"] as? JsonPrimitive)?.longOrNull ?: continue
-                if (expires > threshold) continue
+                val signedExpiry = TrustMarkValidation.numericDate(payload(oldJwt)["exp"]) ?: continue
+                val expires = floor(signedExpiry).toLong() // Whole-second report field, not the scheduling comparison.
+                if (signedExpiry > threshold.toDouble()) continue
                 val kind = if (row.key.collection == "configuration") RenewedStatementKind.ENTITY_CONFIGURATION else RenewedStatementKind.SUBORDINATE_STATEMENT
                 val subordinate = row.key.resourceId.takeIf { kind == RenewedStatementKind.SUBORDINATE_STATEMENT }
                 dueCount++
@@ -90,7 +94,8 @@ class AdminRenewDueStatementsCommand internal constructor(
                 try {
                     val prepared = protocol.prepare(scope, row.key, row.document)
                     val jwt = prepared.artifact
-                    val nextExpiry = (payload(jwt)["exp"] as? JsonPrimitive)?.longOrNull ?: error("Prepared artifact has no exp")
+                    val nextExpiry = TrustMarkValidation.numericDate(payload(jwt)["exp"])?.let { floor(it).toLong() }
+                        ?: error("Prepared artifact has no exp")
                     val committed = store.commit(scope, listOf(AdminMutation(row.key, row.etag, row.document, jwt, expectedKeyState = prepared.keyState)))
                     outcomes += StatementRenewalOutcome(kind, node.account_id, subordinate,
                         if (committed == null) StatementRenewalStatus.ALREADY_RENEWED else StatementRenewalStatus.RENEWED, expires, nextExpiry)

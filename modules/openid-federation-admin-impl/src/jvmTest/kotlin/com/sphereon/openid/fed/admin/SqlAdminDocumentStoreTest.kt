@@ -227,6 +227,93 @@ class SqlAdminDocumentStoreTest {
         store.commit(scope, listOf(AdminMutation(key, sub.etag, JsonObject(sub.document + ("status" to JsonPrimitive("revoked"))))))
         assertTrue(invalidated.count { it == subJwt } >= 2)
     }
+
+    @Test fun scientificExpirySurvivesPendingStageRecoveryAndFinalization(): Unit = runBlocking {
+        val original = configuration()
+        val artifact = "header." + java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"exp":9.999999999E9}""".toByteArray()) + ".original-signature"
+        val stage = store.stage(scope, AdminMutation(original.key, original.etag, original.document, artifact))
+        assertEquals(artifact, store.pendingStages(scope).single().artifact)
+        assertEquals(artifact, store.finalizeStage(scope, stage.digest)!!.artifact)
+    }
+
+    @Test fun configurationLifetimePatchPublishesScientificExpiryThroughRealSqlWorkflow(): Unit = runBlocking {
+        val original = configuration()
+        val protocol = mockk<AdminProtocolPort>()
+        val artifact = "header." + java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"exp":9.999999999E9,"lifetime":86400}""".toByteArray()) + ".original-signature"
+        coEvery { protocol.node(any()) } returns original.document
+        coEvery { protocol.validate(any(), any(), any()) } just Runs
+        coEvery { protocol.prepare(any(), any(), any()) } answers {
+            assertEquals(JsonPrimitive(86400), thirdArg<JsonObject>()["lifetime"])
+            AdminPreparedArtifact(artifact, adminKeyState(scope.accountId, database.jwkQueries,
+                database.accountSigningKeyQueries, database.adminDocumentQueries))
+        }
+        val workflow = DefaultAdminWorkflow(store, protocol)
+        val patched = workflow.execute(AdminOperation.PatchAdminConfiguration,
+            AdminCommandArgs(scope, document = doc("""{"lifetime":86400}"""), ifMatch = original.etag))
+        assertTrue(patched.isOk)
+        assertNotEquals(original.etag, patched.value.etag)
+        val committed = store.readCommitted(scope, original.key)!!
+        assertEquals(JsonPrimitive(86400), committed.document["lifetime"])
+        assertEquals(artifact, committed.artifact)
+        val read = workflow.execute(AdminOperation.ReadAdminConfigurationStatement, AdminCommandArgs(scope))
+        assertTrue(read.isOk)
+        assertEquals(artifact, read.value.artifact)
+    }
+
+    @Test fun managedTrustMarkStatusAcceptsNumericDatesButRejectsStringClaims(): Unit = runBlocking {
+        configuration()
+        val subject = "https://subject.example"
+        val type = "https://types.example/numeric-date"
+        val key = AdminDocumentKey("trust-mark-grant", type, subject)
+        val command = com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkStatusCommandImpl(testSessionExecution(),
+            database.trustMarkQueries, database.adminDocumentQueries)
+        for ((expiry, issuedAt, expected) in listOf(
+            Triple("9.999999999E9", "1E0", "active"), Triple("9999999999.75", "1.0", "active"),
+            Triple("1E0", "1", "expired"), Triple("\"9999999999\"", "1", "invalid"),
+            Triple("9.999999999E9", "\"1\"", "invalid"), Triple("1e999", "1", "invalid"),
+        )) {
+            val payload = """{"iss":"https://ta.example","sub":"$subject","trust_mark_type":"$type","iat":$issuedAt,"exp":$expiry}"""
+            val artifact = "header." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(payload.toByteArray()) + ".original-signature"
+            val old = store.readCommitted(scope, key)
+            store.commit(scope, listOf(AdminMutation(key, old?.etag, doc("""{"status":"active"}"""), artifact)))!!
+            val result = command.execute(com.sphereon.openid.fed.services.command.trustMark.GetTrustMarkStatusArgs(scope.accountId,
+                com.sphereon.openid.fed.openapi.models.TrustMarkStatusRequest(subject, type, 1.0), artifact))
+            assertTrue(result.isOk)
+            assertEquals(expected, result.value.status.wire)
+            assertEquals(artifact, result.value.trustMarkJwt)
+        }
+    }
+
+    @Test fun managedRenewalSchedulesScientificAndFractionalExpiryWithoutRoundingThreshold(): Unit = runBlocking {
+        val original = configuration()
+        fun artifact(expiry: String) = "header." + java.util.Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("""{"exp":$expiry}""".toByteArray()) + ".original-signature"
+        val legacy = mockk<com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsCommandImpl>()
+        val protocol = mockk<AdminProtocolPort>()
+        coEvery { legacy.execute(any()) } returns IdkResult.ok(com.sphereon.openid.fed.services.command.renewal.StatementRenewalReport(100,
+            emptyList()))
+        coEvery { protocol.node(any()) } returns original.document
+        coEvery { protocol.prepare(any(), any(), any()) } answers { AdminPreparedArtifact(artifact("9.999999999E9"),
+            adminKeyState(scope.accountId, database.jwkQueries, database.accountSigningKeyQueries, database.adminDocumentQueries)) }
+        val command = AdminRenewDueStatementsCommand(testSessionExecution(), legacy, store, protocol, database)
+        for ((expiry, due) in listOf("1.0075E2" to true, "101.25" to false)) {
+            val old = store.readCommitted(scope, original.key)!!
+            store.commit(scope, listOf(AdminMutation(old.key, old.etag, old.document, artifact(expiry))))!!
+            val args = com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsArgs(1, accountId = scope.accountId,
+                nowEpochSeconds = 100, listOnly = true)
+            val listed = command.execute(args)
+            assertTrue(listed.isOk)
+            assertEquals(if (due) 1 else 0, listed.value.outcomes.size)
+            if (due) {
+                val renewed = command.execute(args.copy(listOnly = false))
+                assertTrue(renewed.isOk)
+                assertEquals(com.sphereon.openid.fed.services.command.renewal.StatementRenewalStatus.RENEWED, renewed.value.outcomes.single().status)
+                assertEquals(artifact("9.999999999E9"), store.readCommitted(scope, old.key)!!.artifact)
+            }
+        }
+    }
     @Test fun keyInsertAndSelectionRollbackWhenPublicationTransactionRejects(): Unit = runBlocking {
         val original = configuration()
         val oldKey = UUID.randomUUID().toString()

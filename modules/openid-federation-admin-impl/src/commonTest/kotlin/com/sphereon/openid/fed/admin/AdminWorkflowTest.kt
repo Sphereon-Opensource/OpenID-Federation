@@ -267,6 +267,44 @@ class AdminWorkflowTest {
         assertEquals("not_published", result.error.token)
     }
 
+    private fun artifactWithClaims(claims: String) = "header." + kotlin.io.encoding.Base64.UrlSafe
+        .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT).encode(claims.encodeToByteArray()) + ".original-signature"
+
+    @Test fun scientificAndFractionalArtifactExpiryPreservesExactCommittedBytes() = runTest {
+        val cases = listOf(
+            Triple(AdminOperation.ReadAdminConfigurationStatement, AdminDocumentKey("configuration"), AdminCommandArgs(scope)),
+            Triple(AdminOperation.ReadAdminSubordinateStatement, AdminDocumentKey("subordinate", subordinate), AdminCommandArgs(scope, subordinate)),
+            Triple(AdminOperation.ReadAdminTrustMarkToken, AdminDocumentKey("trust-mark-grant", "type", subordinate), AdminCommandArgs(scope, "type", subordinate)),
+        )
+        for (expiry in listOf("9.999999999E9", "9999999999.75")) for ((operation, key, args) in cases) {
+            val original = artifactWithClaims("""{"exp":$expiry,"extension":"preserved"}""")
+            store.rows[key] = AdminStoredDocument(key, doc("""{"status":"active"}"""), "etag", 1, original)
+            val result = workflow.execute(operation, args)
+            assertTrue(result.isOk, "$operation/$expiry: $result")
+            assertEquals(original, result.value.artifact)
+        }
+    }
+
+    @Test fun artifactExpiryRejectsMissingInvalidNonfiniteAndStringNumericDates() = runTest {
+        val key = AdminDocumentKey("subordinate", subordinate)
+        for (claims in listOf("{}", """{"exp":null}""", """{"exp":true}""", """{"exp":{}}""",
+            """{"exp":"9999999999"}""", """{"exp":"9.999999999E9"}""", """{"exp":1e999}""",
+            """{"exp":NaN}""", """{"exp":Infinity}""", """{"exp":1E0}""", """{"exp":1.75}""")) {
+            store.rows[key] = AdminStoredDocument(key, doc("""{"status":"active"}"""), "etag", 1, artifactWithClaims(claims))
+            val result = workflow.execute(AdminOperation.ReadAdminSubordinateStatement, AdminCommandArgs(scope, subordinate))
+            assertTrue(result.isErr, claims)
+            assertEquals(404, result.error.status, claims)
+            assertEquals("not_published", result.error.token, claims)
+        }
+    }
+
+    @Test fun fractionalExpiryIsComparedWithoutTruncationAtTheActualInstant() {
+        val artifact = artifactWithClaims("""{"exp":1792497000.75}""")
+        assertFalse(adminArtifactExpired(artifact, kotlin.time.Instant.fromEpochSeconds(1792497000, 500_000_000)))
+        assertTrue(adminArtifactExpired(artifact, kotlin.time.Instant.fromEpochSeconds(1792497000, 750_000_000)))
+        assertTrue(adminArtifactExpired(artifact, kotlin.time.Instant.fromEpochSeconds(1792497000, 900_000_000)))
+    }
+
     @Test fun stagedPublicationRemainsHiddenUntilExplicitFinalizeAndRetriesAreIdempotent() = runTest {
         val context = doc("""{"priorRevision":1,"generation":2}""")
         val staged = workflow.stage(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
