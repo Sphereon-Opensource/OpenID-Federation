@@ -114,11 +114,14 @@ class DefaultAdminWorkflow(private val store: AdminDocumentStore, private val pr
             if (isStatus) {
                 if (body.keys.any { it !in setOf("status", "verify") }) adminFail("invalid_request", 400, "Status body may contain only status and verify")
                 JsonObject(old!!.document + ("status" to (body["status"] ?: adminFail("invalid_request", 400, "status is required"))))
-            } else if (op.method == "PATCH") mergeAdminPatch(old!!.document, body) else body
+            } else if (op.method == "PATCH") mergeAdminPatch(old!!.document, body)
+            else if (op.method == "PUT" && args.lifetimePolicy?.explicitLifetimeWrite == false && old != null && !revoked)
+                JsonObject(old.document + body) // Retained publication preserves extensions owned by native document edits.
+            else body
         }
         val clean = JsonObject(next.filterKeys { it !in setOf("updated_at", "etag", "verify") })
         if (containsNull(clean)) adminFail("invalid_request", 400, "JSON null is allowed only in merge patches")
-        val resolved = buildJsonObject {
+        var resolved = buildJsonObject {
             clean.forEach { (k, v) -> put(k, v) }
             when (collection) {
                 "subordinate" -> put("entity_id", resourceId)
@@ -156,6 +159,13 @@ class DefaultAdminWorkflow(private val store: AdminDocumentStore, private val pr
             if (type == null || type.document.string("status") == "revoked") adminFail("not_found", 404, "Trust Mark issuance type was not found")
             parentDependency = type.key to type.etag
         }
+        val recreate = revoked && op.method in setOf("POST", "PUT") && !isStatus
+        val lifetimePolicy = if (adminLifetimeKind(key) != null) args.lifetimePolicy ?: protocol.lifetimePolicy(scope, key)?.copy(
+            explicitLifetimeWrite = !isStatus && op.method != "DELETE" &&
+                (op.method == "PUT" || supplied?.containsKey("lifetime") == true)) else null
+        val lifetime = applyAdminLifetimePolicy(key, old, resolved, lifetimePolicy,
+            store.readLifetimeAcknowledgement(scope, key), active, recreate)
+        resolved = lifetime.document
         if (op.method != "DELETE") protocol.validate(scope, key, resolved)
         if (active && collection in setOf("subordinate", "trust-mark-grant")) {
             val mustVerify = old == null || revoked || old.document.string("status") != "active" || isStatus ||
@@ -168,8 +178,9 @@ class DefaultAdminWorkflow(private val store: AdminDocumentStore, private val pr
             val claims = artifactClaims(artifact)
             JsonObject(resolved + claims.filterKeys { it in setOf("iat", "exp") })
         } else resolved
-        val mutations = mutableListOf(AdminMutation(key, old?.etag, storedDocument, artifact, recreate = revoked && op.method in setOf("POST", "PUT") && !isStatus,
-            expectedDependencies = parentDependency?.let { mapOf(it) } ?: emptyMap(), expectedKeyState = prepared?.keyState, activationContext = args.activationContext))
+        val mutations = mutableListOf(AdminMutation(key, old?.etag, storedDocument, artifact, recreate = recreate,
+            expectedDependencies = parentDependency?.let { mapOf(it) } ?: emptyMap(), expectedKeyState = prepared?.keyState, activationContext = args.activationContext,
+            lifetimePolicy = lifetimePolicy, acknowledgeLifetimePolicy = lifetime.acknowledge))
         if (collection == "trust-mark-type" && op.method == "DELETE") {
             store.list(scope, "trust-mark-grant", resourceId).forEach { grant ->
                 mutations += AdminMutation(grant.key, grant.etag, JsonObject(grant.document + ("status" to JsonPrimitive("revoked"))))

@@ -80,7 +80,17 @@ class AdminWorkflowTest {
                 }
                 if (delta > 0 && current.toLong() + delta > limit) adminFail("conflict", 409, "Subordinate limit reached")
             }
-            return writes.map { m -> AdminStoredDocument(m.key, m.document, "\"${++revision}\"", revision.toLong(), m.artifact).also { rows[m.key] = it } }
+            val acknowledgements = writes.map { rows[adminLifetimeAcknowledgementKey(it.key)]?.let { row -> decodeAdminLifetimeAcknowledgement(row.document) } }
+            writes.indices.forEach { index -> checkAdminLifetimePolicy(writes[index].key, writes[index].lifetimePolicy,
+                acknowledgements[index], rows[writes[index].key]?.etag, writes[index].recreate) }
+            return writes.mapIndexed { index, m -> AdminStoredDocument(m.key, m.document, "\"${++revision}\"", revision.toLong(), m.artifact).also { row ->
+                rows[m.key] = row
+                if (adminLifetimeKind(m.key) != null) {
+                    val key = adminLifetimeAcknowledgementKey(m.key)
+                    val ack = updatedAdminLifetimeAcknowledgement(m, acknowledgements[index], row.etag, "incarnation-$revision")
+                    if (ack == null) rows.remove(key) else rows[key] = AdminStoredDocument(key, Json.encodeToJsonElement(ack).jsonObject, row.etag, row.updatedAt)
+                }
+            } }
         }
 
     }
@@ -89,6 +99,8 @@ class AdminWorkflowTest {
         var verificationFails = false
         var verifications = 0
         var preparations = 0
+        var policyContext: AdminLifetimePolicyContext? = null
+        override suspend fun lifetimePolicy(scope: AdminNodeScope, key: AdminDocumentKey) = policyContext
         override suspend fun node(scope: AdminNodeScope) = buildJsonObject { put("roles", JsonArray(roles.map(::JsonPrimitive))) }
         override suspend fun keys(operation: AdminOperation, args: AdminCommandArgs) = AdminCommandResult()
         override suspend fun validate(scope: AdminNodeScope, key: AdminDocumentKey, document: JsonObject) {}
@@ -328,6 +340,139 @@ class AdminWorkflowTest {
         val finalized = workflow.finalizeStage(scope, staged.stageDigest!!)
         assertEquals(412, finalized.error.status)
         assertEquals("pending", store.rows.getValue(AdminDocumentKey("subordinate", subordinate)).document.string("status"))
+    }
+
+
+    private fun lifetimePolicy(revision: Long, value: Long = 600, explicit: Boolean = false) =
+        AdminLifetimePolicyContext(AdminLifetimePolicyBinding("tenant", "federation", "profile-incarnation"),
+            AdminLifetimeKind.ENTITY_CONFIGURATION, revision, value, explicit)
+
+    @Test fun pendingLifetimePolicyAppliesOnceAndLaterNativeSameValueWriteWins() = runTest {
+        val key = AdminDocumentKey("configuration")
+        val first = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"metadata":{}}"""), lifetimePolicy = lifetimePolicy(0)))
+        assertTrue(first.isOk)
+        assertEquals(JsonPrimitive(600), store.rows.getValue(key).document["lifetime"])
+        val native = workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":600}"""), lifetimePolicy = lifetimePolicy(1, 900, explicit = true)))
+        assertTrue(native.isOk)
+        val unrelated = workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(1, 900)))
+        assertTrue(unrelated.isOk)
+        assertEquals(JsonPrimitive(600), store.rows.getValue(key).document["lifetime"])
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, key)!!.revision)
+        assertFalse(unrelated.value.document!!.containsKey("lifetimePolicy"))
+        assertFalse(adminSignedClaims(store.rows.getValue(key).document).containsKey("lifetimePolicy"))
+    }
+
+    @Test fun syntheticReplacementPreservesNativeLifetimeAndLegacyBaseline() = runTest {
+        val key = AdminDocumentKey("configuration")
+        workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = doc("""{"lifetime":42,"custom_extension":{"nested":true}}""")))
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":900}"""), lifetimePolicy = lifetimePolicy(0, 900))).isOk)
+        assertEquals(JsonPrimitive(42), store.rows.getValue(key).document["lifetime"])
+        assertEquals(doc("""{"nested":true}"""), store.rows.getValue(key).document["custom_extension"])
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":null}"""), lifetimePolicy = lifetimePolicy(0, explicit = true))).isOk)
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":900}"""), lifetimePolicy = lifetimePolicy(0, 900))).isOk)
+        assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
+    }
+
+    @Test fun firstObservedProfileChangeOverridesUnacknowledgedLegacyLifetime() = runTest {
+        val key = AdminDocumentKey("configuration")
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":42}"""))).isOk)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(1, 900))).isOk)
+        assertEquals(JsonPrimitive(900), store.rows.getValue(key).document["lifetime"])
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, key)?.revision)
+    }
+
+    @Test fun acknowledgedNativeLifetimeRemovalIsNotReseededByPublication() = runTest {
+        val key = AdminDocumentKey("configuration")
+        workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":600}"""), lifetimePolicy = lifetimePolicy(0, explicit = true)))
+        for (operation in listOf(AdminOperation.PatchAdminConfiguration, AdminOperation.ReplaceAdminConfiguration)) {
+            val body = if (operation.method == "PATCH") doc("""{"lifetime":null}""") else doc("""{"metadata":{}}""")
+            assertTrue(workflow.execute(operation, AdminCommandArgs(scope, document = body,
+                lifetimePolicy = lifetimePolicy(1, 900, explicit = true))).isOk)
+            assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+                document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(1, 900))).isOk)
+            assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
+        }
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":false}"""), lifetimePolicy = lifetimePolicy(2, 1200))).isOk)
+        assertEquals(JsonPrimitive(1200), store.rows.getValue(key).document["lifetime"])
+    }
+
+    @Test fun staleLifetimeRevisionAndForeignBindingCannotPublish() = runTest {
+        workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":600}"""), lifetimePolicy = lifetimePolicy(2, explicit = true)))
+        val before = store.rows.getValue(AdminDocumentKey("configuration"))
+        val stale = workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(1)))
+        assertEquals("precondition_failed", stale.error.token)
+        val foreign = workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimePolicy(2).copy(
+                binding = AdminLifetimePolicyBinding("other-tenant", "federation", "profile-incarnation"))))
+        assertEquals("conflict", foreign.error.token)
+        assertEquals(before, store.rows.getValue(AdminDocumentKey("configuration")))
+    }
+
+    @Test fun absentContextUsesPortWithNativeIntentWhileSuppliedFalseRemainsRetained() = runTest {
+        val key = AdminDocumentKey("configuration")
+        protocol.policyContext = lifetimePolicy(0)
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"metadata":{}}"""))).isOk)
+        assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
+        protocol.policyContext = lifetimePolicy(1, 900)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":null}"""))).isOk)
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, key)!!.revision)
+        assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
+        assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":900}"""), lifetimePolicy = lifetimePolicy(1, 900))).isOk)
+        assertFalse(store.rows.getValue(key).document.containsKey("lifetime"))
+    }
+
+    @Test fun recreationPreservesSamePolicyWatermarkButResetsNativePrecedence() = runTest {
+        val key = AdminDocumentKey("subordinate", subordinate)
+        val context = lifetimePolicy(2, 600, true).copy(kind = AdminLifetimeKind.SUBORDINATE_STATEMENT)
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = doc("""{"entity_id":"$subordinate","status":"active","lifetime":50}"""), lifetimePolicy = context)).isOk)
+        assertTrue(workflow.execute(AdminOperation.DeleteAdminSubordinate, AdminCommandArgs(scope,
+            resourceId = subordinate, lifetimePolicy = context.copy(explicitLifetimeWrite = false))).isOk)
+        val oldIncarnation = store.readLifetimeAcknowledgement(scope, key)!!.documentIncarnation
+        val body = doc("""{"entity_id":"$subordinate","status":"active"}""")
+        val stale = workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context.copy(revision = 1, explicitLifetimeWrite = false)))
+        assertEquals(412, stale.error.status)
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context.copy(explicitLifetimeWrite = false))).isOk)
+        assertEquals(JsonPrimitive(600), store.rows.getValue(key).document["lifetime"])
+        assertNotEquals(oldIncarnation, store.readLifetimeAcknowledgement(scope, key)!!.documentIncarnation)
+    }
+
+    @Test fun policyBoundRecreationRequiresSameBindingAndPreservesWatermarkWhilePending() = runTest {
+        val key = AdminDocumentKey("subordinate", subordinate)
+        val context = lifetimePolicy(2, 600).copy(kind = AdminLifetimeKind.SUBORDINATE_STATEMENT)
+        val body = doc("""{"entity_id":"$subordinate","status":"active"}""")
+        workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope, document = body, lifetimePolicy = context))
+        workflow.execute(AdminOperation.DeleteAdminSubordinate, AdminCommandArgs(scope, resourceId = subordinate, lifetimePolicy = context))
+        val noContext = workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope, document = body))
+        assertEquals(412, noContext.error.status)
+        val foreign = workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope, document = body,
+            lifetimePolicy = context.copy(binding = context.binding.copy(incarnationId = "old-profile"))))
+        assertEquals(409, foreign.error.status)
+        val pending = doc("""{"entity_id":"$subordinate","status":"pending"}""")
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope, document = pending,
+            lifetimePolicy = context)).isOk)
+        assertEquals(2L, store.readLifetimeAcknowledgement(scope, key)!!.revision)
+        assertEquals(JsonPrimitive(600), store.rows.getValue(key).document["lifetime"])
+        val staleActivation = workflow.execute(AdminOperation.SetAdminSubordinateStatus, AdminCommandArgs(scope,
+            resourceId = subordinate, document = doc("""{"status":"active"}"""), lifetimePolicy = context.copy(revision = 1)))
+        assertEquals(412, staleActivation.error.status)
     }
 
 }

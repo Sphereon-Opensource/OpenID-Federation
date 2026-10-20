@@ -26,6 +26,8 @@ data class AdminMutation(
     val expectedKeyState: String? = null,
     val keyChange: AdminKeyChange? = null,
     val activationContext: JsonObject? = null,
+    val lifetimePolicy: AdminLifetimePolicyContext? = null,
+    val acknowledgeLifetimePolicy: Boolean = false,
 )
 
 data class AdminPreparedArtifact(val artifact: String, val keyState: String)
@@ -34,6 +36,10 @@ data class AdminKeyChange(val newKey: AdminPreparedKey? = null, val selectedKeyI
 
 /** All compare-and-swap writes and artifact visibility changes commit in one owning-store transaction. */
 interface AdminDocumentStore {
+    /** Hidden metadata, read with the canonical document and fenced again in the owning-store commit. */
+    suspend fun readLifetimeAcknowledgement(scope: AdminNodeScope, key: AdminDocumentKey): AdminLifetimeAcknowledgement? =
+        readCommitted(scope, adminLifetimeAcknowledgementKey(key))?.let { decodeAdminLifetimeAcknowledgement(it.document) }
+
     /** Internal, read-only key authority; never exposed by a standard document operation. */
     suspend fun readKeyMaterial(scope: AdminNodeScope, keyId: String): AdminStoredKeyMaterial? = null
     suspend fun recoverableKeyPreparations(scope: AdminNodeScope, limit: Int): List<AdminStoredDocument> =
@@ -62,6 +68,9 @@ interface AdminDocumentStore {
 
 /** Domain operations below the document workflow. Preparation never publishes or changes document state. */
 interface AdminProtocolPort {
+    /** Trusted host resolution for direct native commands and managed renewal; standalone nodes return null. */
+    suspend fun lifetimePolicy(scope: AdminNodeScope, key: AdminDocumentKey): AdminLifetimePolicyContext? = null
+
     suspend fun recoverKeyPreparations(scope: AdminNodeScope, abortPending: Boolean = false) = Unit
 
     suspend fun selectSigningKey(scope: AdminNodeScope, keyId: String?, expectedRevision: Long): AdminCommandResult = adminFail("internal", 500, "Signing selection is unavailable")

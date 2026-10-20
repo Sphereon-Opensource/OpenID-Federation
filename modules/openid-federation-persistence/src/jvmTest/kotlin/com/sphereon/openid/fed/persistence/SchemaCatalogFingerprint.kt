@@ -117,16 +117,17 @@ object SchemaCatalogFingerprint {
 
     private fun checkConstraints(connection: Connection, schema: String): List<String> {
         val sql = """
-            SELECT tc.table_name, tc.constraint_name, cc.check_clause
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.check_constraints cc
-              ON tc.constraint_name = cc.constraint_name
-             AND tc.constraint_schema = cc.constraint_schema
-            WHERE tc.table_schema = ?
-              AND tc.constraint_type = 'CHECK'
-              AND tc.table_name NOT IN (${EXCLUDED_TABLES.joinToString { "'$it'" }})
-              AND tc.constraint_name NOT LIKE '%_not_null'
-            ORDER BY tc.table_name, tc.constraint_name
+            SELECT rel.relname AS table_name, con.conname AS constraint_name,
+                   substring(pg_get_constraintdef(con.oid, true) from 7) AS check_clause
+            FROM pg_catalog.pg_constraint con
+            JOIN pg_catalog.pg_class rel ON rel.oid = con.conrelid
+            JOIN pg_catalog.pg_namespace ns ON ns.oid = rel.relnamespace
+            WHERE ns.nspname = ?
+              AND con.contype = 'c'
+              AND rel.relkind IN ('r', 'p')
+              AND rel.relname NOT IN (${EXCLUDED_TABLES.joinToString { "'$it'" }})
+              AND con.conname NOT LIKE '%_not_null'
+            ORDER BY rel.relname, con.conname
         """.trimIndent()
         return connection.prepareStatement(sql).use { ps ->
             ps.setString(1, schema)

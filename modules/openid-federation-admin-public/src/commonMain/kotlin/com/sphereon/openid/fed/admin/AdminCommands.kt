@@ -20,6 +20,7 @@ data class AdminCommandArgs(
     val ifMatch: String? = null,
     val query: Map<String, String> = emptyMap(),
     val activationContext: JsonObject? = null,
+    val lifetimePolicy: AdminLifetimePolicyContext? = null,
 )
 
 @Serializable
