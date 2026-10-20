@@ -57,11 +57,19 @@ class StandaloneAdminProtocolPort internal constructor(
     private val database: com.sphereon.openid.fed.persistence.Database?,
     private val clock: () -> Long,
     private val keyMaterial: AdminKeyMaterialPort? = null,
+    private val lifetimePolicies: AdminLifetimePolicyResolver? = null,
 ) : AdminProtocolPort {
     @Inject constructor(store: AdminDocumentStore, tenantResolver: TenantContextResolver, config: OidfConfigBinder,
         createKey: CreateKeyCommandImpl, jwt: JwtService, fetchConfiguration: GetEntityConfigurationCommand,
-        verifyTrust: VerifyEntityTrustCommand, verifyDelegation: VerifyTrustMarkDelegationCommand, verifyMark: VerifyTrustMarkCommand, keyMaterial: AdminKeyMaterialPort) :
-        this(store, tenantResolver, config, createKey, jwt, fetchConfiguration, verifyTrust, verifyDelegation, verifyMark, null, { System.currentTimeMillis() / 1000 }, keyMaterial)
+        verifyTrust: VerifyEntityTrustCommand, verifyDelegation: VerifyTrustMarkDelegationCommand, verifyMark: VerifyTrustMarkCommand, keyMaterial: AdminKeyMaterialPort, lifetimePolicies: AdminLifetimePolicyResolver) :
+        this(store, tenantResolver, config, createKey, jwt, fetchConfiguration, verifyTrust, verifyDelegation, verifyMark, null, { System.currentTimeMillis() / 1000 }, keyMaterial, lifetimePolicies)
+    override suspend fun lifetimePolicy(scope: AdminNodeScope, key: AdminDocumentKey) = lifetimePolicies?.resolve(scope, key)
+    private suspend fun publicationLifetime(scope: AdminNodeScope, configuration: AdminStoredDocument,
+        captured: AdminLifetimePolicyContext? = null, publishing: Boolean = true): Pair<AdminLifetimePolicyContext?, AdminLifetimeDecision> {
+        val context = (captured ?: lifetimePolicy(scope, configuration.key))?.copy(explicitLifetimeWrite = false)
+        return context to applyAdminLifetimePolicy(configuration.key, configuration, configuration.document, context,
+            store.readLifetimeAcknowledgement(scope, configuration.key), publishing)
+    }
     private val materials: AdminKeyMaterialPort = keyMaterial ?: DefaultAdminKeyMaterialSupport(store, createKey, jwt)
     private val keyQueries get() = database?.jwkQueries ?: Persistence.jwkQueries
     private val selectionQueries get() = database?.accountSigningKeyQueries ?: Persistence.accountSigningKeyQueries
@@ -90,9 +98,11 @@ class StandaloneAdminProtocolPort internal constructor(
             val fence = keyState(scope.accountId)
             val replacement = keys(scope).find { it.kid == state.document.string("new_kid") && capable(it) } ?: continue
             val configuration = store.read(scope, AdminDocumentKey("configuration")) ?: continue
-            val artifact = if (configuration.artifact != null) prepareWith(scope, configuration.key, configuration.document, replacement, publicJwks(scope), fence).artifact else null
-            val changed = AdminMutation(configuration.key, configuration.etag, configuration.document, artifact,
-                expectedKeyState = fence, keyChange = AdminKeyChange(selectedKeyId = replacement.id, updateSelection = true))
+            val (policy, lifetime) = publicationLifetime(scope, configuration, publishing = configuration.artifact != null)
+            val artifact = if (configuration.artifact != null) prepareWith(scope, configuration.key, lifetime.document, replacement, publicJwks(scope), fence).artifact else null
+            val changed = AdminMutation(configuration.key, configuration.etag, lifetime.document, artifact,
+                expectedKeyState = fence, keyChange = AdminKeyChange(selectedKeyId = replacement.id, updateSelection = true),
+                lifetimePolicy = policy, acknowledgeLifetimePolicy = lifetime.acknowledge)
             val switched = AdminMutation(state.key, state.etag, JsonObject(state.document + ("switched" to JsonPrimitive(true))))
             if (store.commit(scope, listOf(changed, switched)) == null) adminFail("precondition_failed", 412, "Key state changed during rollover")
         }
@@ -296,9 +306,11 @@ class StandaloneAdminProtocolPort internal constructor(
         val signer = if (keyId == null) candidates.firstOrNull() else candidates.find { it.id == keyId }
         if (signer == null) adminFail("conflict", 409, "Selected key must be active and signing-capable for this node")
         val configuration = store.read(scope, AdminDocumentKey("configuration")) ?: adminFail("not_found", 404, "Configuration not found")
-        val artifact = if (configuration.artifact != null) prepareWith(scope, configuration.key, configuration.document, signer, null, fence).artifact else null
-        val mutation = AdminMutation(configuration.key, configuration.etag, configuration.document, artifact, expectedKeyState = fence,
-            keyChange = AdminKeyChange(selectedKeyId = signer.id, updateSelection = true))
+        val (policy, lifetime) = publicationLifetime(scope, configuration, publishing = configuration.artifact != null)
+        val artifact = if (configuration.artifact != null) prepareWith(scope, configuration.key, lifetime.document, signer, null, fence).artifact else null
+        val mutation = AdminMutation(configuration.key, configuration.etag, lifetime.document, artifact, expectedKeyState = fence,
+            keyChange = AdminKeyChange(selectedKeyId = signer.id, updateSelection = true),
+            lifetimePolicy = policy, acknowledgeLifetimePolicy = lifetime.acknowledge)
         val committed = store.commit(scope, listOf(mutation))?.firstOrNull() ?: adminFail("precondition_failed", 412, "Signing selection changed during preparation")
         return AdminCommandResult(document = committed.document, etag = committed.etag, artifact = committed.artifact)
     }
@@ -404,10 +416,13 @@ class StandaloneAdminProtocolPort internal constructor(
         }
         val desiredKeys = (all.filter { it.revoked_at == null && it.id != revoke && (it.expires_at == null || it.expires_at!!.toEpochSecond(java.time.ZoneOffset.UTC) > now()) } + listOfNotNull(created))
         val public = buildJsonObject { put("keys", JsonArray(desiredKeys.map { JsonObject(Json.parseToJsonElement(it.key).jsonObject.filterKeys { member -> member !in PRIVATE_JWK_MEMBERS }) })) }
+        val (policy, lifetime) = publicationLifetime(scope, configuration, args.lifetimePolicy,
+            publishing = configuration.artifact != null && nextSigner != null)
         val artifact = if (configuration.artifact != null && nextSigner != null)
-            prepareWith(scope, configuration.key, configuration.document, nextSigner, public, initialFence).artifact else configuration.artifact
+            prepareWith(scope, configuration.key, lifetime.document, nextSigner, public, initialFence).artifact else configuration.artifact
         val keyChange = AdminKeyChange(newKey = staged, selectedKeyId = nextSigner?.id, updateSelection = nextSigner?.id != signer?.id || selectionQueries.findByAccountId(scope.accountId).executeAsOneOrNull()?.jwk_id == null && nextSigner != null, revokeKeyId = revoke)
-        val mutation = AdminMutation(configuration.key, configuration.etag, configuration.document, artifact, expectedKeyState = initialFence, keyChange = keyChange)
+        val mutation = AdminMutation(configuration.key, configuration.etag, lifetime.document, artifact, expectedKeyState = initialFence, keyChange = keyChange,
+            lifetimePolicy = policy, acknowledgeLifetimePolicy = lifetime.acknowledge)
         val preparation = preparationId?.let { keyId ->
             val pending = store.readCommitted(scope, adminKeyPreparationKey(keyId))
                 ?: adminFail("precondition_failed", 412, "Key preparation disappeared")

@@ -92,11 +92,15 @@ class AdminRenewDueStatementsCommand internal constructor(
                     continue
                 }
                 try {
-                    val prepared = protocol.prepare(scope, row.key, row.document)
+                    val lifetimePolicy = protocol.lifetimePolicy(scope, row.key)?.copy(explicitLifetimeWrite = false)
+                    val lifetime = applyAdminLifetimePolicy(row.key, row, row.document, lifetimePolicy,
+                        store.readLifetimeAcknowledgement(scope, row.key), publishing = true)
+                    val prepared = protocol.prepare(scope, row.key, lifetime.document)
                     val jwt = prepared.artifact
                     val nextExpiry = TrustMarkValidation.numericDate(payload(jwt)["exp"])?.let { floor(it).toLong() }
                         ?: error("Prepared artifact has no exp")
-                    val committed = store.commit(scope, listOf(AdminMutation(row.key, row.etag, row.document, jwt, expectedKeyState = prepared.keyState)))
+                    val committed = store.commit(scope, listOf(AdminMutation(row.key, row.etag, lifetime.document, jwt, expectedKeyState = prepared.keyState,
+                        lifetimePolicy = lifetimePolicy, acknowledgeLifetimePolicy = lifetime.acknowledge)))
                     outcomes += StatementRenewalOutcome(kind, node.account_id, subordinate,
                         if (committed == null) StatementRenewalStatus.ALREADY_RENEWED else StatementRenewalStatus.RENEWED, expires, nextExpiry)
                 } catch (cancelled: CancellationException) { throw cancelled }

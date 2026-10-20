@@ -130,6 +130,7 @@ class SqlAdminDocumentStoreTest {
             """{"name":"Research","ref":"https://ta.example/old","lifetimeSeconds":600,"extensions":{"core-owned":true}}""").executeAsOne()
         core.insertRevision(original.id, original.version, original.definition).executeAsOne()
         val protocol = mockk<AdminProtocolPort>()
+        coEvery { protocol.lifetimePolicy(any(), any()) } returns null
         coEvery { protocol.node(any()) } returns doc("""{"roles":["trust_mark_issuer"]}""")
         coEvery { protocol.validate(any(), any(), any()) } just Runs
         val workflow = DefaultAdminWorkflow(store, protocol)
@@ -240,6 +241,7 @@ class SqlAdminDocumentStoreTest {
     @Test fun configurationLifetimePatchPublishesScientificExpiryThroughRealSqlWorkflow(): Unit = runBlocking {
         val original = configuration()
         val protocol = mockk<AdminProtocolPort>()
+        coEvery { protocol.lifetimePolicy(any(), any()) } returns null
         val artifact = "header." + java.util.Base64.getUrlEncoder().withoutPadding()
             .encodeToString("""{"exp":9.999999999E9,"lifetime":86400}""".toByteArray()) + ".original-signature"
         coEvery { protocol.node(any()) } returns original.document
@@ -260,6 +262,175 @@ class SqlAdminDocumentStoreTest {
         val read = workflow.execute(AdminOperation.ReadAdminConfigurationStatement, AdminCommandArgs(scope))
         assertTrue(read.isOk)
         assertEquals(artifact, read.value.artifact)
+    }
+
+    private fun lifetimeContext(revision: Long, value: Long = 600, explicit: Boolean = false,
+        kind: AdminLifetimeKind = AdminLifetimeKind.ENTITY_CONFIGURATION, incarnation: String = "profile-one") =
+        AdminLifetimePolicyContext(AdminLifetimePolicyBinding("tenant", "federation", incarnation), kind, revision, value, explicit)
+
+    private fun lifetimeProtocol(context: AdminLifetimePolicyContext? = null): AdminProtocolPort {
+        val port = mockk<AdminProtocolPort>()
+        val sequence = java.util.concurrent.atomic.AtomicInteger()
+        coEvery { port.lifetimePolicy(any(), any()) } returns context
+        coEvery { port.node(any()) } returns doc("""{"roles":["trust_anchor"]}""")
+        coEvery { port.validate(any(), any(), any()) } just Runs
+        coEvery { port.verifySubject(any(), any(), any()) } just Runs
+        coEvery { port.prepare(any(), any(), any()) } answers {
+            AdminPreparedArtifact(jwt("https://ta.example", "lifetime-${sequence.incrementAndGet()}"),
+                adminKeyState(scope.accountId, database.jwkQueries, database.accountSigningKeyQueries, database.adminDocumentQueries))
+        }
+        return port
+    }
+
+    @Test fun lifetimeAcknowledgementAndArtifactRollbackTogetherOnLateSqlFailure(): Unit = runBlocking {
+        val original = configuration()
+        val workflow = DefaultAdminWorkflow(store, lifetimeProtocol())
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":50}"""), lifetimePolicy = lifetimeContext(0, explicit = true))).isOk)
+        val before = store.readCommitted(scope, original.key)!!
+        val acknowledgement = store.readLifetimeAcknowledgement(scope, original.key)!!
+        val failure = runCatching { store.commit(scope, listOf(
+            AdminMutation(before.key, before.etag, JsonObject(before.document + ("lifetime" to JsonPrimitive(900))),
+                jwt("https://ta.example", "must-rollback"), lifetimePolicy = lifetimeContext(1, 900), acknowledgeLifetimePolicy = true),
+            AdminMutation(AdminDocumentKey("key-preparation", "invalid-late-write"), null, doc("{}"))
+        )) }.exceptionOrNull()
+        assertNotNull(failure)
+        assertEquals(before, store.readCommitted(scope, before.key))
+        assertEquals(acknowledgement, store.readLifetimeAcknowledgement(scope, before.key))
+    }
+
+    @Test fun stagedLifetimePolicyRecoversAtomicallyAndReplayCannotUndoNativeRemoval(): Unit = runBlocking {
+        val original = configuration()
+        val port = lifetimeProtocol()
+        val workflow = DefaultAdminWorkflow(store, port)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":50}"""), lifetimePolicy = lifetimeContext(0, explicit = true))).isOk)
+        val staged = workflow.stage(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":{"retained":true}}"""), lifetimePolicy = lifetimeContext(1, 900))).value
+        assertEquals(0L, store.readLifetimeAcknowledgement(scope, original.key)!!.revision)
+        assertEquals(JsonPrimitive(50), store.readCommitted(scope, original.key)!!.document["lifetime"])
+        val restarted = SqlAdminDocumentStore(object : PublishedStatementCacheInvalidator { override suspend fun published(statementJwt: String) {} }, database)
+        val recovered = DefaultAdminWorkflow(restarted, port)
+        assertEquals(staged.artifact, recovered.pendingStages(scope).value.single().artifact)
+        val finalized = recovered.finalizeStage(scope, staged.stageDigest!!)
+        assertTrue(finalized.isOk)
+        assertEquals(staged.artifact, restarted.readCommitted(scope, original.key)!!.artifact)
+        assertEquals(JsonPrimitive(900), restarted.readCommitted(scope, original.key)!!.document["lifetime"])
+        assertEquals(1L, restarted.readLifetimeAcknowledgement(scope, original.key)!!.revision)
+        assertTrue(recovered.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":null}"""), lifetimePolicy = lifetimeContext(1, 900, explicit = true))).isOk)
+        val native = restarted.readCommitted(scope, original.key)!!
+        assertTrue(recovered.finalizeStage(scope, staged.stageDigest!!).isOk)
+        assertEquals(native, restarted.readCommitted(scope, original.key))
+        assertFalse(native.document.containsKey("lifetime"))
+        val marker = restarted.readCommitted(scope, adminLifetimeAcknowledgementKey(original.key))!!
+        assertFalse(marker.document.containsKey("policyLifetimeSeconds"))
+        assertFalse(native.document.containsKey("binding"))
+    }
+
+    @Test fun laterNativeCommitFencesStagedPolicyAndConcurrentPolicyWriter(): Unit = runBlocking {
+        val original = configuration()
+        val workflow = DefaultAdminWorkflow(store, lifetimeProtocol())
+        val staged = workflow.stage(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"extension":true}"""), lifetimePolicy = lifetimeContext(1, 900))).value
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":30}"""), lifetimePolicy = lifetimeContext(1, 900, explicit = true))).isOk)
+        assertEquals(412, workflow.finalizeStage(scope, staged.stageDigest!!).error.status)
+        val before = store.readCommitted(scope, original.key)!!
+        val results = listOf(false, true).map { explicit -> async(Dispatchers.IO) {
+            workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope, ifMatch = before.etag,
+                document = if (explicit) doc("""{"lifetime":45}""") else doc("""{"extension":false}"""),
+                lifetimePolicy = lifetimeContext(2, 1200, explicit)))
+        }}.awaitAll()
+        assertEquals(1, results.count { it.isOk })
+        assertEquals(1, results.count { it.isErr && it.error.status == 412 })
+        val winner = store.readCommitted(scope, original.key)!!
+        assertEquals(winner.etag, store.readLifetimeAcknowledgement(scope, original.key)!!.documentEtag)
+        assertEquals(2L, store.readLifetimeAcknowledgement(scope, original.key)!!.revision)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":45}"""), lifetimePolicy = lifetimeContext(2, 1200, explicit = true))).isOk)
+        assertEquals(JsonPrimitive(45), store.readCommitted(scope, original.key)!!.document["lifetime"])
+    }
+
+    @Test fun subordinateRecreationCannotDowngradeSamePolicyRevision(): Unit = runBlocking {
+        configuration()
+        val workflow = DefaultAdminWorkflow(store, lifetimeProtocol())
+        val entity = "https://subordinate.example"
+        val context = lifetimeContext(2, kind = AdminLifetimeKind.SUBORDINATE_STATEMENT)
+        val body = doc("""{"entity_id":"$entity","status":"active"}""")
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context)).isOk)
+        assertTrue(workflow.execute(AdminOperation.DeleteAdminSubordinate, AdminCommandArgs(scope,
+            resourceId = entity, lifetimePolicy = context)).isOk)
+        val before = store.readCommitted(scope, AdminDocumentKey("subordinate", entity))!!
+        val stale = workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context.copy(revision = 1)))
+        assertEquals(412, stale.error.status)
+        assertEquals(before, store.readCommitted(scope, before.key))
+        assertEquals(2L, store.readLifetimeAcknowledgement(scope, before.key)!!.revision)
+    }
+
+    @Test fun subordinateRecreationResetsDocumentIncarnationAndRetainsPolicyBinding(): Unit = runBlocking {
+        configuration()
+        val workflow = DefaultAdminWorkflow(store, lifetimeProtocol())
+        val entity = "https://subordinate.example"
+        val key = AdminDocumentKey("subordinate", entity)
+        val context = lifetimeContext(5, 600, kind = AdminLifetimeKind.SUBORDINATE_STATEMENT)
+        val body = doc("""{"entity_id":"$entity","status":"active"}""")
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context)).isOk)
+        val acknowledgement = store.readLifetimeAcknowledgement(scope, key)!!
+        assertTrue(workflow.execute(AdminOperation.DeleteAdminSubordinate, AdminCommandArgs(scope,
+            resourceId = entity, lifetimePolicy = context)).isOk)
+        assertTrue(workflow.execute(AdminOperation.CreateAdminSubordinate, AdminCommandArgs(scope,
+            document = body, lifetimePolicy = context.copy(revision = 6, policyLifetimeSeconds = 800))).isOk)
+        val recreated = store.readLifetimeAcknowledgement(scope, key)!!
+        assertNotEquals(acknowledgement.documentIncarnation, recreated.documentIncarnation)
+        assertEquals("profile-one", recreated.binding.incarnationId)
+        assertEquals(6L, recreated.revision)
+        assertEquals(JsonPrimitive(800), store.readCommitted(scope, key)!!.document["lifetime"])
+    }
+
+    @Test fun managedRenewalAppliesPendingPolicyOnceAndRetainsAcknowledgedAbsence(): Unit = runBlocking {
+        val initial = configuration()
+        val port = lifetimeProtocol()
+        val workflow = DefaultAdminWorkflow(store, port)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":50}"""), lifetimePolicy = lifetimeContext(0, explicit = true))).isOk)
+        var policy = lifetimeContext(1, 900)
+        coEvery { port.lifetimePolicy(any(), any()) } answers { policy }
+        val preparedDocuments = mutableListOf<JsonObject>()
+        val futureArtifact = jwt("https://ta.example", "renewed-policy")
+        coEvery { port.prepare(any(), any(), any()) } answers {
+            preparedDocuments += thirdArg<JsonObject>()
+            AdminPreparedArtifact(futureArtifact, adminKeyState(scope.accountId, database.jwkQueries,
+                database.accountSigningKeyQueries, database.adminDocumentQueries))
+        }
+        val legacy = mockk<com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsCommandImpl>()
+        val command = AdminRenewDueStatementsCommand(testSessionExecution(), legacy, store, port, database)
+        val args = com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsArgs(1,
+            accountId = scope.accountId, nowEpochSeconds = 100, listOnly = false)
+        suspend fun renewDue() {
+            val old = store.readCommitted(scope, initial.key)!!
+            val dueArtifact = "header." + java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("{\"exp\":1E2}".toByteArray()) + ".signature"
+            assertNotNull(store.commit(scope, listOf(AdminMutation(old.key, old.etag, old.document, dueArtifact))))
+            val renewed = command.execute(args)
+            assertTrue(renewed.isOk)
+            assertEquals(com.sphereon.openid.fed.services.command.renewal.StatementRenewalStatus.RENEWED, renewed.value.outcomes.single().status)
+        }
+        renewDue()
+        assertEquals(JsonPrimitive(900), preparedDocuments.last()["lifetime"])
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, initial.key)!!.revision)
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":null}"""), lifetimePolicy = policy.copy(explicitLifetimeWrite = true))).isOk)
+        renewDue()
+        assertFalse(preparedDocuments.last().containsKey("lifetime"))
+        assertFalse(store.readCommitted(scope, initial.key)!!.document.containsKey("lifetime"))
+        policy = lifetimeContext(2, 50) // A -> B -> A is a new policy intent despite equal historical values.
+        renewDue()
+        assertEquals(JsonPrimitive(50), preparedDocuments.last()["lifetime"])
+        assertEquals(2L, store.readLifetimeAcknowledgement(scope, initial.key)!!.revision)
+        assertEquals(futureArtifact, store.readCommitted(scope, initial.key)!!.artifact)
     }
 
     @Test fun managedTrustMarkStatusAcceptsNumericDatesButRejectsStringClaims(): Unit = runBlocking {
@@ -292,6 +463,7 @@ class SqlAdminDocumentStoreTest {
             .encodeToString("""{"exp":$expiry}""".toByteArray()) + ".original-signature"
         val legacy = mockk<com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsCommandImpl>()
         val protocol = mockk<AdminProtocolPort>()
+        coEvery { protocol.lifetimePolicy(any(), any()) } returns null
         coEvery { legacy.execute(any()) } returns IdkResult.ok(com.sphereon.openid.fed.services.command.renewal.StatementRenewalReport(100,
             emptyList()))
         coEvery { protocol.node(any()) } returns original.document
@@ -436,8 +608,11 @@ class SqlAdminDocumentStoreTest {
         val binder = mockk<OidfConfigBinder>(relaxed = true)
         val creation = mockk<CreateKeyCommandImpl>()
         coEvery { creation.prepareKey(any(), any()) } throws IllegalStateException("Generic registry cannot resolve managed resource handles")
+        var publicationPolicy: AdminLifetimePolicyContext? = null
+        var publicationClock = System.currentTimeMillis() / 1000
         fun protocol() = StandaloneAdminProtocolPort(store, resolver, binder, creation, realJwt,
-            mockk(), mockk(), mockk(), mockk(), database, { System.currentTimeMillis() / 1000 }, material)
+            mockk(), mockk(), mockk(), mockk(), database, { publicationClock }, material,
+            AdminLifetimePolicyResolver { _, _ -> publicationPolicy })
         val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list"}}}""")
         var workflow = DefaultAdminWorkflow(store, protocol())
         val created = workflow.execute(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"EdDSA"}}""")))
@@ -498,8 +673,13 @@ class SqlAdminDocumentStoreTest {
         } }
         assertEquals("EdDSA", store.readKeyMaterial(scope, originalKey.id)!!.key.algorithm, "Persisted public alg preserves legacy signing routes")
         val imported = JsonObject(publicJwk + ("kid" to JsonPrimitive("logical-reimport")))
+        assertTrue(workflow.execute(AdminOperation.PatchAdminConfiguration, AdminCommandArgs(scope,
+            document = doc("""{"lifetime":3600}"""), lifetimePolicy = lifetimeContext(0, 3600, explicit = true))).isOk)
+        publicationPolicy = lifetimeContext(1, 7200)
         val rotation = workflow.execute(AdminOperation.RotateAdminKey,
             AdminCommandArgs(scope, resourceId = "managed-kid", document = buildJsonObject { put("import", imported) }))
+        assertEquals(JsonPrimitive(7200), store.readCommitted(scope, committed.key)!!.document["lifetime"])
+        assertEquals(1L, store.readLifetimeAcknowledgement(scope, committed.key)!!.revision)
         assertTrue(rotation.isOk, "Known-key rollover failed: $rotation")
         assertEquals(2, preparations, "Import must not generate physical key material")
         val reimported = database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().single { it.kid == "logical-reimport" }
@@ -528,6 +708,29 @@ class SqlAdminDocumentStoreTest {
             it.document["generated"] == JsonPrimitive(false) && it.document["status"] == JsonPrimitive("ABORTED")
         }
         assertEquals(JsonPrimitive(true), abortedImport.document["cleanup_complete"])
+        changeClaims = false
+        publicationPolicy = lifetimeContext(2, 8100)
+        val selectionRevision = database.accountSigningKeyQueries.findByAccountId(scope.accountId).executeAsOne().revision
+        assertTrue(workflow.selectSigningKey(scope, reimported.id, selectionRevision).isOk)
+        assertEquals(JsonPrimitive(8100), store.readCommitted(scope, committed.key)!!.document["lifetime"])
+        assertEquals(2L, store.readLifetimeAcknowledgement(scope, committed.key)!!.revision)
+        publicationPolicy = lifetimeContext(3, 8200)
+        assertTrue(workflow.execute(AdminOperation.DeleteAdminKey, AdminCommandArgs(scope, resourceId = "managed-kid")).isOk)
+        assertEquals(JsonPrimitive(8200), store.readCommitted(scope, committed.key)!!.document["lifetime"])
+        assertEquals(3L, store.readLifetimeAcknowledgement(scope, committed.key)!!.revision)
+        publicationPolicy = lifetimeContext(4, 8300)
+        val delayed = workflow.execute(AdminOperation.RotateAdminKey, AdminCommandArgs(scope, resourceId = "logical-reimport",
+            document = buildJsonObject { put("import", JsonObject(publicJwk + ("kid" to JsonPrimitive("scheduled-policy-key")))); put("switch_after", 1) }))
+        assertTrue(delayed.isOk)
+        assertEquals(JsonPrimitive(8300), store.readCommitted(scope, committed.key)!!.document["lifetime"])
+        publicationPolicy = lifetimeContext(5, 8400)
+        publicationClock += 2
+        workflow = DefaultAdminWorkflow(store, protocol()) // Process reconstruction resumes the scheduled publication.
+        assertTrue(workflow.execute(AdminOperation.ReadAdminNode, AdminCommandArgs(scope)).isOk)
+        val afterSwitch = store.readCommitted(scope, committed.key)!!
+        assertEquals(JsonPrimitive(8400), afterSwitch.document["lifetime"])
+        assertEquals(5L, store.readLifetimeAcknowledgement(scope, committed.key)!!.revision)
+        assertEquals("scheduled-policy-key", decodeJWTComponents(afterSwitch.artifact!!).header.kid)
     }
 
     @Test fun standaloneProviderAttemptUsesTheSameDurableJournalForClaimAndRestartCleanup(): Unit = runBlocking {
@@ -709,6 +912,7 @@ class SqlAdminDocumentStoreTest {
         database.adminDocumentQueries.upsert(scope.accountId, "key-state", "first", "", pending, "first-state", 1, null)
         database.adminDocumentQueries.upsert(second.id, "key-state", "second", "", pending, "second-state", 2, null)
         val protocol = mockk<AdminProtocolPort>()
+        coEvery { protocol.lifetimePolicy(any(), any()) } returns null
         coEvery { protocol.node(any()) } throws IllegalStateException("KMS unavailable for oldest account")
         val command = AdminRenewDueStatementsCommand(testSessionExecution(), mockk(), store, protocol, database, batchSize = 1)
         val listing = com.sphereon.openid.fed.services.command.renewal.RenewDueStatementsArgs(1, listOnly = true, keysOnly = true)

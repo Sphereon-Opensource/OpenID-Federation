@@ -107,6 +107,17 @@ class SqlAdminDocumentStore internal constructor(
                 queries.findForUpdate(scope.accountId, mutation.key.collection, mutation.key.resourceId, mutation.key.subjectId).executeAsOneOrNull()
             }
             if (writes.indices.any { current[it]?.stored()?.etag != writes[it].expectedEtag }) return@transactionWithResult null
+            val lifetimeAcknowledgements = writes.map { mutation ->
+                if (adminLifetimeKind(mutation.key) == null) null else {
+                    val marker = adminLifetimeAcknowledgementKey(mutation.key)
+                    queries.find(scope.accountId, marker.collection, marker.resourceId, "").executeAsOneOrNull()
+                        ?.let { decodeAdminLifetimeAcknowledgement(Json.parseToJsonElement(it.document).jsonObject) }
+                }
+            }
+            writes.indices.forEach { index ->
+                checkAdminLifetimePolicy(writes[index].key, writes[index].lifetimePolicy, lifetimeAcknowledgements[index],
+                    current[index]?.stored()?.etag, writes[index].recreate)
+            }
             scope.subordinateLimit?.let { limit ->
                 val existing = queries.list(scope.accountId, "subordinate").executeAsList().count { Json.parseToJsonElement(it.document).jsonObject.string("status") != "revoked" }
                 val delta = writes.indices.filter { writes[it].key.collection == "subordinate" }.sumOf { index ->
@@ -131,7 +142,7 @@ class SqlAdminDocumentStore internal constructor(
                     jwkQueries.revoke("superseded", null, keyId).executeAsOne()
                 }
             }
-            val committed = writes.map { mutation ->
+            val committed = writes.mapIndexed { index, mutation ->
                 val now = System.currentTimeMillis() / 1000
                 val etag = "\"${UUID.randomUUID()}\""
                 val key = mutation.key
@@ -150,6 +161,13 @@ class SqlAdminDocumentStore internal constructor(
                 }
                 queries.upsert(scope.accountId, key.collection, key.resourceId, key.subjectId,
                     storedDocument.toString(), etag, now, mutation.artifact)
+                if (adminLifetimeKind(key) != null) {
+                    val markerKey = adminLifetimeAcknowledgementKey(key)
+                    val acknowledgement = updatedAdminLifetimeAcknowledgement(mutation, lifetimeAcknowledgements[index], etag, UUID.randomUUID().toString())
+                    if (acknowledgement == null) queries.deleteHidden(scope.accountId, markerKey.collection, markerKey.resourceId)
+                    else queries.upsert(scope.accountId, markerKey.collection, markerKey.resourceId, "",
+                        Json.encodeToJsonElement(acknowledgement).toString(), etag, now, null)
+                }
                 queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOne().stored()
             }
             committed to current.mapNotNull { it?.artifact }
@@ -170,6 +188,10 @@ class SqlAdminDocumentStore internal constructor(
             val guardKey = if (edge != null && version != null && mutation.key.collection == "subordinate") adminWithdrawalKey(mutation.key.resourceId, edge, version) else null
             if (guardKey != null && queries.find(scope.accountId, guardKey.collection, guardKey.resourceId, guardKey.subjectId).executeAsOneOrNull() != null)
                 adminFail("precondition_failed", 412, "Captured subordinate intent was withdrawn")
+            val markerKey = adminLifetimeAcknowledgementKey(mutation.key)
+            val acknowledgement = queries.find(scope.accountId, markerKey.collection, markerKey.resourceId, "").executeAsOneOrNull()
+                ?.let { decodeAdminLifetimeAcknowledgement(Json.parseToJsonElement(it.document).jsonObject) }
+            checkAdminLifetimePolicy(mutation.key, mutation.lifetimePolicy, acknowledgement, mutation.expectedEtag, mutation.recreate)
             val fenced = mutation.copy(expectedDependencies = mutation.expectedDependencies + if (guardKey != null) mapOf(guardKey to null) else emptyMap())
             val document = stageDocument(fenced)
             typeStore.lock(scope.accountId, listOf(mutation.key) + mutation.expectedDependencies.keys)
@@ -242,7 +264,10 @@ class SqlAdminDocumentStore internal constructor(
             AdminDocumentKey(dep.getValue("collection").jsonPrimitive.content, dep.getValue("resource_id").jsonPrimitive.content, dep.getValue("subject_id").jsonPrimitive.content) to dep.string("etag")
         }
         val mutation = AdminMutation(key, stage.string("expected_etag"), document, artifact,
-            expectedDependencies = dependencies + (AdminDocumentKey("publication-candidate", digest) to candidate.etag), expectedKeyState = stage.string("expected_key_state"))
+            expectedDependencies = dependencies + (AdminDocumentKey("publication-candidate", digest) to candidate.etag), expectedKeyState = stage.string("expected_key_state"),
+            recreate = (stage["recreate"] as? JsonPrimitive)?.booleanOrNull == true,
+            lifetimePolicy = stage["lifetime_policy"]?.let { Json.decodeFromJsonElement<AdminLifetimePolicyContext>(it) },
+            acknowledgeLifetimePolicy = (stage["acknowledge_lifetime_policy"] as? JsonPrimitive)?.booleanOrNull == true)
         queries.find(scope.accountId, key.collection, key.resourceId, key.subjectId).executeAsOneOrNull()?.artifact?.let { invalidations += it }
         val committed = commitDocuments(scope, listOf(mutation))?.first?.firstOrNull() ?: return@transactionWithResult null
         committed.artifact?.let { invalidations += it }
@@ -265,6 +290,9 @@ class SqlAdminDocumentStore internal constructor(
         mutation.expectedEtag?.let { put("expected_etag", it) }
         mutation.expectedKeyState?.let { put("expected_key_state", it) }
         mutation.activationContext?.let { put("activation_context", it) }
+        if (mutation.recreate) put("recreate", true)
+        mutation.lifetimePolicy?.let { put("lifetime_policy", Json.encodeToJsonElement(it)) }
+        if (mutation.acknowledgeLifetimePolicy) put("acknowledge_lifetime_policy", true)
         put("dependencies", JsonArray(mutation.expectedDependencies.map { (key, etag) -> buildJsonObject {
             put("collection", key.collection); put("resource_id", key.resourceId); put("subject_id", key.subjectId); etag?.let { put("etag", it) }
         }}))
