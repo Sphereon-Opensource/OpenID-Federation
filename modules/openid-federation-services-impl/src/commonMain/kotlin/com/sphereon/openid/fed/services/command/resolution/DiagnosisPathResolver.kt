@@ -46,7 +46,7 @@ internal data class DiagnosisPath(
 /** Discovery state belongs to a single invocation, including failed HTTP fetches. */
 internal class DiagnosisPathResolver(
     private val context: FederationContext,
-    private val args: DiagnoseResolutionArgs,
+    private var args: DiagnoseResolutionArgs,
     private val now: Long,
 ) {
     companion object {
@@ -81,6 +81,26 @@ internal class DiagnosisPathResolver(
         subject = identifier,
         kind = StatementKind.ENTITY_CONFIGURATION,
     ).also { if (it.failure?.code != BUDGET_ERROR) configurations[identifier] = it }
+
+    /**
+     * The diagnostics operator can enter an extra trailing slash. Both spellings fetch the same
+     * well-known resource, so use its published identifier only for this narrowly bounded case.
+     * Signed claims are untouched and the evaluator still checks structure, signatures and pins.
+     * A genuinely slash-terminated identifier is preserved; other identifier mismatches are errors.
+     */
+    suspend fun selectTrustAnchor(): DiagnoseResolutionArgs {
+        val entered = args.trustAnchor
+        if (!entered.endsWith("/")) return args
+        val candidate = entered.dropLast(1)
+        if (candidate.endsWith("/")) return args
+        val statement = configuration(entered)
+        val claims = statement.claims ?: return args
+        if (statement.failure == null && claims.string("iss") == candidate && claims.string("sub") == candidate) {
+            configurations[candidate] = statement.copy(issuer = candidate, subject = candidate)
+            args = args.copy(trustAnchor = candidate)
+        }
+        return args
+    }
 
     suspend fun discover(subject: String = args.subject): List<DiagnosisPath> {
         val leaf = configuration(subject)
