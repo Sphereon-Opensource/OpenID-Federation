@@ -199,6 +199,60 @@ class DiagnoseResolutionCommandTest {
     }
 
     @Test
+    fun enteredAnchorSlashUsesPublishedIdentifierWithoutAnExtraHop() = runTest {
+        val topology = topology()
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, "$anchorId/", includeTrustMarks = false))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome, diagnosis.errors.toString())
+        assertEquals(anchorId, diagnosis.trustAnchor)
+        assertEquals(topology.chain, diagnosis.chain.map { it.jwt })
+        assertEquals(1, requests.count { it == getEntityConfigurationEndpoint(anchorId) })
+    }
+
+    @Test
+    fun publishedSlashTerminatedAnchorIsPreserved() = runTest {
+        val leaf = key(); val anchor = key()
+        val id = "$anchorId/"
+        publishEc(leafId, statement(leafId, leafId, leaf, leaf, metadata = leafMetadata, hints = listOf(id)))
+        publishEc(id, statement(id, id, anchor, anchor, metadata = endpointMetadata(id)))
+        publishSs(id, leafId, statement(id, leafId, anchor, leaf))
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, id, includeTrustMarks = false))
+        assertEquals(ResolutionOutcome.VALID, diagnosis.outcome, diagnosis.errors.toString())
+        assertEquals(id, diagnosis.trustAnchor)
+        assertEquals(1, requests.count { it == getEntityConfigurationEndpoint(id) })
+    }
+
+    @Test
+    fun enteredAnchorSlashDoesNotBypassSignatureValidation() = runTest {
+        val topology = topology()
+        publishEc(anchorId, statement(anchorId, anchorId, key(), topology.anchor, metadata = endpointMetadata(anchorId)))
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, "$anchorId/", includeTrustMarks = false))
+        assertEquals(ResolutionOutcome.INVALID, diagnosis.outcome)
+        assertFalse(diagnosis.chain.any { it.verified })
+        assertFalse(diagnosis.errors.any { it.code == "NO_PATH_TO_TRUST_ANCHOR" })
+    }
+
+    @Test
+    fun enteredAnchorSlashStillEnforcesPinnedKeys() = runTest {
+        topology()
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, "$anchorId/",
+            expectedTrustAnchorKeyThumbprints = listOf("different-key"), includeTrustMarks = false))
+        assertEquals(ResolutionOutcome.INVALID, diagnosis.outcome)
+        assertEquals(AnchorKeyComparison.MISMATCH, diagnosis.trustAnchorKeyComparison)
+        assertTrue(diagnosis.errors.any { it.code == "TRUST_ANCHOR_KEY_MISMATCH" })
+    }
+
+    @Test
+    fun unrelatedPublishedIdentifierCannotReplaceEnteredAnchor() = runTest {
+        val topology = topology()
+        publishEc(anchorId, statement("https://other.example", "https://other.example", topology.anchor,
+            topology.anchor, metadata = endpointMetadata(anchorId)))
+        val diagnosis = diagnose(args = DiagnoseResolutionArgs(leafId, "$anchorId/", includeTrustMarks = false))
+        assertEquals(ResolutionOutcome.INVALID, diagnosis.outcome)
+        assertEquals("$anchorId/", diagnosis.trustAnchor)
+        assertFalse(diagnosis.chain.any { it.verified })
+    }
+
+    @Test
     fun validResolutionMatchesServerPolicyAndDescribesEveryStep() = runTest {
         val topology = topology()
         val diagnosis = diagnose()

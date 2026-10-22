@@ -38,12 +38,13 @@ class DiagnoseResolutionCommandImpl(
 
     override suspend fun doExecute(args: DiagnoseResolutionArgs,
         applyDuring: (DiagnoseResolutionArgs) -> DiagnoseResolutionArgs): IdkResult<ResolutionDiagnosis, FederationError> {
-        val input = applyDuring(args)
+        val requested = applyDuring(args)
         return try {
-            require(input.maxDepth >= 0) { "maxDepth must be non-negative" }
-            require(input.subject.isNotBlank() && input.trustAnchor.isNotBlank()) { "Subject and Trust Anchor are required" }
+            require(requested.maxDepth >= 0) { "maxDepth must be non-negative" }
+            require(requested.subject.isNotBlank() && requested.trustAnchor.isNotBlank()) { "Subject and Trust Anchor are required" }
             val now = getCurrentEpochTimeSeconds()
-            val resolver = DiagnosisPathResolver(context, input, now)
+            val resolver = DiagnosisPathResolver(context, requested, now)
+            val input = resolver.selectTrustAnchor()
             val evaluator = DiagnosisEvaluator(context, input, resolver, now)
             val candidates = evaluator.candidates()
             val selected = evaluator.select(candidates)
@@ -127,7 +128,7 @@ class DiagnoseResolutionCommandImpl(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logger.error("Resolution diagnosis failed for ${input.subject}", e)
+            logger.error("Resolution diagnosis failed for ${requested.subject}", e)
             federationErr(ServerError(reason = "Resolution diagnosis failed", causeDescription = e.message, exception = e))
         }
     }
