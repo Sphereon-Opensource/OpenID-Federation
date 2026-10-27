@@ -220,7 +220,9 @@ class SqlAdminDocumentStoreTest {
         val stage = store.stage(scope, AdminMutation(original.key, original.etag, original.document, artifact))
         val committed = store.finalizeStage(scope, stage.digest)!!
         assertEquals(artifact, committed.artifact)
+        val afterFirst = invalidated.count { it == artifact }
         assertEquals(committed.etag, store.finalizeStage(scope, stage.digest)?.etag)
+        assertEquals(afterFirst + 1, invalidated.count { it == artifact }, "A repeated finalize drops cached copies again")
         assertTrue(store.pendingStages(scope).isEmpty())
         val key = AdminDocumentKey("subordinate", "https://op.example")
         val subJwt = jwt("https://op.example", "withdraw")

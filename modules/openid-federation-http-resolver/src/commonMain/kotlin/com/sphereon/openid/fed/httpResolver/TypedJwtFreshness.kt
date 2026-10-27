@@ -14,11 +14,11 @@ import kotlin.time.ExperimentalTime
 internal fun currentEpochSeconds(): Long = Clock.System.now().epochSeconds
 
 /**
- * The last epoch second (exclusive) a typed federation JWT may be served from cache: the earlier of its signed `exp`
- * and the HTTP freshness lifetime (`Cache-Control: max-age` less `Age`). Null when it must not be cached: no numeric
- * `exp`, an unparsable payload, or `no-store`/`no-cache`.
+ * The last epoch second (exclusive) a typed federation JWT may be served from cache: the earliest of its signed `exp`,
+ * the HTTP freshness lifetime (`Cache-Control: max-age` less `Age`) and [maxReuseSeconds] from now. Null when it must
+ * not be cached: no numeric `exp`, an unparsable payload, or `no-store`/`no-cache`.
  */
-internal fun typedJwtFreshUntil(jwt: String, cacheControl: String?, age: String?, now: Long): Long? {
+internal fun typedJwtFreshUntil(jwt: String, cacheControl: String?, age: String?, now: Long, maxReuseSeconds: Long? = null): Long? {
     val exp = jwtExpirySeconds(jwt) ?: return null
     val directives = cacheControl.orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
     if (directives.any { it == "no-store" || it == "no-cache" || it.startsWith("no-cache=") }) return null
@@ -26,7 +26,7 @@ internal fun typedJwtFreshUntil(jwt: String, cacheControl: String?, age: String?
         directive.takeIf { it.startsWith("max-age=") }?.substringAfter('=')?.trim('"')?.toLongOrNull()
     }
     val httpBound = maxAge?.let { now + (it - (age?.trim()?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L)) }
-    return if (httpBound == null) exp else minOf(exp, httpBound)
+    return listOfNotNull(exp, httpBound, maxReuseSeconds?.let { now + it }).min()
 }
 
 /** Signed `exp` of a compact JWS, floored so a fractional NumericDate never extends the lifetime. */

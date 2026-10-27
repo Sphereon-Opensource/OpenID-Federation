@@ -185,8 +185,9 @@ class HttpResolver<V : Any>(
     /**
      * Other signed federation documents retain their own media type without changing getJwt's public ABI.
      *
-     * A cached document is served only until the earlier of its signed `exp` and the response's `Cache-Control`
-     * freshness lifetime, so a statement is never returned past its `exp`. Documents without a usable `exp`, already
+     * A cached document is served only until the earliest of its signed `exp`, the response's `Cache-Control`
+     * freshness lifetime and [HttpResolverConfig.maxStatementReuseSeconds], so a statement is never returned past its
+     * `exp` and a superior's re-signed statement is picked up within that reuse limit. Documents without a usable `exp`, already
      * expired, or marked `no-store`/`no-cache` are not cached. [bypassCache] skips cached bodies and conditional
      * headers and replaces the cached entry with the freshly fetched document, so later cached reads see it too.
      */
@@ -218,7 +219,7 @@ class HttpResolver<V : Any>(
             throw FederationHttpFetchException("JWT response from $url exceeds $MAX_JWT_BYTES bytes")
         }
         val now = epochSeconds()
-        val freshUntil = typedJwtFreshUntil(value.toString(), cacheControl, age, now)
+        val freshUntil = typedJwtFreshUntil(value.toString(), cacheControl, age, now, config.maxStatementReuseSeconds)
         if (freshUntil != null && freshUntil > now) {
             cache.putApp(key, HttpMetadata(value, jwtContentType = expectedContentType, expiresAtEpochSeconds = freshUntil))
         } else {

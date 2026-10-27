@@ -13,10 +13,13 @@ package com.sphereon.openid.fed.httpResolver.config
  * - `DEFAULT_HTTP_RETRIES`: The default number of retry attempts for failed HTTP requests (3 retries).
  * - `DEFAULT_ENABLE_HTTP_CACHING`: Indicates whether HTTP response caching is enabled by default (true).
  * - `DEFAULT_ENABLE_ETAG_SUPPORT`: Specifies if ETag support for conditional requests is enabled by default (true).
+ * - `DEFAULT_MAX_STATEMENT_REUSE_SECONDS`: The longest time a cached Entity Statement is reused (300 seconds), so a
+ *   superior's changed metadata, policy or constraints reach this participant within minutes, not at the old `exp`.
  */
 object HttpResolverDefaults {
     const val DEFAULT_HTTP_TIMEOUT_MS = 30000L
     const val DEFAULT_HTTP_RETRIES = 3
     const val DEFAULT_ENABLE_HTTP_CACHING = true
     const val DEFAULT_ENABLE_ETAG_SUPPORT = true
+    const val DEFAULT_MAX_STATEMENT_REUSE_SECONDS = 300L
 }

@@ -254,8 +254,13 @@ class SqlAdminDocumentStore internal constructor(
         val target = stage.getValue("target").jsonObject
         val key = AdminDocumentKey(target.getValue("collection").jsonPrimitive.content, target.getValue("resource_id").jsonPrimitive.content, target.getValue("subject_id").jsonPrimitive.content)
         val document = stage.getValue("document").jsonObject
-        if (stage.string("stage_status") == "committed") return@transactionWithResult AdminStoredDocument(key, document,
-            stage.getValue("committed_etag").jsonPrimitive.content, stage.getValue("committed_at").jsonPrimitive.long, candidate.artifact)
+        if (stage.string("stage_status") == "committed") {
+            // Committed by an earlier attempt or recovery, whose invalidation may not have run: dropping cached copies
+            // again is harmless and keeps the published statement visible to this process's resolver.
+            candidate.artifact?.let { invalidations += it }
+            return@transactionWithResult AdminStoredDocument(key, document,
+                stage.getValue("committed_etag").jsonPrimitive.content, stage.getValue("committed_at").jsonPrimitive.long, candidate.artifact)
+        }
         val artifact = candidate.artifact ?: adminFail("not_published", 404, "Staged artifact is unavailable")
         if (adminArtifactExpired(artifact))
             adminFail("conflict", 409, "Staged artifact has expired")

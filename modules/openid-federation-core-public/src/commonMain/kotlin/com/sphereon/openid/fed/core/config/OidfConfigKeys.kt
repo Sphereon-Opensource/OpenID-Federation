@@ -233,6 +233,12 @@ object OidfConfigKeys {
         const val ENTITY_CONFIG_LOCALITY = "$PREFIX.entity.config.locality"
         const val TRUST_CHAIN_LOCALITY = "$PREFIX.trust.chain.locality"
         const val TRUST_MARK_LOCALITY = "$PREFIX.trust.mark.locality"
+
+        /**
+         * Longest time, in seconds, a fetched Entity Statement is reused before it is fetched again, on top of its
+         * signed `exp` and the response's `Cache-Control` lifetime. Empty = 300.
+         */
+        const val HTTP_RESOLVER_STATEMENT_MAX_REUSE_SECONDS = "$PREFIX.http.resolver.statement.max.reuse.seconds"
     }
 
     // ========================================================================

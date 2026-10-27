@@ -17,6 +17,8 @@ import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.httpResolver.HttpMetadataCacheSerializers
 import com.sphereon.openid.fed.httpResolver.HttpResolver
+import com.sphereon.openid.fed.httpResolver.config.DefaultHttpResolverConfig
+import com.sphereon.openid.fed.httpResolver.config.HttpResolverDefaults
 import com.sphereon.openid.fed.httpResolver.readBoundedFederationResponse
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.Provides
@@ -88,6 +90,7 @@ interface FederationContextComponent {
         )
 
         val httpResolver = HttpResolver(
+            config = DefaultHttpResolverConfig(maxStatementReuseSeconds = statementMaxReuseSeconds(configBinder)),
             httpClient = httpClient,
             cache = httpCache,
             responseMapper = ::readBoundedFederationResponse,
@@ -107,6 +110,14 @@ interface FederationContextComponent {
             offlineTrustChainPolicy = offlineTrustChainPolicyFromConfig(configBinder),
         )
     }
+}
+
+/** [OidfConfigKeys.Cache.HTTP_RESOLVER_STATEMENT_MAX_REUSE_SECONDS]: empty keeps the default; anything else must be a positive number of seconds. */
+internal fun statementMaxReuseSeconds(configBinder: OidfConfigBinder): Long {
+    val raw = configBinder.getProperty(OidfConfigKeys.Cache.HTTP_RESOLVER_STATEMENT_MAX_REUSE_SECONDS, "").trim()
+    if (raw.isEmpty()) return HttpResolverDefaults.DEFAULT_MAX_STATEMENT_REUSE_SECONDS
+    return raw.toLongOrNull()?.takeIf { it > 0 }
+        ?: throw IllegalArgumentException("${OidfConfigKeys.Cache.HTTP_RESOLVER_STATEMENT_MAX_REUSE_SECONDS} must be a positive number of seconds")
 }
 
 /** APP-level policy snapshot shared by every session; changing the operator allowlist requires a process restart. */
