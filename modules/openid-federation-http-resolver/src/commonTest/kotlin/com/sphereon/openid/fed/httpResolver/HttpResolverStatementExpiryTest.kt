@@ -3,6 +3,8 @@ package com.sphereon.openid.fed.httpResolver
 import com.sphereon.core.api.cache.CacheRequirements
 import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.openid.fed.core.cache.OidfCache
+import com.sphereon.openid.fed.httpResolver.config.DefaultHttpResolverConfig
+import com.sphereon.openid.fed.httpResolver.config.HttpResolverDefaults
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -19,7 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/** Cached federation statements are bounded by their signed `exp` and the HTTP freshness lifetime. */
+/** Cached federation statements are bounded by their signed `exp`, the HTTP freshness lifetime and the reuse limit. */
 @OptIn(ExperimentalEncodingApi::class)
 class HttpResolverStatementExpiryTest {
     private val url = "https://entity.example/.well-known/openid-federation"
@@ -56,8 +58,9 @@ class HttpResolverStatementExpiryTest {
         client.close()
     }
 
-    private fun resolver() = HttpResolver(httpClient = client, cache = cache, responseMapper = { it.bodyAsText() })
-        .also { it.epochSeconds = { now } }
+    private fun resolver(config: DefaultHttpResolverConfig = DefaultHttpResolverConfig()) =
+        HttpResolver(config = config, httpClient = client, cache = cache, responseMapper = { it.bodyAsText() })
+            .also { it.epochSeconds = { now } }
 
     private fun jwt(exp: Any?, marker: String): String {
         fun b64(s: String) = Base64.UrlSafe.encode(s.encodeToByteArray()).trimEnd('=')
@@ -155,5 +158,41 @@ class HttpResolverStatementExpiryTest {
         assertNull(resolver.getCachedApp(url))
         assertEquals(republished, resolver.getJwt(url))
         assertEquals(2, requests)
+    }
+
+    @Test
+    fun aLongLivedStatementIsRefetchedAfterTheDefaultReuseLimit() = runTest {
+        val limit = HttpResolverDefaults.DEFAULT_MAX_STATEMENT_REUSE_SECONDS
+        val original = jwt(start + 86_400, "original")
+        val resigned = jwt(start + 86_400, "resigned")
+        bodies += listOf(original, resigned)
+        val resolver = resolver()
+        assertEquals(original, resolver.getJwt(url))
+        now = start + limit - 1
+        assertEquals(original, resolver.getJwt(url), "Within the reuse limit: served from cache")
+        assertEquals(1, requests)
+        now = start + limit
+        assertEquals(resigned, resolver.getJwt(url), "A superior's re-signed statement is seen once the reuse limit passes")
+        assertEquals(2, requests)
+    }
+
+    @Test
+    fun aConfiguredReuseLimitAppliesAndNullKeepsOnlyExpAndHttpFreshness() = runTest {
+        val first = jwt(start + 86_400, "first")
+        val second = jwt(start + 86_400, "second")
+        bodies += listOf(first, second)
+        val short = resolver(DefaultHttpResolverConfig(maxStatementReuseSeconds = 10))
+        assertEquals(first, short.getJwt(url))
+        now = start + 10
+        assertEquals(second, short.getJwt(url))
+        assertEquals(2, requests)
+
+        val third = jwt(start + 86_400, "third")
+        bodies += listOf(third)
+        val unlimited = resolver(DefaultHttpResolverConfig(maxStatementReuseSeconds = null))
+        assertEquals(third, unlimited.getJwt(url, bypassCache = true))
+        now = start + 10 + 3_600
+        assertEquals(third, unlimited.getJwt(url), "Without a reuse limit only exp and Cache-Control bound the cache")
+        assertEquals(3, requests)
     }
 }

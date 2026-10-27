@@ -14,5 +14,10 @@ data class DefaultHttpResolverConfig(
     override val enableHttpCaching: Boolean = HttpResolverDefaults.DEFAULT_ENABLE_HTTP_CACHING,
     override val enableEtagSupport: Boolean = HttpResolverDefaults.DEFAULT_ENABLE_ETAG_SUPPORT,
     override val httpTimeoutMs: Long = HttpResolverDefaults.DEFAULT_HTTP_TIMEOUT_MS,
-    override val httpRetries: Int = HttpResolverDefaults.DEFAULT_HTTP_RETRIES
-) : HttpResolverConfig
+    override val httpRetries: Int = HttpResolverDefaults.DEFAULT_HTTP_RETRIES,
+    override val maxStatementReuseSeconds: Long? = HttpResolverDefaults.DEFAULT_MAX_STATEMENT_REUSE_SECONDS,
+) : HttpResolverConfig {
+    init {
+        require(maxStatementReuseSeconds == null || maxStatementReuseSeconds > 0) { "maxStatementReuseSeconds must be positive" }
+    }
+}
