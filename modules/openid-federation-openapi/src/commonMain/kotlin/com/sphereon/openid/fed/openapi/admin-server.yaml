@@ -3627,8 +3627,122 @@ components:
           type: boolean
         errorMessage:
           type: string
+          nullable: true
+        outcome:
+          allOf:
+            - $ref: '#/components/schemas/TrustMarkValidationOutcome'
+          nullable: true
+        failureCode:
+          allOf:
+            - $ref: '#/components/schemas/TrustMarkValidationFailureCode'
+          nullable: true
+          description: Stable reason for an invalid or unavailable result.
+        verifiedEvidence:
+          allOf:
+            - $ref: '#/components/schemas/VerifiedTrustMarkEvidence'
+          nullable: true
       required:
         - isValid
+
+    TrustMarkValidationOutcome:
+      type: string
+      enum: [VALID, INVALID, UNAVAILABLE]
+      description: Whether validation succeeded, found invalid evidence, or could not obtain authoritative status.
+
+    TrustMarkValidationFailureCode:
+      type: string
+      enum:
+        - VALIDATION_TIME_INVALID
+        - STATUS_POLICY_INVALID
+        - SUBJECT_REQUIRED
+        - SUBJECT_MISMATCH
+        - MARK_MALFORMED
+        - MARK_TYPE_NOT_RECOGNIZED
+        - MARK_ISSUED_IN_FUTURE
+        - MARK_EXPIRED
+        - MARK_ISSUER_UNAUTHORIZED
+        - MARK_SIGNATURE_INVALID
+        - DELEGATION_INVALID
+        - STATUS_ENDPOINT_MISSING
+        - STATUS_ENDPOINT_INVALID
+        - STATUS_UNAVAILABLE
+        - STATUS_MALFORMED
+        - STATUS_SIGNATURE_INVALID
+        - STATUS_ISSUER_MISMATCH
+        - STATUS_MARK_MISMATCH
+        - STATUS_ISSUED_AT_MISSING
+        - STATUS_ISSUED_IN_FUTURE
+        - STATUS_STALE
+        - STATUS_EXPIRED
+        - STATUS_NOT_ACTIVE
+        - MARK_ISSUER_CHAIN_INVALID
+
+    TrustMarkEvidenceTrustLevel:
+      type: string
+      enum: [VERIFIED]
+
+    VerifiedTrustMarkEvidence:
+      type: object
+      description: Claims and status information verified against the configured authority.
+      required:
+        - trustLevel
+        - issuer
+        - subject
+        - markType
+        - markDigest
+        - authorityAnchor
+        - checkedAt
+        - statusCheckedAt
+        - statusValidUntil
+      properties:
+        trustLevel:
+          $ref: '#/components/schemas/TrustMarkEvidenceTrustLevel'
+        issuer:
+          type: string
+        subject:
+          type: string
+        markType:
+          type: string
+        criteriaReference:
+          type: string
+          nullable: true
+        markDigest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        authorityAnchor:
+          type: string
+        delegationOwner:
+          type: string
+          nullable: true
+        delegationDelegate:
+          type: string
+          nullable: true
+        delegationDigest:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          nullable: true
+        checkedAt:
+          type: integer
+          format: int64
+          description: Validation time in seconds since the Unix epoch.
+        expiresAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Mark expiry in seconds since the Unix epoch.
+        statusCheckedAt:
+          type: integer
+          format: int64
+          description: Status verification time in seconds since the Unix epoch.
+        statusIssuedAt:
+          type: number
+          format: double
+          nullable: true
+          description: Signed status issuance time as NumericDate seconds; present for strict validation.
+        statusValidUntil:
+          type: integer
+          format: int64
+          description: Latest time for which the signed status remains usable, in seconds since the Unix epoch.
 
     TrustAnchorHintsResponse:
       type: object

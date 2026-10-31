@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.client.services
 
 import com.sphereon.di.session.SessionScope
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommand
+import com.sphereon.openid.fed.client.command.trustMark.TrustMarkStatusPolicy
 import com.sphereon.openid.fed.core.error.FederationResult
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
@@ -48,4 +49,13 @@ class TrustMarkServiceImpl(
         subject: String?
     ): FederationResult<TrustMarkValidationResponse> =
         verifyTrustMarkCommand.verifyTrustMark(trustMark, trustAnchorConfig, currentTime, subject)
+
+    override suspend fun verifyTrustMark(
+        trustMark: String,
+        trustAnchorConfig: EntityConfigurationStatement,
+        currentTime: Long?,
+        subject: String?,
+        statusPolicy: TrustMarkStatusPolicy,
+    ): FederationResult<TrustMarkValidationResponse> =
+        verifyTrustMarkCommand.verifyTrustMark(trustMark, trustAnchorConfig, currentTime, subject, statusPolicy)
 }

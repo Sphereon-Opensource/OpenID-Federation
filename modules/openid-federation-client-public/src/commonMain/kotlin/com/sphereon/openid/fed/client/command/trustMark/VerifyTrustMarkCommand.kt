@@ -3,8 +3,18 @@ package com.sphereon.openid.fed.client.command.trustMark
 import com.sphereon.core.api.IdkResult
 import com.sphereon.core.api.session.Command
 import com.sphereon.openid.fed.core.error.FederationError
+import com.sphereon.openid.fed.core.error.TrustMarkInvalidError
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
+
+/**
+ * Required freshness and clock tolerance, in seconds, for authoritative signed status.
+ * Maximum age must be 1 through 31,536,000 seconds; clock skew must be 1 through 86,400 seconds.
+ */
+data class TrustMarkStatusPolicy(
+    val maximumAgeSeconds: Long,
+    val allowedClockSkewSeconds: Long,
+)
 
 /**
  * Arguments for the VerifyTrustMark command.
@@ -14,12 +24,14 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
  * @param currentTime Optional timestamp for validation (defaults to current time).
  * @param subject Optional Entity Identifier that must match the Trust Mark `sub` claim
  *   (the Entity whose Entity Configuration contains the mark). Required for full §7.3 step 4.
+ * @param statusPolicy When present, signed status and a nonblank exact subject are required.
  */
 data class VerifyTrustMarkArgs(
     val trustMark: String,
     val trustAnchorConfig: EntityConfigurationStatement,
     val currentTime: Long? = null,
-    val subject: String? = null
+    val subject: String? = null,
+    val statusPolicy: TrustMarkStatusPolicy? = null,
 )
 
 /**
@@ -46,6 +58,17 @@ interface VerifyTrustMarkCommandService {
         currentTime: Long? = null,
         subject: String? = null
     ): IdkResult<TrustMarkValidationResponse, FederationError>
+
+    /** Verifies a mark with mandatory, fresh signed status for the exact subject. */
+    suspend fun verifyTrustMark(
+        trustMark: String,
+        trustAnchorConfig: EntityConfigurationStatement,
+        currentTime: Long?,
+        subject: String?,
+        statusPolicy: TrustMarkStatusPolicy,
+    ): IdkResult<TrustMarkValidationResponse, FederationError> = IdkResult.err(
+        TrustMarkInvalidError("unknown", "This verifier does not support mandatory Trust Mark status validation")
+    )
 }
 
 /**

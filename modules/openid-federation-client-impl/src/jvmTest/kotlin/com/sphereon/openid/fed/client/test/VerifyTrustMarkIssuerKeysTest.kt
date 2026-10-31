@@ -23,9 +23,12 @@ import com.sphereon.di.context.PrincipalType
 import com.sphereon.openid.fed.client.command.entityConfiguration.GetEntityConfigurationCommand
 import com.sphereon.openid.fed.client.command.trustChain.ResolveTrustChainCommand
 import com.sphereon.openid.fed.client.command.trustChain.VerifyTrustChainCommand
+import com.sphereon.openid.fed.client.command.trustMark.TrustMarkStatusPolicy
+import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkArgs
 import com.sphereon.openid.fed.client.command.trustMark.VerifyTrustMarkCommandImpl
 import com.sphereon.openid.fed.client.context.FederationContext
 import com.sphereon.openid.fed.core.cache.OidfCache
+import com.sphereon.openid.fed.core.error.FederationError
 import com.sphereon.openid.fed.httpResolver.HttpMetadataCacheSerializers
 import com.sphereon.openid.fed.httpResolver.HttpResolver
 import com.sphereon.openid.fed.openapi.models.EntityConfigurationStatement
@@ -33,22 +36,33 @@ import com.sphereon.openid.fed.openapi.models.TrustChainResolveResponse
 import com.sphereon.openid.fed.openapi.models.VerifyTrustChainResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
+import io.ktor.http.headersOf
+import io.ktor.http.parseQueryString
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -57,20 +71,23 @@ import kotlin.test.assertTrue
  * for another issuer it is the issuer's Entity Configuration inside the verified Trust Chain. A separately fetched
  * Entity Configuration, which is only self-signed, must not supply the key.
  */
-class VerifyTrustMarkIssuerKeysTest {
-    private val anchorId = "https://anchor.example"
-    private val issuerId = "https://issuer.example"
-    private val subjectId = "https://leaf.example"
-    private val markType = "https://anchor.example/marks/member"
-    private val now = System.currentTimeMillis() / 1000
-    private val json = Json { ignoreUnknownKeys = true }
+abstract class TrustMarkVerificationTestFixture {
+    protected val anchorId = "https://anchor.example"
+    protected val issuerId = "https://issuer.example"
+    protected val subjectId = "https://leaf.example"
+    protected val markType = "https://anchor.example/marks/member"
+    protected val criteriaReference = "https://anchor.example/criteria/member-v1"
+    protected val ownerId = "https://owner.example"
+    protected val now = 1_800_000_000L
+    protected val statusEndpoint = "https://anchor.example/trust-mark/status"
+    protected val json = Json { ignoreUnknownKeys = true }
 
-    private lateinit var jwtService: JwtService
-    private lateinit var keyManager: com.sphereon.crypto.core.kms.KeyManagerService
-    private lateinit var execution: SessionExecution
-    private var httpClient: HttpClient? = null
+    protected lateinit var jwtService: JwtService
+    protected lateinit var keyManager: com.sphereon.crypto.core.kms.KeyManagerService
+    protected lateinit var execution: SessionExecution
+    protected val httpClients = mutableListOf<HttpClient>()
 
-    private data class Key(val signing: ManagedKeyInfoType<*>, val publicJson: JsonElement)
+    protected data class Key(val signing: ManagedKeyInfoType<*>, val publicJson: JsonElement)
 
     @BeforeTest
     fun setUp() {
@@ -90,17 +107,17 @@ class VerifyTrustMarkIssuerKeysTest {
 
     @AfterTest
     fun tearDown() {
-        httpClient?.close()
+        httpClients.forEach(HttpClient::close)
     }
 
-    private suspend fun key(): Key {
+    protected suspend fun key(): Key {
         val pair = keyManager.generateKeyAsync(alg = SignatureAlgorithm.ECDSA_SHA256)
         val publicJwk = pair.joseToManagedKeyInfo(KeyVisibility.PUBLIC).key as CryptoJwk
         return Key(pair.joseToManagedKeyInfo(KeyVisibility.PRIVATE),
             cryptoJsonSerializer.encodeToJsonElement(CryptoJwk.serializer(), publicJwk))
     }
 
-    private suspend fun sign(signer: Key, typ: String, claims: JsonObject): String {
+    protected suspend fun sign(signer: Key, typ: String, claims: JsonObject): String {
         val result = jwtService.createJwsCompact(
             CreateJwsArgs(
                 issuer = ManagedOptsKeyInfo(
@@ -119,7 +136,7 @@ class VerifyTrustMarkIssuerKeysTest {
         return result.value.jwt
     }
 
-    private fun configurationClaims(entity: String, keys: List<Key>, extra: JsonObject = JsonObject(emptyMap())) = JsonObject(buildJsonObject {
+    protected fun configurationClaims(entity: String, keys: List<Key>, extra: JsonObject = JsonObject(emptyMap())) = JsonObject(buildJsonObject {
         put("iss", entity)
         put("sub", entity)
         put("iat", now - 10)
@@ -128,24 +145,105 @@ class VerifyTrustMarkIssuerKeysTest {
         put("metadata", buildJsonObject { put("federation_entity", JsonObject(emptyMap())) })
     } + extra)
 
-    private fun anchorConfiguration(keys: List<Key>, issuers: List<String>): EntityConfigurationStatement = json.decodeFromJsonElement(
+    protected fun anchorConfiguration(
+        keys: List<Key>,
+        issuers: List<String>,
+        advertiseStatus: Boolean = false,
+        statusUrl: String = statusEndpoint,
+    ): EntityConfigurationStatement = json.decodeFromJsonElement(
         configurationClaims(anchorId, keys, buildJsonObject {
             put("trust_mark_issuers", buildJsonObject { put(markType, JsonArray(issuers.map { kotlinx.serialization.json.JsonPrimitive(it) })) })
+            if (advertiseStatus) {
+                put("metadata", buildJsonObject {
+                    put("federation_entity", buildJsonObject { put("federation_trust_mark_status_endpoint", statusUrl) })
+                })
+            }
         })
     )
 
-    private suspend fun trustMark(issuer: String, signer: Key): String = sign(signer, "trust-mark+jwt", buildJsonObject {
+    protected fun ownedMarkAnchor(anchorKey: Key, ownerKey: Key): EntityConfigurationStatement = json.decodeFromJsonElement(
+        configurationClaims(anchorId, listOf(anchorKey), buildJsonObject {
+            put("trust_mark_owners", buildJsonObject {
+                put(markType, buildJsonObject {
+                    put("sub", ownerId)
+                    put("jwks", buildJsonObject { put("keys", JsonArray(listOf(ownerKey.publicJson))) })
+                })
+            })
+            put("metadata", buildJsonObject {
+                put("federation_entity", buildJsonObject { put("federation_trust_mark_status_endpoint", statusEndpoint) })
+            })
+        })
+    )
+
+    protected suspend fun delegation(
+        signer: Key,
+        owner: String = ownerId,
+        delegate: String = anchorId,
+        type: String = markType,
+    ): String = sign(signer, "trust-mark-delegation+jwt", buildJsonObject {
+        put("iss", owner)
+        put("sub", delegate)
+        put("trust_mark_type", type)
+        put("iat", now - 10)
+        put("exp", now + 300)
+    })
+
+    protected suspend fun trustMark(
+        issuer: String,
+        signer: Key,
+        issuedAt: Long = now - 5,
+        expiry: Long = now + 600,
+        delegation: String? = null,
+        type: String = markType,
+    ): String = sign(signer, "trust-mark+jwt", buildJsonObject {
         put("iss", issuer)
         put("sub", subjectId)
-        put("trust_mark_type", markType)
-        put("iat", now - 5)
-        put("exp", now + 600)
+        put("trust_mark_type", type)
+        put("ref", criteriaReference)
+        put("iat", issuedAt)
+        put("exp", expiry)
+        if (delegation != null) {
+            put("delegation", delegation)
+        }
     })
 
     /** [fetched] is what a separate Entity Configuration fetch of [issuer] returns; [chain] what chain resolution returns. */
-    private fun command(fetched: EntityConfigurationStatement?, chain: List<String> = emptyList()): VerifyTrustMarkCommandImpl {
-        val client = HttpClient(MockEngine) { engine { addHandler { respondError(HttpStatusCode.NotFound) } } }
-        httpClient = client
+    protected fun command(
+        fetched: EntityConfigurationStatement?,
+        chain: List<String> = emptyList(),
+        statusResponse: String? = null,
+        statusFailure: Throwable? = null,
+        expectedMark: String? = null,
+        chainFailure: FederationError? = null,
+        statusResponses: List<String> = emptyList(),
+    ): VerifyTrustMarkCommandImpl {
+        var statusIndex = 0
+        val client = HttpClient(MockEngine) {
+            engine {
+                addHandler { request ->
+                    if (expectedMark != null) {
+                        assertEquals(statusEndpoint, request.url.toString())
+                        assertEquals(HttpMethod.Post, request.method)
+                        val body = request.body as OutgoingContent.ByteArrayContent
+                        assertEquals(expectedMark, parseQueryString(body.bytes().decodeToString())["trust_mark"])
+                    }
+                    if (statusFailure != null) {
+                        throw statusFailure
+                    }
+                    val response = if (statusResponses.isEmpty()) statusResponse else {
+                        check(statusIndex < statusResponses.size) { "Unexpected extra status request" }
+                        statusResponses[statusIndex++]
+                    }
+                    if (response == null) {
+                        respondError(HttpStatusCode.NotFound)
+                    } else {
+                        respond(response, HttpStatusCode.OK,
+                            headersOf(HttpHeaders.ContentType, "application/trust-mark-status-response+jwt"))
+                    }
+                }
+            }
+        }
+        httpClients.add(client)
         val cache = OidfCache.createStringKeyCache(
             manager = OidfCache.newManager(),
             requirements = CacheRequirements(namespace = "trust-mark-issuer-keys-${hashCode()}-${chain.hashCode()}"),
@@ -158,12 +256,68 @@ class VerifyTrustMarkIssuerKeysTest {
             if (fetched != null) IdkResult.ok(fetched) else error("no separate fetch expected")
         }
         val resolve = mockk<ResolveTrustChainCommand>()
-        coEvery { resolve.execute(any()) } returns IdkResult.ok(TrustChainResolveResponse(trustChain = chain))
+        coEvery { resolve.execute(any()) } answers {
+            if (chainFailure != null) IdkResult.err(chainFailure)
+            else IdkResult.ok(TrustChainResolveResponse(trustChain = chain))
+        }
         val verify = mockk<VerifyTrustChainCommand>()
         coEvery { verify.verifyTrustChain(any(), any(), any(), any()) } returns IdkResult.ok(VerifyTrustChainResponse(isValid = true))
         return VerifyTrustMarkCommandImpl(execution, context, getEntityConfiguration, resolve, verify)
     }
 
+    protected suspend fun statusResponse(
+        signer: Key,
+        mark: String,
+        issuedAt: Long? = now - 10,
+        status: String = "active",
+        expiry: Long = now + 120,
+        issuer: String = anchorId,
+    ): String = sign(signer, "trust-mark-status-response+jwt", buildJsonObject {
+        put("iss", issuer)
+        put("trust_mark", mark)
+        if (issuedAt != null) {
+            put("iat", issuedAt)
+        }
+        put("exp", expiry)
+        put("status", status)
+    })
+
+    protected suspend fun strictResult(
+        anchor: EntityConfigurationStatement,
+        mark: String,
+        response: String?,
+        subject: String? = subjectId,
+        chain: List<String> = emptyList(),
+        policy: TrustMarkStatusPolicy = TrustMarkStatusPolicy(maximumAgeSeconds = 60, allowedClockSkewSeconds = 5),
+    ): JsonObject {
+        val result = command(fetched = anchor, chain = chain, statusResponse = response, expectedMark = mark).execute(
+            VerifyTrustMarkArgs(
+                trustMark = mark,
+                trustAnchorConfig = anchor,
+                currentTime = now,
+                subject = subject,
+                statusPolicy = policy,
+            )
+        )
+        assertTrue(result.isOk, "strict validation must return a typed outcome: $result")
+        return json.encodeToJsonElement(result.value).jsonObject
+    }
+
+    protected fun assertRejected(response: JsonObject, outcome: String, failureCode: String) {
+        assertEquals("false", response["isValid"]?.jsonPrimitive?.content)
+        assertEquals(outcome, response["outcome"]?.jsonPrimitive?.content)
+        assertEquals(failureCode, response["failureCode"]?.jsonPrimitive?.content)
+        assertTrue(response["verifiedEvidence"] == null || response["verifiedEvidence"] is JsonNull,
+            "a rejected mark cannot produce verified evidence")
+        val attempted = response["attemptedEvidence"]
+        if (attempted is JsonObject) {
+            assertEquals("UNVERIFIED", attempted["trustLevel"]?.jsonPrimitive?.content)
+        }
+    }
+
+}
+
+class VerifyTrustMarkIssuerKeysTest : TrustMarkVerificationTestFixture() {
     @Test
     fun aMarkSignedWithTheTrustedAnchorKeyIsValid() = runTest {
         val anchorKey = key()
