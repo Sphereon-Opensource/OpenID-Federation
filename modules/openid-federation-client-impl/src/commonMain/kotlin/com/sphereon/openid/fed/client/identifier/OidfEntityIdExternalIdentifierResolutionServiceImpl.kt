@@ -22,6 +22,7 @@ import com.sphereon.openid.fed.client.FederationClient
 import com.sphereon.openid.fed.client.mapper.decodeJWTComponents
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.openapi.models.Jwk
+import com.sphereon.openid.fed.wallet.policy.MetadataPolicyOperators
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import dev.zacsweers.metro.ContributesBinding
@@ -89,17 +90,10 @@ class OidfEntityIdExternalIdentifierResolutionServiceImpl(
             ).asErrorResult()
         }
 
-        // 2. Verify trust chain
-        val verifyResult = client.trustChainVerify(
-            trustChain = trustChain.toTypedArray(),
-            trustAnchor = null,
-            currentTime = null
-        )
-        val trustEstablished = verifyResult.isOk && verifyResult.value.isValid
-
-        if (!trustEstablished) {
-            logger.warn("Trust chain verification failed for $entityIdentifier")
-        }
+        // 2. Trust is established by the resolution itself: trustChainResolve returns only a chain it verified
+        //    against the Trust Anchor's pinned or published keys. Verifying it again without those keys would fail
+        //    for every real chain.
+        val trustEstablished = true
 
         // 3. Determine which trust anchor was used (last entry in chain)
         val trustAnchorJwt = trustChain.lastOrNull()
@@ -112,13 +106,27 @@ class OidfEntityIdExternalIdentifierResolutionServiceImpl(
             }
         } else "unknown"
 
-        // 4. Extract JWKS from the leaf entity configuration (first in chain)
-        val leafEntityConfigJwt = trustChain.first()
-        val leafDecoded = decodeJWTComponents(leafEntityConfigJwt)
-        val jwksJson = leafDecoded.payload["jwks"]?.jsonObject
-            ?: return IdkError.COMMAND_ARG_NOT_SUPPORTED_ERROR(
-                message = "No JWKS found in entity configuration for $entityIdentifier"
-            ).asErrorResult()
+        // 4. Extract the JWKS: the federation keys of the leaf entity configuration (first in chain), or, for a
+        //    requested Entity Type, the protocol keys of its Resolved Metadata under the chain's metadata policies.
+        val entityType = entityIdOpts.entityType
+        val jwksJson = if (entityType == null) {
+            decodeJWTComponents(trustChain.first()).payload["jwks"]?.jsonObject
+                ?: return IdkError.COMMAND_ARG_NOT_SUPPORTED_ERROR(
+                    message = "No JWKS found in entity configuration for $entityIdentifier"
+                ).asErrorResult()
+        } else {
+            // Resolve the whole metadata and select the Entity Type, as trust-domain admission does.
+            val resolved = MetadataPolicyOperators.resolveFromTrustChainPayloads(trustChain.map { decodeJWTComponents(it).payload })
+            if (!resolved.isValid) {
+                return IdkError.COMMAND_ARG_NOT_SUPPORTED_ERROR(
+                    message = "The metadata policies of the Trust Chain of $entityIdentifier do not resolve: ${resolved.errors.joinToString("; ")}"
+                ).asErrorResult()
+            }
+            resolved.metadata[entityType]?.jsonObject?.get("jwks")?.jsonObject
+                ?: return IdkError.COMMAND_ARG_NOT_SUPPORTED_ERROR(
+                    message = "No $entityType jwks found in the Resolved Metadata of $entityIdentifier"
+                ).asErrorResult()
+        }
 
         val keysJsonArray = jwksJson["keys"]?.toString()
             ?: return IdkError.COMMAND_ARG_NOT_SUPPORTED_ERROR(
