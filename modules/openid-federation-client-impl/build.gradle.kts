@@ -64,6 +64,9 @@ kotlin {
                 // Core implementation for caching
                 api(projects.modules.openidFederationCoreImpl)
 
+                // Resolved Metadata (metadata policy application) for Entity Type keys
+                implementation(projects.modules.openidFederationWalletPublic)
+
                 // IDK core and crypto
                 api(idklib.sphereon.idk.lib.core.api.public)
                 api(idklib.sphereon.idk.lib.crypto.core.public)
