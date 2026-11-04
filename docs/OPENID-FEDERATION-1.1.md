@@ -148,6 +148,25 @@ against a Trust Anchor's Entity Configuration. `fed.resolution.verify-immediate-
 Subordinate Statement an entity received from its superior, together with a chain to a Trust Anchor whose keys the
 caller supplies, and returns the metadata that results from the chain's policies.
 
+The Trust Mark verifier also accepts a `TrustMarkStatusPolicy` when a caller needs a current authoritative status.
+The caller supplies the exact, nonblank subject, a maximum status age from 1 to 31,536,000 seconds and an allowed
+clock skew from 1 to 86,400 seconds. The mark issuer must advertise a credential-free HTTPS Trust Mark status
+endpoint. Its signed response must use the issuer's verified federation key, identify the exact compact mark and
+issuer, be active and meet the configured freshness and time checks. After the mark and its authority pass validation,
+each strict verification queries the status endpoint; an earlier positive answer is not reused as the current answer.
+
+A strict result reports `VALID`, `INVALID` or `UNAVAILABLE` and, for non-valid results, a stable failure code.
+`UNAVAILABLE` means the authoritative status could not be retrieved; it is not a cryptographic verdict. Issuer-chain
+resolution failures remain errors and retain their underlying cause. Only a valid strict result contains verified
+evidence: the signed issuer, subject, type and optional `ref`, SHA-256 mark digest, authority anchor, any verified
+delegation, and the mark and status times. Strict evidence includes the signed status issuance NumericDate separately
+from the verification time. The status deadline is bounded by both the signed status expiry, when
+present, and the configured maximum age. A missing or invalid status never produces verified evidence.
+
+Without a status policy, the existing verifier remains available: it checks an advertised status response but does
+not require an endpoint or impose a configured maximum status age. A verifier implementation that does not support
+the strict overload rejects it instead of falling back to this unscoped behavior.
+
 ### Holding Trust Marks
 
 An entity stores the Trust Marks issued to it with `fed.received-trust-mark.create` (the Trust Mark type and the JWT),

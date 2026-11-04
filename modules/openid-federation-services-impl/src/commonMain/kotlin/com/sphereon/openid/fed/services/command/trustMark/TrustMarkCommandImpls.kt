@@ -319,22 +319,20 @@ class GetTrustMarkStatusCommandImpl(
 
         return null
     }
-
-    private fun readJwtExpSeconds(jwt: String): Long? {
-        return try {
-            val parts = jwt.split(".")
-            if (parts.size < 2) return null
-            val payloadJson = kotlin.io.encoding.Base64.UrlSafe
-                .withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT)
-                .decode(parts[1])
-                .decodeToString()
-            val expMatch = Regex("\"exp\"\\s*:\\s*([0-9.]+)").find(payloadJson) ?: return null
-            expMatch.groupValues[1].toDoubleOrNull()?.toLong()
-        } catch (_: Exception) {
-            null
-        }
-    }
 }
+
+/**
+ * The `exp` of a Trust Mark JWT in whole seconds, read from the parsed payload so that every JSON number form counts:
+ * an issuer may write 1.793371311E9 for 1793371311. Null when the token is malformed or `exp` is absent or not a number.
+ */
+internal fun readJwtExpSeconds(jwt: String): Long? = runCatching {
+    val parts = jwt.split(".")
+    if (parts.size < 2) return@runCatching null
+    val payload = Json.parseToJsonElement(
+        kotlin.io.encoding.Base64.UrlSafe.withPadding(kotlin.io.encoding.Base64.PaddingOption.ABSENT).decode(parts[1]).decodeToString(),
+    ).jsonObject
+    TrustMarkValidation.numericDate(payload["exp"])?.toLong()
+}.getOrNull()
 
 // GetTrustMarkedSubsCommand Implementation
 @Inject

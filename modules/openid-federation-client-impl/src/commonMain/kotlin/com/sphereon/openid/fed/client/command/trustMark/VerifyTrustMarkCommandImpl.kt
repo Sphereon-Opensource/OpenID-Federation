@@ -25,10 +25,11 @@ import com.sphereon.openid.fed.openapi.models.Jwt
 import com.sphereon.openid.fed.openapi.models.Jwk
 import com.sphereon.openid.fed.openapi.models.TrustMarkOwner
 import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
+import com.sphereon.openid.fed.openapi.models.TrustMarkValidationOutcome
+import com.sphereon.openid.fed.openapi.models.TrustMarkValidationFailureCode
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
 import io.ktor.http.Parameters
 import io.ktor.http.Url
 import io.ktor.http.URLProtocol
@@ -73,36 +74,72 @@ class VerifyTrustMarkCommandImpl(
         )
     }
 
+    override suspend fun verifyTrustMark(
+        trustMark: String,
+        trustAnchorConfig: EntityConfigurationStatement,
+        currentTime: Long?,
+        subject: String?,
+        statusPolicy: TrustMarkStatusPolicy,
+    ): IdkResult<TrustMarkValidationResponse, FederationError> =
+        execute(VerifyTrustMarkArgs(trustMark, trustAnchorConfig, currentTime, subject, statusPolicy))
+
     override suspend fun doExecute(
         args: VerifyTrustMarkArgs,
         applyDuring: (VerifyTrustMarkArgs) -> VerifyTrustMarkArgs
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
-        val (trustMark, trustAnchorConfig, currentTime, subject) = applyDuring(args)
+        val (trustMark, trustAnchorConfig, currentTime, subject, statusPolicy) = applyDuring(args)
 
         logger.debug("Starting Trust Mark validation")
         val timeToUse = currentTime ?: getCurrentEpochTimeSeconds()
         val trustAnchorId = trustAnchorConfig.sub ?: trustAnchorConfig.iss
 
+        if (statusPolicy != null) {
+            if (timeToUse !in 0..MAX_SAFE_EPOCH_SECONDS) {
+                return strictFailure(TrustMarkValidationFailureCode.VALIDATION_TIME_INVALID)
+            }
+            if (statusPolicy.maximumAgeSeconds !in 1..MAX_STATUS_AGE_SECONDS ||
+                statusPolicy.allowedClockSkewSeconds !in 1..MAX_CLOCK_SKEW_SECONDS) {
+                return strictFailure(TrustMarkValidationFailureCode.STATUS_POLICY_INVALID)
+            }
+            if (subject.isNullOrBlank()) {
+                return strictFailure(TrustMarkValidationFailureCode.SUBJECT_REQUIRED)
+            }
+        }
+
         try {
             // --- Structural JWT checks (§7.3 steps 1–3) ---
-            val decodedTrustMark = decodeJWTComponents(trustMark)
+            val decodedTrustMark = try {
+                decodeJWTComponents(trustMark)
+            } catch (e: Exception) {
+                if (statusPolicy != null) {
+                    return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+                }
+                throw e
+            }
 
-            TrustMarkValidation.headerError(decodedTrustMark)?.let { return IdkResult.err(it) }
+            TrustMarkValidation.headerError(decodedTrustMark)?.let {
+                return if (statusPolicy == null) IdkResult.err(it) else strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+            }
 
-            val trustMarkId = decodedTrustMark.payload["trust_mark_type"]?.jsonPrimitive?.contentOrNull
-                ?: return IdkResult.err(TrustMarkInvalidError(
+            fun requiredText(name: String): String? {
+                val value = decodedTrustMark.payload[name]
+                return if (statusPolicy == null) value?.jsonPrimitive?.contentOrNull
+                else (value as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            }
+            val trustMarkId = requiredText("trust_mark_type")
+                ?: return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED) else IdkResult.err(TrustMarkInvalidError(
                     trustMarkId = "unknown",
                     reason = "Trust Mark missing required 'trust_mark_type' claim"
                 ))
 
-            val trustMarkIssuer = decodedTrustMark.payload["iss"]?.jsonPrimitive?.contentOrNull
-                ?: return IdkResult.err(TrustMarkInvalidError(
+            val trustMarkIssuer = requiredText("iss")
+                ?: return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED) else IdkResult.err(TrustMarkInvalidError(
                     trustMarkId = trustMarkId,
                     reason = "Trust Mark missing required 'iss' claim"
                 ))
 
-            decodedTrustMark.payload["sub"]?.jsonPrimitive?.contentOrNull
-                ?: return IdkResult.err(TrustMarkInvalidError(
+            val markSubject = requiredText("sub")
+                ?: return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED) else IdkResult.err(TrustMarkInvalidError(
                     trustMarkId = trustMarkId,
                     reason = "Trust Mark missing required 'sub' claim"
                 ))
@@ -113,7 +150,7 @@ class VerifyTrustMarkCommandImpl(
                 logger.debug(
                     "Trust Mark type $trustMarkId not recognized by federation TA $trustAnchorId; filter out"
                 )
-                return IdkResult.err(TrustMarkNotRecognizedError(
+                return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_TYPE_NOT_RECOGNIZED) else IdkResult.err(TrustMarkNotRecognizedError(
                     trustMarkId = trustMarkId,
                     trustAnchorId = trustAnchorId,
                     reason = "Trust Mark type is not listed in this Trust Anchor's " +
@@ -122,17 +159,40 @@ class VerifyTrustMarkCommandImpl(
             }
 
             // --- §7.3 step 4: sub matches subject Entity (when known) ---
-            TrustMarkValidation.subjectError(decodedTrustMark, trustMarkId, subject)?.let { return IdkResult.err(it) }
+            TrustMarkValidation.subjectError(decodedTrustMark, trustMarkId, subject)?.let {
+                return if (statusPolicy == null) IdkResult.err(it) else strictFailure(TrustMarkValidationFailureCode.SUBJECT_MISMATCH)
+            }
 
             // --- §7.3 step 5: iat ---
-            TrustMarkValidation.timeError(decodedTrustMark, trustMarkId, timeToUse)?.let { return IdkResult.err(it) }
+            if (statusPolicy == null) {
+                TrustMarkValidation.timeError(decodedTrustMark, trustMarkId, timeToUse)?.let { return IdkResult.err(it) }
+            } else {
+                val issuedAt = TrustMarkValidation.numericDate(decodedTrustMark.payload["iat"])
+                    ?: return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+                if (issuedAt < 0 || issuedAt > MAX_SAFE_EPOCH_SECONDS.toDouble()) {
+                    return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+                }
+                if (issuedAt > timeToUse.toDouble() + statusPolicy.allowedClockSkewSeconds) {
+                    return strictFailure(TrustMarkValidationFailureCode.MARK_ISSUED_IN_FUTURE)
+                }
+                decodedTrustMark.payload["exp"]?.let { value ->
+                    val expiry = TrustMarkValidation.numericDate(value) ?: return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+                    if (expiry < 0 || expiry > MAX_SAFE_EPOCH_SECONDS.toDouble()) {
+                        return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
+                    }
+                    if (expiry <= timeToUse.toDouble() - statusPolicy.allowedClockSkewSeconds) {
+                        return strictFailure(TrustMarkValidationFailureCode.MARK_EXPIRED)
+                    }
+                }
+            }
 
             // --- Issuer authorization under this federation ---
             if (!TrustMarkFederationPolicy.isIssuerAuthorized(
                     recognition, trustMarkId, trustMarkIssuer, trustAnchorConfig
                 )
             ) {
-                return IdkResult.err(TrustMarkIssuerNotAuthorizedError(trustMarkId, trustMarkIssuer))
+                return if (statusPolicy == null) IdkResult.err(TrustMarkIssuerNotAuthorizedError(trustMarkId, trustMarkIssuer))
+                else strictFailure(TrustMarkValidationFailureCode.MARK_ISSUER_UNAUTHORIZED)
             }
 
             // --- Establish trust in TM Issuer (§7.3 preamble / §10) when chain is expected ---
@@ -141,23 +201,30 @@ class VerifyTrustMarkCommandImpl(
                 trustAnchorId = trustAnchorId,
                 trustAnchorConfig = trustAnchorConfig,
                 recognition = recognition,
-                timeToUse = timeToUse
+                timeToUse = timeToUse,
+                preserveFailure = statusPolicy != null,
             )
             if (issuerTrust.isErr) {
-                return issuerTrust.map { TrustMarkValidationResponse(false) }
+                return when {
+                    statusPolicy == null -> issuerTrust.map { TrustMarkValidationResponse(false) }
+                    // A chain that resolved but cannot vouch for the issuer is a refusal the caller can name. A failure to reach or read
+                    // the federation stays an error, because it says nothing about the issuer.
+                    issuerTrust.error is TrustMarkInvalidError -> strictFailure(TrustMarkValidationFailureCode.MARK_ISSUER_CHAIN_INVALID)
+                    else -> IdkResult.err(issuerTrust.error)
+                }
             }
 
             // --- §7.3 step 7: signature with issuer federation keys ---
             val issuerConfig = issuerTrust.value
             val signingKey = issuerConfig.jwks.propertyKeys?.find { it.kid == decodedTrustMark.header.kid }
-                ?: return IdkResult.err(TrustMarkInvalidError(
+                ?: return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_SIGNATURE_INVALID) else IdkResult.err(TrustMarkInvalidError(
                     trustMarkId = trustMarkId,
                     reason = "Trust Mark signing key not found in issuer's JWKS"
                 ))
 
             if (!context.jwtService.verifyJwtSignature(trustMark, signingKey)) {
                 logger.error("Trust Mark signature verification failed")
-                return IdkResult.err(SignatureVerificationFailedError(
+                return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.MARK_SIGNATURE_INVALID) else IdkResult.err(SignatureVerificationFailedError(
                     reason = "Trust Mark signature verification failed",
                     keyId = decodedTrustMark.header.kid
                 ))
@@ -168,7 +235,7 @@ class VerifyTrustMarkCommandImpl(
             val hasDelegation = decodedTrustMark.payload["delegation"] != null
             if (recognition == TrustMarkRecognition.OWNER_DELEGATION) {
                 if (!hasDelegation) {
-                    return IdkResult.err(TrustMarkInvalidError(
+                    return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.DELEGATION_INVALID) else IdkResult.err(TrustMarkInvalidError(
                         trustMarkId = trustMarkId,
                         reason = "Trust Mark type is owned; delegation claim is required"
                     ))
@@ -178,7 +245,7 @@ class VerifyTrustMarkCommandImpl(
             if (hasDelegation) {
                 val owners = trustAnchorConfig.trustMarkOwners
                 val owner = owners?.get(trustMarkId)
-                    ?: return IdkResult.err(TrustMarkInvalidError(
+                    ?: return if (statusPolicy != null) strictFailure(TrustMarkValidationFailureCode.DELEGATION_INVALID) else IdkResult.err(TrustMarkInvalidError(
                         trustMarkId = trustMarkId,
                         reason = "Trust Mark has delegation but type is not in trust_mark_owners"
                     ))
@@ -187,11 +254,21 @@ class VerifyTrustMarkCommandImpl(
                     trustMarkIssuer = trustMarkIssuer,
                     decodedTrustMark = decodedTrustMark,
                     owner = owner,
-                    timeToUse = timeToUse
+                    timeToUse = timeToUse,
+                    clockSkewSeconds = statusPolicy?.allowedClockSkewSeconds ?: DELEGATION_CLOCK_SKEW_SECONDS,
                 )
                 if (delegationResult.isErr) {
-                    return delegationResult
+                    return if (statusPolicy == null) delegationResult else strictFailure(TrustMarkValidationFailureCode.DELEGATION_INVALID)
                 }
+            }
+
+            if (statusPolicy != null) {
+                return verifyStrictStatus(
+                    context, { error -> logger.error("Trust Mark status request failed", error) },
+                    trustMark, trustMarkId, trustMarkIssuer, markSubject, trustAnchorId,
+                    issuerConfig, decodedTrustMark, timeToUse, statusPolicy,
+                    trustAnchorConfig.trustMarkOwners?.get(trustMarkId),
+                )
             }
 
             advertisedActivityError(trustMark, trustMarkId, trustMarkIssuer, issuerConfig, timeToUse)?.let {
@@ -229,21 +306,12 @@ class VerifyTrustMarkCommandImpl(
             return invalid("Advertised Trust Mark status endpoint must be credential-free HTTPS without a fragment")
         }
         val response = context.httpResolver.postJwt(endpoint, Parameters.build { append("trust_mark", compactMark) })
-        val decoded = decodeJWTComponents(response)
-        if (decoded.header.typ != "trust-mark-status-response+jwt" || decoded.header.kid.isNullOrBlank()) return invalid("Trust Mark status response has invalid type or key identifier")
-        val key = configuration.jwks.propertyKeys.orEmpty().singleOrNull { it.kid == decoded.header.kid }
-            ?: return invalid("Trust Mark status response signing key is not an issuer Federation Entity Key")
-        if (!context.jwtService.verifyJwtSignature(response, key)) return invalid("Trust Mark status response signature is invalid")
-        val claims = decoded.payload
-        fun text(name: String): String? = (claims[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
-        if (text("iss") != issuer || text("trust_mark") != compactMark) return invalid("Trust Mark status response does not match issuer and queried mark")
-        val issuedAt = (claims["iat"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
-        if (issuedAt == null || !issuedAt.isFinite() || issuedAt > now.toDouble() + 5) return invalid("Trust Mark status response has invalid issued-at time")
-        if (claims.containsKey("exp")) {
-            val expiry = (claims["exp"] as? JsonPrimitive)?.takeUnless { it.isString }?.doubleOrNull
-            if (expiry == null || !expiry.isFinite() || expiry <= now.toDouble()) return invalid("Trust Mark status response is expired or has invalid expiry")
+        return when (val checked = checkSignedStatus(context, response, configuration, issuer, compactMark, now, null)) {
+            is StatusCheck.Active -> null
+            is StatusCheck.Invalid -> invalid(requireNotNull(checked.legacyReason) {
+                "Missing unscoped status failure reason for ${checked.code}"
+            })
         }
-        return if (text("status") == "active") null else invalid("Advertised issuer status does not establish an active Trust Mark")
     }
 
     /**
@@ -258,7 +326,8 @@ class VerifyTrustMarkCommandImpl(
         trustAnchorId: String,
         trustAnchorConfig: EntityConfigurationStatement,
         recognition: TrustMarkRecognition,
-        timeToUse: Long
+        timeToUse: Long,
+        preserveFailure: Boolean,
     ): IdkResult<EntityConfigurationStatement, FederationError> {
         if (trustMarkIssuer == trustAnchorId) {
             return IdkResult.ok(trustAnchorConfig)
@@ -281,6 +350,9 @@ class VerifyTrustMarkCommandImpl(
                     )
                 )
                 if (chainResult.isErr) {
+                    if (preserveFailure) {
+                        return IdkResult.err(chainResult.error)
+                    }
                     return IdkResult.err(TrustMarkInvalidError(
                         trustMarkId = "unknown",
                         reason = "Could not establish Trust Chain from Trust Mark issuer " +
@@ -301,6 +373,9 @@ class VerifyTrustMarkCommandImpl(
                     currentTime = timeToUse,
                     trustAnchorPublicKeys = trustAnchorKeys,
                 )
+                if (verifyResult.isErr && preserveFailure) {
+                    return IdkResult.err(verifyResult.error)
+                }
                 if (verifyResult.isErr || !verifyResult.value.isValid) {
                     return IdkResult.err(TrustMarkInvalidError(
                         trustMarkId = "unknown",
@@ -334,13 +409,25 @@ class VerifyTrustMarkCommandImpl(
         trustMarkIssuer: String,
         decodedTrustMark: Jwt,
         owner: TrustMarkOwner,
-        timeToUse: Long
+        timeToUse: Long,
+        clockSkewSeconds: Long,
     ): IdkResult<TrustMarkValidationResponse, FederationError> {
         val delegationJwt = decodedTrustMark.payload["delegation"]?.jsonPrimitive?.contentOrNull
             ?: return IdkResult.err(TrustMarkInvalidError(trustMarkId, "Trust Mark missing required delegation claim"))
-        return validateTrustMarkDelegation(context.jwtService, delegationJwt, trustMarkId, trustMarkIssuer, owner, timeToUse)
+        return validateTrustMarkDelegation(context.jwtService, delegationJwt, trustMarkId, trustMarkIssuer, owner, timeToUse, clockSkewSeconds)
     }
 }
+
+internal const val MAX_STATUS_AGE_SECONDS = 31_536_000L
+internal const val MAX_CLOCK_SKEW_SECONDS = 86_400L
+internal const val MAX_SAFE_EPOCH_SECONDS = 9_007_199_254_740_991L
+
+internal fun strictFailure(
+    code: TrustMarkValidationFailureCode,
+    outcome: TrustMarkValidationOutcome = TrustMarkValidationOutcome.INVALID,
+): IdkResult<TrustMarkValidationResponse, FederationError> = IdkResult.ok(
+    TrustMarkValidationResponse(isValid = false, errorMessage = code.value, outcome = outcome, failureCode = code)
+)
 
 private const val DELEGATION_TYP = "trust-mark-delegation+jwt"
 private const val DELEGATION_CLOCK_SKEW_SECONDS = 5L
@@ -356,6 +443,7 @@ internal suspend fun validateTrustMarkDelegation(
     trustMarkIssuer: String,
     owner: TrustMarkOwner,
     timeToUse: Long,
+    clockSkewSeconds: Long = DELEGATION_CLOCK_SKEW_SECONDS,
 ): IdkResult<TrustMarkValidationResponse, FederationError> {
     val trustMarkId = trustMarkType
     val decodedDelegation = try {
@@ -405,7 +493,7 @@ internal suspend fun validateTrustMarkDelegation(
 
     // §7.2.2 steps 6–7: iat / optional exp
     val delIat = TrustMarkValidation.numericDate(decodedDelegation.payload["iat"])
-    if (delIat == null || delIat > timeToUse + DELEGATION_CLOCK_SKEW_SECONDS) {
+    if (delIat == null || delIat > timeToUse.toDouble() + clockSkewSeconds) {
         return IdkResult.err(TrustMarkInvalidError(
             trustMarkId = trustMarkId,
             reason = "Delegation has invalid or future iat"
@@ -414,7 +502,7 @@ internal suspend fun validateTrustMarkDelegation(
     val delExpEl = decodedDelegation.payload["exp"]
     if (delExpEl != null) {
         val delExp = TrustMarkValidation.numericDate(delExpEl)
-        if (delExp == null || delExp <= timeToUse - DELEGATION_CLOCK_SKEW_SECONDS) {
+        if (delExp == null || delExp <= timeToUse.toDouble() - clockSkewSeconds) {
             return IdkResult.err(TrustMarkInvalidError(
                 trustMarkId = trustMarkId,
                 reason = "Delegation has expired"
