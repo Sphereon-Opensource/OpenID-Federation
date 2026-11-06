@@ -61,7 +61,7 @@ internal suspend fun verifyStrictStatus(
         is StatusCheck.Invalid -> return strictFailure(checked.code)
         is StatusCheck.Active -> checked
     }
-    val validUntil = requireNotNull(status.validUntil) { "Strict status must have a freshness deadline" }
+    val validUntil = floor(minOf(status.issuedAt + policy.maximumAgeSeconds, status.expiry ?: Double.POSITIVE_INFINITY)).toLong()
     val evidence = verifiedEvidence(compactMark, type, issuer, subject, authorityAnchor, mark, now, status.issuedAt, validUntil, owner)
     return IdkResult.ok(TrustMarkValidationResponse(
         isValid = true,
@@ -71,8 +71,8 @@ internal suspend fun verifyStrictStatus(
 }
 
 internal sealed interface StatusCheck {
-    data class Active(val validUntil: Long?, val issuedAt: Double) : StatusCheck
-    data class Invalid(val code: TrustMarkValidationFailureCode, val legacyReason: String? = null) : StatusCheck
+    data class Active(val issuedAt: Double, val expiry: Double?) : StatusCheck
+    data class Invalid(val code: TrustMarkValidationFailureCode, val legacyReason: String) : StatusCheck
 }
 
 internal suspend fun checkSignedStatus(
@@ -90,7 +90,8 @@ internal suspend fun checkSignedStatus(
         if (policy == null) {
             throw e
         }
-        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED)
+        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED,
+            "Trust Mark status response is not a decodable JWT")
     }
     if (status.header.typ != "trust-mark-status-response+jwt" || status.header.kid.isNullOrBlank() ||
         (policy != null && (status.header.alg.isBlank() || status.header.alg.equals("none", ignoreCase = true)))) {
@@ -117,21 +118,24 @@ internal suspend fun checkSignedStatus(
         ?: return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_ISSUED_AT_MISSING,
             "Trust Mark status response has invalid issued-at time")
     if (policy != null && (issuedAt < 0 || issuedAt > (MAX_SAFE_EPOCH_SECONDS - policy.maximumAgeSeconds).toDouble())) {
-        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED)
+        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED,
+            "Trust Mark status response has invalid issued-at time")
     }
     if (issuedAt > now.toDouble() + (policy?.allowedClockSkewSeconds ?: 5L)) {
         return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_ISSUED_IN_FUTURE,
             "Trust Mark status response has invalid issued-at time")
     }
     if (policy != null && now.toDouble() - issuedAt > policy.maximumAgeSeconds) {
-        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_STALE)
+        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_STALE,
+            "Trust Mark status response is older than the allowed maximum age")
     }
     val expiry = status.payload["exp"]?.let {
         TrustMarkValidation.numericDate(it) ?: return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED,
             "Trust Mark status response is expired or has invalid expiry")
     }
     if (policy != null && expiry != null && (expiry < 0 || expiry > MAX_SAFE_EPOCH_SECONDS.toDouble())) {
-        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED)
+        return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_MALFORMED,
+            "Trust Mark status response is expired or has invalid expiry")
     }
     if (expiry != null && expiry <= now.toDouble()) {
         return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_EXPIRED,
@@ -141,10 +145,7 @@ internal suspend fun checkSignedStatus(
         return StatusCheck.Invalid(TrustMarkValidationFailureCode.STATUS_NOT_ACTIVE,
             "Advertised issuer status does not establish an active Trust Mark")
     }
-    val validUntil = policy?.let {
-        floor(minOf(issuedAt + it.maximumAgeSeconds, expiry ?: Double.POSITIVE_INFINITY)).toLong()
-    }
-    return StatusCheck.Active(validUntil, issuedAt)
+    return StatusCheck.Active(issuedAt, expiry)
 }
 
 private fun verifiedEvidence(

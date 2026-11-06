@@ -163,27 +163,10 @@ class VerifyTrustMarkCommandImpl(
                 return if (statusPolicy == null) IdkResult.err(it) else strictFailure(TrustMarkValidationFailureCode.SUBJECT_MISMATCH)
             }
 
-            // --- §7.3 step 5: iat ---
-            if (statusPolicy == null) {
-                TrustMarkValidation.timeError(decodedTrustMark, trustMarkId, timeToUse)?.let { return IdkResult.err(it) }
-            } else {
-                val issuedAt = TrustMarkValidation.numericDate(decodedTrustMark.payload["iat"])
-                    ?: return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
-                if (issuedAt < 0 || issuedAt > MAX_SAFE_EPOCH_SECONDS.toDouble()) {
-                    return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
-                }
-                if (issuedAt > timeToUse.toDouble() + statusPolicy.allowedClockSkewSeconds) {
-                    return strictFailure(TrustMarkValidationFailureCode.MARK_ISSUED_IN_FUTURE)
-                }
-                decodedTrustMark.payload["exp"]?.let { value ->
-                    val expiry = TrustMarkValidation.numericDate(value) ?: return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
-                    if (expiry < 0 || expiry > MAX_SAFE_EPOCH_SECONDS.toDouble()) {
-                        return strictFailure(TrustMarkValidationFailureCode.MARK_MALFORMED)
-                    }
-                    if (expiry <= timeToUse.toDouble() - statusPolicy.allowedClockSkewSeconds) {
-                        return strictFailure(TrustMarkValidationFailureCode.MARK_EXPIRED)
-                    }
-                }
+            // --- §7.3 step 5: iat / exp ---
+            TrustMarkValidation.timeFault(decodedTrustMark, timeToUse, statusPolicy)?.let { fault ->
+                return if (statusPolicy == null) IdkResult.err(TrustMarkValidation.timeError(fault, trustMarkId))
+                else strictFailure(fault.strictFailureCode())
             }
 
             // --- Issuer authorization under this federation ---
@@ -308,9 +291,7 @@ class VerifyTrustMarkCommandImpl(
         val response = context.httpResolver.postJwt(endpoint, Parameters.build { append("trust_mark", compactMark) })
         return when (val checked = checkSignedStatus(context, response, configuration, issuer, compactMark, now, null)) {
             is StatusCheck.Active -> null
-            is StatusCheck.Invalid -> invalid(requireNotNull(checked.legacyReason) {
-                "Missing unscoped status failure reason for ${checked.code}"
-            })
+            is StatusCheck.Invalid -> invalid(checked.legacyReason)
         }
     }
 
@@ -419,8 +400,13 @@ class VerifyTrustMarkCommandImpl(
 }
 
 internal const val MAX_STATUS_AGE_SECONDS = 31_536_000L
-internal const val MAX_CLOCK_SKEW_SECONDS = 86_400L
-internal const val MAX_SAFE_EPOCH_SECONDS = 9_007_199_254_740_991L
+internal const val MAX_CLOCK_SKEW_SECONDS = 600L
+
+private fun TrustMarkTimeFault.strictFailureCode(): TrustMarkValidationFailureCode = when (this) {
+    TrustMarkTimeFault.IAT_INVALID, TrustMarkTimeFault.EXP_INVALID -> TrustMarkValidationFailureCode.MARK_MALFORMED
+    TrustMarkTimeFault.IAT_IN_FUTURE -> TrustMarkValidationFailureCode.MARK_ISSUED_IN_FUTURE
+    TrustMarkTimeFault.EXPIRED -> TrustMarkValidationFailureCode.MARK_EXPIRED
+}
 
 internal fun strictFailure(
     code: TrustMarkValidationFailureCode,

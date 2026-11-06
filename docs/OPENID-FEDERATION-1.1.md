@@ -150,7 +150,7 @@ caller supplies, and returns the metadata that results from the chain's policies
 
 The Trust Mark verifier also accepts a `TrustMarkStatusPolicy` when a caller needs a current authoritative status.
 The caller supplies the exact, nonblank subject, a maximum status age from 1 to 31,536,000 seconds and an allowed
-clock skew from 1 to 86,400 seconds. The mark issuer must advertise a credential-free HTTPS Trust Mark status
+clock skew from 1 to 600 seconds. The mark issuer must advertise a credential-free HTTPS Trust Mark status
 endpoint. Its signed response must use the issuer's verified federation key, identify the exact compact mark and
 issuer, be active and meet the configured freshness and time checks. After the mark and its authority pass validation,
 each strict verification queries the status endpoint; an earlier positive answer is not reused as the current answer.
