@@ -9,7 +9,7 @@ import com.sphereon.openid.fed.openapi.models.TrustMarkValidationResponse
 
 /**
  * Required freshness and clock tolerance, in seconds, for authoritative signed status.
- * Maximum age must be 1 through 31,536,000 seconds; clock skew must be 1 through 86,400 seconds.
+ * Maximum age must be 1 through 31,536,000 seconds; clock skew must be 1 through 600 seconds.
  */
 data class TrustMarkStatusPolicy(
     val maximumAgeSeconds: Long,

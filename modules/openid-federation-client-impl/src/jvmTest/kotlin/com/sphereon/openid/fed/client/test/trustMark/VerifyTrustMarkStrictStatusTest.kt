@@ -452,7 +452,7 @@ class VerifyTrustMarkStrictStatusTest : TrustMarkVerificationTestFixture() {
             TrustMarkStatusPolicy(maximumAgeSeconds = 60, allowedClockSkewSeconds = 0),
             TrustMarkStatusPolicy(maximumAgeSeconds = 60, allowedClockSkewSeconds = -1),
             TrustMarkStatusPolicy(maximumAgeSeconds = 31_536_001, allowedClockSkewSeconds = 5),
-            TrustMarkStatusPolicy(maximumAgeSeconds = 60, allowedClockSkewSeconds = 86_401),
+            TrustMarkStatusPolicy(maximumAgeSeconds = 60, allowedClockSkewSeconds = 601),
         )
         for (policy in invalidPolicies) {
             assertRejected(strictResult(anchor, mark, status, policy = policy), "INVALID", "STATUS_POLICY_INVALID")
