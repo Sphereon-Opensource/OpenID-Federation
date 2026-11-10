@@ -16,11 +16,11 @@
 package com.sphereon.openid.fed.persistence
 
 import app.cash.sqldelight.TransacterImpl
-import app.cash.sqldelight.db.AfterVersion
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
 import com.sphereon.openid.fed.core.tenant.IdentityInstallState
+import java.sql.SQLException
 
 private val migrationDescriptions = mapOf(
     1L to ("1.sqm" to "Create Account table with username, identifier, timestamps, and soft-delete"),
@@ -57,34 +57,95 @@ private val migrationDescriptions = mapOf(
 private class MigrationTransacter(driver: SqlDriver) : TransacterImpl(driver)
 
 /**
+ * How [runMigrations] retries. Each attempt is one whole transaction, so a failed attempt leaves nothing behind.
+ *
+ * @property maxAttempts attempts before giving up with a clear error
+ * @property lockTimeoutMillis longest a statement may wait for a lock, the migration lock included
+ * @property backoffMillis pause after attempt n is `n * backoffMillis`
+ * @property pause how to pause; replaced in tests
+ */
+internal class MigrationRetryPolicy(
+    val maxAttempts: Int = 5,
+    val lockTimeoutMillis: Long = 60_000L,
+    val backoffMillis: Long = 500L,
+    val pause: (Long) -> Unit = { millis -> Thread.sleep(millis) },
+) {
+    init {
+        require(maxAttempts >= 1) { "maxAttempts must be at least 1" }
+    }
+}
+
+/**
  * Advisory lock key ("OIDFMIGR") that serializes the migration across every process sharing one database.
  */
 private const val MIGRATION_LOCK_KEY: Long = 0x4F494446_4D494752L
 
 /**
- * Brings the schema to [Database.Schema.version].
- *
- * Several services, or several replicas, may boot against one empty database at once. The whole run therefore happens
- * in one transaction that first takes a transaction-scoped PostgreSQL advisory lock: the first process migrates, the
- * others wait, then find the schema current and change nothing. A failed run rolls back completely, so no
- * half-migrated schema is left behind.
+ * SQLSTATEs that say the attempt lost a race or a lock, not that the migration is wrong: internal_error (for example
+ * "tuple concurrently updated" when another session changes the same catalog rows), deadlock_detected,
+ * serialization_failure, unique_violation (catalog races on `CREATE ... IF NOT EXISTS`) and lock_not_available
+ * (the lock timeout).
  */
-internal fun runMigrations(driver: SqlDriver) {
-    val transacter = MigrationTransacter(driver)
-    try {
-        transacter.transaction { migrateUnderLock(driver, objectsAlreadyExist = false) }
-    } catch (e: org.postgresql.util.PSQLException) {
-        // A pre-existing schema without a version record (partial / hand-made installs): the objects are there,
-        // so only the version is recorded. The failed attempt was rolled back, so this is a fresh transaction.
-        if (e.message?.contains("already exists") == true) {
-            transacter.transaction { migrateUnderLock(driver, objectsAlreadyExist = true) }
-        } else {
-            throw e
-        }
+private val TRANSIENT_SQL_STATES = setOf("XX000", "40P01", "40001", "23505", "55P03")
+
+/**
+ * SQLSTATEs that say a step's effect is already there or was superseded in an existing schema: duplicate_table,
+ * duplicate_column, duplicate_schema, duplicate_object, duplicate_function, and the "undefined" states of an object a
+ * later step dropped or renamed.
+ */
+private val STEP_ALREADY_APPLIED_SQL_STATES = setOf("42P07", "42701", "42P06", "42710", "42723", "42704", "42703", "42P01")
+
+private fun sqlStateOf(failure: Throwable): String? {
+    var current: Throwable? = failure
+    var depth = 0
+    while (current != null && depth < 10) {
+        if (current is SQLException && current.sqlState != null) return current.sqlState
+        current = current.cause
+        depth++
     }
+    return null
 }
 
-private fun migrateUnderLock(driver: SqlDriver, objectsAlreadyExist: Boolean) {
+/**
+ * Brings the schema to [Database.Schema.version].
+ *
+ * Several services, or several replicas, may boot against one empty database at once. Each attempt therefore runs in
+ * one transaction that first takes a transaction-scoped PostgreSQL advisory lock: the first process migrates, the
+ * others wait, then find the schema current and change nothing. A failed attempt rolls back completely, so no
+ * half-migrated schema is left behind. Failures that mean a lost race (see [TRANSIENT_SQL_STATES]) retry the whole
+ * transaction up to [MigrationRetryPolicy.maxAttempts] times; any other failure is thrown at once.
+ *
+ * A schema without a version record that already holds an Account table (a hand-made or pre-versioning install) is
+ * adopted: each migration file runs in its own savepoint, and a file whose objects already exist or were superseded is
+ * skipped, so every file that still applies runs. The version is recorded only after every file has been applied or
+ * skipped that way. Everywhere else a failing file fails the run.
+ *
+ * @throws IllegalStateException when every attempt failed with a transient error; the last one is the cause
+ */
+internal fun runMigrations(driver: SqlDriver, policy: MigrationRetryPolicy = MigrationRetryPolicy()) {
+    val transacter = MigrationTransacter(driver)
+    var lastFailure: Throwable? = null
+    for (attempt in 1..policy.maxAttempts) {
+        try {
+            transacter.transaction { migrateUnderLock(driver, policy.lockTimeoutMillis) }
+            return
+        } catch (failure: Exception) {
+            val sqlState = sqlStateOf(failure)
+            if (sqlState == null || sqlState !in TRANSIENT_SQL_STATES) throw failure
+            lastFailure = failure
+            if (attempt < policy.maxAttempts) policy.pause(policy.backoffMillis * attempt)
+        }
+    }
+    throw IllegalStateException(
+        "The OpenID Federation schema migration failed ${policy.maxAttempts} times with a transient database error " +
+            "(SQLSTATE ${lastFailure?.let { sqlStateOf(it) }}: ${lastFailure?.message}). Each attempt was rolled back, " +
+            "so the database is unchanged. Check what else is changing this database, then retry.",
+        lastFailure,
+    )
+}
+
+private fun migrateUnderLock(driver: SqlDriver, lockTimeoutMillis: Long) {
+    driver.execute(null, "SET LOCAL lock_timeout = '${lockTimeoutMillis}ms'", 0)
     driver.executeQuery(null, "SELECT pg_advisory_xact_lock(?)", parameters = 1, binders = { bindLong(0, MIGRATION_LOCK_KEY) }, mapper = { cursor: SqlCursor ->
         QueryResult.Value(cursor.next().value)
     })
@@ -118,11 +179,13 @@ private fun migrateUnderLock(driver: SqlDriver, objectsAlreadyExist: Boolean) {
     }).value ?: 0L
 
     // Upgrade path: pre-existing schema (develop / pre-0.25 installs) → ACCOUNT mode default
+    var adopting = false
     if (currentVersion > 0L) {
         IdentityInstallState.markExistingDatabase(currentVersion)
     } else if (legacyAccountTablePresent(driver)) {
         // Partial / older installs that have Account data but empty schema_version
         IdentityInstallState.markExistingDatabase(1L)
+        adopting = true
     }
 
     // Backfill migration history for existing databases that already have data
@@ -131,28 +194,29 @@ private fun migrateUnderLock(driver: SqlDriver, objectsAlreadyExist: Boolean) {
     val newVersion = Database.Schema.version
     if (currentVersion >= newVersion) return
 
-    if (!objectsAlreadyExist) {
-        // Build AfterVersion callbacks to track each migration file.
-        // AfterVersion(N) fires after N.sqm completes. Files run for N where
-        // currentVersion <= N < newVersion. We skip N=0 since there's no 0.sqm.
-        val firstVersion = maxOf(1L, currentVersion)
-        val callbacks = (firstVersion until newVersion).map { version ->
-            AfterVersion(version) { drv ->
-                val (filename, desc) = migrationDescriptions[version]
-                    ?: ("${version}.sqm" to "Unknown migration")
-                drv.execute(
-                    null,
-                    "INSERT INTO schema_migration_history (version, filename, description) VALUES (?, ?, ?)",
-                    3
-                ) {
-                    bindLong(0, version)
-                    bindString(1, filename)
-                    bindString(2, desc)
-                }
-            }
-        }.toTypedArray()
-
-        Database.Schema.migrate(driver, currentVersion, newVersion, *callbacks)
+    // Files run for N where currentVersion <= N < newVersion; there is no 0.sqm. Each file runs in its own savepoint so
+    // that an adopted schema can skip a file whose effect is already there.
+    for (step in maxOf(1L, currentVersion) until newVersion) {
+        driver.execute(null, "SAVEPOINT migration_step", 0)
+        val (filename, description) = migrationDescriptions[step] ?: ("${step}.sqm" to "Unknown migration")
+        var recordedDescription = description
+        try {
+            Database.Schema.migrate(driver, step, step + 1)
+        } catch (failure: SQLException) {
+            if (!adopting || failure.sqlState !in STEP_ALREADY_APPLIED_SQL_STATES) throw failure
+            driver.execute(null, "ROLLBACK TO SAVEPOINT migration_step", 0)
+            recordedDescription = "$description (already present in the adopted schema, skipped)"
+        }
+        driver.execute(null, "RELEASE SAVEPOINT migration_step", 0)
+        driver.execute(
+            null,
+            "INSERT INTO schema_migration_history (version, filename, description) VALUES (?, ?, ?)",
+            3
+        ) {
+            bindLong(0, step)
+            bindString(1, filename)
+            bindString(2, recordedDescription)
+        }
     }
     updateDatabaseVersion(driver, currentVersion, newVersion)
 }
@@ -195,14 +259,14 @@ private fun backfillMigrationHistory(driver: SqlDriver, currentVersion: Long) {
 
     // Backfill: insert synthetic rows for all previously applied migrations.
     // When version V is stored, files 1.sqm through (V-1).sqm have been applied.
-    for (v in 1 until currentVersion) {
-        val (filename, desc) = migrationDescriptions[v] ?: ("${v}.sqm" to "Unknown migration")
+    for (appliedVersion in 1 until currentVersion) {
+        val (filename, desc) = migrationDescriptions[appliedVersion] ?: ("${appliedVersion}.sqm" to "Unknown migration")
         driver.execute(
             null,
             "INSERT INTO schema_migration_history (version, filename, description, applied_at) VALUES (?, ?, ?, NOW())",
             3
         ) {
-            bindLong(0, v)
+            bindLong(0, appliedVersion)
             bindString(1, filename)
             bindString(2, desc)
         }
