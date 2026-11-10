@@ -88,13 +88,6 @@ private const val MIGRATION_LOCK_KEY: Long = 0x4F494446_4D494752L
  */
 private val TRANSIENT_SQL_STATES = setOf("XX000", "40P01", "40001", "23505", "55P03")
 
-/**
- * SQLSTATEs that say a step's effect is already there or was superseded in an existing schema: duplicate_table,
- * duplicate_column, duplicate_schema, duplicate_object, duplicate_function, and the "undefined" states of an object a
- * later step dropped or renamed.
- */
-private val STEP_ALREADY_APPLIED_SQL_STATES = setOf("42P07", "42701", "42P06", "42710", "42723", "42704", "42703", "42P01")
-
 private fun sqlStateOf(failure: Throwable): String? {
     var current: Throwable? = failure
     var depth = 0
@@ -115,10 +108,10 @@ private fun sqlStateOf(failure: Throwable): String? {
  * half-migrated schema is left behind. Failures that mean a lost race (see [TRANSIENT_SQL_STATES]) retry the whole
  * transaction up to [MigrationRetryPolicy.maxAttempts] times; any other failure is thrown at once.
  *
- * A schema without a version record that already holds an Account table (a hand-made or pre-versioning install) is
- * adopted: each migration file runs in its own savepoint, and a file whose objects already exist or were superseded is
- * skipped, so every file that still applies runs. The version is recorded only after every file has been applied or
- * skipped that way. Everywhere else a failing file fails the run.
+ * A schema without a version record that already holds an Account table (a pre-versioning install) is adopted only
+ * when its shape equals a version of this library's schema (see [adoptedVersion]); the later files then run in order.
+ * A schema that matches no version is refused with the differences listed, and nothing is changed. No file is ever
+ * skipped.
  *
  * @throws IllegalStateException when every attempt failed with a transient error; the last one is the cause
  */
@@ -137,9 +130,9 @@ internal fun runMigrations(driver: SqlDriver, policy: MigrationRetryPolicy = Mig
         }
     }
     throw IllegalStateException(
-        "The OpenID Federation schema migration failed ${policy.maxAttempts} times with a transient database error " +
-            "(SQLSTATE ${lastFailure?.let { sqlStateOf(it) }}: ${lastFailure?.message}). Each attempt was rolled back, " +
-            "so the database is unchanged. Check what else is changing this database, then retry.",
+        "The OpenID Federation schema migration failed ${policy.maxAttempts} times with a database error that can be a " +
+            "lost race or a real fault (SQLSTATE ${lastFailure?.let { sqlStateOf(it) }}: ${lastFailure?.message}). Each attempt was rolled back, " +
+            "so the database is unchanged. The cause carries the database's own message.",
         lastFailure,
     )
 }
@@ -178,36 +171,26 @@ private fun migrateUnderLock(driver: SqlDriver, lockTimeoutMillis: Long) {
         QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else 0L)
     }).value ?: 0L
 
+    val newVersion = Database.Schema.version
+
     // Upgrade path: pre-existing schema (develop / pre-0.25 installs) → ACCOUNT mode default
-    var adopting = false
+    var startVersion = currentVersion
     if (currentVersion > 0L) {
         IdentityInstallState.markExistingDatabase(currentVersion)
     } else if (legacyAccountTablePresent(driver)) {
         // Partial / older installs that have Account data but empty schema_version
         IdentityInstallState.markExistingDatabase(1L)
-        adopting = true
+        startVersion = adoptedVersion(driver, newVersion)
     }
 
     // Backfill migration history for existing databases that already have data
-    backfillMigrationHistory(driver, currentVersion)
-
-    val newVersion = Database.Schema.version
+    backfillMigrationHistory(driver, startVersion)
     if (currentVersion >= newVersion) return
 
-    // Files run for N where currentVersion <= N < newVersion; there is no 0.sqm. Each file runs in its own savepoint so
-    // that an adopted schema can skip a file whose effect is already there.
-    for (step in maxOf(1L, currentVersion) until newVersion) {
-        driver.execute(null, "SAVEPOINT migration_step", 0)
+    // Files run for N where startVersion <= N < newVersion; there is no 0.sqm.
+    for (step in maxOf(1L, startVersion) until newVersion) {
+        Database.Schema.migrate(driver, step, step + 1)
         val (filename, description) = migrationDescriptions[step] ?: ("${step}.sqm" to "Unknown migration")
-        var recordedDescription = description
-        try {
-            Database.Schema.migrate(driver, step, step + 1)
-        } catch (failure: SQLException) {
-            if (!adopting || failure.sqlState !in STEP_ALREADY_APPLIED_SQL_STATES) throw failure
-            driver.execute(null, "ROLLBACK TO SAVEPOINT migration_step", 0)
-            recordedDescription = "$description (already present in the adopted schema, skipped)"
-        }
-        driver.execute(null, "RELEASE SAVEPOINT migration_step", 0)
         driver.execute(
             null,
             "INSERT INTO schema_migration_history (version, filename, description) VALUES (?, ?, ?)",
@@ -215,10 +198,53 @@ private fun migrateUnderLock(driver: SqlDriver, lockTimeoutMillis: Long) {
         ) {
             bindLong(0, step)
             bindString(1, filename)
-            bindString(2, recordedDescription)
+            bindString(2, description)
         }
     }
-    updateDatabaseVersion(driver, currentVersion, newVersion)
+    updateDatabaseVersion(driver, startVersion, newVersion)
+}
+
+/**
+ * Finds which version an unversioned schema with an Account table really is at, or refuses to adopt it.
+ *
+ * Builds a reference schema inside this transaction (a uniquely named schema, `search_path` pointing at it), applies
+ * the migration files to it one at a time, and compares the live schema's shape (see [captureSchemaCatalog]) with the
+ * reference after each file. The highest version whose shape equals the live schema is returned; the caller then runs
+ * only the later files, so no file is ever skipped or half-applied. When no version matches, the differences against
+ * the latest shape are listed in the error and nothing is stamped, so the transaction rolls back.
+ *
+ * A shape match proves the DDL, not the data: if a file's backfill statements never ran on a schema whose DDL is
+ * complete, no catalog comparison can see it.
+ *
+ * @return the version V such that files 1 until V are present
+ */
+private fun adoptedVersion(driver: SqlDriver, newVersion: Long): Long {
+    val liveSchema = driver.executeQuery(null, "SELECT current_schema()", parameters = 0, mapper = { cursor: SqlCursor ->
+        QueryResult.Value(if (cursor.next().value) cursor.getString(0) else null)
+    }).value ?: "public"
+    val originalSearchPath = driver.executeQuery(null, "SELECT current_setting('search_path')", parameters = 0, mapper = { cursor: SqlCursor ->
+        QueryResult.Value(if (cursor.next().value) cursor.getString(0) else null)
+    }).value ?: liveSchema
+    val referenceSchema = "oidf_adopt_ref_" + java.util.UUID.randomUUID().toString().replace("-", "")
+    val live = captureSchemaCatalog(driver, liveSchema)
+
+    driver.execute(null, "CREATE SCHEMA $referenceSchema", 0)
+    driver.execute(null, "SELECT set_config('search_path', '$referenceSchema', true)", 0)
+    var matched: Long? = null
+    var latestShape: List<String> = emptyList()
+    for (step in 1L until newVersion) {
+        Database.Schema.migrate(driver, step, step + 1)
+        latestShape = captureSchemaCatalog(driver, referenceSchema)
+        if (latestShape == live) matched = step + 1
+    }
+    driver.execute(null, "SELECT set_config('search_path', '${originalSearchPath.replace("'", "''")}', true)", 0)
+    driver.execute(null, "DROP SCHEMA $referenceSchema CASCADE", 0)
+
+    return matched ?: throw IllegalStateException(
+        "The existing OpenID Federation schema has no version record and does not match any version of this library, " +
+            "so it was not adopted and nothing was changed. Differences against the latest version:\n" +
+            describeCatalogDifferences(latestShape, live).joinToString("\n"),
+    )
 }
 
 /**

@@ -21,12 +21,16 @@ object LegacyAccountSessionTenantLookup {
      *
      * @param username Account username; blank uses [Constants.DEFAULT_ROOT_USERNAME]
      * @return Account UUID string, or null if not found / DB unavailable
+     * @throws IllegalStateException when the persistence layer cannot start (not configured, or its schema migration
+     *   failed): that is a fault of the installation, not an unavailable database, and is not hidden
      */
     fun resolveAccountId(username: String?): String? {
         val name = username?.trim()?.takeIf { it.isNotEmpty() }
             ?: Constants.DEFAULT_ROOT_USERNAME
         return try {
             Persistence.accountQueries.findByUsername(name).executeAsOneOrNull()?.id
+        } catch (failure: IllegalStateException) {
+            throw failure
         } catch (_: Exception) {
             null
         }
