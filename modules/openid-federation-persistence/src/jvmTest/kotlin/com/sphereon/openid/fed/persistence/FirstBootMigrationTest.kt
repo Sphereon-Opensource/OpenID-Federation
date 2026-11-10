@@ -72,6 +72,7 @@ class FirstBootMigrationTest {
 
     private var databaseName = ""
     private val createdDatabases = mutableListOf<String>()
+    private val createdRoles = mutableListOf<String>()
 
     private fun createEmptyDatabase() {
         databaseName = "firstboot_" + java.util.UUID.randomUUID().toString().replace("-", "")
@@ -89,6 +90,7 @@ class FirstBootMigrationTest {
     fun dropDatabase() {
         IdentityInstallState.resetForTests()
         createdDatabases.forEach { adminExecute("DROP DATABASE IF EXISTS $it WITH (FORCE)") }
+        createdRoles.forEach { adminExecute("DROP ROLE IF EXISTS $it") }
     }
 
     private fun adminExecute(sql: String) {
@@ -99,10 +101,10 @@ class FirstBootMigrationTest {
 
     private fun databaseUrl(): String = postgres.jdbcUrl.replace("/postgres", "/$databaseName")
 
-    private fun openSource(): HikariDataSource = HikariDataSource(HikariConfig().apply {
+    private fun openSource(user: String = "owner"): HikariDataSource = HikariDataSource(HikariConfig().apply {
         jdbcUrl = databaseUrl()
-        username = "owner"
-        password = "owner"
+        username = user
+        password = user
         maximumPoolSize = 2
     })
 
@@ -276,6 +278,106 @@ class FirstBootMigrationTest {
 
             assertEquals(greenfieldCatalog(), captureSchemaCatalog(driver, "public"))
             assertEquals(Database.Schema.version, scalar(driver, "SELECT MAX(version) FROM schema_version"))
+        }
+    }
+
+    private fun assertLatestShapeWithChangeIsRefused(vararg statements: String) {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.create(driver)
+            statements.forEach { statement -> driver.execute(null, statement, 0) }
+
+            assertRefusedAndUnchanged(driver, "does not match any version")
+        }
+    }
+
+    @Test
+    fun aChangedColumnDefaultIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account ALTER COLUMN tenant_source SET DEFAULT 'ACCOUNT'",
+    )
+
+    @Test
+    fun aChangedCheckExpressionIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Jwk DROP CONSTRAINT jwk_revocation_reason_token",
+        "ALTER TABLE Jwk ADD CONSTRAINT jwk_revocation_reason_token CHECK (revocation_reason IS NULL OR revocation_reason ~ '^[A-Z][a-z0-9_]{0,63}$')",
+    )
+
+    @Test
+    fun aChangedTimestampPrecisionIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account ALTER COLUMN updated_at TYPE TIMESTAMP(0)",
+    )
+
+    @Test
+    fun aChangedColumnOrderIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account DROP COLUMN identifier",
+        "ALTER TABLE Account ADD COLUMN identifier TEXT",
+    )
+
+    @Test
+    fun anAddedTriggerIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "CREATE FUNCTION oidf_stray_trigger() RETURNS trigger LANGUAGE plpgsql AS \$\$ BEGIN RETURN NEW; END \$\$",
+        "CREATE TRIGGER oidf_stray BEFORE INSERT ON Account FOR EACH ROW EXECUTE FUNCTION oidf_stray_trigger()",
+    )
+
+    @Test
+    fun anIdentityColumnIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE AccountSigningKey ALTER COLUMN revision ADD GENERATED ALWAYS AS IDENTITY",
+    )
+
+    @Test
+    fun aGeneratedColumnIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account ADD COLUMN oidf_stray TEXT GENERATED ALWAYS AS (username || 'x') STORED",
+    )
+
+    @Test
+    fun aChangedCollationIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account ALTER COLUMN username TYPE VARCHAR(255) COLLATE \"C\"",
+    )
+
+    @Test
+    fun enabledRowLevelSecurityIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "ALTER TABLE Account ENABLE ROW LEVEL SECURITY",
+    )
+
+    @Test
+    fun anAddedPolicyIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "CREATE POLICY oidf_stray ON Account USING (true)",
+    )
+
+    @Test
+    fun aStandaloneEnumTypeIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "CREATE TYPE oidf_stray_type AS ENUM ('a', 'b')",
+    )
+
+    @Test
+    fun aStandaloneSequenceIsRefused() = assertLatestShapeWithChangeIsRefused(
+        "CREATE SEQUENCE oidf_stray_sequence",
+    )
+
+    @Test
+    fun aVersionTwoSchemaWithoutTheRootAccountIsRefused() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 2L)
+            driver.execute(null, "DELETE FROM Account WHERE username = 'root'", 0)
+
+            assertRefusedAndUnchanged(driver, "root")
+        }
+    }
+
+    @Test
+    fun aRoleWithoutTheCreatePrivilegeOnTheDatabaseGetsAnErrorThatNamesIt() {
+        val role = "adopter_" + java.util.UUID.randomUUID().toString().replace("-", "").take(12)
+        adminExecute("CREATE ROLE $role LOGIN PASSWORD '$role'")
+        createdRoles.add(role)
+        DriverManager.getConnection(databaseUrl(), "owner", "owner").use { connection ->
+            connection.createStatement().use { statement -> statement.execute("GRANT ALL ON SCHEMA public TO $role") }
+        }
+        openSource(role).use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 17L)
+
+            assertRefusedAndUnchanged(driver, "CREATE privilege on the database")
         }
     }
 

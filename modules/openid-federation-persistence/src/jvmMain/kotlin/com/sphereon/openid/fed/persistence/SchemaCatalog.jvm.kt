@@ -23,9 +23,17 @@ import app.cash.sqldelight.db.SqlDriver
 private val BOOKKEEPING_TABLES = setOf("schema_version", "schema_migration_history")
 
 /**
- * The shape of one PostgreSQL schema as sorted, comparable lines: columns (type, nullability, default, length),
- * indexes, foreign keys and check constraints. Schema names are stripped, so two schemas with the same shape give the
- * same lines. Row data is not part of it.
+ * The shape of one PostgreSQL schema as sorted, comparable lines. Compared, exactly as PostgreSQL reports them:
+ * - columns: position, type, nullability, default, character length, numeric and datetime precision and scale,
+ *   collation, identity and generated-column settings (and the generation expression);
+ * - indexes (their full definitions);
+ * - constraints: primary key, unique, foreign key and check (their full definitions);
+ * - non-internal triggers (their full definitions);
+ * - row-level security: whether it is enabled or forced per table, and every policy;
+ * - sequences not owned by a column, and standalone enum, domain, range and composite types.
+ *
+ * The only normalization is removing the schema qualifier, so two schemas with the same shape give the same lines.
+ * Letter case, quotes and casts are kept. Row data is not part of it.
  */
 internal fun captureSchemaCatalog(driver: SqlDriver, schema: String): List<String> {
     val excluded = BOOKKEEPING_TABLES.joinToString { "'$it'" }
@@ -33,14 +41,13 @@ internal fun captureSchemaCatalog(driver: SqlDriver, schema: String): List<Strin
     lines += queryLines(
         driver, schema,
         """
-        SELECT table_name, column_name, udt_name, is_nullable, column_default, character_maximum_length
+        SELECT table_name, column_name, ordinal_position::text, udt_name, is_nullable, column_default,
+               character_maximum_length::text, numeric_precision::text, numeric_scale::text, datetime_precision::text,
+               collation_name, is_identity, identity_generation, is_generated, generation_expression
         FROM information_schema.columns
         WHERE table_schema = ? AND table_name NOT IN ($excluded)
         """.trimIndent(),
-    ) { cursor ->
-        "col|${cursor.getString(0)}|${cursor.getString(1)}|${cursor.getString(2)}|${cursor.getString(3)}|" +
-            "${normalize(cursor.getString(4), schema)}|${cursor.getLong(5) ?: ""}"
-    }
+    ) { cursor -> "col|" + (0..14).joinToString("|") { index -> normalize(cursor.getString(index), schema) } }
     lines += queryLines(
         driver, schema,
         "SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = ? AND tablename NOT IN ($excluded)",
@@ -56,6 +63,60 @@ internal fun captureSchemaCatalog(driver: SqlDriver, schema: String): List<Strin
           AND rel.relname NOT IN ($excluded) AND con.conname NOT LIKE '%_not_null'
         """.trimIndent(),
     ) { cursor -> "con|${cursor.getString(0)}|${cursor.getString(1)}|${normalize(cursor.getString(2), schema)}" }
+    lines += queryLines(
+        driver, schema,
+        """
+        SELECT rel.relname, trg.tgname, pg_get_triggerdef(trg.oid, true)
+        FROM pg_catalog.pg_trigger trg
+        JOIN pg_catalog.pg_class rel ON rel.oid = trg.tgrelid
+        JOIN pg_catalog.pg_namespace ns ON ns.oid = rel.relnamespace
+        WHERE ns.nspname = ? AND NOT trg.tgisinternal AND rel.relname NOT IN ($excluded)
+        """.trimIndent(),
+    ) { cursor -> "trg|${cursor.getString(0)}|${cursor.getString(1)}|${normalize(cursor.getString(2), schema)}" }
+    lines += queryLines(
+        driver, schema,
+        """
+        SELECT rel.relname, rel.relrowsecurity::text, rel.relforcerowsecurity::text
+        FROM pg_catalog.pg_class rel JOIN pg_catalog.pg_namespace ns ON ns.oid = rel.relnamespace
+        WHERE ns.nspname = ? AND rel.relkind IN ('r', 'p') AND rel.relname NOT IN ($excluded)
+        """.trimIndent(),
+    ) { cursor -> "rls|${cursor.getString(0)}|${cursor.getString(1)}|${cursor.getString(2)}" }
+    lines += queryLines(
+        driver, schema,
+        """
+        SELECT tablename, policyname, permissive, roles::text, cmd, qual, with_check
+        FROM pg_catalog.pg_policies WHERE schemaname = ? AND tablename NOT IN ($excluded)
+        """.trimIndent(),
+    ) { cursor -> "pol|" + (0..6).joinToString("|") { index -> normalize(cursor.getString(index), schema) } }
+    lines += queryLines(
+        driver, schema,
+        """
+        SELECT cls.relname, format_type(seq.seqtypid, NULL), seq.seqstart::text, seq.seqincrement::text,
+               seq.seqmax::text, seq.seqmin::text, seq.seqcache::text, seq.seqcycle::text
+        FROM pg_catalog.pg_class cls
+        JOIN pg_catalog.pg_namespace ns ON ns.oid = cls.relnamespace
+        JOIN pg_catalog.pg_sequence seq ON seq.seqrelid = cls.oid
+        WHERE ns.nspname = ? AND cls.relkind = 'S'
+          AND NOT EXISTS (
+              SELECT 1 FROM pg_catalog.pg_depend dep
+              WHERE dep.objid = cls.oid AND dep.deptype IN ('a', 'i') AND dep.refobjsubid > 0
+          )
+        """.trimIndent(),
+    ) { cursor -> "seq|" + (0..7).joinToString("|") { index -> normalize(cursor.getString(index), schema) } }
+    lines += queryLines(
+        driver, schema,
+        """
+        SELECT typ.typname, typ.typtype::text,
+               coalesce((SELECT string_agg(label.enumlabel, ',' ORDER BY label.enumsortorder)
+                         FROM pg_catalog.pg_enum label WHERE label.enumtypid = typ.oid), '')
+        FROM pg_catalog.pg_type typ
+        JOIN pg_catalog.pg_namespace ns ON ns.oid = typ.typnamespace
+        WHERE ns.nspname = ?
+          AND (typ.typtype IN ('e', 'd', 'r', 'm')
+               OR (typ.typtype = 'c' AND EXISTS (
+                   SELECT 1 FROM pg_catalog.pg_class own WHERE own.oid = typ.typrelid AND own.relkind = 'c')))
+        """.trimIndent(),
+    ) { cursor -> "typ|${cursor.getString(0)}|${cursor.getString(1)}|${cursor.getString(2)}" }
     return lines.sorted()
 }
 
@@ -77,15 +138,8 @@ private fun queryLines(driver: SqlDriver, schema: String, sql: String, line: (Sq
         },
     ).value
 
+/** Removes the schema qualifier and nothing else. */
 private fun normalize(raw: String?, schema: String): String {
-    if (raw.isNullOrBlank()) return ""
-    return raw
-        .replace("\"$schema\".", "")
-        .replace("$schema.", "")
-        .replace(Regex("::[a-zA-Z_][a-zA-Z0-9_]*"), "")
-        .replace("'", "")
-        .replace("\"", "")
-        .replace(Regex("\\s+"), " ")
-        .trim()
-        .lowercase()
+    if (raw.isNullOrEmpty()) return ""
+    return raw.replace("\"$schema\".", "").replace("$schema.", "")
 }
