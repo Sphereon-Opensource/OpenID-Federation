@@ -16,7 +16,8 @@ WORKDIR /app
 
 # Copy the installDist output (includes jars and start scripts)
 COPY --from=builder /app/modules/openid-federation-public-server-ktor/build/install/openid-federation-public-server-ktor ./
-HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost:8080/.well-known/openid-federation || exit 1
+# The server migrates the schema before it binds its port and may wait up to ten minutes for the migration lock, so failures do not count until then.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=600s CMD curl -f http://localhost:8080/health || exit 1
 
 # Create non-root user
 RUN useradd -r -u 1001 -g root federation-server
