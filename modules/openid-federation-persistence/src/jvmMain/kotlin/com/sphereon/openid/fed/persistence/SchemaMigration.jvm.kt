@@ -86,6 +86,9 @@ private const val MIGRATION_LOCK_KEY: Long = 0x4F494446_4D494752L
  * serialization_failure, unique_violation (catalog races on `CREATE ... IF NOT EXISTS`) and lock_not_available
  * (the lock timeout).
  */
+/** SQLSTATE insufficient_privilege. */
+private const val INSUFFICIENT_PRIVILEGE = "42501"
+
 private val TRANSIENT_SQL_STATES = setOf("XX000", "40P01", "40001", "23505", "55P03")
 
 private fun sqlStateOf(failure: Throwable): String? {
@@ -113,7 +116,9 @@ private fun sqlStateOf(failure: Throwable): String? {
  * A schema that matches no version is refused with the differences listed, and nothing is changed. No file is ever
  * skipped.
  *
- * @throws IllegalStateException when every attempt failed with a transient error; the last one is the cause
+ * @throws IllegalStateException when every attempt failed with a transient error (the last one is the cause), or when
+ *   an unversioned schema was refused for adoption (no matching version, a missing `root` account at version 2, or no
+ *   CREATE privilege for the reference schema); in that case nothing was changed
  */
 internal fun runMigrations(driver: SqlDriver, policy: MigrationRetryPolicy = MigrationRetryPolicy()) {
     val transacter = MigrationTransacter(driver)
@@ -213,8 +218,13 @@ private fun migrateUnderLock(driver: SqlDriver, lockTimeoutMillis: Long) {
  * only the later files, so no file is ever skipped or half-applied. When no version matches, the differences against
  * the latest shape are listed in the error and nothing is stamped, so the transaction rolls back.
  *
- * A shape match proves the DDL, not the data: if a file's backfill statements never ran on a schema whose DDL is
- * complete, no catalog comparison can see it.
+ * A shape match proves the DDL, not the data. Data statements that follow their file's DDL can be missing without
+ * any difference in shape. This is accepted: file 26 inserts its first revision rows after its DDL, so a schema could
+ * be adopted with none, but the only path that reaches adoption is an install from before versioning, whose
+ * `TrustMarkType` table is empty. File 23's backfill cannot be missing on a matching schema, because its ADD CONSTRAINT
+ * statements follow its UPDATEs, so a schema with the constraints has had the UPDATEs. The one data check made is
+ * for version 2: the `root` account that file 1 inserts must exist. Adoption needs the CREATE privilege on the
+ * database for the reference schema; without it the error says so.
  *
  * @return the version V such that files 1 until V are present
  */
@@ -228,7 +238,17 @@ private fun adoptedVersion(driver: SqlDriver, newVersion: Long): Long {
     val referenceSchema = "oidf_adopt_ref_" + java.util.UUID.randomUUID().toString().replace("-", "")
     val live = captureSchemaCatalog(driver, liveSchema)
 
-    driver.execute(null, "CREATE SCHEMA $referenceSchema", 0)
+    try {
+        driver.execute(null, "CREATE SCHEMA $referenceSchema", 0)
+    } catch (failure: SQLException) {
+        if (failure.sqlState != INSUFFICIENT_PRIVILEGE) throw failure
+        throw IllegalStateException(
+            "Adopting an existing OpenID Federation schema that has no version record needs the CREATE privilege on the " +
+                "database, to build a temporary reference schema. Grant it to the migrating role, or give the schema a " +
+                "version record. Nothing was changed.",
+            failure,
+        )
+    }
     driver.execute(null, "SELECT set_config('search_path', '$referenceSchema', true)", 0)
     var matched: Long? = null
     var latestShape: List<String> = emptyList()
@@ -240,11 +260,23 @@ private fun adoptedVersion(driver: SqlDriver, newVersion: Long): Long {
     driver.execute(null, "SELECT set_config('search_path', '${originalSearchPath.replace("'", "''")}', true)", 0)
     driver.execute(null, "DROP SCHEMA $referenceSchema CASCADE", 0)
 
-    return matched ?: throw IllegalStateException(
+    val version = matched ?: throw IllegalStateException(
         "The existing OpenID Federation schema has no version record and does not match any version of this library, " +
             "so it was not adopted and nothing was changed. Differences against the latest version:\n" +
             describeCatalogDifferences(latestShape, live).joinToString("\n"),
     )
+    // Version 2 is the shape after file 1, whose last statement inserts the `root` account. A process killed between
+    // that file's DDL and its INSERT leaves the same shape without the row.
+    if (version == 2L) {
+        val rootRows = driver.executeQuery(null, "SELECT COUNT(*) FROM Account WHERE username = 'root'", parameters = 0, mapper = { cursor: SqlCursor ->
+            QueryResult.Value(if (cursor.next().value) cursor.getLong(0) else 0L)
+        }).value ?: 0L
+        check(rootRows > 0L) {
+            "The existing OpenID Federation schema has the shape of version 2 but no `root` account, so the first " +
+                "migration file did not finish. It was not adopted and nothing was changed."
+        }
+    }
+    return version
 }
 
 /**
