@@ -213,17 +213,102 @@ class FirstBootMigrationTest {
         }
     }
 
-    @Test
-    fun aSchemaMissingATableGetsOnlyThatTableCreatedOnAdoption() {
-        openSource().use { source ->
+    private fun greenfieldCatalog(): List<String> {
+        val reference = "firstboot_ref_" + java.util.UUID.randomUUID().toString().replace("-", "")
+        adminExecute("CREATE DATABASE $reference")
+        createdDatabases.add(reference)
+        HikariDataSource(HikariConfig().apply {
+            jdbcUrl = postgres.jdbcUrl.replace("/postgres", "/$reference")
+            username = "owner"
+            password = "owner"
+            maximumPoolSize = 1
+        }).use { source ->
             val driver = source.asJdbcDriver()
             Database.Schema.create(driver)
-            driver.execute(null, "DROP TABLE Log", 0)
+            return captureSchemaCatalog(driver, "public")
+        }
+    }
+
+    private fun tableNames(driver: SqlDriver): List<String> = driver.executeQuery(
+        null, "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name", parameters = 0,
+        mapper = { cursor: SqlCursor ->
+            val names = mutableListOf<String>()
+            while (cursor.next().value) names.add(cursor.getString(0)!!)
+            QueryResult.Value(names)
+        },
+    ).value
+
+    private fun assertRefusedAndUnchanged(driver: SqlDriver, expectedInMessage: String) {
+        val shapeBefore = captureSchemaCatalog(driver, "public")
+        val tablesBefore = tableNames(driver)
+
+        val failure = assertFailsWith<IllegalStateException> { runMigrations(driver, MigrationRetryPolicy(pause = {})) }
+
+        assertTrue(failure.message.orEmpty().contains(expectedInMessage), failure.message)
+        assertEquals(shapeBefore, captureSchemaCatalog(driver, "public"), "the schema is exactly as it was")
+        assertEquals(tablesBefore, tableNames(driver), "no version table, history table or reference schema table is left")
+        assertEquals(0L, scalar(driver, "SELECT COUNT(*) FROM pg_namespace WHERE nspname LIKE 'oidf_adopt_ref_%'"), "the reference schema is gone")
+    }
+
+    @Test
+    fun anAccountOnlySchemaIsAdoptedAndTheLaterFilesRunInOrder() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 2L)
+            driver.execute(null, "INSERT INTO Account (username, identifier) VALUES ('adopted_leaf', 'https://example.com/adopted_leaf')", 0)
 
             runMigrations(driver)
 
-            assertEquals(1L, scalar(driver, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'log'"), "the missing table is created, not just the version stamped")
+            assertEquals(greenfieldCatalog(), captureSchemaCatalog(driver, "public"))
             assertEquals(Database.Schema.version, scalar(driver, "SELECT MAX(version) FROM schema_version"))
+            assertEquals(1L, scalar(driver, "SELECT COUNT(*) FROM Account WHERE username = 'adopted_leaf'"))
+            assertEquals(Database.Schema.version - 1, scalar(driver, "SELECT COUNT(DISTINCT version) FROM schema_migration_history"))
+        }
+    }
+
+    @Test
+    fun aSchemaAtFilesOneToSixteenIsAdoptedAndTheLaterFilesRunInOrder() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 17L)
+
+            runMigrations(driver)
+
+            assertEquals(greenfieldCatalog(), captureSchemaCatalog(driver, "public"))
+            assertEquals(Database.Schema.version, scalar(driver, "SELECT MAX(version) FROM schema_version"))
+        }
+    }
+
+    @Test
+    fun aSchemaMissingAColumnOfTheLatestShapeIsRefusedAndLeftUnchanged() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.create(driver)
+            driver.execute(null, "ALTER TABLE Jwk DROP COLUMN revocation_reason", 0)
+
+            assertRefusedAndUnchanged(driver, "revocation_reason")
+        }
+    }
+
+    @Test
+    fun aPartlyAppliedFileTwentyThreeIsRefusedAndLeftUnchanged() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 23L)
+            driver.execute(null, "ALTER TABLE Jwk ADD COLUMN expires_at TIMESTAMP", 0)
+
+            assertRefusedAndUnchanged(driver, "revocation_reason")
+        }
+    }
+
+    @Test
+    fun aPartlyAppliedFileTwentyOneIsRefusedInsteadOfCascadingThroughTheLaterFiles() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, 21L)
+            driver.execute(null, "ALTER TABLE Jwk ADD CONSTRAINT jwk_account_id_id_unique UNIQUE (account_id, id)", 0)
+
+            assertRefusedAndUnchanged(driver, "accountsigningkey")
         }
     }
 
@@ -257,6 +342,18 @@ class FirstBootMigrationTest {
     }
 
     @Test
+    fun aTransientFailureWrappedInAnotherExceptionIsStillRetried() {
+        openSource().use { source ->
+            val failing = FailingDriver(source.asJdbcDriver(), failOn = "CREATE TABLE TrustMark ", sqlState = "40001", failures = 1, wrap = true)
+
+            runMigrations(failing, MigrationRetryPolicy(maxAttempts = 2, pause = {}))
+
+            assertEquals(1, failing.failureCount)
+            assertEquals(Database.Schema.version, scalar(failing.delegate, "SELECT MAX(version) FROM schema_version"))
+        }
+    }
+
+    @Test
     fun exhaustedRetriesGiveAClearErrorAndLeaveTheDatabaseUnchanged() {
         openSource().use { source ->
             val failing = FailingDriver(source.asJdbcDriver(), failOn = "CREATE TABLE TrustMark ", sqlState = "40P01", failures = Int.MAX_VALUE)
@@ -278,6 +375,7 @@ private class FailingDriver(
     private val failOn: String,
     private val sqlState: String,
     private val failures: Int,
+    private val wrap: Boolean = false,
 ) : SqlDriver by delegate {
     var failureCount: Int = 0
         private set
@@ -285,7 +383,8 @@ private class FailingDriver(
     override fun execute(identifier: Int?, sql: String, parameters: Int, binders: (SqlPreparedStatement.() -> Unit)?): QueryResult<Long> {
         if (sql.contains(failOn) && failureCount < failures) {
             failureCount++
-            throw SQLException("injected failure for the test", sqlState)
+            val failure = SQLException("injected failure for the test", sqlState)
+            throw if (wrap) IllegalStateException("wrapped by a layer above the driver", failure) else failure
         }
         return delegate.execute(identifier, sql, parameters, binders)
     }
