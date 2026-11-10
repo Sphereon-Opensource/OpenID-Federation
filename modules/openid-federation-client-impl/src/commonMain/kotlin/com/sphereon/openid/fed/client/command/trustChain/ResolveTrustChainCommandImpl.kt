@@ -496,10 +496,10 @@ class ResolveTrustChainCommandImpl(
                 }
 
                 return Pair(subordinateStatementJwt, subordinateStatement)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (e: Exception) {
-                logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.FETCH_OR_PARSE_FAILED, e)
+            } catch (failure: Throwable) {
+                // One handler: GraalVM 21 cannot parse several typed catches around a suspension inside a loop.
+                if (failure is CancellationException || failure !is Exception) throw failure
+                logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_FETCH, TrustChainDiagnosticReason.FETCH_OR_PARSE_FAILED, failure)
             }
         }
         logDiagnostic(TrustChainDiagnosticStage.SUBORDINATE_STATEMENT, TrustChainDiagnosticReason.NO_ACCEPTABLE_STATEMENT)

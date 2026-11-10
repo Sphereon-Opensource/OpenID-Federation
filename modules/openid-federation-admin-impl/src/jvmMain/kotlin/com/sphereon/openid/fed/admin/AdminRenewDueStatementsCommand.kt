@@ -103,8 +103,9 @@ class AdminRenewDueStatementsCommand internal constructor(
                         lifetimePolicy = lifetimePolicy, acknowledgeLifetimePolicy = lifetime.acknowledge)))
                     outcomes += StatementRenewalOutcome(kind, node.account_id, subordinate,
                         if (committed == null) StatementRenewalStatus.ALREADY_RENEWED else StatementRenewalStatus.RENEWED, expires, nextExpiry)
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (failure: Exception) {
+                } catch (failure: Throwable) {
+                    // One handler: GraalVM 21 cannot parse several typed catches around a suspension inside a loop.
+                    if (failure is CancellationException || failure !is Exception) throw failure
                     outcomes += StatementRenewalOutcome(kind, node.account_id, subordinate, StatementRenewalStatus.FAILED, expires, detail = failure.message)
                 }
             }

@@ -86,9 +86,9 @@ class VerifyEntityTrustCommandImpl(
                 }
                 val markExpiry = try {
                     decodeJWTComponents(mark).payload["exp"]?.let(EntityStatementValidation::conservativeExpiryEpochSeconds)
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
+                } catch (failure: Throwable) {
+                    // One handler: GraalVM 21 cannot parse several typed catches inside a loop of a suspend function.
+                    if (failure is CancellationException || failure !is Exception) throw failure
                     null
                 }
                 if (markExpiry != null) validUntil = minOf(validUntil, markExpiry)

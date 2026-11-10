@@ -290,10 +290,10 @@ class ResolveEntityCommandImpl(
                             )
                         }
                     }
-                } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (e: Exception) {
-                    logger.warn("Failed to verify trust mark ${trustMark.trustMarkType}: ${e.message}")
+                } catch (failure: Throwable) {
+                    // One handler: GraalVM 21 cannot parse several typed catches around a suspension inside a loop.
+                    if (failure is CancellationException || failure !is Exception) throw failure
+                    logger.warn("Failed to verify trust mark ${trustMark.trustMarkType}: ${failure.message}")
                 }
             }
 
