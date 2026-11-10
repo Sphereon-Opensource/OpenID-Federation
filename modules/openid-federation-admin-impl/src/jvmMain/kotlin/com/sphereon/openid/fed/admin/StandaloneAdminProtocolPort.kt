@@ -492,8 +492,11 @@ class StandaloneAdminProtocolPort internal constructor(
                 if (abortPending || preparation.document.string("status") == "ABORTED" ||
                     (preparation.document["lease_expires_at"] as? JsonPrimitive)?.longOrNull?.let { it <= now() } == true)
                     abortKeyPreparation(scope, preparation.key.resourceId)
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { /* Durable ABORTED/PENDING state is retried by independent maintenance. */ }
+            } catch (failure: Throwable) {
+                // One handler: GraalVM 21 cannot parse several typed catches around a suspension inside a loop.
+                if (failure is CancellationException || failure !is Exception) throw failure
+                /* Durable ABORTED/PENDING state is retried by independent maintenance. */
+            }
             finally { store.touchKeyPreparation(scope, preparation.key.resourceId) }
         }
     }
