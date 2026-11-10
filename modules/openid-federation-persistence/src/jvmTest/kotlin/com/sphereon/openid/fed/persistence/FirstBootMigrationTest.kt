@@ -18,6 +18,7 @@ package com.sphereon.openid.fed.persistence
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.asJdbcDriver
 import com.sphereon.openid.fed.core.tenant.IdentityInstallState
 import com.zaxxer.hikari.HikariConfig
@@ -30,10 +31,12 @@ import org.junit.Test
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import java.sql.DriverManager
+import java.sql.SQLException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -185,5 +188,105 @@ class FirstBootMigrationTest {
             assertEquals(historyRows, scalar(driver, "SELECT COUNT(*) FROM schema_migration_history"))
             assertEquals(tables, scalar(driver, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"))
         }
+    }
+
+    @Test
+    fun aPopulatedOlderSchemaIsBroughtToTheLatestVersionWithItsDataKept() {
+        val baselineVersion = 17L
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.migrate(driver, 0L, baselineVersion)
+            driver.execute(null, "CREATE TABLE schema_version (version INTEGER NOT NULL)", 0)
+            driver.execute(null, "INSERT INTO schema_version (version) VALUES ($baselineVersion)", 0)
+            driver.execute(null, "INSERT INTO Account (username, identifier) VALUES ('older_leaf', 'https://example.com/older_leaf')", 0)
+
+            runMigrations(driver)
+
+            assertEquals(Database.Schema.version, scalar(driver, "SELECT MAX(version) FROM schema_version"))
+            assertEquals(1L, scalar(driver, "SELECT COUNT(*) FROM Account WHERE username = 'older_leaf'"))
+            assertEquals(
+                Database.Schema.version - 1,
+                scalar(driver, "SELECT COUNT(DISTINCT version) FROM schema_migration_history"),
+                "earlier files are backfilled, later files are recorded as they run",
+            )
+            assertEquals(1L, scalar(driver, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'trustanchorhint'"))
+        }
+    }
+
+    @Test
+    fun aSchemaMissingATableGetsOnlyThatTableCreatedOnAdoption() {
+        openSource().use { source ->
+            val driver = source.asJdbcDriver()
+            Database.Schema.create(driver)
+            driver.execute(null, "DROP TABLE Log", 0)
+
+            runMigrations(driver)
+
+            assertEquals(1L, scalar(driver, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'log'"), "the missing table is created, not just the version stamped")
+            assertEquals(Database.Schema.version, scalar(driver, "SELECT MAX(version) FROM schema_version"))
+        }
+    }
+
+    @Test
+    fun aFailedRunRollsBackEverythingAndRecordsNoVersion() {
+        openSource().use { source ->
+            val failing = FailingDriver(source.asJdbcDriver(), failOn = "CREATE TABLE TrustMark ", sqlState = "42000", failures = Int.MAX_VALUE)
+
+            assertFailsWith<SQLException> { runMigrations(failing, MigrationRetryPolicy(pause = {})) }
+
+            assertEquals(1, failing.failureCount, "a non-transient error is not retried")
+            val tables = scalar(failing.delegate, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+            assertEquals(0L, tables, "no table, version record or history row of the failed run remains")
+        }
+    }
+
+    @Test
+    fun aTransientFailureIsRetriedAndThenSucceeds() {
+        openSource().use { source ->
+            val failing = FailingDriver(source.asJdbcDriver(), failOn = "CREATE TABLE TrustMark ", sqlState = "XX000", failures = 2)
+            val pauses = mutableListOf<Long>()
+
+            runMigrations(failing, MigrationRetryPolicy(maxAttempts = 3, backoffMillis = 10L, pause = { pauses.add(it) }))
+
+            assertEquals(2, failing.failureCount)
+            assertEquals(listOf(10L, 20L), pauses)
+            assertEquals(Database.Schema.version, scalar(failing.delegate, "SELECT MAX(version) FROM schema_version"))
+            assertEquals(1L, scalar(failing.delegate, "SELECT COUNT(*) FROM schema_version"))
+            assertEquals(Database.Schema.version - 1, scalar(failing.delegate, "SELECT COUNT(*) FROM schema_migration_history"), "history has one row per file, none from the failed attempts")
+        }
+    }
+
+    @Test
+    fun exhaustedRetriesGiveAClearErrorAndLeaveTheDatabaseUnchanged() {
+        openSource().use { source ->
+            val failing = FailingDriver(source.asJdbcDriver(), failOn = "CREATE TABLE TrustMark ", sqlState = "40P01", failures = Int.MAX_VALUE)
+
+            val failure = assertFailsWith<IllegalStateException> { runMigrations(failing, MigrationRetryPolicy(maxAttempts = 3, pause = {})) }
+
+            assertTrue(failure.message.orEmpty().contains("failed 3 times"), failure.message)
+            assertTrue(failure.message.orEmpty().contains("40P01"), failure.message)
+            assertTrue(failure.cause is SQLException)
+            assertEquals(3, failing.failureCount)
+            assertEquals(0L, scalar(failing.delegate, "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"))
+        }
+    }
+}
+
+/** Throws a database error when a statement containing [failOn] runs, for the first [failures] times. */
+private class FailingDriver(
+    val delegate: SqlDriver,
+    private val failOn: String,
+    private val sqlState: String,
+    private val failures: Int,
+) : SqlDriver by delegate {
+    var failureCount: Int = 0
+        private set
+
+    override fun execute(identifier: Int?, sql: String, parameters: Int, binders: (SqlPreparedStatement.() -> Unit)?): QueryResult<Long> {
+        if (sql.contains(failOn) && failureCount < failures) {
+            failureCount++
+            throw SQLException("injected failure for the test", sqlState)
+        }
+        return delegate.execute(identifier, sql, parameters, binders)
     }
 }
