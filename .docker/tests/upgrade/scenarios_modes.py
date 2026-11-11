@@ -115,4 +115,23 @@ def keycloak(env, report, options):
     report.check(answer[0] == 200, f"with the client set to typ at+jwt it accepts it again ({answer.describe()})")
 
 
-MODE_SCENARIOS = {"signing": signing, "fresh": fresh, "external": external, "keycloak": keycloak}
+def account_operations(env, report, options):
+    """Create an account and delete a source-created account after the preservation checks, in an isolated lane."""
+    upgrade(env, report, options)
+    admin, token = env.url("admin"), env.token(typ=AT_JWT)
+    migrated_id = env.psql("SELECT id FROM Account WHERE username = 'beta'").strip()
+    report.anchor(bool(migrated_id), "the source-created beta account exists before deletion")
+    answer = http("POST", f"{admin}/accounts", token, body={"username": "gamma", "identifier": identifier("gamma")})
+    report.anchor(answer[0] == 201, f"the legacy account API creates an account on the upgraded database ({answer.describe()})")
+    answer = http("GET", f"{admin}/accounts", token)
+    report.check(answer[0] == 200 and "gamma" in answer[1] and migrated_id in answer[1],
+                 f"the created and migrated accounts are both listed ({answer.describe()})")
+    answer = http("DELETE", f"{admin}/accounts", token, {"X-Account-Username": "beta"})
+    report.check(answer[0] == 200, f"the legacy account API deletes the migrated beta account ({answer.describe()})")
+    answer = http("GET", f"{admin}/accounts", token)
+    report.check(answer[0] == 200 and migrated_id not in answer[1] and "gamma" in answer[1] and "alpha" in answer[1],
+                 f"the deleted migrated account is absent and the other accounts remain ({answer.describe()})")
+
+
+MODE_SCENARIOS = {"signing": signing, "fresh": fresh, "external": external, "keycloak": keycloak,
+                  "account-operations": account_operations}

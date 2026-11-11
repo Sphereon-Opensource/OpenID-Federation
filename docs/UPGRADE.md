@@ -106,9 +106,10 @@ target needs:
 |---|---|
 | `OIDF_FEDERATION_STATEMENT_LIFETIME_SECONDS` | Required. `3600` is the usual value. |
 | `OIDF_OAUTH2_ISSUER_URI` | Admin image. The earlier `OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI` still works. The image refuses to start without an issuer. |
+| `OIDF_OAUTH2_AUDIENCE` | Required for the admin image in this upgrade procedure. Use an audience that the issuer grants only to administrators. The target does not enforce the earlier `admin` role, so restrict issuance of tokens for this audience at the issuer. |
 | `OAUTH2_CLIENT_ALLOW_INSECURE_HTTP=true` | Admin image, only when the issuer URL is `http://` on a host other than `localhost`, for example `http://keycloak:8080/realms/...` inside a Docker network. Without it every call answers 401 `IdP discovery failed`. The earlier images accepted such an issuer. Prefer `https://`. |
 | `OIDF_ACCOUNT_HEADER_PRINCIPAL_CLAIM` and `OIDF_ACCOUNT_HEADER_ALLOWED_PRINCIPALS` | Admin image, only when clients select an account with `X-Account-Username`. Set the claim to `sub` and list the token subjects that may do it. The list is empty by default and an empty list answers 403 to the header. |
-| `OIDF_DATASOURCE_SCHEMA_MANAGEMENT=verify` | Optional on the public image and on extra admin replicas: the service runs no DDL and refuses to start unless another instance migrated the schema. |
+| `OIDF_DATASOURCE_SCHEMA_MANAGEMENT=verify` | Optional on the public image and on extra admin replicas: the service runs no DDL and refuses to start unless another instance migrated the schema. Also set `OIDF_IDENTITY_MODE=account` on these containers for an existing account-based installation: verify mode does not set the process-local existing-database signal used by automatic identity-mode selection. |
 
 Entry points, ports and health paths of the target images:
 

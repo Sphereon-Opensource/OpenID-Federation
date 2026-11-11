@@ -38,6 +38,7 @@ that a broken run ends in `FAIL` lines and a non-zero exit instead of a stack tr
 |---|---|
 | `upgrade` | Source images provision accounts, keys, a subordinate and statements. The target images start on the volume. All preserved manifest values are equal, the derived values are what the source rows require, every migration file is recorded once, and the legacy account API, the admin API and the public endpoint answer. |
 | `restart` | Two restarts of each target image replay no migration and rewrite no history row. |
+| `account-operations` | After the upgrade preservation checks, create an account and delete a source-created account through the legacy account API, then verify the remaining account list. This destructive check uses its own database so restart and rollback comparisons retain their original fixtures. |
 | `blocked` | A migration that fails (a conflicting table) stops the target with the failing file named, leaves the source schema untouched, and finishes after the cause is removed. |
 | `simultaneous` | Two admin images and the public image started at the same moment against the source database apply each migration file once. |
 | `restore` | A plain SQL backup restored into new databases runs under the source image (rollback) and upgrades again under the target image. |
