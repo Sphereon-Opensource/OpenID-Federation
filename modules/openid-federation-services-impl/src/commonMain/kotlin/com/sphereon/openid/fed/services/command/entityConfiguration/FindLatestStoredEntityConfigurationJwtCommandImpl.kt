@@ -11,6 +11,7 @@ import com.sphereon.openid.fed.core.error.federationErr
 import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.openid.fed.persistence.Persistence
 import dev.zacsweers.metro.ContributesBinding
+import com.sphereon.openid.fed.services.command.isStoredStatementLive
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
@@ -36,9 +37,7 @@ class FindLatestStoredEntityConfigurationJwtCommandImpl(
         return try {
             val managed = Persistence.adminDocumentQueries.find(accountId, "configuration", "", "").executeAsOneOrNull()
             if (managed != null) {
-                val artifact = managed.artifact?.takeIf { compact ->
-                    runCatching { (com.sphereon.openid.fed.client.mapper.decodeJWTComponents(compact).payload["exp"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.let { it > System.currentTimeMillis() / 1000 } == true }.getOrDefault(false)
-                }
+                val artifact = managed.artifact?.takeIf { compact -> isStoredStatementLive(compact, System.currentTimeMillis() / 1000) }
                 return IdkResult.ok(StoredEntityConfigurationJwt(artifact))
             }
             val statement = Persistence.entityConfigurationStatementQueries

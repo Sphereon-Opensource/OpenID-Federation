@@ -57,6 +57,9 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
       "secret": "th1s1s4s3cr3tth4tMUSTb3ch4ng3d",
+      "attributes": {
+        "access.token.header.type.rfc9068": "true"
+      },
       "protocolMappers": [
         {
           "name": "realm-role-mapper",

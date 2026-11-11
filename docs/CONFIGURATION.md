@@ -281,6 +281,17 @@ session config for effective tenant keys). No parallel OIDFed YAML engine.
 The identity modes are described in the [README](../README.md#identity-modes-account-and-external). Admin always requires a Bearer JWT and a non-blank
 `oidf.oauth2.issuer.uri`.
 
+What the IDK resource server demands of the identity provider, and what the earlier Spring admin server did not:
+
+- **The access token header `typ` is `at+jwt`** (RFC 9068). A token with `typ` `JWT`, which is what Keycloak issues by default,
+  is refused with 401 `Malformed token`. In Keycloak enable *Use "at+jwt" as access token header type* on the client
+  (attribute `access.token.header.type.rfc9068`, available from Keycloak 26.3, 26.0 ignores it), the bundled realm in `.docker/keycloak` sets it and `docker-compose.yaml` runs 26.3.
+- **An `http` issuer needs `OAUTH2_CLIENT_ALLOW_INSECURE_HTTP=true`** unless the host is `localhost`, `127.0.0.1`, `[::1]` or
+  `*.localhost`. Without it discovery fails and every call answers 401 `IdP discovery failed`. Use an `https` issuer in production.
+- **Roles are not read.** The earlier admin server required the `admin` role in the `roles` claim on every path. Access is now
+  decided by the issuer, `oidf.oauth2.audience` and, for `X-Account-Username`, the principal allow-list. Set the audience to
+  the client that only administrators obtain tokens for.
+
 ## File-only (zero OIDFed env) Docker
 
 ```bash
