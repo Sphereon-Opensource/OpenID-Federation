@@ -1,0 +1,10 @@
+CREATE TABLE SubordinateJwk (
+    id UUID AS kotlin.String DEFAULT gen_random_uuid() PRIMARY KEY,
+    subordinate_id UUID AS kotlin.String NOT NULL,
+    key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP,
+    CONSTRAINT FK_ParentSubordinateJwk FOREIGN KEY (subordinate_id) REFERENCES Subordinate (id)
+);
+
+CREATE INDEX subordinate_jwk_account_id_index ON SubordinateJwk (subordinate_id);
