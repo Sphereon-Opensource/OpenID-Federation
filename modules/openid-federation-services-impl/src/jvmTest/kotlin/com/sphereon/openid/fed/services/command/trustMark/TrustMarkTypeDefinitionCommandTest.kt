@@ -23,6 +23,7 @@ import com.sphereon.openid.fed.persistence.Database
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
 import com.sphereon.openid.fed.persistence.models.Account
 import com.sphereon.openid.fed.persistence.models.AccountQueries
+import com.sphereon.openid.fed.persistence.models.Metadata
 import com.sphereon.openid.fed.persistence.models.AccountSigningKey as AccountSigningKeyEntity
 import com.sphereon.openid.fed.persistence.models.AccountSigningKeyQueries
 import com.sphereon.openid.fed.persistence.models.Jwk
@@ -31,6 +32,7 @@ import com.sphereon.openid.fed.persistence.models.TrustMark
 import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkType
 import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
+import com.sphereon.openid.fed.persistence.models.MetadataQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkTypeRevision
 import com.sphereon.openid.fed.services.command.jwk.FindAccountSigningKeySelectionCommandImpl
 import com.sphereon.openid.fed.services.command.jwk.ResolveAccountSigningKeyCommandImpl
@@ -99,6 +101,7 @@ class TrustMarkTypeDefinitionCommandTest {
     private lateinit var selectionQueries: AccountSigningKeyQueries
     private lateinit var typeQueries: TrustMarkTypeQueries
     private lateinit var trustMarkQueries: TrustMarkQueries
+    private lateinit var metadataQueries: MetadataQueries
     private lateinit var keyManager: KeyManagerService
     private lateinit var jwtService: JwtService
     private lateinit var resolver: TenantContextResolver
@@ -116,6 +119,7 @@ class TrustMarkTypeDefinitionCommandTest {
             AccountSigningKeyEntity.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
         typeQueries = typeQueries(driver)
         trustMarkQueries = TrustMarkQueries(driver, TrustMarkAdapter = TrustMark.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
+        metadataQueries = MetadataQueries(driver, Metadata.Adapter(JavaUuidStringAdapter, JavaUuidStringAdapter))
         val app = createExactSuperiorEvidenceTestGraph(this@TrustMarkTypeDefinitionCommandTest)
         session = app.userContextManager.getAnonymous().sessionContextManager.createOrGetFromId(
             "trust-mark-types-" + UUID.randomUUID(), principalType = PrincipalType.ANONYMOUS)
@@ -190,7 +194,7 @@ class TrustMarkTypeDefinitionCommandTest {
         execution, jwtService, resolver,
         ResolveAccountSigningKeyCommandImpl(execution,
             FindAccountSigningKeySelectionCommandImpl(execution, accountQueries, selectionQueries), jwkQueries),
-        trustMarkQueries, typeQueries,
+        trustMarkQueries, typeQueries, metadataQueries,
     )
 
     private val extensions: JsonObject = buildJsonObject {
@@ -411,6 +415,34 @@ class TrustMarkTypeDefinitionCommandTest {
         assertEquals(iat + 3600, claims["exp"]!!.jsonPrimitive.double)
         assertEquals(iat + 3600, issued.value.exp)
         assertEquals((iat + 3600).toInt(), trustMarkQueries.findByAccountIdAndId(accountId, issued.value.id!!).executeAsOne().exp)
+    }
+
+    @Test
+    fun canonicalIssuanceSignsDisplayNamesFromStoredTypeAndFederationMetadata() = runTest {
+        createType(definition(name = "IedereenZorgt keurmerk"))
+        metadataQueries.create(accountId, "federation_entity", """{"display_name":"IedereenZorgt keurmerkuitgever","organization_name":"Fallback issuer"}""").executeAsOne()
+
+        val issued = issue().execute(CreateTrustMarkArgs(accountId,
+            CreateTrustMarkRequest(sub = "https://subject.example", trustMarkType = typeIdentifier, iat = 1_800_000_000.0),
+            System.currentTimeMillis()))
+        assertTrue(issued.isOk, issued.toString())
+        val display = payload(issued.value.trustMarkValue)["https://sphereon.com/claims/trust-mark-display"]!!.jsonObject
+        assertEquals("IedereenZorgt keurmerk", display["name"]!!.jsonPrimitive.content)
+        assertEquals("IedereenZorgt keurmerkuitgever", display["issuer_name"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun canonicalIssuanceUsesOrganizationNameWhenFederationDisplayNameIsAbsent() = runTest {
+        createType(definition(name = "Bounded trust mark"))
+        metadataQueries.create(accountId, "federation_entity", """{"organization_name":"Organization label"}""").executeAsOne()
+
+        val issued = issue().execute(CreateTrustMarkArgs(accountId,
+            CreateTrustMarkRequest(sub = "https://subject.example", trustMarkType = typeIdentifier, iat = 1_800_000_000.0),
+            System.currentTimeMillis()))
+        assertTrue(issued.isOk, issued.toString())
+        val display = payload(issued.value.trustMarkValue)["https://sphereon.com/claims/trust-mark-display"]!!.jsonObject
+        assertEquals("Bounded trust mark", display["name"]!!.jsonPrimitive.content)
+        assertEquals("Organization label", display["issuer_name"]!!.jsonPrimitive.content)
     }
 
     @Test

@@ -26,9 +26,11 @@ import com.sphereon.openid.fed.core.error.toIdkErrorResult
 import com.sphereon.openid.fed.openapi.models.CreateTrustMarkResult
 import com.sphereon.openid.fed.openapi.models.JwtHeader
 import com.sphereon.openid.fed.openapi.models.TrustMark
+import com.sphereon.openid.fed.openapi.models.TrustMarkPayload
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.TrustMarkQueries
 import com.sphereon.openid.fed.persistence.models.TrustMarkTypeQueries
+import com.sphereon.openid.fed.persistence.models.MetadataQueries
 import com.sphereon.openid.fed.core.error.TenantNotFoundError
 import com.sphereon.openid.fed.core.tenant.TenantContextResolver
 import com.sphereon.openid.fed.services.JwkService
@@ -65,6 +67,10 @@ class GetTrustMarksForAccountCommandImpl(
     }
 }
 
+private const val TRUST_MARK_DISPLAY_CLAIM = "https://sphereon.com/claims/trust-mark-display"
+private const val FEDERATION_ENTITY_METADATA_KEY = "federation_entity"
+private const val MAX_TRUST_MARK_DISPLAY_LENGTH = 200
+
 // CreateTrustMarkCommand Implementation
 @SingleIn(SessionScope::class)
 @ContributesBinding(SessionScope::class, binding = binding<CreateTrustMarkCommand>())
@@ -75,6 +81,7 @@ class CreateTrustMarkCommandImpl internal constructor(
     private val resolveSigningKey: ResolveAccountSigningKeyCommand,
     private val trustMarkQueries: TrustMarkQueries,
     private val trustMarkTypeQueries: TrustMarkTypeQueries,
+    private val metadataQueries: MetadataQueries,
 ) : TypedServiceCommandAdapter<CreateTrustMarkArgs, CreateTrustMarkResult, FederationError>(
     commandId = CreateTrustMarkCommand.COMMAND_ID, execution = execution,
     inputTypeToken = typeToken<CreateTrustMarkArgs>(),
@@ -90,7 +97,7 @@ class CreateTrustMarkCommandImpl internal constructor(
         resolveSigningKey: ResolveAccountSigningKeyCommand,
     ) : this(
         execution, jwtService, tenantContextResolver, resolveSigningKey,
-        Persistence.trustMarkQueries, Persistence.trustMarkTypeQueries,
+        Persistence.trustMarkQueries, Persistence.trustMarkTypeQueries, Persistence.metadataQueries,
     )
 
     override suspend fun doExecute(args: CreateTrustMarkArgs, applyDuring: (CreateTrustMarkArgs) -> CreateTrustMarkArgs): IdkResult<CreateTrustMarkResult, FederationError> {
@@ -125,7 +132,28 @@ class CreateTrustMarkCommandImpl internal constructor(
             if (exp != null) trustMark.exp(exp)
 
             val header = JwtHeader(typ = "trust-mark+jwt", kid = key.kid, alg = key.alg)
-            val jwtResult = jwtService.signPayload(trustMark.build(), header, key.kid, key.kmsKeyRef, key.kms)
+            val standardClaims = Json.encodeToJsonElement(TrustMarkPayload.serializer(), trustMark.build()).jsonObject
+            val issuerDisplay = metadataQueries.findByAccountIdAndKey(tenantId, FEDERATION_ENTITY_METADATA_KEY)
+                .executeAsList()
+                .asSequence()
+                .mapNotNull { row -> runCatching { Json.parseToJsonElement(row.metadata).jsonObject }.getOrNull() }
+                .mapNotNull { metadata ->
+                    (metadata["display_name"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                        ?.trim()?.takeIf { it.isNotEmpty() }
+                        ?: (metadata["organization_name"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                            ?.trim()?.takeIf { it.isNotEmpty() }
+                }
+                .firstOrNull()
+                ?.take(MAX_TRUST_MARK_DISPLAY_LENGTH)
+            val typeDisplay = definition?.name?.trim()?.takeIf { it.isNotEmpty() }
+                ?.take(MAX_TRUST_MARK_DISPLAY_LENGTH)
+            val signedClaims = if (typeDisplay != null || issuerDisplay != null) {
+                JsonObject(standardClaims + (TRUST_MARK_DISPLAY_CLAIM to buildJsonObject {
+                    typeDisplay?.let { put("name", it) }
+                    issuerDisplay?.let { put("issuer_name", it) }
+                }))
+            } else standardClaims
+            val jwtResult = jwtService.signPayload(signedClaims, header, key.kid, key.kmsKeyRef, key.kms)
             if (jwtResult.isErr) return jwtResult.error.asErrorResult()
             val jwt = jwtResult.value
 
