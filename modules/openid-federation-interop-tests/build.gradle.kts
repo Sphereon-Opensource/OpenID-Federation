@@ -11,11 +11,11 @@ kotlin { jvmToolchain(21) }
 
 dependencies {
     testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
-    testImplementation("org.testcontainers:testcontainers:1.21.3")
+    testImplementation(sphereonlib.org.junit.jupiter.junit.jupiter)
+    testRuntimeOnly(sphereonlib.org.junit.platform.junit.platform.launcher)
+    testImplementation(sphereonlib.org.testcontainers.testcontainers)
     testImplementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
-    testImplementation("org.bouncycastle:bcpkix-jdk18on:1.80")
+    testImplementation(sphereonlib.org.bouncycastle.bcpkix.jdk18on)
     testImplementation("com.microsoft.playwright:playwright:1.63.0")
 }
 
