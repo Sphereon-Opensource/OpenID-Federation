@@ -58,10 +58,10 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     versionCatalogs {
         create("sphereonplug") {
-            from("com.sphereon.gradle:gradle-plugin-bom:0.10.0-SNAPSHOT@toml" as String)
+            gbsCatalogFile("gradle-plugin-bom", "sphereonGradlePluginBom")?.let { from(files(it)) } ?: from("com.sphereon.gradle:gradle-plugin-bom:0.10.0-SNAPSHOT@toml" as String)
         }
         create("sphereonlib") {
-            from("com.sphereon.gradle:library-bom:0.10.0-SNAPSHOT@toml" as String)
+            gbsCatalogFile("library-bom", "sphereonLibraryBom")?.let { from(files(it)) } ?: from("com.sphereon.gradle:library-bom:0.10.0-SNAPSHOT@toml" as String)
         }
         create("idklib") {
             from("com.sphereon.idk:idk-bom:0.26.0-SNAPSHOT@toml" as String)
@@ -239,3 +239,15 @@ if (selectedFederationModules != null) {
         "openidFederation.modules contains unknown module names: " + (selectedFederationModules - includedFederationModules)
     }
 }
+
+
+/**
+ * The gradle-build-support catalog generated in this workspace
+ * (`gradle-build-support/versions/<module>/build/tomlCatalog/<catalog>.versioned.toml` in this
+ * checkout or a parent), or null. A workspace that builds gradle-build-support from source then
+ * reads its catalog entries before they are published; elsewhere the published catalog is used.
+ */
+fun gbsCatalogFile(module: String, catalog: String): File? =
+    generateSequence(settingsDir) { it.parentFile }
+        .map { it.resolve("gradle-build-support/versions/$module/build/tomlCatalog/$catalog.versioned.toml") }
+        .firstOrNull { it.isFile }
