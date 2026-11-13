@@ -58,7 +58,7 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit5")) // Use the JUnit 5 variant
-                implementation("org.junit.jupiter:junit-jupiter-engine:5.10.2") // Use an appropriate version
+                implementation(sphereonlib.org.junit.jupiter.junit.jupiter.engine)
                 // PLATFORM e2e: tenant claim helpers + OpenAPI models + in-process admin
                 implementation(projects.modules.openidFederationCorePublic)
                 implementation(projects.modules.openidFederationOpenapi)
