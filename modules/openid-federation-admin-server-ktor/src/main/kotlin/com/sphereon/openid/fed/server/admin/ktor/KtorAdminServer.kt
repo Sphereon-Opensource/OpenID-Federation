@@ -8,6 +8,7 @@ import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.core.config.StatementRenewalConfig
+import com.sphereon.openid.fed.persistence.initializePersistence
 import com.sphereon.openid.fed.server.admin.ktor.renewal.SessionStatementRenewalRunner
 import com.sphereon.openid.fed.server.admin.ktor.renewal.installAdminKeyMaintenance
 import com.sphereon.openid.fed.server.admin.ktor.renewal.StatementRenewalScheduler
@@ -29,6 +30,7 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
+import kotlin.system.exitProcess
 import kotlinx.serialization.json.Json
 
 private val logger = Log.app().withTag("KtorAdminServer")
@@ -68,6 +70,14 @@ fun main() {
     // Get configuration from the component (loaded via OidfConfigBinder)
     val config = appGraph.serverConfig
     logger.info("Configuration loaded: rootIdentifier=${config.rootIdentifier}, port=${config.port}")
+
+    // Open the database before the port: a failed migration must stop the process, not leave a healthy server over an unusable schema.
+    try {
+        initializePersistence()
+    } catch (failure: Throwable) {
+        logger.error("The persistence layer could not start, stopping: ${failure.message}", failure)
+        exitProcess(1)
+    }
 
     // Start Ktor server
     embeddedServer(CIO, port = config.port, host = config.host) {

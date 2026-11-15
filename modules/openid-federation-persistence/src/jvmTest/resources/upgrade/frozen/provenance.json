@@ -1,0 +1,103 @@
+{
+  "description": "Byte copies of the migrations shipped by the two supported source schema classes. Class A (507e2e3d) is v0.23.0. Class B (dae7b01c) is v0.20.7, which differs from class A only in 2.sqm.",
+  "hash": "sha256 over the file bytes with CRLF normalised to LF",
+  "sources": [
+    {
+      "tag": "v0.23.0",
+      "commit": "b285ab77d3483ec0afa183bec586c9f1e28e3dc5",
+      "files": [
+        {
+          "file": "v0.23.0/1.sqm",
+          "gitBlob": "59fe5a402ece1cc6b0a221f2359a178dcc1504ea",
+          "sha256": "4388c43bb371ae9737796babf3c0e4232f2746deac1ab7ea89d8425375a8fb03"
+        },
+        {
+          "file": "v0.23.0/2.sqm",
+          "gitBlob": "65434b55af760820509a1f20846e79c7f9b2ba4b",
+          "sha256": "bff7e9c94916f7af5f1c468c6cf844c2a43f0e7f204b5c493841744907e0044d"
+        },
+        {
+          "file": "v0.23.0/3.sqm",
+          "gitBlob": "dca9a0f16463ecd44455faa20725a89aaf40b3f2",
+          "sha256": "bf8df3c8e239b6a516a7817f41e987cea155173ea7d34ba9ec28ddda49591a73"
+        },
+        {
+          "file": "v0.23.0/4.sqm",
+          "gitBlob": "9da3661fc71db057d6323512b4a43c44773988ac",
+          "sha256": "b810e28ea463d46b050b433e12820fa03c8b8b7a261464ba00c0591e5eb7d9e6"
+        },
+        {
+          "file": "v0.23.0/5.sqm",
+          "gitBlob": "68cf3d54b3738166c47f5be7a81ecb0dae9c62b9",
+          "sha256": "93ba35a280b2bfe80dbbfe204012d7b804b7b8aaa0224436094e04d72ba1fcad"
+        },
+        {
+          "file": "v0.23.0/6.sqm",
+          "gitBlob": "08d1c90d9837041fdfd61f26b709f6d801180400",
+          "sha256": "d324bb9722bab095563795095192b0273bf70091450ed6323fc886aabceb3f4f"
+        },
+        {
+          "file": "v0.23.0/7.sqm",
+          "gitBlob": "d212a567f9f65230ec414e5917a417bcd40ee0cc",
+          "sha256": "50d0f45a81612d5c11ef74f4c8871d41d2a8761131c26d9275e9188d28d147f8"
+        },
+        {
+          "file": "v0.23.0/8.sqm",
+          "gitBlob": "5c0b1ad4884d03c0dea6c53e40926939cdd15851",
+          "sha256": "643c64b18c4d38e0aa88fd9ad837956dec87fde7f07ec4e9cde9bd7c69807840"
+        },
+        {
+          "file": "v0.23.0/9.sqm",
+          "gitBlob": "9d31194250dd0c642f73cd566ba8f077f795595d",
+          "sha256": "a83a6e2c32cb3a030224634991a1ba4ba508806121cbe1b437f662cb46ba6dc4"
+        },
+        {
+          "file": "v0.23.0/10.sqm",
+          "gitBlob": "70009c9d5898127f43b762a7dd3915fe9fc200d5",
+          "sha256": "304ca260d1f3a2d2e2f0fc65b00a0b6d6daefc09605c207384c8db797e663d3d"
+        },
+        {
+          "file": "v0.23.0/11.sqm",
+          "gitBlob": "9c851fdc6097e3d94518c419e99a4aaf717528b1",
+          "sha256": "ab797f4bbe62d4306a5d63ea4d228a66dcb89fe2f4ceea1f04a130ec2b54959b"
+        },
+        {
+          "file": "v0.23.0/12.sqm",
+          "gitBlob": "f78c91f9d3af4ef23450c6cc5df29e99ea593239",
+          "sha256": "094f2fe3c39f09fa1e8632bbe6d5a3205e8b43e3583169359f38245e0a3c4448"
+        },
+        {
+          "file": "v0.23.0/13.sqm",
+          "gitBlob": "19aa048b033be3684872acd6fa475ad7c3bebb00",
+          "sha256": "0825a2f0f2f33ac4762bb649ab2c5fed1df677998c123962e15766d2b17fe22a"
+        },
+        {
+          "file": "v0.23.0/14.sqm",
+          "gitBlob": "2c75551e4eed9d97a8bcddf0b248974431761d12",
+          "sha256": "e36e5bd1b0568d0ecab661803e2aa68a258534050ebf07aadaf5ff2782a87a88"
+        },
+        {
+          "file": "v0.23.0/15.sqm",
+          "gitBlob": "77858128d3a01f885552851f3f3f80530325ee15",
+          "sha256": "8914d98530161f1746427a7aae40085175ce209d3db13b4272a8f4fdbedc50a2"
+        },
+        {
+          "file": "v0.23.0/16.sqm",
+          "gitBlob": "2552b3838814a8d7142e76025a0f9b5e28feef6f",
+          "sha256": "b52d82e8c1224d7ab8d4b062e4ad59af4f55957928f3c211ae9a4e0c39fcb5e9"
+        }
+      ]
+    },
+    {
+      "tag": "v0.20.7",
+      "commit": "6fabf6a0c503852800013811bba0870f6211316a",
+      "files": [
+        {
+          "file": "v0.20.7/2.sqm",
+          "gitBlob": "259b6c6cadf85c0e30de00be086dc3adb3c7be4f",
+          "sha256": "f242212e8dfc57f3cd69fd2c7d50ee20f0db9595b03e2649b4bc8ddf405a77e8"
+        }
+      ]
+    }
+  ]
+}

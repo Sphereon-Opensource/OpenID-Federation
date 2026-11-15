@@ -136,6 +136,9 @@ services:
       OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI: ${OAUTH2_RESOURCE_SERVER_JWT_ISSUER_URI:-http://keycloak:8080/realms/openid-federation}
       OIDF_OAUTH2_AUDIENCE: ${OIDF_OAUTH2_AUDIENCE:-}
       OIDF_OAUTH2_JWT_AUTH_ENABLED: ${OIDF_OAUTH2_JWT_AUTH_ENABLED:-auto}
+      # The IDK accepts an http issuer only on loopback unless this is true. The bundled Keycloak is http://keycloak:8080.
+      # Set it to false (or leave it unset elsewhere) when the issuer is https.
+      OAUTH2_CLIENT_ALLOW_INSECURE_HTTP: ${OAUTH2_CLIENT_ALLOW_INSECURE_HTTP:-true}
       KMS_PROVIDERS_MEMORY_TYPE: ${KMS_PROVIDERS_MEMORY_TYPE:-}
       KMS_PROVIDERS_MEMORY_ID: ${KMS_PROVIDERS_MEMORY_ID:-}
       KMS_PROVIDERS_MEMORY_ENABLED: ${KMS_PROVIDERS_MEMORY_ENABLED:-}
@@ -178,7 +181,8 @@ services:
       - ./config:/app/config:ro
 
   keycloak:
-    image: keycloak/keycloak:26.0
+    # 26.3 or later: the access token header type at+jwt that the admin server requires is not available in 26.0.
+    image: keycloak/keycloak:26.3
     user: keycloak
     security_opt:
       - no-new-privileges:true

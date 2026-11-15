@@ -1,0 +1,15 @@
+-- Brings data written by an official release (0.16.8 up to 0.23.1-beta.7f6c091) in line with what the current
+-- services read. No statement creates, replaces or removes a key, and each one selects only rows it has not
+-- changed yet, so a second run changes nothing. No signing key is selected here: the services publish only with a
+-- key an operator selected, and an upgrade never infers that choice.
+
+-- The public key carries the algorithm. Releases up to 0.20.9-beta had no Jwk.alg column (SchemaMigrator adds it
+-- before this file runs) and some later rows left it empty.
+UPDATE Jwk
+SET alg = trim(substring(key, '"alg"\s*:\s*"([^"]*)"'))
+WHERE (alg IS NULL OR trim(alg) = '')
+AND trim(substring(key, '"alg"\s*:\s*"([^"]*)"')) <> '';
+
+-- Those releases stored the KmsType enum name. The KMS provider registry matches provider ids exactly and the
+-- default ids are lower case, so only these three names change and every other id is left as it is.
+UPDATE Jwk SET kms = lower(kms) WHERE kms IN ('MEMORY', 'AWS', 'AZURE');
