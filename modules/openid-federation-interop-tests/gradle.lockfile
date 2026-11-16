@@ -1,0 +1,7 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+# To regenerate this file, run: ./gradlew :modules:openid-federation-interop-tests:dependencies --write-locks
+org.jetbrains.kotlin:kotlin-stdlib:2.4.20=runtimeClasspath
+org.jetbrains:annotations:13.0=runtimeClasspath
+empty=

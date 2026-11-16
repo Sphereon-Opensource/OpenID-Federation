@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.client
 
 import com.sphereon.core.api.cache.CacheManager
+import com.sphereon.core.api.cache.ScopedCache
 import com.sphereon.core.api.conf.TenantConfigService
 import com.sphereon.core.api.context.SessionExecution
 import com.sphereon.crypto.jose.jws.JwtService
@@ -15,6 +16,7 @@ import com.sphereon.openid.fed.client.helpers.OfflineTrustChainPolicy
 import com.sphereon.openid.fed.core.cache.OidfCache
 import com.sphereon.openid.fed.core.config.OidfConfigBinder
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
+import com.sphereon.openid.fed.httpResolver.HttpMetadata
 import com.sphereon.openid.fed.httpResolver.HttpMetadataCacheSerializers
 import com.sphereon.openid.fed.httpResolver.HttpResolver
 import com.sphereon.openid.fed.httpResolver.config.DefaultHttpResolverConfig
@@ -25,6 +27,7 @@ import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.AppScope
+import io.ktor.client.HttpClient
 import io.ktor.http.Url
 
 /**
@@ -89,18 +92,14 @@ interface FederationContextComponent {
             valueSerializer = com.sphereon.core.api.cache.CacheSerializers.string,
         )
 
-        val httpResolver = HttpResolver(
+        val httpResolver = federationHttpResolver(
             config = DefaultHttpResolverConfig(maxStatementReuseSeconds = statementMaxReuseSeconds(configBinder)),
             httpClient = httpClient,
             cache = httpCache,
-            responseMapper = ::readBoundedFederationResponse,
-        ).also { resolver ->
-            // Namespace APP and TENANT cache entries by the process policy, and validate URL syntax before cache reads.
-            // A restarted process with a revoked allowlist cannot reuse the previous policy's persistent entries.
-            resolver.installRequestPolicy(counterpartyEgressSettings.cacheNamespace) { url ->
-                egressPolicy.validate(Url(url))
-            }
-        }
+            egressPolicy = egressPolicy,
+            cacheNamespace = counterpartyEgressSettings.cacheNamespace,
+            holderHttpClient = { httpClientFactory.createClient(federationCounterpartyClientOptions(HOLDER_COUNTERPARTY_EGRESS_POLICY)) },
+        )
 
         return FederationContext(
             jwtService = jwtService,
@@ -111,6 +110,52 @@ interface FederationContextComponent {
         )
     }
 }
+
+/**
+ * The policy of a wallet holder fetching on counterparty-supplied URLs: the plain counterparty egress rule, without the
+ * operator's private IPv4 targets. Those targets admit federation hosts on internal networks for server work; a holder
+ * never reaches loopback, private or link-local addresses.
+ */
+internal val HOLDER_COUNTERPARTY_EGRESS_POLICY: UrlValidationPolicy = UrlValidationPolicy.COUNTERPARTY_EGRESS
+
+/** Cache partition for holder counterparty fetches; never equal to a server policy partition. */
+internal val HOLDER_COUNTERPARTY_EGRESS_CACHE_NAMESPACE: String =
+    "oidf-holder-counterparty-egress|" + federationCounterpartyCacheNamespace(HOLDER_COUNTERPARTY_EGRESS_POLICY)
+
+/**
+ * The federation [HttpResolver]. Unmarked calls fetch through [httpClient] under [egressPolicy] and [cacheNamespace].
+ * Calls marked as holder counterparty fetches (see
+ * [withCounterpartyEgress][com.sphereon.ktor.http.client.provider.withCounterpartyEgress]) are checked against
+ * [HOLDER_COUNTERPARTY_EGRESS_POLICY], fetch through the client [holderHttpClient] creates on first use, and use their
+ * own cache partition.
+ */
+internal fun federationHttpResolver(
+    config: DefaultHttpResolverConfig,
+    httpClient: HttpClient,
+    cache: ScopedCache<String, HttpMetadata<String>>,
+    egressPolicy: UrlValidationPolicy,
+    cacheNamespace: String,
+    holderHttpClient: () -> HttpClient,
+): HttpResolver<String> =
+    HttpResolver(
+        config = config,
+        httpClient = httpClient,
+        cache = cache,
+        responseMapper = ::readBoundedFederationResponse,
+    ).also { resolver ->
+        // Namespace APP and TENANT cache entries by the process policy, and validate URL syntax before cache reads.
+        // A restarted process with a revoked allowlist cannot reuse the previous policy's persistent entries.
+        resolver.installRequestPolicy(cacheNamespace) { url ->
+            egressPolicy.validate(Url(url))
+        }
+        // Without private targets the server client already enforces the holder policy, so it is shared; the
+        // holder calls still keep their own cache partition.
+        val holderClient: () -> HttpClient =
+            if (egressPolicy == HOLDER_COUNTERPARTY_EGRESS_POLICY) ({ httpClient }) else holderHttpClient
+        resolver.installCounterpartyEgressRoute(HOLDER_COUNTERPARTY_EGRESS_CACHE_NAMESPACE, holderClient) { url ->
+            HOLDER_COUNTERPARTY_EGRESS_POLICY.validate(Url(url))
+        }
+    }
 
 /** [OidfConfigKeys.Cache.HTTP_RESOLVER_STATEMENT_MAX_REUSE_SECONDS]: empty keeps the default; anything else must be a positive number of seconds. */
 internal fun statementMaxReuseSeconds(configBinder: OidfConfigBinder): Long {

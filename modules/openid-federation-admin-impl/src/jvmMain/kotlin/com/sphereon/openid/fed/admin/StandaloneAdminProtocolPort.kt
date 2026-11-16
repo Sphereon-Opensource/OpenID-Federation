@@ -74,6 +74,7 @@ class StandaloneAdminProtocolPort internal constructor(
     private val keyQueries get() = database?.jwkQueries ?: Persistence.jwkQueries
     private val selectionQueries get() = database?.accountSigningKeyQueries ?: Persistence.accountSigningKeyQueries
     private val documentQueries get() = database?.adminDocumentQueries ?: Persistence.adminDocumentQueries
+    private val trustMarkTypeQueries get() = database?.trustMarkTypeQueries ?: Persistence.trustMarkTypeQueries
     private fun keyState(accountId: String) = adminKeyState(accountId, keyQueries, selectionQueries, documentQueries)
 
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
@@ -248,15 +249,40 @@ class StandaloneAdminProtocolPort internal constructor(
         if (allowed != null && types.any { !EntityStatementValidation.isEntityTypeAllowed(it, allowed) }) adminFail("subject_mismatch", 422, "Subject violates allowed_entity_types")
     }
 
+    private fun displayText(value: JsonElement?): String? = (value as? JsonPrimitive)
+        ?.takeIf { it.isString }
+        ?.content?.trim()
+        ?.takeIf { it.isNotEmpty() && it.length <= 200 }
+
+    private suspend fun trustMarkDisplay(scope: AdminNodeScope, key: AdminDocumentKey): JsonObject? {
+        if (key.collection != "trust-mark-grant") return null
+        val type = trustMarkTypeQueries.findLatestByAccountAndIdentifier(scope.accountId, key.resourceId).executeAsOneOrNull()
+            ?.takeIf { it.deleted_at == null } ?: return null
+        val typeName = runCatching {
+            type.definition?.let { Json.parseToJsonElement(it).jsonObject["name"] }
+        }.getOrNull()?.let(::displayText)
+        val configuration = store.read(scope, AdminDocumentKey("configuration"))?.document
+        val metadata = configuration?.get("metadata") as? JsonObject
+        val federation = metadata?.get("federation_entity") as? JsonObject
+        val issuerName = displayText(federation?.get("display_name")) ?: displayText(federation?.get("organization_name"))
+        if (typeName == null && issuerName == null) return null
+        return buildJsonObject {
+            typeName?.let { put("name", it) }
+            issuerName?.let { put("issuer_name", it) }
+        }
+    }
+
     private suspend fun claims(scope: AdminNodeScope, key: AdminDocumentKey, document: JsonObject, time: Long, publicKeys: JsonObject? = null): JsonObject {
         val issuer = (if (key.collection == "configuration") document.string("entity_id") ?: identifier(scope) else identifier(scope))
             ?: adminFail("not_initialized", 409, "Node Entity Identifier is not configured")
         val issuance = if (key.collection == "trust-mark-grant") store.read(scope, AdminDocumentKey("trust-mark-type", key.resourceId))?.document else null
+        val displayClaim = trustMarkDisplay(scope, key)
         val lifetime = (document["lifetime"] as? JsonPrimitive)?.longOrNull ?: (issuance?.get("lifetime") as? JsonPrimitive)?.longOrNull ?: config.getFederationConfig().statementLifetimeSeconds
             ?: adminFail("not_initialized", 409, "No statement lifetime is configured")
         return buildJsonObject {
-            issuance?.let { adminSignedClaims(it).forEach { (k,v) -> put(k,v) } }
-            adminSignedClaims(document).filterKeys { !(it == "authority_hints" && (document[it] as? JsonArray)?.isEmpty() == true) }.forEach { (k,v) -> put(k,v) }
+            issuance?.let { adminSignedClaims(it).filterKeys { claim -> claim != TRUST_MARK_DISPLAY_CLAIM }.forEach { (k,v) -> put(k,v) } }
+            adminSignedClaims(document).filterKeys { it != TRUST_MARK_DISPLAY_CLAIM && !(it == "authority_hints" && (document[it] as? JsonArray)?.isEmpty() == true) }.forEach { (k,v) -> put(k,v) }
+            displayClaim?.let { put(TRUST_MARK_DISPLAY_CLAIM, it) }
             if (key.collection == "configuration") {
                 put("jwks", publicKeys ?: publicJwks(scope))
             }
@@ -508,5 +534,8 @@ class StandaloneAdminProtocolPort internal constructor(
     }
     private fun invalid(detail: String, pointer: String? = null): Nothing = adminFail("invalid_federation_claim", 400, detail, pointer)
     private fun now() = clock()
-    companion object { private val PRIVATE_JWK_MEMBERS = setOf("d", "p", "q", "dp", "dq", "qi", "oth", "k", "dP", "dQ", "qInv") }
+    companion object {
+        private const val TRUST_MARK_DISPLAY_CLAIM = "https://sphereon.com/claims/trust-mark-display"
+        private val PRIVATE_JWK_MEMBERS = setOf("d", "p", "q", "dp", "dq", "qi", "oth", "k", "dP", "dQ", "qInv")
+    }
 }
