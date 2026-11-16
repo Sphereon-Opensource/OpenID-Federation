@@ -11,7 +11,7 @@ kotlin { jvmToolchain(21) }
 
 dependencies {
     testImplementation(kotlin("test-junit5"))
-    testImplementation(sphereonlib.org.junit.jupiter.junit.jupiter)
+    testImplementation(sphereonlib.org.junit.jupiter.junit.jupiter.asProvider())
     testRuntimeOnly(sphereonlib.org.junit.platform.junit.platform.launcher)
     testImplementation(sphereonlib.org.testcontainers.testcontainers)
     testImplementation("com.nimbusds:nimbus-jose-jwt:10.0.2")

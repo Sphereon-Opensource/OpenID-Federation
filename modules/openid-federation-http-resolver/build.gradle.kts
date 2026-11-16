@@ -83,7 +83,7 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit5"))
-                implementation(sphereonlib.org.junit.jupiter.junit.jupiter)
+                implementation(sphereonlib.org.junit.jupiter.junit.jupiter.asProvider())
             }
         }
     }
