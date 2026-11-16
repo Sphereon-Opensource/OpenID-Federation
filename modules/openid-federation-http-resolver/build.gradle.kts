@@ -22,7 +22,7 @@ kotlin {
         }
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-http-resolver"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation HTTP Resolver Module"
             customField("description", "OpenID Federation HTTP Resolver Module")
             customField("license", "Apache-2.0")

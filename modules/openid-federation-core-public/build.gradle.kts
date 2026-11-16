@@ -23,7 +23,7 @@ kotlin {
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-core-public"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation Core Public API - Error types and interfaces for IDK integration"
             customField("description", "OpenID Federation Core Public API")
             customField("license", "Apache-2.0")

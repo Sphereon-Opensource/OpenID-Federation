@@ -23,7 +23,7 @@ kotlin {
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-common"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation Common Library"
             customField("description", "OpenID Federation Common Library")
             customField("license", "Apache-2.0")

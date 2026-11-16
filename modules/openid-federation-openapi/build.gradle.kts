@@ -314,7 +314,7 @@ kotlin {
 
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-open-api"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation OpenAPI Library (Kotlin Multiplatform)"
             customField("description", "OpenID Federation OpenAPI Library")
             customField("license", "Apache-2.0")
