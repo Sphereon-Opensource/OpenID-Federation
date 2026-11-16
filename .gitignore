@@ -4752,3 +4752,6 @@ kotlin-js-store/wasm/yarn.lock
 
 __pycache__/
 *.py[cod]
+
+# Generated Kotlin/JS lock; its workspace package versions carry the commit id, so it is not reproducible.
+kotlin-js-store/
