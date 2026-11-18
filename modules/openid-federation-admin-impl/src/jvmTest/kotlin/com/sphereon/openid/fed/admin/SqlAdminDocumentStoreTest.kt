@@ -837,7 +837,7 @@ class SqlAdminDocumentStoreTest {
         var protocol = port()
         val first = protocol.keys(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"ES256"}}""")))
         val firstKid = first.document!!.getValue("kid").jsonPrimitive.content
-        val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list","federation_trust_mark_endpoint":"https://ta.example/trust-mark"}},"extension_claim":{"preserved":true}}""")
+        val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"organization_name":"IedereenZorgt keurmerkuitgever","display_name":"IedereenZorgt keurmerkuitgever","federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list","federation_trust_mark_endpoint":"https://ta.example/trust-mark"}},"extension_claim":{"preserved":true}}""")
         var workflow = DefaultAdminWorkflow(store, protocol)
         val published = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config))
         assertTrue(published.isOk)
@@ -849,11 +849,15 @@ class SqlAdminDocumentStoreTest {
         val issuance = workflow.execute(AdminOperation.CreateAdminTrustMarkType, AdminCommandArgs(scope,
             document = doc("""{"trust_mark_type":"https://ta.example/marks/signed","lifetime":900,"ref":"https://ta.example/policy","logo_uri":"https://ta.example/logo.png"}""")))
         assertTrue(issuance.isOk)
+        val savedType = database.trustMarkTypeQueries.findLatestByAccountAndIdentifier(scope.accountId, "https://ta.example/marks/signed").executeAsOne()
+        val namedDefinition = """{"name":"Zorgaanbieder","lifetimeSeconds":900,"ref":"https://ta.example/policy","logoUri":"https://ta.example/logo.png"}"""
+        database.trustMarkTypeQueries.updateDefinition(namedDefinition, scope.accountId, savedType.id, savedType.version).executeAsOne()
         val issued = protocol.prepare(scope, AdminDocumentKey("trust-mark-grant", "https://ta.example/marks/signed", "https://op.example"),
-            doc("""{"entity_id":"https://op.example","trust_mark_type":"https://ta.example/marks/signed","status":"active"}"""))
+            doc("""{"entity_id":"https://op.example","trust_mark_type":"https://ta.example/marks/signed","status":"active","https://sphereon.com/claims/trust-mark-display":{"name":"attacker"}}"""))
         val issuedClaims = decodeJWTComponents(issued.artifact).payload
         assertEquals(JsonPrimitive("https://ta.example/policy"), issuedClaims["ref"])
         assertEquals(JsonPrimitive("https://ta.example/logo.png"), issuedClaims["logo_uri"])
+        assertEquals(buildJsonObject { put("name", "Zorgaanbieder"); put("issuer_name", "IedereenZorgt keurmerkuitgever") }, issuedClaims["https://sphereon.com/claims/trust-mark-display"])
         assertEquals(900L, issuedClaims.getValue("exp").jsonPrimitive.long - issuedClaims.getValue("iat").jsonPrimitive.long)
         val invalidPolicy = JsonObject(config + ("metadata_policy" to doc("""{"openid_provider":{"foo":{"essential":"yes"}}}""")))
         assertTrue(workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = invalidPolicy)).isErr)

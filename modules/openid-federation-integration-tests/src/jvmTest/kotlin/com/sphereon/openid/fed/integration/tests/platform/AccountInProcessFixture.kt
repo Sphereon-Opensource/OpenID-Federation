@@ -4,6 +4,7 @@ import com.sphereon.crypto.kms.keystore.memory.MemoryKeyStoreBackingStorageImpl
 import com.sphereon.core.api.conf.DefaultAppMapPropertySource
 import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.common.config.getEnvironmentVariable
+import com.sphereon.openid.fed.core.config.DatasourceConfig
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.core.config.OidfConfigKeys
 import com.sphereon.openid.fed.server.admin.ktor.configureAdmin
@@ -16,6 +17,8 @@ import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import kotlinx.coroutines.runBlocking
+import java.sql.Connection
+import java.sql.DriverManager
 
 /**
  * In-process **ACCOUNT** stack for authenticated integration tests:
@@ -162,11 +165,8 @@ class AccountInProcessFixture(
          */
         val shared: AccountInProcessFixture by lazy { AccountInProcessFixture() }
 
-        fun seedAccountConfig(
-            issuerUri: String,
-            audience: String,
-        ) {
-            // Resolve via OIDF config env pipeline (OIDF_* + legacy DATASOURCE_*), not System.getenv.
+        /** The database the fixture servers use, resolved through the OIDF config env pipeline (OIDF_* + legacy DATASOURCE_*). */
+        fun datasourceSettings(): DatasourceConfig {
             val dsUrl =
                 getEnvironmentVariable(OidfConfigKeys.Datasource.URL)
                     ?: "jdbc:postgresql://localhost:5432/openid-federation-db"
@@ -176,12 +176,22 @@ class AccountInProcessFixture(
                 } else {
                     dsUrl
                 }
-            val dsUser =
-                getEnvironmentVariable(OidfConfigKeys.Datasource.USER)
-                    ?: "openid-federation-db-user"
-            val dsPass =
-                getEnvironmentVariable(OidfConfigKeys.Datasource.PASSWORD)
-                    ?: "openid-federation-db-password"
+            return DatasourceConfig(
+                url = hostLocalDs,
+                user = getEnvironmentVariable(OidfConfigKeys.Datasource.USER) ?: "openid-federation-db-user",
+                password = getEnvironmentVariable(OidfConfigKeys.Datasource.PASSWORD) ?: "openid-federation-db-password",
+            )
+        }
+
+        /** A plain JDBC connection to the fixture database, for tests that provision records the way an earlier release left them. */
+        fun openDatabaseConnection(): Connection =
+            datasourceSettings().let { DriverManager.getConnection(it.url, it.user, it.password) }
+
+        fun seedAccountConfig(
+            issuerUri: String,
+            audience: String,
+        ) {
+            val datasource = datasourceSettings()
 
             val props =
                 mapOf(
@@ -192,9 +202,9 @@ class AccountInProcessFixture(
                     OidfConfigKeys.OAuth2.ISSUER_URI to issuerUri,
                     OidfConfigKeys.OAuth2.AUDIENCE to audience,
                     OidfConfigKeys.OAuth2.JWT_AUTH_ENABLED to "true",
-                    OidfConfigKeys.Datasource.URL to hostLocalDs,
-                    OidfConfigKeys.Datasource.USER to dsUser,
-                    OidfConfigKeys.Datasource.PASSWORD to dsPass,
+                    OidfConfigKeys.Datasource.URL to datasource.url,
+                    OidfConfigKeys.Datasource.USER to datasource.user,
+                    OidfConfigKeys.Datasource.PASSWORD to datasource.password,
                     // Declared protocol identity is distinct from the fixture's loopback API transport.
                     OidfConfigKeys.Federation.STATEMENT_LIFETIME_SECONDS to "3600",
                     // The fixture database outlives a test run; background renewal of earlier runs' statements would

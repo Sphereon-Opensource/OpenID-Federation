@@ -1,6 +1,7 @@
 package com.sphereon.openid.fed.persistence
 
 import app.cash.sqldelight.db.SqlDriver
+import com.sphereon.openid.fed.core.tenant.IdentityInstallState
 import com.sphereon.openid.fed.persistence.config.DatabaseConfig
 import com.sphereon.openid.fed.persistence.config.SchemaManagement
 import com.sphereon.openid.fed.persistence.database.JavaUuidStringAdapter
@@ -86,7 +87,10 @@ internal class PersistenceDatabase {
         val config = DatabaseConfig()
         driver = createDriver(config)
         when (config.schemaManagement) {
-            SchemaManagement.MIGRATE -> runMigrations(driver)
+            SchemaManagement.MIGRATE -> {
+                val migration = SchemaMigrator(driver).migrate()
+                if (migration.existingDatabase) IdentityInstallState.markExistingDatabase(migration.fromVersion)
+            }
             SchemaManagement.VERIFY -> verifySchema(driver, Database.Schema.version)
         }
         // We are mapping the Postgres UUID types to OpenAPI model string types

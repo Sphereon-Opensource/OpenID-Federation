@@ -17,7 +17,7 @@ kotlin {
         useEsModules()
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-client-test-js"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation Client JS Test Module"
             customField("type", "module")
         }
