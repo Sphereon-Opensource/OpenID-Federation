@@ -22,7 +22,7 @@ kotlin {
         }
         compilations["main"].packageJson {
             name = "@sphereon/openid-federation-http-resolver"
-            version = rootProject.extra["npmVersion"] as String
+            version = rootProject.version.toString()
             description = "OpenID Federation HTTP Resolver Module"
             customField("description", "OpenID Federation HTTP Resolver Module")
             customField("license", "Apache-2.0")
@@ -83,7 +83,7 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test-junit5"))
-                implementation("org.junit.jupiter:junit-jupiter:5.10.1")
+                implementation(sphereonlib.org.junit.jupiter.junit.jupiter.asProvider())
             }
         }
     }

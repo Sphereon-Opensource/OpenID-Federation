@@ -420,7 +420,7 @@ class OidfTrustValidationService(
             JsonPrimitive(maxChainDepth),
             JsonPrimitive(request.context.type),
             request.context.framework?.let { JsonPrimitive(it) } ?: JsonNull,
-            JsonObject(request.context.parameters.toSortedMap().mapValues { JsonPrimitive(it.value) }),
+            JsonObject(request.context.parameters.entries.sortedBy { it.key }.associate { it.key to JsonPrimitive(it.value) }),
             request.validationTime?.let { JsonPrimitive(it.toString()) } ?: JsonNull,
             JsonPrimitive(request.checkRevocation),
             request.entityDiscovery?.let { Json.encodeToJsonElement(EntityDiscoveryOptions.serializer(), it) } ?: JsonNull,

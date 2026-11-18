@@ -11,9 +11,11 @@ pluginManagement {
                 content { includeGroupAndSubgroups("com.sphereon") }
             }
         }
+        // Never GBS from Maven Local: a stale copy would shadow the published catalogs and conventions.
         mavenLocal {
             content {
                 includeGroupAndSubgroups("com.sphereon")
+                excludeGroupAndSubgroups("com.sphereon.gradle")
             }
         }
         google {
@@ -80,9 +82,11 @@ dependencyResolutionManagement {
                 content { includeGroupAndSubgroups("com.sphereon") }
             }
         }
+        // Never GBS from Maven Local: a stale copy would shadow the published catalogs and conventions.
         mavenLocal {
             content {
                 includeGroupAndSubgroups("com.sphereon")
+                excludeGroupAndSubgroups("com.sphereon.gradle")
             }
         }
         google {
