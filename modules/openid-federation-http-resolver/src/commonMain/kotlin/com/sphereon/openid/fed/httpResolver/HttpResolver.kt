@@ -2,6 +2,7 @@ package com.sphereon.openid.fed.httpResolver
 
 import com.sphereon.core.api.cache.CacheScope
 import com.sphereon.core.api.cache.ScopedCache
+import com.sphereon.ktor.http.client.provider.isCounterpartyEgress
 import com.sphereon.openid.fed.httpResolver.config.DefaultHttpResolverConfig
 import com.sphereon.openid.fed.httpResolver.config.HttpResolverConfig
 import io.ktor.client.*
@@ -39,6 +40,7 @@ class HttpResolver<V : Any>(
     private var validateUrl: ((String) -> Unit)? = null
     private var cacheNamespace: String? = null
     private var requestPolicyInstalled: Boolean = false
+    private var counterpartyEgressRoute: CounterpartyEgressRoute? = null
 
     /** Current time in epoch seconds; tests replace it to move past a cached document's freshness bound. */
     internal var epochSeconds: () -> Long = { currentEpochSeconds() }
@@ -49,19 +51,61 @@ class HttpResolver<V : Any>(
         validator: (String) -> Unit,
     ) {
         check(!requestPolicyInstalled) { "A request policy is already installed" }
-        require(cacheNamespace.isNotBlank() && cacheNamespace.length <= 16_384) {
-            "The cache namespace must be non-empty and at most 16384 characters"
+        requireCacheNamespace(cacheNamespace)
+        require(cacheNamespace != counterpartyEgressRoute?.cacheNamespace) {
+            "The request policy and the counterparty egress route must use different cache namespaces"
         }
         this.cacheNamespace = cacheNamespace
         validateUrl = validator
         requestPolicyInstalled = true
     }
 
-    private fun validate(url: String) {
-        validateUrl?.invoke(url)
+    /**
+     * Installs the route used when the current call is a wallet holder fetching on counterparty-supplied URLs (see
+     * [withCounterpartyEgress][com.sphereon.ktor.http.client.provider.withCounterpartyEgress]). Such a call checks
+     * its URLs with [validator], fetches through the client [httpClient] creates on first use and reads and writes
+     * cache entries only under [cacheNamespace], so it never reuses a document another call fetched under a looser
+     * policy. Calls without the mark keep the request policy and client of this resolver.
+     */
+    fun installCounterpartyEgressRoute(
+        cacheNamespace: String,
+        httpClient: () -> HttpClient,
+        validator: (String) -> Unit,
+    ) {
+        check(counterpartyEgressRoute == null) { "A counterparty egress route is already installed" }
+        requireCacheNamespace(cacheNamespace)
+        require(cacheNamespace != this.cacheNamespace) {
+            "The request policy and the counterparty egress route must use different cache namespaces"
+        }
+        counterpartyEgressRoute = CounterpartyEgressRoute(cacheNamespace, httpClient, validator)
     }
 
-    private fun cacheKey(url: String): String = cacheNamespace?.let { namespace -> "ns:${namespace.length}:$namespace|url:${url.length}:$url" } ?: url
+    private fun requireCacheNamespace(cacheNamespace: String) {
+        require(cacheNamespace.isNotBlank() && cacheNamespace.length <= 16_384) {
+            "The cache namespace must be non-empty and at most 16384 characters"
+        }
+    }
+
+    /** The counterparty egress route when one is installed and the current call is marked; otherwise null. */
+    private suspend fun holderRoute(): CounterpartyEgressRoute? = counterpartyEgressRoute?.takeIf { isCounterpartyEgress() }
+
+    private suspend fun validate(url: String) {
+        val holder = holderRoute()
+        if (holder != null) holder.validator(url) else validateUrl?.invoke(url)
+    }
+
+    private suspend fun client(): HttpClient = holderRoute()?.httpClient ?: httpClient
+
+    private suspend fun cacheKey(url: String): String =
+        (holderRoute()?.cacheNamespace ?: cacheNamespace)?.let { namespace -> "ns:${namespace.length}:$namespace|url:${url.length}:$url" } ?: url
+
+    private class CounterpartyEgressRoute(
+        val cacheNamespace: String,
+        clientProvider: () -> HttpClient,
+        val validator: (String) -> Unit,
+    ) {
+        val httpClient: HttpClient by lazy(clientProvider)
+    }
     /**
      * Adds conditional cache headers to the HTTP request based on cached metadata.
      * Uses the APP scope to check for existing cache entries.
@@ -93,7 +137,7 @@ class HttpResolver<V : Any>(
     ): R {
         try {
             logger.debug("Attempting HTTP request for $url (attempt $attempt/${config.httpRetries})")
-            return httpClient.prepareGet(url) {
+            return client().prepareGet(url) {
                 applyCacheHeaders(url, cachedMetadata)
                 expectedContentType?.let { header(HttpHeaders.Accept, it) }
                 timeout {
@@ -239,7 +283,7 @@ class HttpResolver<V : Any>(
     suspend fun postJwt(url: String, formParameters: Parameters): String {
         validate(url)
         val value = try {
-            httpClient.preparePost(url) {
+            client().preparePost(url) {
                 setBody(io.ktor.client.request.forms.FormDataContent(formParameters))
                 timeout { requestTimeoutMillis = config.httpTimeoutMs }
             }.execute { response ->

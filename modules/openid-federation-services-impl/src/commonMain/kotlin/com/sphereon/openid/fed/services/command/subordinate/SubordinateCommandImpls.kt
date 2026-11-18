@@ -1,5 +1,6 @@
 package com.sphereon.openid.fed.services.command.subordinate
 
+import com.sphereon.openid.fed.services.command.isStoredStatementLive
 import com.sphereon.openid.fed.services.command.StatementSigningValidation
 import com.sphereon.openid.fed.services.command.renewal.PublishedStatementCacheInvalidator
 import kotlinx.serialization.json.JsonPrimitive
@@ -400,7 +401,7 @@ class FetchSubordinateStatementCommandImpl(
         if (account != null && Persistence.adminDocumentQueries.find(account.id, "configuration", "", "").executeAsOneOrNull() != null) {
             val managed = Persistence.adminDocumentQueries.find(account.id, "subordinate", sub, "").executeAsOneOrNull()
             val active = managed?.let { (Json.parseToJsonElement(it.document).jsonObject["status"] as? JsonPrimitive)?.content == "active" } == true
-            val artifact = managed?.artifact?.takeIf { compact -> runCatching { (com.sphereon.openid.fed.client.mapper.decodeJWTComponents(compact).payload["exp"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.let { it > System.currentTimeMillis() / 1000 } == true }.getOrDefault(false) }
+            val artifact = managed?.artifact?.takeIf { compact -> isStoredStatementLive(compact, System.currentTimeMillis() / 1000) }
             return if (active && artifact != null) IdkResult.ok(artifact)
                 else federationErr(InvalidRequestError(Constants.SUBORDINATE_STATEMENT_NOT_FOUND))
         }

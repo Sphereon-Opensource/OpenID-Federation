@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import com.sphereon.openid.fed.common.config.OidfConfigEnvironment
 import com.sphereon.openid.fed.core.config.OidfConfigBootstrap
 import com.sphereon.openid.fed.openapi.models.ErrorResponse
+import com.sphereon.openid.fed.persistence.initializePersistence
 import com.sphereon.openid.fed.server.federation.ktor.auth.OidfJwtAuthSupport.installOidfJwtAuthIfConfigured
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerBindings
 import com.sphereon.openid.fed.server.federation.ktor.di.FederationServerAppGraph
@@ -29,6 +30,7 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.system.exitProcess
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
@@ -71,6 +73,14 @@ fun main() {
 
     logger.info("Federation server initialized")
     logger.info("Configuration: rootIdentifier=${config.rootIdentifier}, port=${config.port}")
+
+    // Open the database before the port: a failed migration must stop the process, not leave a healthy server over an unusable schema.
+    try {
+        initializePersistence()
+    } catch (failure: Throwable) {
+        logger.error("The persistence layer could not start, stopping: ${failure.message}", failure)
+        exitProcess(1)
+    }
 
     // Start the embedded server
     embeddedServer(CIO, port = config.port, host = config.host) {
