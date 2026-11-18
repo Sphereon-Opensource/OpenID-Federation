@@ -3,6 +3,7 @@ package com.sphereon.openid.fed.account
 import com.sphereon.openid.fed.common.Constants
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class LegacyAccountSessionTenantLookupTest {
 
@@ -24,5 +25,12 @@ class LegacyAccountSessionTenantLookupTest {
         val headers = mapOf("x-account-username" to "leaf")
         val name = LegacyAccountSessionTenantLookup.usernameFromHeaders { headers[it] }
         assertEquals("leaf", name)
+    }
+
+    @Test
+    fun resolveAccountId_does_not_hide_a_persistence_that_cannot_start() {
+        // No datasource is configured in this test run, so the persistence layer cannot open. That is a fault of the
+        // installation (or of the migration), not "database unavailable", and must reach the caller.
+        assertFailsWith<IllegalStateException> { LegacyAccountSessionTenantLookup.resolveAccountId("anyone") }
     }
 }
