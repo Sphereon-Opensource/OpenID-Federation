@@ -11,6 +11,8 @@ import com.sphereon.openid.fed.core.logging.federationLogger
 import com.sphereon.core.api.service.TypedServiceCommandAdapter
 import com.sphereon.crypto.core.kms.KeyManagerService
 import com.sphereon.crypto.core.CoseJoseKeyMappingService
+import com.sphereon.crypto.core.KeyBinding
+import com.sphereon.crypto.core.KeyBindingScope
 import com.sphereon.crypto.core.KeyVisibility
 import com.sphereon.crypto.core.generic.KeyOperations
 import com.sphereon.crypto.core.sign.keyCompatibilityFailure
@@ -22,6 +24,7 @@ import com.sphereon.openid.fed.openapi.models.TenantJwk
 import com.sphereon.openid.fed.persistence.Persistence
 import com.sphereon.openid.fed.persistence.models.JwkQueries
 import com.sphereon.openid.fed.services.CreateKeyArgs
+import com.sphereon.openid.fed.services.FEDERATION_KEY_BINDING_PURPOSE
 import com.sphereon.openid.fed.services.config.resolveEffectiveKmsProviderId
 import com.sphereon.openid.fed.services.mappers.toDTO
 import kotlinx.coroutines.Dispatchers
@@ -116,7 +119,11 @@ class CreateKeyCommandImpl internal constructor(
             // deliberately transient. Never regenerate or switch providers when a receipt is invalid.
             beforeGenerate(providerId, alias)
             val context = generationContext(providerId, alias)
-            val generated = withContext(context) { keyManagerService.generateKeyResult(providerId, alias, use, keyOperations, alg, KeyVisibility.PUBLIC) }
+            // Every key this command creates is a Federation Entity Key: it signs federation statements only.
+            val binding = federationKeyBinding(opts.binding)
+            val generated = withContext(context) {
+                keyManagerService.generateKeyResult(providerId, alias, use, keyOperations, alg, KeyVisibility.PUBLIC, binding = binding)
+            }
             if (generated.isErr) return@withContext federationErr(ServerError("Failed to create key", generated.error.message.defaultMessage))
             val reference = requireNotNull(generated.value.keyReference) { "Generated managed key reference is missing" }
             require(reference.alias.isNotBlank() && reference.providerId.isNotBlank()) { "Generated managed key coordinates are blank" }
@@ -172,6 +179,17 @@ class CreateKeyCommandImpl internal constructor(
         else IdkResult.ok(result.value.deleted)
     }
 
+}
+
+/**
+ * The key management binding of a new Federation Entity Key. A supplied binding must be in the federation scope;
+ * without one the key is bound to the federation scope as a whole.
+ */
+fun federationKeyBinding(requested: KeyBinding?): KeyBinding {
+    require(requested == null || requested.scope == KeyBindingScope.OPENID_FEDERATION) {
+        "A federation key can only be bound to the ${KeyBindingScope.OPENID_FEDERATION.value} scope"
+    }
+    return requested ?: KeyBinding(KeyBindingScope.OPENID_FEDERATION, purpose = FEDERATION_KEY_BINDING_PURPOSE)
 }
 
 /** Transient KMS generation receipt; no database row or public publication exists yet. */

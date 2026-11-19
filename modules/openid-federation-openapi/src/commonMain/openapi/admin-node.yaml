@@ -4256,6 +4256,14 @@
           },
           "not_after": {
             "type": "integer"
+          },
+          "kms_key_alias": {
+            "type": "string",
+            "description": "Implementation extension, not defined by draft-kodden-oidfed-admin-00: alias of the key in key management. Omitted when unknown."
+          },
+          "kms_provider_id": {
+            "type": "string",
+            "description": "Implementation extension, not defined by draft-kodden-oidfed-admin-00: the key management provider or resource the key lives in. Omitted when unknown."
           }
         }
       },

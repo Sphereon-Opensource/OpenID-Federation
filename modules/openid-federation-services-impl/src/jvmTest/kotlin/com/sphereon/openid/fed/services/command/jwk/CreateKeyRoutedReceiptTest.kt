@@ -8,6 +8,8 @@ import com.sphereon.core.api.error.IdkError
 import com.sphereon.core.api.json.jsonSerializer
 import com.sphereon.core.api.session.asCoreApiServiceGraph
 import com.sphereon.crypto.core.CoseJoseKeyMappingService
+import com.sphereon.crypto.core.KeyBinding
+import com.sphereon.crypto.core.KeyBindingScope
 import com.sphereon.crypto.core.ManagedKeyInfo
 import com.sphereon.crypto.core.ManagedKeyReference
 import com.sphereon.crypto.core.ResolvedKeyInfo
@@ -101,6 +103,26 @@ class CreateKeyRoutedReceiptTest {
         }
     }
 
+    @Test fun everyGeneratedKeyIsBoundToTheFederationScope() = runBlocking {
+        fixture { f ->
+            assertTrue(f.command().execute(f.args()).isOk)
+            assertEquals(listOf<KeyBinding?>(KeyBinding(KeyBindingScope.OPENID_FEDERATION, null, "entity-signing")), f.bindings)
+        }
+        fixture { f ->
+            val requested = KeyBinding(KeyBindingScope.OPENID_FEDERATION, "entity-1", "entity-signing")
+            val args = f.args().let { it.copy(opts = it.opts.copy(binding = requested)) }
+            assertTrue(f.command().execute(args).isOk)
+            assertEquals(listOf<KeyBinding?>(requested), f.bindings)
+        }
+        fixture { f ->
+            val foreign = KeyBinding(KeyBindingScope.CREDENTIAL_ISSUER, "issuer-1")
+            val args = f.args().let { it.copy(opts = it.opts.copy(binding = foreign)) }
+            assertTrue(f.command().execute(args).isErr)
+            assertEquals(0, f.resultApiCalls)
+            assertEquals(emptyList(), f.rows)
+        }
+    }
+
     @Test fun theSupportedStandaloneCommandApiAlsoCreatesAPublicFederationKey() = runBlocking {
         fixture { f ->
             val result = f.command(f.actualManager).execute(f.args())
@@ -181,6 +203,7 @@ class CreateKeyRoutedReceiptTest {
         var failGeneration = false
         var originalReference: ManagedKeyReference? = null
         var wireResult: GenerateKeyResult? = null
+        val bindings = mutableListOf<KeyBinding?>()
         private val manager = mockk<KeyManagerService>()
 
         init {
@@ -204,8 +227,9 @@ class CreateKeyRoutedReceiptTest {
                 val result = generateWire()
                 result.keyPair ?: error("Generated key pair is null")
             }
-            coEvery { manager.generateKeyResult(any(), any(), any(), any(), any(), any(), any()) } coAnswers {
+            coEvery { manager.generateKeyResult(any(), any(), any(), any(), any(), any(), any(), any()) } coAnswers {
                 resultApiCalls++
+                bindings += arg<KeyBinding?>(7)
                 if (failGeneration) Err(IdkError.NOT_FOUND_ERROR(resource = "managed resource", message = "Managed generation refused"))
                 else Ok(generateWire())
             }
