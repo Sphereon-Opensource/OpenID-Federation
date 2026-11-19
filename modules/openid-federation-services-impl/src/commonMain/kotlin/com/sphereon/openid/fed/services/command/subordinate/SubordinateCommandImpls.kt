@@ -257,9 +257,9 @@ class GetSubordinateStatementCommandImpl internal constructor(
             }
 
             buildSubordinateStatement(tenantId, subordinate, subordinateJwks, subordinateMetadataList, constraints)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // One handler: GraalVM 21 cannot parse several typed catches around a suspension inside a loop.
+            if (e is CancellationException || e !is Exception) throw e
             logger.error("Failed to generate subordinate statement for ID: $subordinateId", e)
             federationErr(ServerError("Failed to generate subordinate statement", e.message, e))
         }
