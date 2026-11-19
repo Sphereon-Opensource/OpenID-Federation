@@ -837,6 +837,9 @@ class SqlAdminDocumentStoreTest {
         var protocol = port()
         val first = protocol.keys(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = doc("""{"generate":{"alg":"ES256"}}""")))
         val firstKid = first.document!!.getValue("kid").jsonPrimitive.content
+        val firstRow = database.jwkQueries.findAllByAccountId(scope.accountId).executeAsList().single { it.kid == firstKid }
+        assertEquals(JsonPrimitive(firstRow.kms_key_ref), first.document!!["kms_key_alias"])
+        assertEquals(JsonPrimitive(providerId), first.document!!["kms_provider_id"])
         val config = doc("""{"entity_id":"https://ta.example","lifetime":3600,"metadata":{"federation_entity":{"organization_name":"IedereenZorgt keurmerkuitgever","display_name":"IedereenZorgt keurmerkuitgever","federation_fetch_endpoint":"https://ta.example/fetch","federation_list_endpoint":"https://ta.example/list","federation_trust_mark_endpoint":"https://ta.example/trust-mark"}},"extension_claim":{"preserved":true}}""")
         var workflow = DefaultAdminWorkflow(store, protocol)
         val published = workflow.execute(AdminOperation.ReplaceAdminConfiguration, AdminCommandArgs(scope, document = config))
@@ -891,6 +894,9 @@ class SqlAdminDocumentStoreTest {
         assertIs<AdminFailure>(runCatching { protocol.keys(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = privateImport)) }.exceptionOrNull())
         val imported = protocol.keys(AdminOperation.CreateAdminKey, AdminCommandArgs(scope, document = importBody))
         assertEquals(JsonPrimitive(false), imported.document!!["signing"])
+        // A public-only import has no key management backing, so it names no alias or provider.
+        assertNull(imported.document!!["kms_key_alias"])
+        assertNull(imported.document!!["kms_provider_id"])
         val lastWithPublicOnly = runCatching { protocol.keys(AdminOperation.DeleteAdminKey, AdminCommandArgs(scope, nextKid)) }.exceptionOrNull()
         assertEquals("last_signing_key", assertIs<AdminFailure>(lastWithPublicOnly).problem.token)
         val beforeFailure = store.readCommitted(scope, committed.key)!!

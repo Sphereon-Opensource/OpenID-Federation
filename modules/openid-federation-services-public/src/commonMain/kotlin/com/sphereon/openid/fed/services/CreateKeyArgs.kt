@@ -1,20 +1,28 @@
 package com.sphereon.openid.fed.services
 
+import com.sphereon.crypto.core.KeyBinding
 import com.sphereon.crypto.core.generic.KeyOperations
 import com.sphereon.crypto.core.generic.SignatureAlgorithm
 import com.sphereon.crypto.core.jose.JwaAlgorithm
 import com.sphereon.crypto.core.jose.JwkUse
 import com.sphereon.openid.fed.openapi.models.CreateKey
 
+/** Purpose recorded on the key management binding of a Federation Entity Key. */
+const val FEDERATION_KEY_BINDING_PURPOSE = "entity-signing"
+
 /**
  * Arguments for creating a new key.
+ *
+ * @property binding The key management binding recorded for the key. Null records the federation scope binding
+ *   without an owning resource; a federation key never carries a binding outside the federation scope.
  */
 data class CreateKeyArgs(
     val providerId: String? = null,
     val alias: String? = null,
     val use: JwkUse = JwkUse.sig,
     val keyOperations: Array<out KeyOperations> = arrayOf(KeyOperations.SIGN, KeyOperations.VERIFY),
-    val alg: SignatureAlgorithm = SignatureAlgorithm.ECDSA_SHA256
+    val alg: SignatureAlgorithm = SignatureAlgorithm.ECDSA_SHA256,
+    val binding: KeyBinding? = null,
 ) {
     companion object {
         fun fromModel(model: CreateKey) = with(model) {
@@ -39,6 +47,7 @@ data class CreateKeyArgs(
         if (use != other.use) return false
         if (!keyOperations.contentEquals(other.keyOperations)) return false
         if (alg != other.alg) return false
+        if (binding != other.binding) return false
 
         return true
     }
@@ -49,6 +58,7 @@ data class CreateKeyArgs(
         result = 31 * result + use.hashCode()
         result = 31 * result + keyOperations.contentHashCode()
         result = 31 * result + alg.hashCode()
+        result = 31 * result + (binding?.hashCode() ?: 0)
         return result
     }
 }

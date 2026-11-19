@@ -356,6 +356,12 @@ class StandaloneAdminProtocolPort internal constructor(
             put("signing", row.id == selected(scope)?.id); row.alg?.let { put("alg", it) }; public["kty"]?.let { put("kty", it) }
             row.created_at?.let { put("created_at", it.toEpochSecond(java.time.ZoneOffset.UTC)) }
             row.expires_at?.let { put("not_after", it.toEpochSecond(java.time.ZoneOffset.UTC)) }
+            // Implementation extension members: where the key lives in key management. A key management port that
+            // stores a key record id as the reference records the alias on the key's preparation.
+            val preparedAlias = documentQueries.find(scope.accountId, "key-preparation", row.id, "").executeAsOneOrNull()
+                ?.let { Json.parseToJsonElement(it.document).jsonObject.string("key_alias") }
+            (preparedAlias ?: row.kms_key_ref).takeIf(String::isNotBlank)?.let { put("kms_key_alias", it) }
+            row.kms.takeIf(String::isNotBlank)?.let { put("kms_provider_id", it) }
         }
         if (operation == AdminOperation.ListAdminKeys) {
             val limit = args.query["limit"]?.let { it.toIntOrNull() ?: adminFail("invalid_request", 400, "Invalid limit") } ?: 100
@@ -484,7 +490,10 @@ class StandaloneAdminProtocolPort internal constructor(
             put("account_id", scope.accountId); scope.entityId?.let { put("entity_identifier", it) }
             put("key_id", keyId); put("preparation_id", java.util.UUID.randomUUID().toString())
             put("node_incarnation", incarnation); put("configuration_revision", configuration.etag)
-            put("algorithm", algorithm); put("lease_expires_at", now() + 300)
+            // Covers generating the key, binding it and signing the configuration with it: two KMS round trips and a
+            // few store commits. Long enough for a slow HSM key creation, short enough that a crashed preparation
+            // is cleaned up within two minutes.
+            put("algorithm", algorithm); put("lease_expires_at", now() + KEY_PREPARATION_LEASE_SECONDS)
         }
         if (store.commit(scope, listOf(AdminMutation(adminKeyPreparationKey(keyId), null, document))) == null)
             adminFail("precondition_failed", 412, "Key preparation already exists")
@@ -535,6 +544,7 @@ class StandaloneAdminProtocolPort internal constructor(
     private fun invalid(detail: String, pointer: String? = null): Nothing = adminFail("invalid_federation_claim", 400, detail, pointer)
     private fun now() = clock()
     companion object {
+        const val KEY_PREPARATION_LEASE_SECONDS: Long = 120
         private const val TRUST_MARK_DISPLAY_CLAIM = "https://sphereon.com/claims/trust-mark-display"
         private val PRIVATE_JWK_MEMBERS = setOf("d", "p", "q", "dp", "dq", "qi", "oth", "k", "dP", "dQ", "qInv")
     }
