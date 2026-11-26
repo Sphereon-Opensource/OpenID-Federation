@@ -6,10 +6,24 @@ import com.sphereon.core.api.error.IdkErrorType
 import com.sphereon.core.api.service.ServiceCommand
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
 /** Already-authorized scope. HTTP bodies must never be deserialized into this object. */
 @Serializable
 data class AdminNodeScope(val accountId: String, val entityId: String? = null, val basePath: String = "/admin/v1", val subordinateLimit: Long? = null)
+
+/** Optional caller-scoped notification issued after a scheduled signing-key switch commits. */
+class AdminSigningKeySwitchObserver(
+    private val onSwitch: suspend (String) -> Unit,
+) : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<AdminSigningKeySwitchObserver> {
+        suspend fun switched(keyId: String) {
+            coroutineContext[Key]?.onSwitch?.invoke(keyId)
+        }
+    }
+}
 
 @Serializable
 data class AdminCommandArgs(
