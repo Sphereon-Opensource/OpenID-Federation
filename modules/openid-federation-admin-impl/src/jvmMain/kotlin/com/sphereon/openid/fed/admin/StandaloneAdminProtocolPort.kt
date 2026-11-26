@@ -106,6 +106,7 @@ class StandaloneAdminProtocolPort internal constructor(
                 lifetimePolicy = policy, acknowledgeLifetimePolicy = lifetime.acknowledge)
             val switched = AdminMutation(state.key, state.etag, JsonObject(state.document + ("switched" to JsonPrimitive(true))))
             if (store.commit(scope, listOf(changed, switched)) == null) adminFail("precondition_failed", 412, "Key state changed during rollover")
+            AdminSigningKeySwitchObserver.switched(replacement.id)
         }
     }
     override suspend fun node(scope: AdminNodeScope): JsonObject {
